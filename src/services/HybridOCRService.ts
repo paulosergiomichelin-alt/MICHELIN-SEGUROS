@@ -1,5 +1,6 @@
 import { LocalOCRService } from "./LocalOCRService";
 import { CNH_LANDSCAPE_PROFILE, CNHCoordinateEngine, CNHFieldProfile } from "./document-engine/CNHCoordinateMap";
+import { CNHAnchoredOCRService, CNHAnchoredResult } from "./document-engine/CNHAnchoredOCRService";
 import { PDFRenderService } from "./PDFRenderService";
 import { DocumentMemoryManager } from "./DocumentMemoryManager";
 import { OCRPreprocessService } from "./OCRPreprocessService";
@@ -68,8 +69,47 @@ export class HybridOCRService {
 
     if (type === 'cnh') {
         const baseCanvas = await this.prepareCNHSourceImage(finalImageUrl);
+
+        // STEP 1 (PRIMARY): Anchored pipeline — OCR Global -> Anchors -> Dynamic Regions
+        try {
+          console.log('[HYBRID_OCR] [CNH] Trying anchored pipeline (primary)...');
+          const anchored = await CNHAnchoredOCRService.getInstance().extract(baseCanvas);
+          const extractedCount = Object.values(anchored.fields).filter(f => f.value && f.confidence >= 40).length;
+          console.log(`[HYBRID_OCR] [CNH] Anchored pipeline extracted ${extractedCount} fields (anchors found: ${anchored.metrics.anchorsFound})`);
+
+          if (extractedCount >= 2) {
+            // Anchored pipeline succeeded — package result for DeterministicParser
+            const regions: any = {
+              nome: anchored.fields.nome.value,
+              cpf: anchored.fields.cpf.value,
+              nascimento: anchored.fields.nascimento.value,
+              validade: anchored.fields.validade.value,
+              registro: anchored.fields.registro.value,
+              categoria: anchored.fields.categoria.value,
+              _anchored: true,
+              _fields: anchored.fields
+            };
+            const text = anchored.globalText;
+            return {
+              text,
+              regions,
+              structured: anchored.structured,
+              debug: {
+                pipeline: 'CNH_Anchored_v1',
+                metrics: anchored.metrics,
+                fields: Object.fromEntries(Object.entries(anchored.fields).map(([k, v]) => [k, { value: v.value, confidence: v.confidence, source: v.source }]))
+              },
+              metrics: { ...metrics, totalTime: Date.now() - startTime, pipeline: 'CNH_Anchored_v1' }
+            };
+          }
+          console.warn('[HYBRID_OCR] [CNH] Anchored pipeline yielded few fields; falling back to fixed-coord regional pipeline.');
+        } catch (e: any) {
+          console.warn('[HYBRID_OCR] [CNH] Anchored pipeline error, falling back:', e?.message || e);
+        }
+
+        // STEP 2 (FALLBACK): Original fixed-coordinate regional pipeline
         const result = await this.performCNHRegionPipelineWithCanvas(baseCanvas, startTime);
-        
+
         // CNH STRATEGY: Regional tokens are primary, but 0 tokens triggers a global fallback for parsing survivability
         if (result.structured.words.length === 0) {
            console.warn('[HYBRID_OCR] [CNH] Regional extraction returned 0 tokens. Attempting global fallback.');

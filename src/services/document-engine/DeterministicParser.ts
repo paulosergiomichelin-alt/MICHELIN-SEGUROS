@@ -68,7 +68,38 @@ export class DeterministicParser {
     const data: any = {};
     const sanitizer = FieldSanitizer.getInstance();
     const layout = LayoutAwareExtractionEngine.getInstance();
-    
+
+    // 0. ANCHORED PIPELINE SHORT-CIRCUIT: values already extracted and validated upstream
+    if (regions && regions._anchored && regions._fields) {
+      console.log('[CNH_PARSER] [ANCHORED_INPUT] Using pre-extracted, validated field values from anchored pipeline.');
+      const f = regions._fields as Record<string, { value: string; confidence: number }>;
+      data.name = sanitizer.sanitizeCNHName(f.nome?.value || '');
+      data.cpf = sanitizer.sanitizeCPF(f.cpf?.value || '');
+      data.birthDate = sanitizer.sanitizeDate(f.nascimento?.value || '');
+      data.validity = sanitizer.sanitizeDate(f.validade?.value || '');
+      data.registration = (f.registro?.value || '').match(/\d{9,11}/)?.[0] || '';
+      data.category = (f.categoria?.value || '').toUpperCase().match(/[A-E]{1,2}|ACC/)?.[0] || '';
+      data._fieldConfidence = {
+        name: f.nome?.confidence ?? 0,
+        cpf: f.cpf?.confidence ?? 0,
+        birthDate: f.nascimento?.confidence ?? 0,
+        validity: f.validade?.confidence ?? 0,
+        registration: f.registro?.confidence ?? 0,
+        category: f.categoria?.confidence ?? 0
+      };
+
+      // Global text fallback for anything still missing
+      if (!data.cpf) {
+        const m = text.match(/[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}|[0-9]{11}/);
+        if (m) data.cpf = sanitizer.sanitizeCPF(m[0]);
+      }
+      if (!data.birthDate) {
+        const m = text.match(/(?:NASCIMENTO|NASC\.?)[^\d]*(\d{2}[\/\-]\d{2}[\/\-]\d{4})/i);
+        if (m) data.birthDate = sanitizer.sanitizeDate(m[1]);
+      }
+      return data;
+    }
+
     // 1. MANDATORY SPATIAL DATA CHECK
     const isStructured = !!structured && structured.words.length > 0;
     if (!isStructured) {
