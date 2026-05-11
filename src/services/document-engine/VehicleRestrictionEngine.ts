@@ -14,29 +14,41 @@ export class VehicleRestrictionEngine {
     'DAYCOVAL', 'PONTUAL', 'MERCEDES', 'TOYOTA', 'HONDA', 'SCOTIABANK'
   ];
 
-  public static analyze(text: string): { 
-    hasFinancialRestriction: boolean; 
+  // Negation phrases that mean "no restriction" even when the label word appears
+  private static NEGATION_PATTERNS = [
+    'SEM GRAVAME', 'SEM RESTRICAO', 'SEM RESTRIÇÃO',
+    'NAO POSSUI ALIENACAO', 'NAO POSSUI RESTRIÇÃO', 'NAO POSSUI RESTRICAO',
+    'NAO ALIENADO', 'NAO GRAVAME', 'ALIENACAO NAO',
+    'FIDUCIARIA NAO', 'FIDUCIÁRIA NÃO', 'SEM ALIENACAO',
+    'RESTRICAO NAO', 'RESTRIÇÃO NÃO',
+  ];
+
+  public static analyze(text: string): {
+    hasFinancialRestriction: boolean;
     financialInstitution?: string;
     restrictionType?: string;
   } {
-    const uText = text.toUpperCase();
-    
-    // Check for "ALIENACAO FIDUCIARIA" or "GRAVAME"
-    let hasRestriction = this.KEYWORDS.some(k => uText.includes(k));
-    
-    // Explicit "SEM GRAVAME" or "NAO POSSUI" near the keywords might negate this
-    if (uText.includes('SEM GRAVAME') || uText.includes('NAO POSSUI ALIENACAO') || uText.includes('SEM RESTRICAO')) {
-      hasRestriction = false;
-    }
+    const uText = text.toUpperCase()
+      .normalize('NFD').replace(/\p{M}/gu, '') // strip accents for matching
+      .toUpperCase();
 
-    if (!hasRestriction) {
+    // Explicit negation wins immediately
+    if (this.NEGATION_PATTERNS.some(p => uText.includes(p))) {
       return { hasFinancialRestriction: false };
     }
 
-    // Try to find the institution
+    // Look for restriction keyword
+    const hasKeyword = this.KEYWORDS.some(k => uText.includes(k));
+    if (!hasKeyword) return { hasFinancialRestriction: false };
+
+    // Keywords alone are not enough — they appear as field labels on CRLV.
+    // Require a financial institution name to confirm an actual restriction.
     const institution = this.FINANCIAL_INSTITUTIONS.find(inst => uText.includes(inst));
-    
-    // Determine type
+    if (!institution) {
+      // No institution found → keyword was just a label, not a value
+      return { hasFinancialRestriction: false };
+    }
+
     let type = 'Alienação Fiduciária';
     if (uText.includes('LEASING') || uText.includes('ARRENDAMENTO')) type = 'Arrendamento / Leasing';
     if (uText.includes('RESERVA DOMINIO')) type = 'Reserva de Domínio';
