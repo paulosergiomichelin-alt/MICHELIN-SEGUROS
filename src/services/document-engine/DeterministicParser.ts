@@ -213,6 +213,7 @@ export class DeterministicParser {
           maxChars: 70,
           maxWords: 5,
           maxDistance: 200,
+          horizontalTolerance: 300,
           stopTokens: ['CPF', 'CNPJ', 'PLACA', 'LOCAL', 'DOCUMENTO', 'ESTADO', 'MUNICIPIO', 'ENDERECO', 'VALIDE', 'QRCODE', 'BAIXE', 'APP', 'DETRAN']
        }).value);
     } else {

@@ -6,6 +6,7 @@ export interface ExtractionOptions {
   direction?: 'RIGHT' | 'BELOW' | 'LEFT' | 'ABOVE';
   maxDistance?: number;
   verticalTolerance?: number; // Y-axis tolerance
+  horizontalTolerance?: number; // X-axis tolerance for BELOW direction (default 40)
   stopTokens?: string[];
   pattern?: RegExp;
   maxWords?: number;
@@ -163,11 +164,12 @@ export class LayoutAwareExtractionEngine {
         const labelLeft = Math.min(...labelTokens.map(lt => lt.x));
         const labelRightEdge = Math.max(...labelTokens.map(lt => lt.x + lt.width));
         labelRight = labelRightEdge;
+        const hTol = options.horizontalTolerance ?? 40;
         candidates = this.currentResult!.words.filter(w => {
           const wCenter = w.x + w.width / 2;
           const isBelow = w.y >= labelBottom - 5;
           const dist = w.y - labelBottom;
-          const isAligned = wCenter >= labelLeft - 40 && wCenter <= labelRightEdge + 40;
+          const isAligned = wCenter >= labelLeft - hTol && wCenter <= labelRightEdge + hTol;
           const isNotLabel = !labelTokens.some(lt => lt === w);
           return isBelow && isAligned && dist < maxDistance && isNotLabel;
         }).sort((a, b) => a.y - b.y || a.x - b.x);

@@ -170,11 +170,13 @@ export class OCRService {
       const viewport = page.getViewport({ scale: 1.0 });
       const pdfText = textContent.items.map((item: any) => item.str).join(' ').trim();
 
-      // CNH-e digital PDFs embed the personal data as graphics; only footer/validation text
-      // is selectable. Guard against committing to the text layer when it has no actual data.
-      const CNH_DATA_MARKERS = ['NOME', 'CPF', 'NASCIMENTO', 'REGISTRO', 'CATEGORIA', 'VALIDADE', 'HABILITACAO', 'FILIACAO'];
-      const hasCPFPattern = /\d{3}\.?\d{3}\.?\d{3}-?\d{2}/.test(pdfText);
-      const hasPersonalDataMarkers = CNH_DATA_MARKERS.some(m => pdfText.toUpperCase().includes(m)) || hasCPFPattern;
+      // CNH-e digital PDFs embed personal data as graphics; only footer/validation text is
+      // selectable. Strip URLs before checking markers to avoid false positives on paths
+      // like /habilitacao/ in the SENATRAN validation URL.
+      const textWithoutUrls = pdfText.replace(/https?:\/\/\S+/gi, '');
+      const CNH_DATA_MARKERS = ['NOME', 'CPF', 'NASCIMENTO', 'REGISTRO', 'CATEGORIA', 'VALIDADE', 'FILIACAO'];
+      const hasCPFPattern = /\d{3}\.?\d{3}\.?\d{3}-?\d{2}/.test(textWithoutUrls);
+      const hasPersonalDataMarkers = CNH_DATA_MARKERS.some(m => textWithoutUrls.toUpperCase().includes(m)) || hasCPFPattern;
 
       if (pdfText.length >= 100 && hasPersonalDataMarkers) {
         console.log(`[OCR_PIPELINE] [CNH_PDF_TEXT_LAYER] ${pdfText.length} chars found with data markers. Using structured PDF pipeline.`);
