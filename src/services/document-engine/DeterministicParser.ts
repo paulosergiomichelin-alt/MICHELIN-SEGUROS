@@ -208,14 +208,27 @@ export class DeterministicParser {
          maxWords: 2
        }).value.toUpperCase();
 
-       data.ownerName = sanitizer.sanitizeName(layout.extractField(['PROPRIETARIO', 'NOME DO PROPRIETARIO', 'NOME'], {
-          direction: 'BELOW',
-          maxChars: 70,
-          maxWords: 5,
-          maxDistance: 200,
-          horizontalTolerance: 300,
-          stopTokens: ['CPF', 'CNPJ', 'PLACA', 'LOCAL', 'DOCUMENTO', 'ESTADO', 'MUNICIPIO', 'ENDERECO', 'VALIDE', 'QRCODE', 'BAIXE', 'APP', 'DETRAN']
-       }).value);
+       data.ownerName = sanitizer.sanitizeName(layout.extractField(
+         ['NOME / RAZAO SOCIAL', 'NOME RAZAO SOCIAL', 'RAZAO SOCIAL', 'NOME DO PROPRIETARIO', 'PROPRIETARIO', 'NOME'],
+         {
+           direction: 'BELOW',
+           maxChars: 70,
+           maxWords: 5,
+           maxDistance: 200,
+           horizontalTolerance: 100,
+           pattern: /[A-ZÀ-Ú][A-ZÀ-Ú\s]{4,}/,
+           stopTokens: ['CPF', 'CNPJ', 'PLACA', 'LOCAL', 'DOCUMENTO', 'ESTADO', 'MUNICIPIO', 'ENDERECO', 'VALIDE', 'QRCODE', 'BAIXE', 'APP', 'DETRAN']
+         }
+       ).value);
+
+       // If spatial extraction failed (e.g. label not present or value purely numeric),
+       // try contextual text-based fallback on the raw text
+       if (!data.ownerName) {
+         data.ownerName = sanitizer.sanitizeName(ContextualFieldExtractor.extract(text, ['NOME / RAZAO SOCIAL', 'RAZAO SOCIAL', 'PROPRIETARIO', 'NOME DO PROPRIETARIO'], {
+            maxChars: 70,
+            stopTokens: ['CPF', 'CNPJ', 'PLACA', 'LOCAL', 'DOCUMENTO', 'ESTADO', 'MUNICIPIO', 'ENDERECO', 'VALIDE', 'QRCODE']
+         }));
+       }
     } else {
        // FALLBACK TO CONTEXTUAL (LEGACY RIGID)
        data.plate = ContextualFieldExtractor.extract(text, ['PLACA', 'PLACA DO VEICULO'], {
