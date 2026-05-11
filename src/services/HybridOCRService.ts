@@ -405,7 +405,8 @@ export class HybridOCRService {
             pass,
             sharpen: pass >= 2,
             contrast: pass === 3 ? 1.8 : 1.4,
-            grayscale: true
+            grayscale: true,
+            desaturate: true  // CNH-e has colored security background — kill colored pixels
           });
           
           LocalOCRService.getInstance().performStructuredOCR(canvas, { char_whitelist: profile.whitelist || '' })

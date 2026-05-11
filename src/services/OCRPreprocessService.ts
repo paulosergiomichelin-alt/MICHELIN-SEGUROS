@@ -7,26 +7,42 @@ export class OCRPreprocessService {
   /**
    * Main entry point for preprocessing a canvas.
    */
-  public static process(ctx: CanvasRenderingContext2D, width: number, height: number, options: { 
+  public static process(ctx: CanvasRenderingContext2D, width: number, height: number, options: {
     pass: number,
     sharpen?: boolean,
     contrast?: number,
-    grayscale?: boolean
+    grayscale?: boolean,
+    desaturate?: boolean  // Remove colored pixels (for security backgrounds like CNH-e)
   }) {
     const imageData = ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
-    
+
     // Pass 1: Standard
     // Pass 2: High Contrast
     // Pass 3: Extreme Thresholding
     const threshold = options.pass === 1 ? 145 : (options.pass === 2 ? 130 : 175);
     const contrastFactor = options.contrast || (options.pass >= 2 ? 1.7 : 1.3);
+    // Saturation cutoff: pixels with R/G/B variance above this are considered "colored" (background)
+    const satCutoff = options.pass === 3 ? 25 : 40;
 
     for (let i = 0; i < data.length; i += 4) {
-      // Grayscale with weighted luminance
       const r = data[i];
       const g = data[i + 1];
       const b = data[i + 2];
+
+      // Desaturation filter: if pixel is colored (high R/G/B variance), kill it (white)
+      // This removes the colored security pattern from CNH-e while preserving black text
+      if (options.desaturate) {
+        const maxCh = Math.max(r, g, b);
+        const minCh = Math.min(r, g, b);
+        if (maxCh - minCh > satCutoff) {
+          data[i] = data[i + 1] = data[i + 2] = 255;
+          data[i + 3] = 255;
+          continue;
+        }
+      }
+
+      // Grayscale with weighted luminance
       let val = (0.299 * r) + (0.587 * g) + (0.114 * b);
 
       // Simple Linear Contrast
@@ -34,7 +50,7 @@ export class OCRPreprocessService {
 
       // Thresholding (Binarization)
       const finalVal = val < threshold ? 0 : 255;
-      
+
       data[i] = data[i + 1] = data[i + 2] = finalVal;
       data[i + 3] = 255; // Opaque
     }
