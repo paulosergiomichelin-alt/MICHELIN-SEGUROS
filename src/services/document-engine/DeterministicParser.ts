@@ -38,10 +38,10 @@ export class DeterministicParser {
       console.log(`[DETERMINISTIC_PARSER] [STRUCTURED_MODE_ENABLED] Geometry-linked engine active for ${type.toUpperCase()}`);
     } else {
       if (type === 'cnh') {
-        console.error(`[DETERMINISTIC_PARSER] [CRITICAL_FAIL] CNH MUST have spatial tokens.`);
-        throw new Error('CNH_SPATIAL_EXTRACTION_MANDATORY_FAILED');
+        console.warn(`[DETERMINISTIC_PARSER] [CNH_TEXT_FALLBACK] No spatial tokens — falling back to regex on raw text.`);
+      } else {
+        console.warn(`[DETERMINISTIC_PARSER] [FALLBACK_TEXT_MODE] No spatial data available. Falling back to linear regex.`);
       }
-      console.warn(`[DETERMINISTIC_PARSER] [FALLBACK_TEXT_MODE] No spatial data available. Falling back to linear regex.`);
     }
 
     let data: any;
@@ -72,8 +72,18 @@ export class DeterministicParser {
     // 1. MANDATORY SPATIAL DATA CHECK
     const isStructured = !!structured && structured.words.length > 0;
     if (!isStructured) {
-      console.error('[CNH_PARSER] [FAIL_FAST] No structured spatial data found for CNH.');
-      return {}; 
+      // No spatial tokens: try regex on raw text before giving up
+      console.warn('[CNH_PARSER] [TEXT_ONLY_FALLBACK] No spatial tokens. Attempting regex on raw text.');
+      const cpfMatch = text.match(/[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}|[0-9]{11}/);
+      if (cpfMatch) data.cpf = sanitizer.sanitizeCPF(cpfMatch[0]);
+      const birthMatch = text.match(/(?:NASCIMENTO|NASC\.?)[^\d]*(\d{2}[\/\-]\d{2}[\/\-]\d{4})/i);
+      if (birthMatch) data.birthDate = sanitizer.sanitizeDate(birthMatch[1]);
+      const nameMatch = text.match(/(?:NOME)[^\n:]*[:]*\s*([A-ZÀ-Ú][A-ZÀ-Ú\s]{4,60})/i);
+      if (nameMatch) {
+        const candidate = nameMatch[1].trim();
+        if (!sanitizer.isRejectedValue(candidate)) data.name = sanitizer.sanitizeCNHName(candidate);
+      }
+      return data;
     }
 
     // 2. REGION-BASED SPATIAL EXTRACTION (Priority)
@@ -133,10 +143,21 @@ export class DeterministicParser {
       if (!data.registration) data.registration = (regions.registro || '').match(/\d{9,11}/)?.[0] || '';
     }
 
-    // 4. GLOBAL TEXT FALLBACK (Only for unstructured snippets if safety score is high)
+    // 4. GLOBAL TEXT FALLBACK (regex scan on raw OCR text string)
     if (!data.cpf) {
       const globalCPF = text.match(/[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}|[0-9]{11}/);
       if (globalCPF) data.cpf = sanitizer.sanitizeCPF(globalCPF[0]);
+    }
+    if (!data.birthDate) {
+      const birthMatch = text.match(/(?:NASCIMENTO|NASC\.?)[^\d]*(\d{2}[\/\-]\d{2}[\/\-]\d{4})/i);
+      if (birthMatch) data.birthDate = sanitizer.sanitizeDate(birthMatch[1]);
+    }
+    if (!data.name) {
+      const nameMatch = text.match(/(?:NOME)[^\n:]*[:]*\s*([A-ZÀ-Ú][A-ZÀ-Ú\s]{4,60})/i);
+      if (nameMatch) {
+        const candidate = nameMatch[1].trim();
+        if (!sanitizer.isRejectedValue(candidate)) data.name = sanitizer.sanitizeCNHName(candidate);
+      }
     }
 
     // Final Purity Check for Name

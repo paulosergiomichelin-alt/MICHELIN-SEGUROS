@@ -170,8 +170,14 @@ export class OCRService {
       const viewport = page.getViewport({ scale: 1.0 });
       const pdfText = textContent.items.map((item: any) => item.str).join(' ').trim();
 
-      if (pdfText.length >= 100) {
-        console.log(`[OCR_PIPELINE] [CNH_PDF_TEXT_LAYER] ${pdfText.length} chars found. Using structured PDF pipeline.`);
+      // CNH-e digital PDFs embed the personal data as graphics; only footer/validation text
+      // is selectable. Guard against committing to the text layer when it has no actual data.
+      const CNH_DATA_MARKERS = ['NOME', 'CPF', 'NASCIMENTO', 'REGISTRO', 'CATEGORIA', 'VALIDADE', 'HABILITACAO', 'FILIACAO'];
+      const hasCPFPattern = /\d{3}\.?\d{3}\.?\d{3}-?\d{2}/.test(pdfText);
+      const hasPersonalDataMarkers = CNH_DATA_MARKERS.some(m => pdfText.toUpperCase().includes(m)) || hasCPFPattern;
+
+      if (pdfText.length >= 100 && hasPersonalDataMarkers) {
+        console.log(`[OCR_PIPELINE] [CNH_PDF_TEXT_LAYER] ${pdfText.length} chars found with data markers. Using structured PDF pipeline.`);
         const structured: StructuredOCRResult = { text: '', words: [], lines: [], confidence: 100 };
         textContent.items.forEach((item: any) => {
           const text = item.str;
@@ -190,8 +196,8 @@ export class OCRService {
         return { text: pdfText, structured, regions: undefined };
       }
 
-      // Scanned / photo CNH: fall back to visual regional pipeline
-      console.log(`[OCR_PIPELINE] [CNH_VISUAL_FALLBACK] PDF text layer insufficient (${pdfText.length} chars). Using visual pipeline.`);
+      // Scanned / photo CNH or CNH-e with graphics-only personal data: fall back to visual pipeline
+      console.log(`[OCR_PIPELINE] [CNH_VISUAL_FALLBACK] PDF text layer has ${pdfText.length} chars but no personal data markers. Using visual pipeline.`);
       const visual = await HybridOCRService.getInstance().performVisualOCR('', page, typeHint);
       return visual;
     } else {
