@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(node_modules\\\\.bin\\\\tsc --noEmit)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\paulo\\\\OneDrive\\\\Documentos\\\\GitHub\\\\MICHELIN-SEGUROS\" -Force)",
+      "Bash(Select-Object Name)",
+      "Bash(findstr /E \"\\\\.\\(css|scss|less\\)$\")",
+      "Bash(node_modules/.bin/tsc --noEmit --skipLibCheck)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}
