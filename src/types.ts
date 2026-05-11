@@ -110,10 +110,6 @@ export interface Lead {
   // Insurance info
   hasInsurance: boolean;
   insuranceExpiry?: string;
-  insuranceBroker?: string;
-  insuranceCompany?: string;
-  insuranceExpirationDate?: string; // ISO date
-  normalizedPhone?: string;
   
   // Personal info
   name: string;

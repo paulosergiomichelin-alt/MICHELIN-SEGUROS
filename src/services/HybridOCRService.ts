@@ -196,9 +196,8 @@ export class HybridOCRService {
       const uProbe = probeResult.text.toUpperCase();
       console.log(`[ORIENTATION_PROBE] Rotation ${rot} text: "${uProbe.trim()}" | Conf: ${probeResult.confidence} | Tokens: ${probeResult.words.length}`);
       
-      const markers = ['REPUBLICA', 'FEDERATIVA', 'HABILITACAO', 'TERRITORIO', 'MINISTERIO', 'TRANSITO', 'CONDUTOR', 'REGISTRO', 'BRASIL'];
-      const foundMarker = markers.some(m => new RegExp(`\\b${m}\\b`).test(uProbe));
-      if ((foundMarker && probeResult.confidence > 15) || (probeResult.words.length > 5 && probeResult.confidence > 25)) {
+      const markers = ['REPUBLICA', 'FEDERATIVA', 'BRASIL', 'HABILITACAO', 'VALE', 'EM', 'TODO', 'TERRITORIO', 'NACIONAL', 'DOCUMENTO', 'MINISTERIO', 'TRANSITO'];
+      if ((markers.some(m => uProbe.includes(m)) && probeResult.confidence > 15) || (probeResult.words.length > 5 && probeResult.confidence > 25)) {
         console.log(`[ORIENTATION_ENGINE] Anchor found for ${rot}deg. Confidence: ${probeResult.confidence}. Alignment locked.`);
         bestRotation = rot;
         foundAnchor = true;

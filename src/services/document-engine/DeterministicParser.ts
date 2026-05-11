@@ -165,41 +165,30 @@ export class DeterministicParser {
     const isStructured = !!structured && structured.words.length > 0;
 
     if (isStructured) {
-       // USE SPATIAL EXTRACTION — BELOW direction because CRLV labels sit above values
+       // USE SPATIAL EXTRACTION (DETERMINISTIC)
        data.plate = layout.extractField(['PLACA', 'PLACA DO VEICULO'], {
-         direction: 'BELOW',
          pattern: /[A-Z]{3}-?[0-9][A-Z0-9][0-9]{2}/i,
+         stopTokens: ['CHASSI', 'MODELO', 'ANO', 'MARCA'],
          maxWords: 2
        }).value.toUpperCase().replace('-', '');
 
        data.renavam = layout.extractField(['RENAVAM', 'Nº DO RENAVAM'], {
-         direction: 'BELOW',
          pattern: /\d{9,11}/,
+         stopTokens: ['PLACA', 'CHASSI', 'MODELO'],
          maxWords: 2
        }).value;
 
        data.chassis = layout.extractField(['CHASSI', 'IDENTIFICACAO'], {
-         direction: 'BELOW',
          pattern: /[A-HJ-NPR-Z0-9]{17}/i,
+         stopTokens: ['RENAVAM', 'PLACA', 'MODELO'],
          maxWords: 2
        }).value.toUpperCase();
 
        data.ownerName = sanitizer.sanitizeName(layout.extractField(['PROPRIETARIO', 'NOME', 'NOME DO PROPRIETARIO'], {
-          direction: 'BELOW',
           maxChars: 70,
           maxWords: 7,
           stopTokens: ['CPF', 'CNPJ', 'PLACA', 'LOCAL', 'DOCUMENTO', 'ESTADO', 'MUNICIPIO', 'ENDERECO']
        }).value);
-
-       // Fallback to linear text when spatial BELOW extraction still returns empty
-       if (!data.plate)
-         data.plate = ContextualFieldExtractor.extractPlate(text);
-       if (!data.renavam)
-         data.renavam = ContextualFieldExtractor.extract(text, ['RENAVAM', 'Nº DO RENAVAM', 'CODIGO RENAVAM'], { pattern: /\d{9,11}/ });
-       if (!data.chassis)
-         data.chassis = ContextualFieldExtractor.extract(text, ['CHASSI', 'IDENTIFICACAO'], { pattern: /[A-HJ-NPR-Z0-9]{17}/i }).toUpperCase();
-       if (!data.ownerName)
-         data.ownerName = sanitizer.sanitizeName(ContextualFieldExtractor.extract(text, ['PROPRIETARIO', 'NOME DO PROPRIETARIO'], { maxChars: 70, stopTokens: ['CPF', 'CNPJ', 'PLACA'] }));
     } else {
        // FALLBACK TO CONTEXTUAL (LEGACY RIGID)
        data.plate = ContextualFieldExtractor.extract(text, ['PLACA', 'PLACA DO VEICULO'], {
@@ -256,83 +245,60 @@ export class DeterministicParser {
     // 1. Base Detectors (Always detectable from text)
     data.insurer = InsurerDetectorService.detect(text);
 
-    // Labels with accented variants for Brazilian policies
-    const policyNumberLabels = ['NUMERO DA APOLICE', 'NÚMERO DA APÓLICE', 'APOLICE', 'APÓLICE', 'Nº APOLICE', 'Nº APÓLICE', 'PROPOSTA', 'Nº PROPOSTA', 'NUMERO APOLICE', 'APOLICE ATUAL'];
-    const insuredNameLabels  = ['SEGURADO(A)', 'NOME DO SEGURADO', 'NOME DO SEGURADO(A)', 'NOME DO(A) SEGURADO', 'SEGURADO', 'CONTRATANTE', 'NOME'];
-    const insuredCpfLabels   = ['CPF', 'CNPJ', 'CPF/CNPJ', 'CNPJ/CPF'];
-    const brokerLabels       = ['CORRETOR', 'CORRETORA', 'INTERMEDIARIO', 'INTERMEDIÁRIO'];
-    const expiryLabels       = ['FIM VIGENCIA', 'FIM VIGÊNCIA', 'VENCIMENTO', 'ATE', 'DATA VENCIMENTO', 'VIGENCIA ATE', 'FIM DA VIGENCIA'];
-    const startLabels        = ['INICIO VIGENCIA', 'INÍCIO VIGÊNCIA', 'DESDE', 'VIGENCIA DE', 'VIGÊNCIA DE', 'INICIO DA VIGENCIA'];
-
     if (isStructured) {
        console.log('[POLICY_PARSER] [STRUCTURED_PIPELINE_ACTIVE] Executing spatial extraction.');
-
-       data.policyNumber = layout.extractField(policyNumberLabels, {
+       
+       data.policyNumber = layout.extractField(['NUMERO DA APOLICE', 'APOLICE', 'Nº APOLICE', 'PROPOSTA', 'Nº PROPOSTA'], { 
          maxChars: 40,
          maxWords: 3,
          pattern: /[A-Z0-9.\-/]{6,}/,
          stopTokens: ['VIGENCIA', 'VENCIMENTO', 'SEGURADO', 'VALOR', 'COBERTURA', 'EMISSAO']
        }).value;
 
-       data.insuredName = sanitizer.sanitizeName(layout.extractField(insuredNameLabels, {
+       data.insuredName = sanitizer.sanitizeName(layout.extractField(['SEGURADO(A)', 'NOME', 'NOME DO SEGURADO', 'SEGURADO', 'CONTRATANTE'], {
           maxChars: 70,
           maxWords: 7,
           stopTokens: ['CPF', 'CNPJ', 'ENDERECO', 'TELEFONE', 'LOCAL', 'LIMITES', 'IMPORTANCIA', 'PREMIO', 'COBERTURA', 'EMITIU', 'ESTA', 'BAIRRO', 'CEP']
        }).value);
 
-       data.insuredCpf = sanitizer.sanitizeCPF(layout.extractField(insuredCpfLabels, {
+       data.insuredCpf = sanitizer.sanitizeCPF(layout.extractField(['CPF', 'CNPJ', 'CPF/CNPJ', 'SEGURADO'], {
          pattern: /[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}|[0-9]{11}|[0-9]{2}\.[0-9]{3}\.[0-9]{3}\/[0-9]{4}-[0-9]{2}/,
          maxWords: 2,
          stopTokens: ['NOME', 'ENDERECO', 'TELEFONE', 'ESTA', 'DADOS']
        }).value);
 
-       data.brokerName = sanitizer.sanitizeName(layout.extractField(brokerLabels, {
+       data.brokerName = sanitizer.sanitizeName(layout.extractField(['CORRETOR', 'CORRETORA', 'INTERMEDIARIO'], {
          maxChars: 80,
          maxWords: 8,
          stopTokens: ['SUSEP', 'CNPJ', 'TELEFONE', 'VINCULO', 'LOCAL', 'ENDERECO', 'DADOS', 'OUVIDORIA', 'PORTAL']
        }).value);
 
-       data.insuranceExpiry = layout.extractField(expiryLabels, {
+       data.insuranceExpiry = layout.extractField(['FIM VIGENCIA', 'VENCIMENTO', 'ATE', 'DATA VENCIMENTO'], {
          pattern: /\d{2}\/\d{2}\/\d{4}/,
          stopTokens: ['VALOR', 'PREMIO', 'R$']
        }).value;
 
-       data.startDate = layout.extractField(startLabels, {
+       data.startDate = layout.extractField(['INICIO VIGENCIA', 'DESDE', 'VIGENCIA DE'], {
          pattern: /\d{2}\/\d{2}\/\d{4}/,
          stopTokens: ['ATE', 'VALOR']
        }).value;
-
-       // Fallback to linear text for mandatory fields not found by spatial engine
-       if (!data.policyNumber)
-         data.policyNumber = ContextualFieldExtractor.extract(text, policyNumberLabels, {
-           maxChars: 40,
-           pattern: /[A-Z0-9.\-/]{6,}/,
-           stopTokens: ['VIGENCIA', 'VIGÊNCIA', 'VENCIMENTO', 'SEGURADO']
-         });
-       if (!data.insuredName)
-         data.insuredName = sanitizer.sanitizeName(ContextualFieldExtractor.extract(text, insuredNameLabels, {
-           maxChars: 70,
-           stopTokens: ['CPF', 'CNPJ', 'ENDERECO', 'TELEFONE', 'LOCAL', 'FALECONOSCO', 'LIMITES', 'IMPORTANCIA', 'PREMIO']
-         }));
-       if (!data.insuredCpf)
-         data.insuredCpf = sanitizer.sanitizeCPF(ContextualFieldExtractor.extractCPF(text));
     } else {
        console.warn('[POLICY_PARSER] [FALLBACK_TEXT_MODE] Policy parsing using linear heuristics.');
-       data.policyNumber = ContextualFieldExtractor.extract(text, policyNumberLabels, {
+       data.policyNumber = ContextualFieldExtractor.extract(text, ['NUMERO DA APOLICE', 'APOLICE', 'Nº APOLICE', 'PROPOSTA', 'Nº PROPOSTA', 'APOLICE ATUAL'], { 
          maxChars: 40,
          pattern: /[A-Z0-9.\-/]{6,}/,
-         stopTokens: ['VIGENCIA', 'VIGÊNCIA', 'VENCIMENTO', 'SEGURADO']
+         stopTokens: ['VIGENCIA', 'VENCIMENTO', 'SEGURADO']
        });
 
-       data.insuredName = sanitizer.sanitizeName(ContextualFieldExtractor.extract(text, insuredNameLabels, {
+       data.insuredName = sanitizer.sanitizeName(ContextualFieldExtractor.extract(text, ['SEGURADO(A)', 'NOME', 'NOME DO SEGURADO', 'SEGURADO', 'CONTRATANTE', 'NOME DO CONDUTOR'], {
           maxChars: 70,
           stopTokens: ['CPF', 'CNPJ', 'ENDERECO', 'TELEFONE', 'LOCAL', 'FALECONOSCO', 'LIMITES', 'IMPORTANCIA', 'PREMIO']
        }));
 
        data.insuredCpf = sanitizer.sanitizeCPF(ContextualFieldExtractor.extractCPF(text));
        data.brokerName = sanitizer.sanitizeName(ContextualFieldExtractor.extractBroker(text));
-       data.insuranceExpiry = ContextualFieldExtractor.extractDate(text, expiryLabels);
-       data.startDate = ContextualFieldExtractor.extractDate(text, startLabels);
+       data.insuranceExpiry = ContextualFieldExtractor.extractDate(text, ['FIM VIGENCIA', 'VENCIMENTO', 'ATE', 'VIGENCIA ATE', 'DATA VENCIMENTO', 'FIM DA VIGENCIA']);
+       data.startDate = ContextualFieldExtractor.extractDate(text, ['INICIO VIGENCIA', 'DESDE', 'VIGENCIA DE', 'VIGENCIA INICIO', 'INICIO DA VIGENCIA']);
     }
     
     const brokerDetails = BrokerExtractionEngine.extract(text);

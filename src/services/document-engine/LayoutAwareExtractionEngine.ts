@@ -47,19 +47,19 @@ export class LayoutAwareExtractionEngine {
     // 1. Sort by Y initially to process top-down
     const sortedByY = [...words].sort((a, b) => a.y - b.y);
     const lineBuckets: OCRWord[][] = [];
-
+    
     for (const word of sortedByY) {
       if (!word.text || word.text.trim().length === 0) continue;
-
+      
       let added = false;
       // Search for an existing bucket where this word fits vertically
       for (const bucket of lineBuckets) {
         const anchor = bucket[0];
-
+        
         // INTERSECTION RULE: If the word's Y-center is within the anchor's vertical bounds
         const anchorCenter = anchor.y + anchor.height / 2;
         const wordCenter = word.y + word.height / 2;
-
+        
         // Tolerance based on font height
         const tolerance = Math.max(anchor.height, word.height) * 0.4;
         const isOverlap = Math.abs(anchorCenter - wordCenter) < tolerance;
@@ -70,7 +70,7 @@ export class LayoutAwareExtractionEngine {
           break;
         }
       }
-
+      
       if (!added) {
         lineBuckets.push([word]);
       }
@@ -96,7 +96,7 @@ export class LayoutAwareExtractionEngine {
         }
       };
     });
-
+    
     // 3. Final sort of lines by Y
     return lines.sort((a, b) => a.bounds.y - b.bounds.y);
   }
@@ -121,12 +121,6 @@ export class LayoutAwareExtractionEngine {
     };
   }
 
-  // Removes diacritical marks (accents) for locale-safe label matching.
-  private static normalizeForComparison(str: string): string {
-    // \p{M} matches all Unicode combining marks (NFD-decomposed accents)
-    return str.normalize('NFD').replace(/\p{M}/gu, '').toUpperCase();
-  }
-
   /**
    * Spatial Extraction logic (Geometric Parsing)
    */
@@ -149,9 +143,9 @@ export class LayoutAwareExtractionEngine {
       }
     }
 
-    const {
-      direction = 'RIGHT',
-      maxDistance = 450,
+    const { 
+      direction = 'RIGHT', 
+      maxDistance = 450, 
       stopTokens = [],
       pattern,
       maxWords = 8,
@@ -159,31 +153,10 @@ export class LayoutAwareExtractionEngine {
     } = options;
 
     // 2. Search for candidates
-    let candidates: OCRWord[] = [];
+    let candidates: OCRWord[];
     let labelRight = 0;
 
-    if (direction === 'BELOW') {
-      // BELOW: search for words in lines directly below the label within same X column
-      if (labelTokens.length > 0 && parentLine) {
-        const labelXMin = Math.min(...labelTokens.map(lt => lt.x)) - 30;
-        const labelXMax = Math.max(...labelTokens.map(lt => lt.x + lt.width)) + 30;
-        labelRight = labelXMin;
-
-        const belowLines = this.lines
-          .filter(l => l.bounds.y > parentLine!.bounds.y + parentLine!.bounds.height - 10)
-          .sort((a, b) => a.bounds.y - b.bounds.y);
-
-        for (const belowLine of belowLines) {
-          const matchingWords = belowLine.words
-            .filter(w => w.x >= labelXMin && w.x <= labelXMax)
-            .sort((a, b) => a.x - b.x);
-          if (matchingWords.length > 0) {
-            candidates = matchingWords;
-            break;
-          }
-        }
-      }
-    } else if (labelTokens.length > 0 && parentLine) {
+    if (labelTokens.length > 0 && parentLine) {
        // Geometric Priority: RIGHT of the label
        labelRight = Math.max(...labelTokens.map(lt => lt.x + lt.width));
        candidates = parentLine.words.filter(w => {
@@ -213,14 +186,12 @@ export class LayoutAwareExtractionEngine {
 
     for (const cand of candidates) {
       const uText = cand.text.toUpperCase().trim();
-
-      // 3.1. COLUMN_BREAKER_RULE (skip for BELOW — X range already constrains the column)
-      if (direction !== 'BELOW') {
-        const gap = cand.x - lastX;
-        if (gap > 130 && valueParts.length > 0) {
-          console.log(`[LAYOUT_MATCH] [COLUMN_DETECTED] Large gap of ${gap}px detected. Stopping extraction for ${labels[0]}.`);
-          break;
-        }
+      
+      // 3.1. COLUMN_BREAKER_RULE
+      const gap = cand.x - lastX;
+      if (gap > 130 && valueParts.length > 0) {
+        console.log(`[LAYOUT_MATCH] [COLUMN_DETECTED] Large gap of ${gap}px detected. Stopping extraction for ${labels[0]}.`);
+        break;
       }
 
       // 3.2. ADDRESS_PATTERN_DETECTION
@@ -246,7 +217,7 @@ export class LayoutAwareExtractionEngine {
         console.log(`[LAYOUT_MATCH] [ENTITY_TRANSITION_DETECTED] New label pattern found: "${uText}". Stopping.`);
         break;
       }
-
+      
       valueParts.push(cand.text);
       confidenceSum += cand.confidence;
       lastX = cand.x + cand.width;
@@ -258,7 +229,7 @@ export class LayoutAwareExtractionEngine {
     }
 
     let extractedValue = valueParts.join(' ').trim();
-
+    
     // Pattern enforcement (Regex as Filter, not as Extractor)
     if (pattern) {
       const match = extractedValue.match(pattern);
@@ -275,20 +246,20 @@ export class LayoutAwareExtractionEngine {
     }
 
     const avgConfidence = valueParts.length > 0 ? (confidenceSum / valueParts.length) / 100 : 0;
-
+    
     if (extractedValue) {
        console.log(`[LAYOUT_MATCH] [SPATIAL_ALIGNMENT] Found "${labels[0]}" -> "${extractedValue}" | Conf: ${(avgConfidence * 100).toFixed(1)}%`);
     }
 
-    return {
-      value: extractedValue,
+    return { 
+      value: extractedValue, 
       confidence: avgConfidence,
       reason: extractedValue ? 'SUCCESS' : 'EMPTY_OR_REJECTED'
     };
   }
 
   private findLabelTokens(target: string, anchorRegion?: { x: number, y: number, width: number, height: number }): { tokens: OCRWord[], line: OCRLine | null } {
-    const uTarget = LayoutAwareExtractionEngine.normalizeForComparison(target);
+    const uTarget = target.toUpperCase();
     for (const line of this.lines) {
       if (anchorRegion) {
         // Line must intersect with anchor region
@@ -296,16 +267,15 @@ export class LayoutAwareExtractionEngine {
         if (!intersects) continue;
       }
 
-      const normalizedLineText = LayoutAwareExtractionEngine.normalizeForComparison(line.text);
-      if (normalizedLineText.includes(uTarget)) {
+      if (line.text.toUpperCase().includes(uTarget)) {
+        // Find specific tokens in the line that match the target
         const words = line.words;
         const targetParts = uTarget.split(' ');
-
+        
         for (let i = 0; i < words.length; i++) {
-          const normalizedWord = LayoutAwareExtractionEngine.normalizeForComparison(words[i].text);
-          if (normalizedWord.includes(targetParts[0])) {
-            return { tokens: words.slice(i, i + targetParts.length), line };
-          }
+           if (words[i].text.toUpperCase().includes(targetParts[0])) {
+             return { tokens: words.slice(i, i + targetParts.length), line };
+           }
         }
       }
     }

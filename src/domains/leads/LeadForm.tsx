@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import {
-  X, Save, Trash2, FileUp, Loader2, MapPin, Sparkles, CheckCircle2,
-  AlertCircle, Download, Eye, Users, ChevronDown, ChevronUp,
+import { 
+  X, Save, Trash2, FileUp, Loader2, MapPin, Sparkles, CheckCircle2, 
+  AlertCircle, Download, Eye, Users, ChevronDown, ChevronUp, 
   Flame, Thermometer, Bot, User as UserIcon, Calendar, Clock, Lock as LockIcon,
   FilePlus, PhoneCall, Smartphone, ShieldCheck, Mail, ClipboardList, Info,
   GripVertical, UserCheck, Briefcase, Car, Wallet, FileText, Upload, Filter,
-  Target, TrendingUp, Search, FileCheck, ArrowRight, Building2, Timer
+  Target, TrendingUp, Search, FileCheck, ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PDFViewer } from '../../components/PDFViewer';
@@ -88,46 +88,6 @@ const formatDateDisplay = (dateStr: string) => {
   } catch (e) {
     return dateStr;
   }
-};
-
-const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
-
-const INSURANCE_COMPANIES = [
-  'Porto', 'Azul', 'Tokio Marine', 'Allianz', 'HDI', 'Mapfre',
-  'Bradesco', 'SulAmérica', 'Itaú', 'Liberty', 'Yelum', 'Mitsui', 'Suhai',
-];
-
-type CountdownColor = 'green' | 'yellow' | 'red';
-
-const calculateInsuranceCountdown = (dateStr: string): { label: string; color: CountdownColor } => {
-  if (!dateStr) return { label: '', color: 'green' };
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const expiry = new Date(dateStr);
-  expiry.setHours(0, 0, 0, 0);
-
-  const diffDays = Math.round((expiry.getTime() - today.getTime()) / 86400000);
-
-  if (diffDays < 0) {
-    const abs = Math.abs(diffDays);
-    return { label: `Apólice vencida há ${abs} dia${abs !== 1 ? 's' : ''}`, color: 'red' };
-  }
-  if (diffDays === 0) return { label: 'Vence hoje', color: 'red' };
-
-  const base = new Date(today);
-  let months = (expiry.getFullYear() - base.getFullYear()) * 12 + (expiry.getMonth() - base.getMonth());
-  if (expiry.getDate() < base.getDate()) months--;
-  const afterMonths = new Date(base);
-  afterMonths.setMonth(afterMonths.getMonth() + months);
-  const remainDays = Math.round((expiry.getTime() - afterMonths.getTime()) / 86400000);
-
-  const parts: string[] = [];
-  if (months > 0) parts.push(`${months} ${months === 1 ? 'mês' : 'meses'}`);
-  if (remainDays > 0) parts.push(`${remainDays} dia${remainDays !== 1 ? 's' : ''}`);
-  const label = parts.length > 0 ? `Faltam ${parts.join(' e ')}` : 'Vence hoje';
-  const color: CountdownColor = diffDays > 60 ? 'green' : diffDays > 30 ? 'yellow' : 'red';
-  return { label, color };
 };
 
 // --- UI COMPONENTS ---
@@ -227,107 +187,6 @@ const PremiumCardToggle = React.memo(({ label, description, icon: Icon, active, 
     </div>
   </div>
 ));
-
-const InsuranceCompanySelect = React.memo(({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
-  const [query, setQuery] = useState(value || '');
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { setQuery(value || ''); }, [value]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const filtered = INSURANCE_COMPANIES.filter(c =>
-    c.toLowerCase().includes(query.toLowerCase())
-  );
-
-  const handleSelect = (company: string) => {
-    setQuery(company);
-    onChange(company);
-    setIsOpen(false);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(e.target.value);
-    onChange(e.target.value);
-    setIsOpen(true);
-  };
-
-  return (
-    <div className="space-y-1.5 w-full group relative" ref={ref}>
-      <label className="text-[9px] font-bold text-[#8E8E93] uppercase tracking-widest ml-1 group-focus-within:text-[#D4A854] transition-colors">
-        Seguradora Atual
-      </label>
-      <div className="relative">
-        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8E8E93]/40 group-focus-within:text-[#D4A854]/60 transition-colors pointer-events-none" />
-        <input
-          type="text"
-          value={query}
-          onChange={handleInputChange}
-          onFocus={() => setIsOpen(true)}
-          placeholder="Ex: Porto, Allianz..."
-          className="w-full h-11 bg-[#1A1C1E] border border-white/10 rounded-xl pl-11 pr-10 text-[12px] font-medium text-white transition-all focus:ring-2 focus:ring-[#D4A85420] focus:border-[#D4A85440] placeholder:text-white/10 outline-none"
-        />
-        <ChevronDown className={cn("absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8E8E93]/40 transition-transform pointer-events-none", isOpen && "rotate-180")} />
-      </div>
-      <AnimatePresence>
-        {isOpen && filtered.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.98 }}
-            transition={{ duration: 0.15 }}
-            className="absolute z-50 w-full mt-1 bg-[#111214] border border-white/10 rounded-xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
-          >
-            {filtered.map(company => (
-              <button
-                key={company}
-                type="button"
-                onClick={() => handleSelect(company)}
-                className={cn(
-                  "w-full px-4 py-2.5 text-left text-[11px] font-medium transition-all flex items-center gap-3",
-                  value === company
-                    ? "bg-[#D4A85420] text-[#D4A854]"
-                    : "text-white/70 hover:bg-white/5 hover:text-white"
-                )}
-              >
-                {value === company && <CheckCircle2 className="w-3 h-3 text-[#D4A854] shrink-0" />}
-                {company}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-});
-
-const InsuranceCountdownBadge = React.memo(({ dateStr }: { dateStr: string }) => {
-  const { label, color } = useMemo(() => calculateInsuranceCountdown(dateStr), [dateStr]);
-  if (!label) return null;
-
-  const colorMap = {
-    green: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400', glow: 'shadow-[0_0_12px_rgba(52,211,153,0.15)]' },
-    yellow: { bg: 'bg-amber-500/10', border: 'border-amber-500/20', text: 'text-amber-400', glow: 'shadow-[0_0_12px_rgba(245,158,11,0.15)]' },
-    red: { bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-400', glow: 'shadow-[0_0_12px_rgba(239,68,68,0.15)]' },
-  }[color];
-
-  return (
-    <div className={cn(
-      "flex items-center gap-2 px-3 py-2 rounded-xl border text-[10px] font-bold uppercase tracking-wide shrink-0",
-      colorMap.bg, colorMap.border, colorMap.text, colorMap.glow
-    )}>
-      <Timer className="w-3.5 h-3.5 shrink-0" />
-      <span>{label}</span>
-    </div>
-  );
-});
 
 // --- COMPONENTS ---
 // --- COMPONENTS ---
@@ -845,28 +704,11 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
   const handleChange = (e: any) => {
     const { name, value, type, checked } = e.target;
     let val = type === 'checkbox' ? checked : value;
-
-    if (name === 'phone') {
-      const formatted = formatPhone(value);
-      setFormData(prev => ({ ...prev, phone: formatted, normalizedPhone: normalizePhone(formatted) }));
-      setIsDirty(true);
-      return;
-    }
+    
+    if (name === 'phone') val = formatPhone(value);
     if (name === 'cpf' || name === 'cpfProprietario') val = formatCpf(value);
     if (name === 'name' || name === 'nomeProprietario' || name === 'plate' || name === 'chassi') {
       val = typeof val === 'string' ? val.toUpperCase() : val;
-    }
-    if (name === 'possuiSeguro' && val === false) {
-      setFormData(prev => ({
-        ...prev,
-        possuiSeguro: false,
-        hasInsurance: false,
-        insuranceBroker: '',
-        insuranceCompany: '',
-        insuranceExpirationDate: '',
-      }));
-      setIsDirty(true);
-      return;
     }
 
     setFormData(prev => ({ ...prev, [name]: val }));
@@ -1052,10 +894,6 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
       nextReturnAt: formData.proximoRetorno || formData.nextReturnAt,
       responsibleAgentId: formData.responsibleUserId || formData.responsibleAgentId,
       responsibleAgentName: formData.responsibleAgentName || crmUsers.find(u => u.uid === (formData.responsibleUserId || formData.responsibleAgentId))?.name || 'Sem agente',
-      normalizedPhone: normalizePhone(formData.phone || ''),
-      insuranceBroker: (formData.possuiSeguro ?? formData.hasInsurance) ? (formData.insuranceBroker || '') : '',
-      insuranceCompany: (formData.possuiSeguro ?? formData.hasInsurance) ? (formData.insuranceCompany || '') : '',
-      insuranceExpirationDate: (formData.possuiSeguro ?? formData.hasInsurance) ? (formData.insuranceExpirationDate || '') : '',
       updatedAt: new Date().toISOString()
     } as Lead;
 
@@ -1285,7 +1123,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
             </div>
             <div className="mt-8 flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
               <div className="flex items-center gap-3">
-                <div className={cn("w-2 h-2 rounded-full transition-all", (formData.possuiSeguro ?? formData.hasInsurance) ? "bg-[#D4A854] shadow-[0_0_8px_rgba(212,168,84,0.5)]" : "bg-white/10")} />
+                <div className={cn("w-2 h-2 rounded-full", (formData.possuiSeguro ?? formData.hasInsurance) ? "bg-[#D4A854] shadow-[0_0_8px_rgba(212,168,84,0.5)]" : "bg-white/10")} />
                 <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Já possui seguro ativo?</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -1293,60 +1131,6 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
                 <div className="w-10 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-[#D4A854] after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-[#D4A854]"></div>
               </label>
             </div>
-
-            <AnimatePresence>
-              {!!(formData.possuiSeguro ?? formData.hasInsurance) && (
-                <motion.div
-                  key="insurance-fields"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2, ease: 'easeInOut' }}
-                  className="overflow-hidden"
-                >
-                  <div className="mt-4 p-5 bg-[#D4A85406] border border-[#D4A85420] rounded-2xl space-y-4">
-                    <div className="flex items-center gap-2.5 pb-1">
-                      <div className="p-1.5 rounded-lg bg-[#D4A85415] ring-1 ring-[#D4A85425]">
-                        <ShieldCheck className="w-3.5 h-3.5 text-[#D4A854]" />
-                      </div>
-                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#D4A854]">Dados da Apólice Atual</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <PremiumInput
-                        label="Corretora Atual"
-                        name="insuranceBroker"
-                        value={formData.insuranceBroker || ''}
-                        onChange={handleChange}
-                        placeholder="Ex: Michelin Seguros"
-                        icon={Building2}
-                      />
-                      <InsuranceCompanySelect
-                        value={formData.insuranceCompany || ''}
-                        onChange={(v: string) => setFormData(p => ({ ...p, insuranceCompany: v }))}
-                      />
-                    </div>
-
-                    <div className="flex flex-col md:flex-row md:items-end gap-4">
-                      <div className="w-full md:flex-1">
-                        <PremiumInput
-                          label="Fim da Vigência"
-                          name="insuranceExpirationDate"
-                          type="date"
-                          value={formData.insuranceExpirationDate || ''}
-                          onChange={handleChange}
-                          className="[color-scheme:dark]"
-                          icon={Calendar}
-                        />
-                      </div>
-                      {formData.insuranceExpirationDate && (
-                        <InsuranceCountdownBadge dateStr={formData.insuranceExpirationDate} />
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </PremiumSection>
 
           {/* Perfil de Uso */}
