@@ -164,42 +164,44 @@ export class OCRService {
       const pdf = await PDFResourceManager.getDocument(new Uint8Array(arrayBuffer), file.name);
       const page = await pdf.getPage(1);
 
-      // CNH-e (digital): PDF has embedded text layer — use it directly instead of visual OCR.
-      // Physical/scanned CNH uploaded as PDF will have <100 chars and fall through to visual.
+      // CNH-e (digital): PDF may have embedded text layer with personal data, OR may have
+      // personal data rendered as graphics with only footer/validation text selectable.
+      // We must distinguish these two cases.
       const textContent = await page.getTextContent();
       const viewport = page.getViewport({ scale: 1.0 });
       const pdfText = textContent.items.map((item: any) => item.str).join(' ').trim();
 
-      // CNH-e digital PDFs embed personal data as graphics; only footer/validation text is
-      // selectable. Strip URLs before checking markers to avoid false positives on paths
-      // like /habilitacao/ in the SENATRAN validation URL.
-      const textWithoutUrls = pdfText.replace(/https?:\/\/\S+/gi, '');
-      const CNH_DATA_MARKERS = ['NOME', 'CPF', 'NASCIMENTO', 'REGISTRO', 'CATEGORIA', 'VALIDADE', 'FILIACAO'];
-      const hasCPFPattern = /\d{3}\.?\d{3}\.?\d{3}-?\d{2}/.test(textWithoutUrls);
-      const hasPersonalDataMarkers = CNH_DATA_MARKERS.some(m => textWithoutUrls.toUpperCase().includes(m)) || hasCPFPattern;
+      // Build spatial tokens from the PDF text layer
+      const structured: StructuredOCRResult = { text: '', words: [], lines: [], confidence: 100 };
+      textContent.items.forEach((item: any) => {
+        const text = item.str;
+        if (text.trim()) {
+          structured.words.push({
+            text,
+            x: item.transform[4],
+            y: viewport.height - item.transform[5],
+            width: item.width || text.length * 8,
+            height: item.height || 12,
+            confidence: 100
+          });
+        }
+      });
 
-      if (pdfText.length >= 100 && hasPersonalDataMarkers) {
-        console.log(`[OCR_PIPELINE] [CNH_PDF_TEXT_LAYER] ${pdfText.length} chars found with data markers. Using structured PDF pipeline.`);
-        const structured: StructuredOCRResult = { text: '', words: [], lines: [], confidence: 100 };
-        textContent.items.forEach((item: any) => {
-          const text = item.str;
-          if (text.trim()) {
-            structured.words.push({
-              text,
-              x: item.transform[4],
-              y: viewport.height - item.transform[5],
-              width: item.width || text.length * 8,
-              height: item.height || 12,
-              confidence: 100
-            });
-          }
-        });
+      // Validate: do the tokens contain CNH labels as DISTINCT words (not substrings)?
+      // This rules out footer text like "VALIDAÇÃO DO DOCUMENTO" which contains "VALIDA" as substring.
+      const tokenWords = structured.words.map(w => w.text.toUpperCase().normalize('NFD').replace(/\p{M}/gu, ''));
+      const CNH_LABELS = ['NOME', 'CPF', 'NASCIMENTO', 'REGISTRO', 'CATEGORIA', 'FILIACAO'];
+      const hasCNHLabel = CNH_LABELS.some(label => tokenWords.some(tw => tw === label || tw.startsWith(label + ' ') || tw.endsWith(' ' + label) || tw === label + ':'));
+      const hasCPFPattern = structured.words.some(w => /\d{3}\.?\d{3}\.?\d{3}-?\d{2}/.test(w.text));
+
+      if (pdfText.length >= 100 && (hasCNHLabel || hasCPFPattern)) {
+        console.log(`[OCR_PIPELINE] [CNH_PDF_TEXT_LAYER] ${pdfText.length} chars and ${structured.words.length} tokens with real CNH labels. Using structured PDF pipeline.`);
         console.log(`[OCR_PIPELINE] [PDF_STRUCTURED_EXTRACT] Generated ${structured.words.length} spatial tokens from PDF layer.`);
         return { text: pdfText, structured, regions: undefined };
       }
 
       // Scanned / photo CNH or CNH-e with graphics-only personal data: fall back to visual pipeline
-      console.log(`[OCR_PIPELINE] [CNH_VISUAL_FALLBACK] PDF text layer has ${pdfText.length} chars but no personal data markers. Using visual pipeline.`);
+      console.log(`[OCR_PIPELINE] [CNH_VISUAL_FALLBACK] PDF text layer has ${pdfText.length} chars / ${structured.words.length} tokens but no CNH labels. Using visual pipeline.`);
       const visual = await HybridOCRService.getInstance().performVisualOCR('', page, typeHint);
       return visual;
     } else {
