@@ -103,6 +103,35 @@ export class LocalOCRService {
               confidence: w.confidence
             }));
 
+            // Tesseract.js v7 never populates data.words — bounding boxes live in data.hocr HTML.
+            if (words.length === 0 && data.hocr) {
+              try {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(data.hocr, 'text/html');
+                doc.querySelectorAll('.ocrx_word').forEach((el: Element) => {
+                  const title = el.getAttribute('title') || '';
+                  const bbox = title.match(/bbox\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
+                  const conf = title.match(/x_wconf\s+(\d+)/);
+                  const wordText = (el.textContent || '').trim();
+                  if (bbox && wordText) {
+                    words.push({
+                      text: wordText,
+                      x: parseInt(bbox[1]),
+                      y: parseInt(bbox[2]),
+                      width: parseInt(bbox[3]) - parseInt(bbox[1]),
+                      height: parseInt(bbox[4]) - parseInt(bbox[2]),
+                      confidence: conf ? parseInt(conf[1]) : 50
+                    });
+                  }
+                });
+                if (words.length > 0) {
+                  console.log(`[LOCAL_OCR] HOCR fallback: ${words.length} words extracted.`);
+                }
+              } catch (e) {
+                console.warn('[LOCAL_OCR] HOCR parse failed:', e);
+              }
+            }
+
             const lines: OCRLine[] = (data.lines || []).map((l: any, idx: number) => ({
               id: `line_${idx}`,
               text: l.text,

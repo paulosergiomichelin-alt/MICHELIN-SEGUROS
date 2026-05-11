@@ -157,14 +157,30 @@ export class LayoutAwareExtractionEngine {
     let labelRight = 0;
 
     if (labelTokens.length > 0 && parentLine) {
-       // Geometric Priority: RIGHT of the label
-       labelRight = Math.max(...labelTokens.map(lt => lt.x + lt.width));
-       candidates = parentLine.words.filter(w => {
-         const isRight = w.x >= labelRight - 5;
-         const isNotLabel = !labelTokens.some(lt => lt === w);
-         const dist = w.x - labelRight;
-         return isRight && isNotLabel && dist < maxDistance;
-       }).sort((a, b) => a.x - b.x);
+      if (direction === 'BELOW') {
+        // BELOW: find words vertically beneath the label, horizontally aligned with it
+        const labelBottom = Math.max(...labelTokens.map(lt => lt.y + lt.height));
+        const labelLeft = Math.min(...labelTokens.map(lt => lt.x));
+        const labelRightEdge = Math.max(...labelTokens.map(lt => lt.x + lt.width));
+        labelRight = labelRightEdge;
+        candidates = this.currentResult!.words.filter(w => {
+          const wCenter = w.x + w.width / 2;
+          const isBelow = w.y >= labelBottom - 5;
+          const dist = w.y - labelBottom;
+          const isAligned = wCenter >= labelLeft - 40 && wCenter <= labelRightEdge + 40;
+          const isNotLabel = !labelTokens.some(lt => lt === w);
+          return isBelow && isAligned && dist < maxDistance && isNotLabel;
+        }).sort((a, b) => a.y - b.y || a.x - b.x);
+      } else {
+        // RIGHT (default): words to the right of the label on the same line
+        labelRight = Math.max(...labelTokens.map(lt => lt.x + lt.width));
+        candidates = parentLine.words.filter(w => {
+          const isRight = w.x >= labelRight - 5;
+          const isNotLabel = !labelTokens.some(lt => lt === w);
+          const dist = w.x - labelRight;
+          return isRight && isNotLabel && dist < maxDistance;
+        }).sort((a, b) => a.x - b.x);
+      }
     } else if (anchorRegion) {
        // Region-Based Fallback: If label not found but anchor region provided, use the region itself as reference
        console.log(`[LAYOUT_ENGINE] [ANCHOR_MODE] Label "${labels[0]}" not detected. Using anchor region directly.`);
@@ -258,24 +274,26 @@ export class LayoutAwareExtractionEngine {
     };
   }
 
+  private static normalizeForComparison(text: string): string {
+    return text.toUpperCase().normalize('NFD').replace(/\p{M}/gu, '');
+  }
+
   private findLabelTokens(target: string, anchorRegion?: { x: number, y: number, width: number, height: number }): { tokens: OCRWord[], line: OCRLine | null } {
-    const uTarget = target.toUpperCase();
+    const uTarget = LayoutAwareExtractionEngine.normalizeForComparison(target);
     for (const line of this.lines) {
       if (anchorRegion) {
-        // Line must intersect with anchor region
         const intersects = line.bounds.y >= anchorRegion.y - 40 && line.bounds.y <= anchorRegion.y + anchorRegion.height + 40;
         if (!intersects) continue;
       }
 
-      if (line.text.toUpperCase().includes(uTarget)) {
-        // Find specific tokens in the line that match the target
+      if (LayoutAwareExtractionEngine.normalizeForComparison(line.text).includes(uTarget)) {
         const words = line.words;
         const targetParts = uTarget.split(' ');
-        
+
         for (let i = 0; i < words.length; i++) {
-           if (words[i].text.toUpperCase().includes(targetParts[0])) {
-             return { tokens: words.slice(i, i + targetParts.length), line };
-           }
+          if (LayoutAwareExtractionEngine.normalizeForComparison(words[i].text).includes(targetParts[0])) {
+            return { tokens: words.slice(i, i + targetParts.length), line };
+          }
         }
       }
     }
