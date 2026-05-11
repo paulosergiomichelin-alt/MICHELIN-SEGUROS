@@ -81,15 +81,16 @@ export class LocalOCRService {
 
         (async () => {
           try {
-            // In Tesseract.js v7, char_whitelist is still set via setParameters.
-            // Output format (hocr, blocks, text) is controlled by the 3rd arg to recognize().
+            const params: any = {
+              tessjs_create_hocr: '0',
+              tessjs_create_tsv: '0'
+            };
             if (options.char_whitelist) {
-              await worker.setParameters({ tessedit_char_whitelist: options.char_whitelist });
+              params.tessedit_char_whitelist = options.char_whitelist;
             }
+            await worker.setParameters(params);
 
-            // Request hocr:true so data.hocr contains word-level bounding boxes.
-            // data.words is not populated in v7; we parse HOCR HTML instead.
-            const recognitionResult = await worker.recognize(input, {}, { text: true, hocr: true });
+            const recognitionResult = await worker.recognize(input);
             const data = recognitionResult.data as any;
             console.log(`[LOCAL_OCR] Structured Success. Confidence: ${data.confidence}, Time: ${Date.now() - startTime}ms`);
             
