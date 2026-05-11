@@ -1,0 +1,9 @@
+{
+  "name": "Michelin Seguros CRM",
+  "description": "Sistema de gestão de leads e vendas com inteligência artificial para corretoras de seguros.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

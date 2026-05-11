@@ -1,0 +1,191 @@
+rules_version = '2';
+// Deploy trigger for storage rules sync
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global safety net - Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // --- Phase 3: Primitives & Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    
+    // Helper to check if a user is an admin without crashing if the document doesn't exist
+    function isAdmin() {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.permissions.get('canManageUsers', false) == true);
+    }
+    
+    // Get organizationId safely
+    function getOrgId() {
+      // Prefer token, but fallback to direct user doc fetch (safest for multi-tenant)
+      return request.auth.token.get('organizationId', 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
+          ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('organizationId', null)
+          : null
+      );
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    
+    // Rule for multi-tenant isolation
+    // Strict requirement: resource must have organizationId matching user's organizationId
+    function sameOrg(data) {
+      // Admins bypass organization filters only if necessary, but preferred to keep them siloed too
+      // unless they are 'superadmin' (not implemented yet). 
+      // For now, let's keep even admins within their org by default, 
+      // but ALLOW them to see orgs where they are explicit admins.
+      let docOrgId = data.get('organizationId', null);
+      let userOrgId = getOrgId();
+      
+      return (userOrgId != null && docOrgId == userOrgId) || isAdmin();
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+
+    function isImmutable(field) {
+      return !(field in incoming()) || 
+             (!(field in existing()) && isAdmin()) || // Admins can set missing fields
+             (field in existing() && incoming()[field] == existing()[field]);
+    }
+
+    // Special helper for user self-repair (allowing setting missing organizationId)
+    function isAllowedUserUpdate(userId) {
+      return (isVerified() && isOwner(userId)) &&
+             isImmutable('role') &&
+             isImmutable('permissions') &&
+             isImmutable('email') &&
+             (isImmutable('organizationId') || (!('organizationId' in existing()) && incoming().get('organizationId', '') == 'default')) &&
+             (isImmutable('userType') || (!('userType' in existing()) && incoming().get('userType', '') == 'HUMAN')) &&
+             (isImmutable('status') || (!('status' in existing()) && incoming().get('status', '') == 'active'));
+    }
+
+    // --- Phase 2: Validation Blueprints ---
+    function isValidLead(data) {
+      return data.keys().hasAll(['id', 'organizationId', 'status']) &&
+             data.id is string &&
+             data.organizationId is string &&
+             data.status is string &&
+             (!('name' in data) || (data.name is string && data.name.size() <= 255));
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['id', 'leadId', 'organizationId', 'sender']) &&
+             data.id is string &&
+             data.leadId is string &&
+             data.organizationId is string &&
+             data.sender is string;
+    }
+
+    // --- Phase 4: Fortress Rules ---
+
+    // 1. LEADS: Strict Isolation
+    match /leads/{leadId} {
+      allow read: if isSignedIn() && sameOrg(existing());
+      
+      allow create: if isVerified() && 
+                    isValidId(leadId) && 
+                    isValidLead(incoming()) && 
+                    sameOrg(incoming());
+      
+      allow update: if isVerified() && 
+                    sameOrg(existing()) && 
+                    sameOrg(incoming()) &&
+                    isImmutable('organizationId') && (
+                      isAdmin() || (
+                        existing().ownerId == request.auth.uid &&
+                        isImmutable('ownerId')
+                      )
+                    );
+      
+      allow delete: if isAdmin() && sameOrg(existing());
+    }
+
+    // 2. MESSAGES: Derivativo via Lead or Direct ABAC
+    match /messages/{msgId} {
+      allow read: if isSignedIn() && sameOrg(existing());
+      
+      allow create: if isVerified() && 
+                    isValidId(msgId) && 
+                    isValidMessage(incoming()) && 
+                    sameOrg(incoming());
+      
+      allow update, delete: if isAdmin() && sameOrg(existing());
+    }
+
+    // 3. USERS: Profile & Org Lock
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || sameOrg(existing()));
+      allow list: if isSignedIn() && sameOrg(existing());
+      
+      allow create: if isSignedIn() && isOwner(userId);
+      
+      allow update: if isAllowedUserUpdate(userId) || (isAdmin() && sameOrg(existing()));
+      
+      allow delete: if isAdmin() && sameOrg(existing());
+    }
+
+    // 4. INFRASTRUCTURE & AUTOMATION
+    match /processing_locks/{lockId} {
+      allow read, write: if isSignedIn(); // Concurrent engine depends on this
+    }
+
+    match /dead_letter_queue/{id} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+    }
+
+    match /follow_up/{id} {
+      allow read: if isSignedIn() && sameOrg(existing());
+      allow write: if isVerified() && sameOrg(incoming());
+    }
+
+    match /audit_logs/{id} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+    }
+
+    match /system_logs/{id} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+    }
+
+    match /system_metrics/{id} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+      allow update: if isAdmin();
+    }
+
+    // 5. CONFIGURAÇÕES GLOBAIS (Leitura permitida para todos logados)
+    match /settings/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /config/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /access_profiles/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // 6. BUSINESS FLOWS & AUTOMATION
+    match /flows/{flowId} {
+      allow read: if isSignedIn() && sameOrg(existing());
+      allow write: if isAdmin() && sameOrg(incoming());
+    }
+  }
+}

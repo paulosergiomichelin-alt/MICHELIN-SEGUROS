@@ -1,0 +1,122 @@
+{
+  "entities": {
+    "Lead": {
+      "title": "Lead",
+      "description": "Represents a potential insurance customer and their vehicle details.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "organizationId": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "cpf": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "status": { "type": "string" },
+        "temperature": { "type": "string", "enum": ["quente", "morno", "frio"] },
+        "birthDate": { "type": "string" },
+        "maritalStatus": { "type": "string" },
+        "cepPernoite": { "type": "string" },
+        "enderecoAuto": { "type": "string" },
+        "statusLead": { "type": "string" },
+        "temperatura": { "type": "string" },
+        "perfilLead": { "type": "string" },
+        "score": { "type": "number" },
+        "iaEnabled": { "type": "boolean" },
+        "justificativa": { "type": "string" },
+        "chassi": { "type": "string" },
+        "possuiSeguro": { "type": "boolean" },
+        "perfilUso": { "type": "object" },
+        "proprietarioEhCondutor": { "type": "boolean" },
+        "nomeProprietario": { "type": "string" },
+        "cpfProprietario": { "type": "string" },
+        "alienacaoFiduciaria": { "type": "boolean" },
+        "proximoRetorno": { "type": "string" },
+        "responsibleUserId": { "type": "string" },
+        "cotacaoFiles": { "type": "array" },
+        "documents": {
+          "type": "object",
+          "properties": {
+            "cnh": { "type": "string" },
+            "crv": { "type": "string" },
+            "policy": { "type": "string" },
+            "cnhMetadata": { "type": "object" },
+            "crvMetadata": { "type": "object" },
+            "policyMetadata": { "type": "object" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "organizationId", "status"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A chat message between a user/AI and a lead.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "organizationId": { "type": "string" },
+        "leadId": { "type": "string" },
+        "leadOwnerId": { "type": "string" },
+        "text": { "type": "string" },
+        "sender": { "type": "string", "enum": ["user", "lead", "ai"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "attachments": { "type": "array" }
+      },
+      "required": ["id", "organizationId", "leadId", "sender", "timestamp"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Internal CRM user details.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "organizationId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" }
+      },
+      "required": ["uid", "organizationId", "email"]
+    },
+    "ProcessingLock": {
+      "title": "Processing Lock",
+      "description": "Distributed locks for concurrency control.",
+      "type": "object",
+      "properties": {
+        "resourceId": { "type": "string" },
+        "organizationId": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "instanceId": { "type": "string" },
+        "type": { "type": "string" },
+        "expiresAt": { "type": "object" }
+      }
+    }
+  },
+  "firestore": {
+    "leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Main collection for lead data."
+    },
+    "messages/{messageId}": {
+      "schema": "Message",
+      "description": "Chat message history."
+    },
+    "users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles for CRM staff."
+    },
+    "processing_locks/{lockKey}": {
+      "schema": "ProcessingLock",
+      "description": "Distributed locks."
+    },
+    "dead_letter_queue/{id}": {
+      "schema": "object",
+      "description": "Failed event orchestration queue."
+    },
+    "follow_up/{id}": {
+      "schema": "object",
+      "description": "Scheduled follow-ups for leads."
+    }
+  }
+}

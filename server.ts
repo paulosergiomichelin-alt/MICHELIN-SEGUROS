@@ -1,0 +1,128 @@
+import express from 'express';
+import { createServer as createViteServer } from 'vite';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import axios from 'axios';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+async function startServer() {
+  const app = express();
+  const PORT = 3000;
+
+  app.use(express.json());
+
+  // Logging middleware
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      console.log(`${new Date().toISOString()} [SERVER] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms)`);
+    });
+    next();
+  });
+
+  app.get('/api/health', (req, res) => {
+    res.json({ 
+      status: 'ok', 
+      time: new Date().toISOString(),
+      nodeEnv: process.env.NODE_ENV || 'development'
+    });
+  });
+
+  app.get('/favicon.ico', (req, res) => res.status(204).end());
+
+  // Proxy Genérico para OpenRouter (suporta validação completa)
+  app.post('/api/proxy/openrouter/request', async (req, res) => {
+    const { apiKey, method, endpoint, data } = req.body;
+
+    if (!apiKey) {
+      return res.status(400).json({ error: 'API Key is required' });
+    }
+
+    try {
+      const host = req.get('host');
+      const protocol = req.protocol;
+      const referer = `${protocol}://${host}`;
+
+      const config = {
+        method: method || 'GET',
+        url: `https://openrouter.ai/api/v1${endpoint}`,
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': referer,
+          'X-OpenRouter-Title': 'Michelin Seguros CRM'
+        },
+        data: data || undefined,
+        timeout: 15000
+      };
+
+      const response = await axios(config);
+      res.status(response.status).json(response.data);
+    } catch (error: any) {
+      const errorStatus = error.response?.status || 500;
+      const errorData = error.response?.data || { error: error.message || 'Internal Server Error' };
+      console.error(`[PROXY-REQ] Erro OpenRouter (${errorStatus}) em ${endpoint}:`, errorData);
+      res.status(errorStatus).json(errorData);
+    }
+  });
+
+  // Proxy para OpenRouter Auth/Usage
+  app.post('/api/proxy/openrouter/auth', async (req, res) => {
+    console.log('[PROXY] Recebida requisição de autenticação OpenRouter');
+    const { apiKey } = req.body;
+
+    if (!apiKey) {
+      console.warn('[PROXY] API Key ausente na requisição');
+      return res.status(400).json({ error: 'API Key is required' });
+    }
+
+    try {
+      const host = req.get('host');
+      const protocol = req.protocol;
+      const referer = `${protocol}://${host}`;
+      
+      console.log(`[PROXY] Chamando OpenRouter API com referer: ${referer}`);
+      
+      const response = await axios.get('https://openrouter.ai/api/v1/auth/key', {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': referer,
+          'X-OpenRouter-Title': 'Michelin Seguros CRM'
+        },
+        timeout: 10000 // 10s timeout
+      });
+      console.log('[PROXY] Resposta OpenRouter recebida com sucesso');
+      res.json(response.data);
+    } catch (error: any) {
+      const errorStatus = error.response?.status || 500;
+      const errorData = error.response?.data || { error: error.message || 'Internal Server Error' };
+      console.error(`[PROXY] Erro OpenRouter (${errorStatus}):`, errorData);
+      res.status(errorStatus).json(errorData);
+    }
+  });
+
+  // Middleware do Vite para desenvolvimento
+  if (process.env.NODE_ENV !== 'production') {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Servidor rodando em http://localhost:${PORT}`);
+  });
+}
+
+startServer();

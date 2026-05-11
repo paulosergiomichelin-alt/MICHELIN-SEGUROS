@@ -1,0 +1,162 @@
+import React, { useState, useEffect } from 'react';
+import { auth, onAuthStateChanged, signOut } from './lib/firebase';
+import { Auth } from './components/Auth';
+import { MainAppContent } from './components/MainAppContent';
+import { PermissionsProvider, usePermissions } from './contexts/PermissionsContext';
+import { VisualIdentityConfig } from './types';
+import { ChatPreferencesProvider } from './contexts/ChatPreferencesContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { LayoutProvider } from './contexts/LayoutContext';
+import { ShieldAlert } from 'lucide-react';
+
+import { logger } from './services/LoggerService';
+import { agentService } from './services/agentService';
+import { DataService } from './services/DataService';
+
+export default function App() {
+  return (
+    <PermissionsProvider>
+      <AppInternal />
+    </PermissionsProvider>
+  );
+}
+
+function AppInternal() {
+  const { permissions, userProfile, loading: permsLoading, error: permsError } = usePermissions();
+  const [user, setUser] = useState<any>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
+  const [visualConfig, setVisualConfig] = useState<VisualIdentityConfig>({
+    companyName: 'Michelin Seguros',
+    logoDark: 'https://cdn-icons-png.flaticon.com/512/3755/3755250.png', // Generic fallback
+    logoLight: '', 
+    primaryColor: '#CFA764',
+  });
+
+  // Global Error Tracking
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      logger.error('GLOBAL_ERROR', event.message, { 
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        error: event.error?.stack 
+      });
+    };
+
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      logger.error('UNHANDLED_REJECTION', event.reason?.message || 'Promise failed', {
+        reason: event.reason?.stack || event.reason
+      });
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleRejection);
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleRejection);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (userProfile) {
+      console.log("USER_ROLE_IN_APP", userProfile.role);
+    }
+    DataService.setCurrentUser(userProfile);
+
+    // Activity tracking logic - Optimized with throttle in DataService
+    if (userProfile?.uid) {
+      const handleActivity = () => {
+        DataService.updateUserActivity(userProfile.uid!);
+      };
+
+      window.addEventListener('mousemove', handleActivity);
+      window.addEventListener('keydown', handleActivity);
+      window.addEventListener('click', handleActivity);
+
+      // Initial update
+      DataService.updateUserActivity(userProfile.uid);
+
+      return () => {
+        window.removeEventListener('mousemove', handleActivity);
+        window.removeEventListener('keydown', handleActivity);
+        window.removeEventListener('click', handleActivity);
+      };
+    }
+  }, [userProfile]);
+
+  useEffect(() => {
+    // 1. Listen to Visual Identity changes
+    const unsubVisual = DataService.subscribe('settings', 'visual_identity', (data) => {
+      if (data) {
+        console.log('[APP] Identidade Visual carregada/atualizada:', data);
+        setVisualConfig(prev => ({ ...prev, ...data }));
+      }
+    }, true);
+
+    // 2. Auth State Listener
+    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setIsAuthReady(true);
+    });
+
+    return () => {
+      unsubVisual();
+      unsubscribeAuth();
+    };
+  }, []);
+
+  if (!isAuthReady || permsLoading) {
+    return (
+      <div className="min-h-screen bg-brand-dark flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex gap-2">
+            <div className="w-3 h-3 bg-gold-deep rounded-full animate-bounce"></div>
+            <div className="w-3 h-3 bg-gold-deep rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+            <div className="w-3 h-3 bg-gold-deep rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+          </div>
+          <p className="text-gold-deep/60 text-[10px] font-bold uppercase tracking-[0.2em] animate-pulse">Sincronizando Segurança...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (permsError) {
+    return (
+      <div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6">
+          <ShieldAlert className="w-8 h-8 text-red-500" />
+        </div>
+        <h1 className="text-xl font-bold text-white mb-2 uppercase tracking-wider">Erro de Permissão</h1>
+        <p className="text-gray-400 max-w-md mb-8">{permsError}</p>
+        <button 
+          onClick={() => signOut(auth)}
+          className="px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white text-sm font-medium transition-colors"
+        >
+          Sair da Conta
+        </button>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Auth onSuccess={() => {}} visualConfig={visualConfig} />;
+  }
+
+  return (
+    <ThemeProvider userProfile={userProfile}>
+      <LayoutProvider>
+        <ChatPreferencesProvider userProfile={userProfile}>
+          <MainAppContent 
+            user={user}
+            userProfile={userProfile}
+            isAuthReady={isAuthReady}
+            permissions={permissions}
+            permsLoading={permsLoading}
+            visualConfig={visualConfig}
+            setVisualConfig={setVisualConfig}
+          />
+        </ChatPreferencesProvider>
+      </LayoutProvider>
+    </ThemeProvider>
+  );
+}

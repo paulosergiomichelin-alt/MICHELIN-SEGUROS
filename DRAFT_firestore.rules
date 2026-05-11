@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitives
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isAdmin() { 
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function verified() { return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'google.com'); }
+
+    // LEADS
+    match /leads/{leadId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(leadId) && isValidLead(incoming()) && (
+        incoming().keys().hasAll(['id', 'status', 'createdAt', 'updatedAt']) &&
+        incoming().keys().size() >= 4
+      );
+      
+      allow update: if isSignedIn() && isValidLead(incoming()) && (
+        // Action: Admin Override
+        isAdmin() ||
+        
+        // Action: Update Info (By any signed in user - simplified for this app)
+        (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'cpf', 'birthDate', 'email', 'phone', 'plate', 'chassis', 'zipCodeOvernight', 'hasInsurance', 'insuranceExpiry', 'status', 'temperature', 'updatedAt', 'version', 'lastInteraction', 'lastMessageText', 'lastMessageSender', 'lastMessageStatus', 'documents', 'lastSyncAt', 'isTest']))
+      );
+      
+      allow delete: if isAdmin();
+    }
+
+    function isValidLead(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.status is string && data.status.size() <= 50 &&
+             (!data.keys().contains('cpf') || (data.cpf is string && data.cpf.size() <= 20)) &&
+             (!data.keys().contains('updatedAt') || data.updatedAt == request.time || data.updatedAt is string); // Relaxed for the ISO string coming from client
+    }
+
+    // MESSAGES
+    match /messages/{msgId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(msgId) && isValidMessage(incoming());
+      allow update, delete: if isAdmin();
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['id', 'leadId', 'sender', 'timestamp']) &&
+             data.sender in ['user', 'lead', 'ai'] &&
+             data.leadId is string && data.leadId.size() <= 128 &&
+             data.text is string && data.text.size() <= 10000;
+    }
+
+    // USERS
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId) || isAdmin();
+    }
+
+    // CONFIG
+    match /config/{configId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || (isSignedIn() && configId == 'agent'); // Allow some config updates
+    }
+
+    // AUDIT LOGS
+    match /audit_logs/{id} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+    }
+    
+    // SYSTEM METRICS
+    match /system_metrics/{id} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn(); // Metrics are updated by system actions
+    }
+  }
+}
