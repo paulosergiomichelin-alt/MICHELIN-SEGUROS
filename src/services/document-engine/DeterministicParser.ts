@@ -187,11 +187,12 @@ export class DeterministicParser {
          maxWords: 2
        }).value.toUpperCase();
 
-       data.ownerName = sanitizer.sanitizeName(layout.extractField(['PROPRIETARIO', 'NOME', 'NOME DO PROPRIETARIO'], {
+       data.ownerName = sanitizer.sanitizeName(layout.extractField(['PROPRIETARIO', 'NOME DO PROPRIETARIO', 'NOME'], {
           direction: 'BELOW',
           maxChars: 70,
-          maxWords: 7,
-          stopTokens: ['CPF', 'CNPJ', 'PLACA', 'LOCAL', 'DOCUMENTO', 'ESTADO', 'MUNICIPIO', 'ENDERECO']
+          maxWords: 5,
+          maxDistance: 200,
+          stopTokens: ['CPF', 'CNPJ', 'PLACA', 'LOCAL', 'DOCUMENTO', 'ESTADO', 'MUNICIPIO', 'ENDERECO', 'VALIDE', 'QRCODE', 'BAIXE', 'APP', 'DETRAN']
        }).value);
     } else {
        // FALLBACK TO CONTEXTUAL (LEGACY RIGID)

@@ -163,7 +163,36 @@ export class OCRService {
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await PDFResourceManager.getDocument(new Uint8Array(arrayBuffer), file.name);
       const page = await pdf.getPage(1);
-      const visual = await HybridOCRService.getInstance().performVisualOCR("", page, typeHint);
+
+      // CNH-e (digital): PDF has embedded text layer — use it directly instead of visual OCR.
+      // Physical/scanned CNH uploaded as PDF will have <100 chars and fall through to visual.
+      const textContent = await page.getTextContent();
+      const viewport = page.getViewport({ scale: 1.0 });
+      const pdfText = textContent.items.map((item: any) => item.str).join(' ').trim();
+
+      if (pdfText.length >= 100) {
+        console.log(`[OCR_PIPELINE] [CNH_PDF_TEXT_LAYER] ${pdfText.length} chars found. Using structured PDF pipeline.`);
+        const structured: StructuredOCRResult = { text: '', words: [], lines: [], confidence: 100 };
+        textContent.items.forEach((item: any) => {
+          const text = item.str;
+          if (text.trim()) {
+            structured.words.push({
+              text,
+              x: item.transform[4],
+              y: viewport.height - item.transform[5],
+              width: item.width || text.length * 8,
+              height: item.height || 12,
+              confidence: 100
+            });
+          }
+        });
+        console.log(`[OCR_PIPELINE] [PDF_STRUCTURED_EXTRACT] Generated ${structured.words.length} spatial tokens from PDF layer.`);
+        return { text: pdfText, structured, regions: undefined };
+      }
+
+      // Scanned / photo CNH: fall back to visual regional pipeline
+      console.log(`[OCR_PIPELINE] [CNH_VISUAL_FALLBACK] PDF text layer insufficient (${pdfText.length} chars). Using visual pipeline.`);
+      const visual = await HybridOCRService.getInstance().performVisualOCR('', page, typeHint);
       return visual;
     } else {
       return await HybridOCRService.getInstance().performVisualOCR(url, null, typeHint);
