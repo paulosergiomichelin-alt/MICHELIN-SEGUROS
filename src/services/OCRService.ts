@@ -226,7 +226,7 @@ export class OCRService {
   > {
     let canvas: HTMLCanvasElement | null;
     try {
-      canvas = await this.renderToCanvas(file, url, isPDF);
+      canvas = await this.renderToCanvas(file, url, isPDF, typeHint);
     } catch (err: any) {
       return { kind: 'transport_error', reason: `RENDER_FAILED: ${err.message}` };
     }
@@ -286,29 +286,68 @@ export class OCRService {
   }
 
   /**
-   * Render the input (PDF page 1 or image URL) into a canvas suitable for AI OCR.
-   * Scale is computed dynamically so the rendered canvas never exceeds 1800px on its
-   * longest dimension — keeps the JPEG payload small and Qianfan handles any further
-   * resolution internally. Avoids the 2200x3113 monsters from naive scale=1.5.
+   * Render the input (PDF page(s) or image URL) into a canvas suitable for AI OCR.
+   * For policies (apólices), renders up to 3 pages stacked vertically — the data
+   * is rarely on page 1 (which is usually the cover/index). For CNH/CRLV, page 1
+   * is sufficient. Scale is computed dynamically so the rendered canvas never
+   * exceeds the type-specific max dimension; keeps payload small and Qianfan
+   * handles any further resolution internally.
    */
-  private async renderToCanvas(file: File, url: string, isPDF: boolean): Promise<HTMLCanvasElement | null> {
+  private async renderToCanvas(file: File, url: string, isPDF: boolean, typeHint?: string): Promise<HTMLCanvasElement | null> {
     if (isPDF) {
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await PDFResourceManager.getDocument(new Uint8Array(arrayBuffer), file.name);
-      const page = await pdf.getPage(1);
-      const baseViewport = page.getViewport({ scale: 1 });
-      const MAX_DIM = 1800;
-      const maxScale = MAX_DIM / Math.max(baseViewport.width, baseViewport.height);
-      const scale = Math.min(1.5, maxScale);
-      const viewport = page.getViewport({ scale });
-      console.log(`[PDF_RENDER_LEAN] page=${baseViewport.width}x${baseViewport.height} scale=${scale.toFixed(2)} -> ${Math.round(viewport.width)}x${Math.round(viewport.height)}`);
+      const isPolicyDoc = typeHint === 'policy' || typeHint === 'apolice';
+      const PAGE_LIMIT = isPolicyDoc ? Math.min(3, pdf.numPages) : 1;
+      const MAX_DIM = isPolicyDoc ? 2000 : 1800;
+
+      // First pass: figure out the scale that fits the widest page within MAX_DIM
+      // and gather page metadata. All pages render at the same scale.
+      const pageMetas: Array<{ pageNo: number; baseW: number; baseH: number }> = [];
+      let maxBaseW = 0;
+      for (let i = 1; i <= PAGE_LIMIT; i++) {
+        const page = await pdf.getPage(i);
+        const v = page.getViewport({ scale: 1 });
+        pageMetas.push({ pageNo: i, baseW: v.width, baseH: v.height });
+        if (v.width > maxBaseW) maxBaseW = v.width;
+      }
+
+      const scaleForWidth = MAX_DIM / maxBaseW;
+      const scale = Math.min(isPolicyDoc ? 1.8 : 1.5, scaleForWidth);
+
+      // Compute final canvas size (sum heights at this scale)
+      const renderedPages = pageMetas.map(p => ({
+        ...p,
+        renderedW: Math.round(p.baseW * scale),
+        renderedH: Math.round(p.baseH * scale)
+      }));
+      const finalW = Math.max(...renderedPages.map(p => p.renderedW));
+      const finalH = renderedPages.reduce((acc, p) => acc + p.renderedH, 0);
+
+      console.log(`[PDF_RENDER_LEAN] type=${typeHint} pages=${PAGE_LIMIT}/${pdf.numPages} scale=${scale.toFixed(2)} -> ${finalW}x${finalH}`);
+
       const canvas = document.createElement('canvas');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
+      canvas.width = finalW;
+      canvas.height = finalH;
       const ctx = canvas.getContext('2d', { willReadFrequently: true, alpha: false })!;
       ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      await page.render({ canvasContext: ctx, viewport, intent: 'display' }).promise;
+      ctx.fillRect(0, 0, finalW, finalH);
+
+      // Render each page stacked vertically.
+      let offsetY = 0;
+      for (const meta of renderedPages) {
+        const page = await pdf.getPage(meta.pageNo);
+        const viewport = page.getViewport({ scale });
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = viewport.width;
+        pageCanvas.height = viewport.height;
+        const pageCtx = pageCanvas.getContext('2d', { willReadFrequently: true, alpha: false })!;
+        pageCtx.fillStyle = 'white';
+        pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        await page.render({ canvasContext: pageCtx, viewport, intent: 'display' }).promise;
+        ctx.drawImage(pageCanvas, 0, offsetY);
+        offsetY += pageCanvas.height;
+      }
       return canvas;
     }
     return new Promise((resolve) => {

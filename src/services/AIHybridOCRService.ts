@@ -47,7 +47,7 @@ export interface AIExtractionResult {
 const MODEL_ID = 'baidu/qianfan-ocr-fast:free';
 // Cache version: bump this whenever the prompt, model, or output schema changes so
 // old cached responses (which may miss fields) are invalidated automatically.
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const CACHE_PREFIX = `ai_ocr_cache_${CACHE_VERSION}:`;
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -87,7 +87,13 @@ export class AIHybridOCRService {
 
     let preprocessed: PreprocessedImage;
     try {
-      preprocessed = await ImagePreprocessor.fromCanvas(canvas);
+      // Apólices arrive as multi-page stacks (~3 pages tall). The default 1600px
+      // max would shrink them to ~370px wide, making the text unreadable. Use a
+      // taller cap so the model can still resolve small print.
+      const isPolicy = type === 'policy' || (type as string) === 'apolice';
+      preprocessed = await ImagePreprocessor.fromCanvas(canvas, {
+        maxDimension: isPolicy ? 3200 : 1600
+      });
       console.log(`[IMAGE_PREPROCESS] ${preprocessed.width}x${preprocessed.height} ${Math.round(preprocessed.bytes / 1024)}KB`);
     } catch (err: any) {
       console.error('[IMAGE_PREPROCESS_FAIL]', err.message);

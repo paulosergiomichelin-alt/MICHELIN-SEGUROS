@@ -23,13 +23,18 @@ export interface PreprocessedImage {
   bytes: number;
 }
 
-const MAX_DIMENSION = 1600;
+const DEFAULT_MAX_DIMENSION = 1600;
 const JPEG_QUALITY = 0.82;
+
+export interface PreprocessOptions {
+  maxDimension?: number;
+}
 
 export class ImagePreprocessor {
   /** Prepare a canvas for AI OCR. Returns a JPEG base64 string with size & dim metadata. */
-  public static async fromCanvas(source: HTMLCanvasElement): Promise<PreprocessedImage> {
-    const { width: dstW, height: dstH } = this.fitToMax(source.width, source.height, MAX_DIMENSION);
+  public static async fromCanvas(source: HTMLCanvasElement, options: PreprocessOptions = {}): Promise<PreprocessedImage> {
+    const maxDim = options.maxDimension ?? DEFAULT_MAX_DIMENSION;
+    const { width: dstW, height: dstH } = this.fitToMax(source.width, source.height, maxDim);
     const canvas = document.createElement('canvas');
     canvas.width = dstW;
     canvas.height = dstH;
