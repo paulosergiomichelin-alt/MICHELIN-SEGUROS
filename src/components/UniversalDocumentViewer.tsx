@@ -135,6 +135,10 @@ function renderValidationFields(type: string | undefined, data: any) {
     const value = pickValue(data, def);
     if (def.type === 'boolean') {
       const checked = coerceBool(value);
+      // Debug: log boolean field resolution so we can see exactly which alias the value came from
+      // and what coerceBool decided. Helps diagnose 'NÃO when it should be SIM' issues.
+      // eslint-disable-next-line no-console
+      console.log(`[VIEWER_FIELD] ${def.key}`, { value, checked, allCandidates: [def.key, ...(def.aliases || [])].reduce((acc: any, k) => { acc[k] = data?.[k]; return acc; }, {}) });
       return (
         <div key={def.key} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
           <label className="text-[11px] uppercase tracking-wider text-[#D4A854] font-black">{def.label}</label>

@@ -47,7 +47,7 @@ export interface AIExtractionResult {
 const MODEL_ID = 'baidu/qianfan-ocr-fast:free';
 // Cache version: bump this whenever the prompt, model, or output schema changes so
 // old cached responses (which may miss fields) are invalidated automatically.
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const CACHE_PREFIX = `ai_ocr_cache_${CACHE_VERSION}:`;
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -282,8 +282,12 @@ export class AIHybridOCRService {
             '- categoria: categoria do veículo (PARTICULAR, COMERCIAL, etc.)',
             '- ano_modelo: ano do modelo (4 dígitos)',
             '- combustivel: tipo de combustível (GASOLINA, FLEX, DIESEL, etc.)',
-            '- alienacao_fiduciaria: "sim" se houver BANCO, FINANCIAMENTO, ALIENAÇÃO, ARRENDAMENTO, LEASING nas observações; caso contrário "não"',
-            '- instituicao_financeira: nome do banco/financeira se alienação_fiduciaria for "sim"',
+            '',
+            'ATENÇÃO ESPECIAL — Alienação Fiduciária:',
+            'PROCURE em TODO o documento, especialmente nas seções "OBSERVAÇÕES", "OBS", "RESTRIÇÕES", "GRAVAMES", "OBSERVAÇÕES DO VEÍCULO":',
+            '- Se encontrar QUALQUER UMA das palavras/frases: "ALIENAÇÃO FIDUCIÁRIA", "ALIENACAO FIDUCIARIA", "FIDUCIÁRIA", "GRAVAME", "FINANCIAMENTO", "ARRENDAMENTO", "LEASING", "RESERVA DE DOMÍNIO" ou nome de banco/financeira → alienacao_fiduciaria = "sim"',
+            '- Caso CONTRÁRIO (não houver NENHUMA dessas palavras visíveis) → alienacao_fiduciaria = "não"',
+            '- instituicao_financeira: se alienacao_fiduciaria = "sim", capture o nome do banco/financeira mencionado',
             '',
             'Retorne APENAS este JSON:',
             '{"nome":"","cpf":"","placa":"","chassi":"","renavam":"","marca_modelo":"","categoria":"","ano_modelo":"","combustivel":"","alienacao_fiduciaria":"","instituicao_financeira":""}'
