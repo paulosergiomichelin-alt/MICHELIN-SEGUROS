@@ -196,15 +196,48 @@ export const standardizeLeadData = (data: any, existingLead?: Partial<Lead>): Pa
   // 6. General Text Normalization
   const textFields = [
     'plate', 'chassis', 'civilStatus', 'maritalStatus', 'gender',
-    'addressOvernight', 'addressResidence', 'numberOvernight', 
+    'addressOvernight', 'addressResidence', 'numberOvernight',
     'numberResidence', 'renavam', 'brandModel', 'licenseCategory', 'licenseNumber', 'renach'
   ];
-  
+
   textFields.forEach(field => {
     if (result[field] && typeof result[field] === 'string') {
       result[field] = result[field].toUpperCase().trim();
     }
   });
+
+  // 6b. Boolean coercion for questionnaire-style fields.
+  // The AI pipeline returns these as 'SIM'/'NÃO' strings (or pt-BR sim/nao); the form
+  // state expects booleans. Without this conversion, the toggle in LeadForm stayed
+  // OFF even when the document clearly had Alienação Fiduciária in the observations.
+  const booleanFields: Record<string, string[]> = {
+    fiduciaryAlienation: ['alienacaoFiduciaria', 'alienacao_fiduciaria'],
+    isOwnerDriver: ['proprietarioCondutor', 'proprietario_e_condutor'],
+    commercialUse: ['usoComercial', 'uso_comercial'],
+    youngDriver: ['condutorJovem', 'condutor_jovem']
+  };
+  const truthyTokens = ['SIM', 'YES', 'TRUE', '1', 'POSSUI', 'CONSTA', 'VERDADEIRO'];
+  const falsyTokens = ['NAO', 'NÃO', 'NO', 'FALSE', '0', 'INEXISTENTE'];
+  for (const [primary, aliases] of Object.entries(booleanFields)) {
+    let raw: any = result[primary];
+    if (raw === undefined) {
+      for (const alias of aliases) {
+        if (result[alias] !== undefined) { raw = result[alias]; break; }
+      }
+    }
+    if (raw === undefined || raw === null || raw === '') continue;
+    let coerced: boolean | null = null;
+    if (typeof raw === 'boolean') coerced = raw;
+    else {
+      const norm = String(raw).toUpperCase().normalize('NFD').replace(/\p{M}/gu, '').trim();
+      if (truthyTokens.includes(norm)) coerced = true;
+      else if (falsyTokens.includes(norm)) coerced = false;
+    }
+    if (coerced !== null) {
+      result[primary] = coerced;
+      for (const alias of aliases) result[alias] = coerced;
+    }
+  }
 
   // 6. PROTEÇÃO DE DADOS EXISTENTES (POLÍTICA DE NÃO-SOBREPOSIÇÃO)
   if (existingLead) {
