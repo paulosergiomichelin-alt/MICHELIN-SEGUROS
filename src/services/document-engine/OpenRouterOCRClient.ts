@@ -46,12 +46,19 @@ export interface OpenRouterChatResponse {
 }
 
 const PROXY_ENDPOINT = '/api/proxy/openrouter/request';
+const DIRECT_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 const DEFAULT_TIMEOUT_MS = 20000;
 
 export class OpenRouterOCRClient {
   /**
-   * POST /chat/completions through the local backend proxy.
-   * Returns the raw response and throws on transport/HTTP errors.
+   * POST /chat/completions.
+   *
+   * Strategy:
+   *   1. Direct browser→OpenRouter call (their CORS supports this; the API key
+   *      is already in the browser, so the proxy was only obfuscation).
+   *      Eliminates the local Express body-parser as a failure point (413).
+   *   2. If direct fails with a CORS error or network blockage, fall back to
+   *      the local proxy so on-prem environments with a real backend still work.
    */
   public static async chatCompletion(
     apiKey: string,
@@ -60,9 +67,66 @@ export class OpenRouterOCRClient {
   ): Promise<OpenRouterChatResponse> {
     if (!apiKey) throw new Error('OPENROUTER_API_KEY_MISSING');
 
+    try {
+      return await this.chatCompletionDirect(apiKey, payload, timeoutMs);
+    } catch (err: any) {
+      const msg = err?.message || '';
+      // CORS errors / network blockages → try proxy. Real HTTP errors (4xx/5xx) bubble up.
+      const transient = msg.includes('CORS') || msg.includes('NetworkError') || msg.includes('Failed to fetch') || msg === 'DIRECT_NETWORK_ERROR';
+      if (transient) {
+        console.warn('[OPENROUTER_DIRECT_FAIL] Falling back to local proxy:', msg);
+        return await this.chatCompletionViaProxy(apiKey, payload, timeoutMs);
+      }
+      throw err;
+    }
+  }
+
+  /** Direct browser→OpenRouter chat completion (preferred). */
+  private static async chatCompletionDirect(
+    apiKey: string,
+    payload: OpenRouterChatRequest,
+    timeoutMs: number
+  ): Promise<OpenRouterChatResponse> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const referer = typeof window !== 'undefined' ? window.location.origin : 'https://michelin-seguros.local';
+      const res = await fetch(DIRECT_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': referer,
+          'X-Title': 'Michelin Seguros CRM'
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => '');
+        throw new Error(`OPENROUTER_HTTP_${res.status}: ${errorText.substring(0, 200)}`);
+      }
+      const body = await res.json() as OpenRouterChatResponse;
+      if (body.error) throw new Error(`OPENROUTER_API_ERROR: ${body.error.message}`);
+      return body;
+    } catch (err: any) {
+      if (err.name === 'AbortError') throw new Error('OPENROUTER_TIMEOUT');
+      // fetch throws TypeError 'Failed to fetch' on CORS/network issues
+      if (err.name === 'TypeError') throw new Error('DIRECT_NETWORK_ERROR');
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 
+  /** Legacy path: chat completion through the local /api/proxy/openrouter/request route. */
+  private static async chatCompletionViaProxy(
+    apiKey: string,
+    payload: OpenRouterChatRequest,
+    timeoutMs: number
+  ): Promise<OpenRouterChatResponse> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const res = await fetch(PROXY_ENDPOINT, {
         method: 'POST',
@@ -75,15 +139,12 @@ export class OpenRouterOCRClient {
         }),
         signal: controller.signal
       });
-
       if (!res.ok) {
         const errorText = await res.text().catch(() => '');
         throw new Error(`OPENROUTER_HTTP_${res.status}: ${errorText.substring(0, 200)}`);
       }
       const body = await res.json() as OpenRouterChatResponse;
-      if (body.error) {
-        throw new Error(`OPENROUTER_API_ERROR: ${body.error.message}`);
-      }
+      if (body.error) throw new Error(`OPENROUTER_API_ERROR: ${body.error.message}`);
       return body;
     } catch (err: any) {
       if (err.name === 'AbortError') throw new Error('OPENROUTER_TIMEOUT');
