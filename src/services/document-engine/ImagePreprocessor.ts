@@ -23,8 +23,8 @@ export interface PreprocessedImage {
   bytes: number;
 }
 
-const MAX_DIMENSION = 1200;
-const JPEG_QUALITY = 0.75;
+const MAX_DIMENSION = 1600;
+const JPEG_QUALITY = 0.82;
 
 export class ImagePreprocessor {
   /** Prepare a canvas for AI OCR. Returns a JPEG base64 string with size & dim metadata. */

@@ -101,6 +101,20 @@ export function AIDocumentExtractionPanel() {
     setConfig((prev) => ({ ...DEFAULT_AI_OCR_CONFIG, apiKey: prev.apiKey }));
   }, []);
 
+  const handleClearCache = useCallback(() => {
+    if (!confirm('Limpar todo o cache de resultados OCR? Próximas execuções farão nova chamada à IA.')) return;
+    let removed = 0;
+    try {
+      const toRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('ai_ocr_cache_')) toRemove.push(k);
+      }
+      toRemove.forEach((k) => { localStorage.removeItem(k); removed++; });
+    } catch (e) { /* noop */ }
+    alert(`Cache limpo: ${removed} entradas removidas.`);
+  }, []);
+
   const handleTestConnection = useCallback(async () => {
     if (!config.apiKey || config.apiKey.length < 12) {
       setTestResult({ ok: false, message: 'API key inválida ou ausente.' });
@@ -302,6 +316,12 @@ export function AIDocumentExtractionPanel() {
             className="flex items-center gap-2 px-4 py-2 bg-brand-black text-slate-300 border border-white/10 rounded-xl font-bold text-[11px] uppercase tracking-widest hover:bg-white/5 transition-all"
           >
             <RefreshCcw className="w-3.5 h-3.5" /> Restaurar padrão
+          </button>
+          <button
+            onClick={handleClearCache}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-900/30 text-amber-300 border border-amber-500/20 rounded-xl font-bold text-[11px] uppercase tracking-widest hover:bg-amber-900/50 transition-all"
+          >
+            <Trash2 className="w-3.5 h-3.5" /> Limpar cache OCR
           </button>
         </div>
 

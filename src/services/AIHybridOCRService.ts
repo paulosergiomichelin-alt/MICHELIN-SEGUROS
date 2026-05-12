@@ -45,7 +45,10 @@ export interface AIExtractionResult {
 }
 
 const MODEL_ID = 'baidu/qianfan-ocr-fast:free';
-const CACHE_PREFIX = 'ai_ocr_cache:';
+// Cache version: bump this whenever the prompt, model, or output schema changes so
+// old cached responses (which may miss fields) are invalidated automatically.
+const CACHE_VERSION = 'v3';
+const CACHE_PREFIX = `ai_ocr_cache_${CACHE_VERSION}:`;
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export class AIHybridOCRService {
@@ -232,11 +235,11 @@ export class AIHybridOCRService {
   private buildPrompt(type: string): { system: string; user: string } {
     const system = [
       'Você é um sistema especializado em OCR documental brasileiro para seguros.',
-      'Extraia SOMENTE os dados presentes no documento.',
+      'Extraia TODOS os dados visíveis no documento.',
       'NÃO invente informações. NÃO complete campos automaticamente.',
       'NÃO use markdown. NÃO explique. Retorne SOMENTE JSON válido.',
       'Se um campo não existir no documento, retorne string vazia "".',
-      'Datas em formato DD/MM/YYYY. CPF/CNPJ formatados. Placas em maiúsculas.'
+      'CPF formato: XXX.XXX.XXX-XX. Datas formato: DD/MM/YYYY. Placas em maiúsculas.'
     ].join(' ');
 
     switch (type) {
@@ -244,8 +247,21 @@ export class AIHybridOCRService {
         return {
           system,
           user: [
-            'Documento: CNH (Carteira Nacional de Habilitação) brasileira.',
-            'Retorne JSON com as chaves abaixo (use string vazia se não encontrar):',
+            'Documento: CNH (Carteira Nacional de Habilitação) digital brasileira.',
+            '',
+            'Localize e extraia EXATAMENTE estes campos:',
+            '- nome: nome completo do condutor (texto em maiúsculas)',
+            '- cpf: número do CPF, 11 dígitos (formato XXX.XXX.XXX-XX)',
+            '- data_nascimento: data de nascimento (DD/MM/YYYY)',
+            '- registro: número de registro da CNH, 9 a 11 dígitos',
+            '- validade: data de validade (DD/MM/YYYY)',
+            '- categoria: categoria da habilitação (A, B, AB, C, D, E, ACC)',
+            '- filiacao_pai: nome completo do pai',
+            '- filiacao_mae: nome completo da mãe',
+            '- primeira_habilitacao: data da primeira habilitação (DD/MM/YYYY)',
+            '',
+            'IMPORTANTE: Examine a CNH inteira com atenção. Os números (CPF, registro) e datas estão visíveis claramente.',
+            'Retorne APENAS este JSON, sem comentários:',
             '{"nome":"","cpf":"","data_nascimento":"","registro":"","validade":"","categoria":"","filiacao_pai":"","filiacao_mae":"","primeira_habilitacao":""}'
           ].join('\n')
         };
@@ -255,8 +271,21 @@ export class AIHybridOCRService {
           system,
           user: [
             'Documento: CRLV-e (Certificado de Registro e Licenciamento de Veículo) brasileiro.',
-            'Detecte alienação fiduciária procurando palavras como BANCO, FINANCIAMENTO, ALIENAÇÃO, ARRENDAMENTO, LEASING na seção observações.',
-            'Retorne JSON com as chaves abaixo (use string vazia se não encontrar):',
+            '',
+            'Localize e extraia EXATAMENTE estes campos:',
+            '- nome: nome completo do proprietário ou razão social',
+            '- cpf: CPF ou CNPJ do proprietário (formato XXX.XXX.XXX-XX ou XX.XXX.XXX/XXXX-XX)',
+            '- placa: placa do veículo, 7 caracteres (Mercosul AAA-9A99 ou antiga AAA-9999)',
+            '- chassi: chassi/VIN, exatamente 17 caracteres alfanuméricos',
+            '- renavam: número RENAVAM, 9 a 11 dígitos',
+            '- marca_modelo: marca e modelo do veículo (ex: VW/GOL)',
+            '- categoria: categoria do veículo (PARTICULAR, COMERCIAL, etc.)',
+            '- ano_modelo: ano do modelo (4 dígitos)',
+            '- combustivel: tipo de combustível (GASOLINA, FLEX, DIESEL, etc.)',
+            '- alienacao_fiduciaria: "sim" se houver BANCO, FINANCIAMENTO, ALIENAÇÃO, ARRENDAMENTO, LEASING nas observações; caso contrário "não"',
+            '- instituicao_financeira: nome do banco/financeira se alienação_fiduciaria for "sim"',
+            '',
+            'Retorne APENAS este JSON:',
             '{"nome":"","cpf":"","placa":"","chassi":"","renavam":"","marca_modelo":"","categoria":"","ano_modelo":"","combustivel":"","alienacao_fiduciaria":"","instituicao_financeira":""}'
           ].join('\n')
         };
@@ -266,13 +295,27 @@ export class AIHybridOCRService {
           system,
           user: [
             'Documento: Apólice de seguro auto brasileira.',
-            'Para campos booleanos do questionário, responda apenas "sim" ou "não".',
-            'Retorne JSON com as chaves abaixo (use string vazia se não encontrar):',
-            '{"numero_apolice":"","seguradora":"","corretora":"","seguradora_cnpj":"","corretora_cnpj":"","corretora_susep":"",',
-            '"segurado_nome":"","segurado_cpf":"","segurado_data_nascimento":"",',
-            '"proprietario_veiculo_nome":"","proprietario_veiculo_cpf":"",',
-            '"placa":"","chassi":"","cep":"","fim_vigencia":"","inicio_vigencia":"",',
-            '"uso_comercial":"","alienacao_fiduciaria":"","proprietario_e_condutor":"","condutor_jovem":"","estado_civil":""}'
+            '',
+            'Localize e extraia TODOS estes campos. Para booleanos do questionário, retorne EXATAMENTE "sim" ou "não".',
+            '- numero_apolice: número da apólice ou proposta',
+            '- seguradora: nome da seguradora',
+            '- corretora: nome da corretora',
+            '- seguradora_cnpj, corretora_cnpj: CNPJ formato XX.XXX.XXX/XXXX-XX',
+            '- corretora_susep: código SUSEP da corretora',
+            '- segurado_nome, segurado_cpf, segurado_data_nascimento: dados do segurado',
+            '- proprietario_veiculo_nome, proprietario_veiculo_cpf: dados do proprietário do veículo',
+            '- placa: placa do veículo (formato Mercosul ou antiga)',
+            '- chassi: 17 caracteres alfanuméricos',
+            '- cep: CEP formato XXXXX-XXX',
+            '- fim_vigencia, inicio_vigencia: datas DD/MM/YYYY',
+            '- uso_comercial: "sim" ou "não"',
+            '- alienacao_fiduciaria: "sim" ou "não"',
+            '- proprietario_e_condutor: "sim" se proprietário do veículo é o condutor principal',
+            '- condutor_jovem: "sim" se há condutor com idade < 25 anos',
+            '- estado_civil: SOLTEIRO, CASADO, DIVORCIADO, VIUVO, UNIAO ESTAVEL',
+            '',
+            'Retorne APENAS este JSON:',
+            '{"numero_apolice":"","seguradora":"","corretora":"","seguradora_cnpj":"","corretora_cnpj":"","corretora_susep":"","segurado_nome":"","segurado_cpf":"","segurado_data_nascimento":"","proprietario_veiculo_nome":"","proprietario_veiculo_cpf":"","placa":"","chassi":"","cep":"","fim_vigencia":"","inicio_vigencia":"","uso_comercial":"","alienacao_fiduciaria":"","proprietario_e_condutor":"","condutor_jovem":"","estado_civil":""}'
           ].join('\n')
         };
       default:
