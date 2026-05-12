@@ -16,12 +16,26 @@ export interface OpenRouterMessage {
   >;
 }
 
+export interface OpenRouterProviderRouting {
+  sort?: 'price' | 'throughput' | 'latency' | { by: 'price' | 'throughput' | 'latency'; partition?: 'model' | 'none' };
+  order?: string[];
+  only?: string[];
+  ignore?: string[];
+  allow_fallbacks?: boolean;
+  require_parameters?: boolean;
+  data_collection?: 'allow' | 'deny';
+  zdr?: boolean;
+  preferred_max_latency?: number | { p50?: number; p75?: number; p90?: number; p99?: number };
+  preferred_min_throughput?: number | { p50?: number; p75?: number; p90?: number; p99?: number };
+}
+
 export interface OpenRouterChatRequest {
   model: string;
   messages: OpenRouterMessage[];
   temperature?: number;
   max_tokens?: number;
   response_format?: { type: 'json_object' };
+  provider?: OpenRouterProviderRouting;
 }
 
 export interface OpenRouterChatResponse {

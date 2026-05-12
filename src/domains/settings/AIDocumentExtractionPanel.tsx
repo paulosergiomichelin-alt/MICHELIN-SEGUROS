@@ -353,6 +353,47 @@ export function AIDocumentExtractionPanel() {
         </div>
       </div>
 
+      {/* SECTION 5b: PROVIDER ROUTING */}
+      <div className={CARD_CLASS}>
+        <h3 className={SECTION_HEADER_CLASS}>
+          <Zap className="w-3.5 h-3.5" /> Provider Routing (OpenRouter)
+        </h3>
+        <p className="text-[10px] text-slate-500 -mt-2">
+          OpenRouter escolhe automaticamente o provider mais rápido para o modelo. Estes filtros guiam essa escolha.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Sort por</label>
+            <select
+              value={config.routingSort}
+              onChange={(e) => handleConfigChange('routingSort', e.target.value as any)}
+              className="w-full px-3 py-2 bg-brand-black border border-white/10 rounded-xl text-sm text-white focus:border-gold-deep focus:outline-none transition-colors"
+            >
+              <option value="throughput">Throughput (rápido)</option>
+              <option value="latency">Latência (menor)</option>
+              <option value="price">Preço (menor)</option>
+            </select>
+          </div>
+          <NumberInput label="Max latency p90 (s)" value={config.routingMaxLatencyP90} min={1} max={30} step={1} onChange={(v) => handleConfigChange('routingMaxLatencyP90', v)} />
+          <NumberInput label="Min throughput p90 (t/s)" value={config.routingMinThroughputP90} min={10} max={500} step={10} onChange={(v) => handleConfigChange('routingMinThroughputP90', v)} />
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Data Collection</label>
+            <select
+              value={config.routingDataCollection}
+              onChange={(e) => handleConfigChange('routingDataCollection', e.target.value as any)}
+              className="w-full px-3 py-2 bg-brand-black border border-white/10 rounded-xl text-sm text-white focus:border-gold-deep focus:outline-none transition-colors"
+            >
+              <option value="deny">Deny (recomendado)</option>
+              <option value="allow">Allow</option>
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Toggle label="Allow fallbacks (failover entre providers)" checked={config.routingAllowFallbacks} onChange={(v) => handleConfigChange('routingAllowFallbacks', v)} />
+          <Toggle label="ZDR (Zero Data Retention)" checked={config.routingZdr} onChange={(v) => handleConfigChange('routingZdr', v)} />
+        </div>
+      </div>
+
       {/* SECTION 4: SUPPORTED DOCS */}
       <div className={CARD_CLASS}>
         <h3 className={SECTION_HEADER_CLASS}>

@@ -30,6 +30,14 @@ export interface AIOCRConfig {
   retries: number;
   jpegQuality: number;
   maxWidth: number;
+  // Provider routing (OpenRouter)
+  routingSort: 'throughput' | 'latency' | 'price';
+  routingAllowFallbacks: boolean;
+  routingRequireParameters: boolean;
+  routingMaxLatencyP90: number; // seconds
+  routingMinThroughputP90: number; // tokens/sec
+  routingDataCollection: 'allow' | 'deny';
+  routingZdr: boolean;
   updatedAt?: string;
   updatedBy?: string;
 }
@@ -54,7 +62,15 @@ export const DEFAULT_AI_OCR_CONFIG: AIOCRConfig = {
   timeout: 20000,
   retries: 2,
   jpegQuality: 80,
-  maxWidth: 1200
+  maxWidth: 1200,
+  // Routing defaults aligned with the enterprise spec (throughput-first, fast providers).
+  routingSort: 'throughput',
+  routingAllowFallbacks: true,
+  routingRequireParameters: false,
+  routingMaxLatencyP90: 3,
+  routingMinThroughputP90: 40,
+  routingDataCollection: 'deny',
+  routingZdr: false
 };
 
 export class AIOCRConfigService {

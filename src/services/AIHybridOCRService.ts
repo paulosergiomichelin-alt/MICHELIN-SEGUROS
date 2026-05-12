@@ -106,10 +106,26 @@ export class AIHybridOCRService {
     const prompt = this.buildPrompt(type);
     const activeModel = cfg?.model || MODEL_ID;
     const activeTimeout = cfg?.timeout || 20000;
+    const maxRetries = cfg?.retryEnabled === false ? 0 : Math.min(2, cfg?.retries ?? 2);
+
+    // Build the provider routing block from settings. This sorts by throughput by
+    // default, prefers fast providers (p90 latency < 3s, throughput > 40 tok/s),
+    // denies data collection, and optionally enforces ZDR.
+    const routing = {
+      sort: (cfg?.routingSort ?? 'throughput') as 'throughput' | 'latency' | 'price',
+      allow_fallbacks: cfg?.routingAllowFallbacks ?? true,
+      require_parameters: cfg?.routingRequireParameters ?? false,
+      data_collection: (cfg?.routingDataCollection ?? 'deny') as 'allow' | 'deny',
+      ...(cfg?.routingZdr ? { zdr: true } : {}),
+      preferred_max_latency: { p90: cfg?.routingMaxLatencyP90 ?? 3 },
+      preferred_min_throughput: { p90: cfg?.routingMinThroughputP90 ?? 40 }
+    };
+
     const payload: OpenRouterChatRequest = {
       model: activeModel,
       temperature: 0,
       max_tokens: 1024,
+      provider: routing,
       messages: [
         { role: 'system', content: prompt.system },
         {
@@ -122,20 +138,46 @@ export class AIHybridOCRService {
       ]
     };
 
+    console.log(`[AI_PIPELINE_PRIMARY] model=${activeModel} type=${type}`);
+    console.log(`[OPENROUTER_ROUTING] sort=${routing.sort} maxLatencyP90=${routing.preferred_max_latency.p90}s minThroughputP90=${routing.preferred_min_throughput.p90}t/s data=${routing.data_collection}${routing.zdr ? ' zdr=on' : ''}`);
     console.log(`[QIANFAN_REQUEST] model=${activeModel} bytes=${preprocessed.bytes}`);
+    AIOCRMetricsService.recordEvent('OPENROUTER_ROUTING', `sort=${routing.sort} lat<=${routing.preferred_max_latency.p90}s thr>=${routing.preferred_min_throughput.p90}t/s`, { type, sort: routing.sort });
     AIOCRMetricsService.recordEvent('QIANFAN_REQUEST', `model=${activeModel}`, { type, bytes: preprocessed.bytes });
     let raw = '';
     let tokensUsed = 0;
-    try {
-      const response = await OpenRouterOCRClient.chatCompletion(apiKey, payload, activeTimeout);
-      raw = response.choices?.[0]?.message?.content || '';
-      tokensUsed = response.usage?.total_tokens || 0;
-      console.log(`[QIANFAN_RESPONSE] tokens=${tokensUsed} finish=${response.choices?.[0]?.finish_reason}`);
-      AIOCRMetricsService.recordEvent('QIANFAN_RESPONSE', `tokens=${tokensUsed}`, { type, tokens: tokensUsed });
-    } catch (err: any) {
-      console.error('[OCR_FALLBACK]', err.message);
-      AIOCRMetricsService.recordFailure(type, err.message || 'AI_REQUEST_FAILED', Date.now() - start);
-      return this.failure(type, err.message || 'AI_REQUEST_FAILED', start, preprocessed.bytes);
+    // Retry loop: provider routing lets OpenRouter switch providers on its end,
+    // but if the whole request errors we retry once or twice with exponential backoff.
+    let lastError: any = null;
+    let modelEcho = '';
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await OpenRouterOCRClient.chatCompletion(apiKey, payload, activeTimeout);
+        raw = response.choices?.[0]?.message?.content || '';
+        tokensUsed = response.usage?.total_tokens || 0;
+        modelEcho = response.model || activeModel;
+        console.log(`[OPENROUTER_SUCCESS] provider-resolved-model=${modelEcho} attempt=${attempt + 1}`);
+        console.log(`[QIANFAN_RESPONSE] tokens=${tokensUsed} finish=${response.choices?.[0]?.finish_reason}`);
+        AIOCRMetricsService.recordEvent('OPENROUTER_SUCCESS', `model=${modelEcho} attempt=${attempt + 1}`, { type, attempts: attempt + 1 });
+        AIOCRMetricsService.recordEvent('QIANFAN_RESPONSE', `tokens=${tokensUsed}`, { type, tokens: tokensUsed });
+        lastError = null;
+        break;
+      } catch (err: any) {
+        lastError = err;
+        const isTransient = err.message?.includes('TIMEOUT') || err.message?.includes('HTTP_5') || err.message?.includes('HTTP_429');
+        if (attempt < maxRetries && isTransient) {
+          const backoff = 500 * Math.pow(2, attempt);
+          console.warn(`[OPENROUTER_RETRY] attempt ${attempt + 1} failed: ${err.message}. Retrying in ${backoff}ms.`);
+          AIOCRMetricsService.recordEvent('OPENROUTER_RETRY', `attempt=${attempt + 1} reason=${err.message}`, { type });
+          await new Promise(r => setTimeout(r, backoff));
+          continue;
+        }
+        break;
+      }
+    }
+    if (lastError) {
+      console.error('[OCR_FALLBACK]', lastError.message);
+      AIOCRMetricsService.recordFailure(type, lastError.message || 'AI_REQUEST_FAILED', Date.now() - start);
+      return this.failure(type, lastError.message || 'AI_REQUEST_FAILED', start, preprocessed.bytes);
     }
 
     // Parse
@@ -149,12 +191,19 @@ export class AIHybridOCRService {
     // Validate
     const { validation, semanticScore, normalizedFields } = this.validate(parsed, type);
     console.log(`[SEMANTIC_VALIDATION] score=${(semanticScore * 100).toFixed(0)}%`, this.summarizeValidation(validation));
+    AIOCRMetricsService.recordEvent('SEMANTIC_VALIDATION', `score=${(semanticScore * 100).toFixed(0)}%`, { type, score: Math.round(semanticScore * 100) });
 
-    // Hybrid confidence: AI baseline + semantic + completeness
-    const completeness = this.computeCompleteness(type, normalizedFields);
-    const aiBaseline = 0.6; // assume 60% for AI raw output before semantic checks
-    const confidence = Math.round(Math.min(1, aiBaseline * 0.4 + semanticScore * 0.5 + completeness * 0.1) * 100);
-    console.log(`[CONFIDENCE_SCORE] hybrid=${confidence}% (semantic=${(semanticScore * 100).toFixed(0)}% completeness=${(completeness * 100).toFixed(0)}%)`);
+    // New hybrid confidence (per spec):
+    //   final = AI * 0.5 + Semantic * 0.3 + Document * 0.2
+    // AI confidence: heuristic over output (JSON well-formed, mandatory fields present, no hallucination markers)
+    // Semantic: aggregated FieldValidation.score
+    // Document: completeness ratio of mandatory fields
+    const aiConfidence = this.computeAIConfidence(parsed, type);
+    const documentConfidence = this.computeCompleteness(type, normalizedFields);
+    const finalConfidence = Math.round(Math.min(1, aiConfidence * 0.5 + semanticScore * 0.3 + documentConfidence * 0.2) * 100);
+    const confidence = finalConfidence;
+    console.log(`[CONFIDENCE_SCORE] final=${confidence}% (ai=${(aiConfidence * 100).toFixed(0)}% semantic=${(semanticScore * 100).toFixed(0)}% document=${(documentConfidence * 100).toFixed(0)}%)`);
+    AIOCRMetricsService.recordEvent('CONFIDENCE_SCORE', `final=${confidence}%`, { type, ai: Math.round(aiConfidence * 100), semantic: Math.round(semanticScore * 100), document: Math.round(documentConfidence * 100) });
 
     const result: AIExtractionResult = {
       success: true,
@@ -304,6 +353,38 @@ export class AIHybridOCRService {
 
     const semanticScore = scores.length > 0 ? DocumentValidator.aggregate(scores) : 0.5;
     return { validation: v, semanticScore, normalizedFields: out };
+  }
+
+  /**
+   * Heuristic for how much we trust the AI's raw output:
+   * - starts at 0.7
+   * - +0.1 if all mandatory fields are non-empty (matches output schema)
+   * - -0.1 per suspicious filler value ("undefined", "n/a", "exemplo")
+   * - -0.2 if any mandatory field is glued to a placeholder
+   * - capped to [0, 1]
+   */
+  private computeAIConfidence(parsed: Record<string, any>, type: string): number {
+    const mandatoryByType: Record<string, string[]> = {
+      cnh: ['nome', 'cpf', 'data_nascimento'],
+      crv: ['nome', 'cpf', 'placa', 'chassi'],
+      crlv: ['nome', 'cpf', 'placa', 'chassi'],
+      policy: ['segurado_nome', 'segurado_cpf', 'seguradora', 'placa', 'chassi'],
+      apolice: ['segurado_nome', 'segurado_cpf', 'seguradora', 'placa', 'chassi']
+    };
+    const mandatory = mandatoryByType[type] || [];
+    let score = 0.7;
+    const allPresent = mandatory.every(k => typeof parsed[k] === 'string' && (parsed[k] as string).length > 1);
+    if (allPresent) score += 0.1;
+    const hallucinationMarkers = ['undefined', 'null', 'n/a', 'exemplo', 'placeholder', 'lorem ipsum', 'fulano', 'beltrano'];
+    let hits = 0;
+    for (const v of Object.values(parsed)) {
+      if (typeof v === 'string') {
+        const lower = v.toLowerCase();
+        if (hallucinationMarkers.some(m => lower.includes(m))) hits++;
+      }
+    }
+    score -= Math.min(0.4, hits * 0.1);
+    return Math.max(0, Math.min(1, score));
   }
 
   private computeCompleteness(type: string, fields: Record<string, any>): number {

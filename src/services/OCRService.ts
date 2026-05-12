@@ -122,7 +122,7 @@ export class OCRService {
         // AI failed. Decide whether to fall back to the legacy heavy pipeline.
         const allowLegacyFallback = await this.shouldAllowLegacyFallback(aiOutcome.reason);
         if (!allowLegacyFallback) {
-          console.warn(`[OCR_PIPELINE] AI_ONLY mode — refusing to run legacy fallback. Reason: ${aiOutcome.reason}`);
+          console.warn(`[LEGACY_PIPELINE_SKIPPED] AI_ONLY mode active. Reason for AI failure: ${aiOutcome.reason}`);
           if (options.onStatus) options.onStatus(ProcessingState.FAILED);
           return {
             success: false,
@@ -133,7 +133,7 @@ export class OCRService {
             metrics: { ...metrics, totalTime: Date.now() - startTime }
           };
         }
-        console.warn(`[OCR_PIPELINE] AI failed (${aiOutcome.reason}); legacy fallback enabled — running local pipeline.`);
+        console.warn(`[OCR_FALLBACK_SIMPLE] AI failed (${aiOutcome.reason}); running local Tesseract pipeline as fallback.`);
       }
 
       // PIPELINE EXECUTION BY STRATEGY (fallback when AI unavailable)
