@@ -52,6 +52,8 @@ const DOCUMENT_SCHEMAS: Record<string, FieldDef[]> = {
     { key: 'licenseCategory', label: 'Categoria', aliases: ['category', 'categoria'] }
   ],
   crv: [
+    { key: 'name', label: 'Nome do Proprietário', aliases: ['nome', 'ownerName', 'nomeProprietario'] },
+    { key: 'cpf', label: 'CPF do Proprietário', aliases: ['ownerCpf', 'cpfProprietario'] },
     { key: 'plate', label: 'Placa', aliases: ['placa'] },
     { key: 'chassi', label: 'Chassi', aliases: ['chassis'] },
     { key: 'renavam', label: 'RENAVAM' },
@@ -59,8 +61,7 @@ const DOCUMENT_SCHEMAS: Record<string, FieldDef[]> = {
     { key: 'category', label: 'Categoria', aliases: ['categoria'] },
     { key: 'modelYear', label: 'Ano Modelo', aliases: ['ano_modelo'] },
     { key: 'fuel', label: 'Combustível', aliases: ['combustivel'] },
-    { key: 'fiduciaryAlienation', label: 'Alienação Fiduciária', type: 'boolean', aliases: ['alienacao_fiduciaria', 'alienacaoFiduciaria'] },
-    { key: 'financialInstitution', label: 'Instituição Financeira', aliases: ['instituicao_financeira'] }
+    { key: 'fiduciaryAlienation', label: 'Alienação Fiduciária', type: 'boolean', aliases: ['alienacao_fiduciaria', 'alienacaoFiduciaria'] }
   ],
   policy: [
     { key: 'policyNumber', label: 'Nº Apólice', aliases: ['numero_apolice'] },
@@ -83,10 +84,19 @@ const DOCUMENT_SCHEMAS: Record<string, FieldDef[]> = {
 };
 
 function pickValue(data: any, def: FieldDef): any {
-  if (data == null) return '';
+  if (data == null) return def.type === 'boolean' ? false : '';
   const candidates = [def.key, ...(def.aliases || [])];
+  // For boolean fields, the first explicitly-defined value wins (true or false).
+  if (def.type === 'boolean') {
+    for (const k of candidates) {
+      if (data[k] !== undefined && data[k] !== null && data[k] !== '') return data[k];
+    }
+    return false;
+  }
+  // For text fields, skip empty/falsy values
   for (const k of candidates) {
-    if (data[k] !== undefined && data[k] !== null && data[k] !== '') return data[k];
+    const v = data[k];
+    if (v !== undefined && v !== null && v !== '' && v !== false) return v;
   }
   return '';
 }
