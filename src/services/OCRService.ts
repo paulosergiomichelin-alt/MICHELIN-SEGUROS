@@ -7,6 +7,8 @@ import { OCRStrategyResolver, OCRStrategy } from './OCRStrategyResolver';
 import { DocumentMemoryManager } from './DocumentMemoryManager';
 import { OCRRegionSchemaValidator } from './OCRRegionSchemaValidator';
 import { StructuredOCRResult } from '../types/OCRTypes';
+import { AIHybridOCRService, AIDocumentType } from './AIHybridOCRService';
+import { PDFRenderService } from './PDFRenderService';
 
 export enum ProcessingState {
   IDLE = 'IDLE',
@@ -89,7 +91,36 @@ export class OCRService {
       let structured: any = undefined;
       const isPDF = mimeType === 'application/pdf' || (isLocalFile && (file as File).name.toLowerCase().includes('.pdf'));
 
-      // PIPELINE EXECUTION BY STRATEGY
+      // PRIMARY PIPELINE: AI (Qianfan OCR via OpenRouter) — unified for CNH/CRLV/Apolice
+      if (typeHint && ['cnh', 'crv', 'crlv', 'policy', 'apolice'].includes(typeHint)) {
+        const aiResult = await this.tryAIPipeline(file as File, fileUrl, isPDF, typeHint as AIDocumentType, metrics);
+        if (aiResult) {
+          metrics.totalTime = Date.now() - startTime;
+          metrics.confidence = aiResult.confidence / 100;
+
+          const finalResult = {
+            text: aiResult.rawText,
+            type: typeHint,
+            structuredData: aiResult.fields,
+            confidence: aiResult.confidence / 100,
+            regions: aiResult.fields,
+            metrics,
+            fileUrl,
+            provider: aiResult.provider,
+            validation: aiResult.validation
+          };
+
+          if (isLocalFile && fingerprint && aiResult.confidence >= 60) {
+            CacheManager.set(`enterprise_ocr_cache:${fingerprint}`, finalResult);
+          }
+          if (options.onStatus) options.onStatus(ProcessingState.COMPLETED);
+          console.log(`[OCR_PIPELINE] AI_SUCCESS | Type: ${typeHint} | Conf: ${aiResult.confidence}% | Time: ${metrics.totalTime}ms`);
+          return finalResult;
+        }
+        console.warn('[OCR_PIPELINE] AI pipeline unavailable or low-confidence; falling back to local pipeline.');
+      }
+
+      // PIPELINE EXECUTION BY STRATEGY (fallback when AI unavailable)
       if (strategy === OCRStrategy.REGIONAL_VISUAL) {
         // CNH MANDATE: 100% REGIONAL VISUAL
         const result = await this.executeRegionalPipeline(file as File, fileUrl, isPDF, typeHint, metrics);
@@ -156,6 +187,61 @@ export class OCRService {
       // Memory managed via reference count
       if (isLocalFile) this.memory.release(fileUrl);
     }
+  }
+
+  /**
+   * Try the AI-driven OCR pipeline first. Returns null if it fails or yields
+   * low confidence, signalling the caller to fall back to the local pipeline.
+   */
+  private async tryAIPipeline(file: File, url: string, isPDF: boolean, typeHint: AIDocumentType, metrics: OCRMetrics): Promise<any | null> {
+    try {
+      const canvas = await this.renderToCanvas(file, url, isPDF);
+      if (!canvas) return null;
+      const aiResult = await AIHybridOCRService.getInstance().extractFromCanvas(canvas, typeHint);
+      if (!aiResult.success) return null;
+      // Confidence floor: below 40% we don't trust the result and fall back.
+      if (aiResult.confidence < 40) {
+        console.warn(`[AI_OCR_LOW_CONFIDENCE] ${aiResult.confidence}% — using local pipeline instead.`);
+        return null;
+      }
+      return aiResult;
+    } catch (err: any) {
+      console.error('[AI_OCR_PIPELINE_ERROR]', err.message);
+      return null;
+    }
+  }
+
+  /** Render the input (PDF page 1 or image URL) into a canvas suitable for AI OCR. */
+  private async renderToCanvas(file: File, url: string, isPDF: boolean): Promise<HTMLCanvasElement | null> {
+    if (isPDF) {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await PDFResourceManager.getDocument(new Uint8Array(arrayBuffer), file.name);
+      const page = await pdf.getPage(1);
+      // Use the existing PDF render service; scale 2.5 is enough for vision LLM input
+      const viewport = page.getViewport({ scale: 2.5 });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true, alpha: false })!;
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport, intent: 'display' }).promise;
+      return canvas;
+    }
+    // Non-PDF: load the image and draw onto a canvas
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        canvas.getContext('2d')!.drawImage(img, 0, 0);
+        resolve(canvas);
+      };
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
   }
 
   private async executeRegionalPipeline(file: File, url: string, isPDF: boolean, typeHint?: string, metrics?: OCRMetrics): Promise<any> {
