@@ -20,6 +20,8 @@
 import { ImagePreprocessor, PreprocessedImage } from './document-engine/ImagePreprocessor';
 import { OpenRouterOCRClient, OpenRouterChatRequest } from './document-engine/OpenRouterOCRClient';
 import { DocumentValidator, FieldValidation } from './document-engine/DocumentValidator';
+import { AIOCRConfigService } from './AIOCRConfigService';
+import { AIOCRMetricsService } from './AIOCRMetricsService';
 
 export type AIDocumentType = 'cnh' | 'crv' | 'crlv' | 'policy' | 'apolice';
 
@@ -60,11 +62,23 @@ export class AIHybridOCRService {
   public async extractFromCanvas(canvas: HTMLCanvasElement, documentType: AIDocumentType): Promise<AIExtractionResult> {
     const start = Date.now();
     const type = this.normalizeType(documentType);
-    console.log(`[AI_OCR_START] type=${type}`);
 
-    const apiKey = OpenRouterOCRClient.resolveApiKey();
+    // Apply persisted config (model, timeout, toggles) if available
+    const cfg = AIOCRConfigService.peek();
+    if (cfg && cfg.enabled === false) {
+      console.warn('[AI_OCR_DISABLED] Pipeline disabled in settings; signalling caller to fall back.');
+      AIOCRMetricsService.recordEvent('AI_OCR_DISABLED', 'AI pipeline disabled in settings', { type });
+      return this.failure(type, 'AI_DISABLED', start, 0);
+    }
+
+    console.log(`[AI_OCR_START] type=${type}`);
+    AIOCRMetricsService.recordStart(type);
+
+    // Prefer config-resolved key (Firestore-backed); fallback to env/legacy storage.
+    const apiKey = AIOCRConfigService.resolveApiKey() || OpenRouterOCRClient.resolveApiKey();
     if (!apiKey) {
       console.warn('[AI_OCR_NO_KEY] OpenRouter API key not configured; signalling caller to fall back.');
+      AIOCRMetricsService.recordFailure(type, 'NO_API_KEY', Date.now() - start);
       return this.failure(type, 'NO_API_KEY', start, 0);
     }
 
@@ -90,8 +104,10 @@ export class AIHybridOCRService {
 
     // AI call
     const prompt = this.buildPrompt(type);
+    const activeModel = cfg?.model || MODEL_ID;
+    const activeTimeout = cfg?.timeout || 20000;
     const payload: OpenRouterChatRequest = {
-      model: MODEL_ID,
+      model: activeModel,
       temperature: 0,
       max_tokens: 1024,
       messages: [
@@ -106,16 +122,19 @@ export class AIHybridOCRService {
       ]
     };
 
-    console.log(`[QIANFAN_REQUEST] model=${MODEL_ID} bytes=${preprocessed.bytes}`);
+    console.log(`[QIANFAN_REQUEST] model=${activeModel} bytes=${preprocessed.bytes}`);
+    AIOCRMetricsService.recordEvent('QIANFAN_REQUEST', `model=${activeModel}`, { type, bytes: preprocessed.bytes });
     let raw = '';
     let tokensUsed = 0;
     try {
-      const response = await OpenRouterOCRClient.chatCompletion(apiKey, payload);
+      const response = await OpenRouterOCRClient.chatCompletion(apiKey, payload, activeTimeout);
       raw = response.choices?.[0]?.message?.content || '';
       tokensUsed = response.usage?.total_tokens || 0;
       console.log(`[QIANFAN_RESPONSE] tokens=${tokensUsed} finish=${response.choices?.[0]?.finish_reason}`);
+      AIOCRMetricsService.recordEvent('QIANFAN_RESPONSE', `tokens=${tokensUsed}`, { type, tokens: tokensUsed });
     } catch (err: any) {
       console.error('[OCR_FALLBACK]', err.message);
+      AIOCRMetricsService.recordFailure(type, err.message || 'AI_REQUEST_FAILED', Date.now() - start);
       return this.failure(type, err.message || 'AI_REQUEST_FAILED', start, preprocessed.bytes);
     }
 
@@ -155,6 +174,7 @@ export class AIHybridOCRService {
 
     if (cacheKey && confidence >= 50) this.cacheSet(cacheKey, result);
     console.log(`[OCR_SUCCESS] type=${type} confidence=${confidence} latency=${result.metrics.latency}ms`);
+    AIOCRMetricsService.recordSuccess(type, confidence, result.metrics.latency);
     return result;
   }
 

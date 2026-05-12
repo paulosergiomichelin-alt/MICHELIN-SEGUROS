@@ -16,6 +16,7 @@ import { SystemHealth } from './SystemHealth';
 import { AdminTools } from '../admin/AdminTools';
 import { auth } from '../../lib/firebase';
 import { CacheManager } from '../../services/CacheManager';
+import { AIDocumentExtractionPanel } from './AIDocumentExtractionPanel';
 
 interface SettingsProps {
   canManageUsers?: boolean;
@@ -69,7 +70,7 @@ const HelpButton = ({ title, description, usage }: { title: string, description:
 
 export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig, onUpdateVisualConfig, permissions }: SettingsProps) {
   const { theme: currentTheme, setTheme: setAppTheme } = useTheme();
-  const [activeSubTab, setActiveSubTab] = useState<'general' | 'diagnostic' | 'health' | 'admin' | 'visual'>('general');
+  const [activeSubTab, setActiveSubTab] = useState<'general' | 'diagnostic' | 'health' | 'admin' | 'visual' | 'ai_ocr'>('general');
 
   const [isDocsModalOpen, setIsDocsModalOpen] = useState(false);
   const [isTestMode, setIsTestMode] = useState<boolean>(() => {
@@ -393,7 +394,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
       {/* Tab Navigation */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 px-1">
         <div className="flex bg-brand-dark p-1 rounded-2xl border border-white/5 backdrop-blur-md">
-          <button 
+          <button
             onClick={() => setActiveSubTab('general')}
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
@@ -402,9 +403,19 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
           >
             <Cog className="w-3.5 h-3.5" /> GERAL
           </button>
-          
+
+          <button
+            onClick={() => setActiveSubTab('ai_ocr')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+              activeSubTab === 'ai_ocr' ? "bg-gold-deep text-brand-black shadow-lg shadow-gold-deep/20" : "text-slate-500 hover:text-white"
+            )}
+          >
+            <Bot className="w-3.5 h-3.5" /> OCR IA
+          </button>
+
           {canManageUsers && (
-            <button 
+            <button
               onClick={() => setActiveSubTab('diagnostic')}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
@@ -876,8 +887,12 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
           </motion.div>
         )}
 
+        {activeSubTab === 'ai_ocr' && (
+          <AIDocumentExtractionPanel />
+        )}
+
         {activeSubTab === 'admin' && canManageUsers && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             className="space-y-6"
