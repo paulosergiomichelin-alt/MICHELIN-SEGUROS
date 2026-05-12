@@ -102,6 +102,18 @@ export class HybridOCRService {
               metrics: { ...metrics, totalTime: Date.now() - startTime, pipeline: 'CNH_Anchored_v1' }
             };
           }
+          // Abort early when anchors < 2: spatial/regional fallback would just waste 10-20s.
+          if (anchored.metrics.anchorsFound < 2) {
+            console.warn(`[ANCHOR_PIPELINE_ABORTED] anchorsFound=${anchored.metrics.anchorsFound} (< 2). Skipping regional/spatial OCR.`);
+            console.warn('[SPATIAL_PIPELINE_ABORTED] No reliable anchors — refusing to run multi-pass regional crops.');
+            return {
+              text: anchored.globalText,
+              regions: { _anchored: false, _fields: anchored.fields },
+              structured: anchored.structured,
+              debug: { pipeline: 'CNH_Anchored_Aborted', metrics: anchored.metrics },
+              metrics: { ...metrics, totalTime: Date.now() - startTime, pipeline: 'CNH_Anchored_Aborted' }
+            };
+          }
           console.warn('[HYBRID_OCR] [CNH] Anchored pipeline yielded few fields; falling back to fixed-coord regional pipeline.');
         } catch (e: any) {
           console.warn('[HYBRID_OCR] [CNH] Anchored pipeline error, falling back:', e?.message || e);

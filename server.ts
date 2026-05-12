@@ -12,8 +12,11 @@ async function startServer() {
   const PORT = 3000;
 
   // Image OCR payloads carry JPEG base64 (~150-300KB). Default 100KB limit caused HTTP 413.
-  app.use(express.json({ limit: '15mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+  // Bumped to 25MB to comfortably fit any document image; refuses larger payloads outright.
+  const BODY_LIMIT = '25mb';
+  app.use(express.json({ limit: BODY_LIMIT }));
+  app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
+  console.log(`[SERVER] Body parser limit set to ${BODY_LIMIT} (was 100KB default)`);
 
   // Logging middleware
   app.use((req, res, next) => {
@@ -35,9 +38,20 @@ async function startServer() {
 
   app.get('/favicon.ico', (req, res) => res.status(204).end());
 
+  // Body-parser error handler (catches 413 before routes see it).
+  app.use((err: any, _req: any, res: any, next: any) => {
+    if (err && (err.type === 'entity.too.large' || err.status === 413)) {
+      console.error(`[SERVER] 413 PayloadTooLarge — bumping body limit failed? Current=${BODY_LIMIT}`);
+      return res.status(413).json({ error: 'PAYLOAD_TOO_LARGE', limit: BODY_LIMIT });
+    }
+    next(err);
+  });
+
   // Proxy Genérico para OpenRouter (suporta validação completa)
   app.post('/api/proxy/openrouter/request', async (req, res) => {
     const { apiKey, method, endpoint, data } = req.body;
+    const bodySize = JSON.stringify(req.body || {}).length;
+    console.log(`[PROXY-REQ] Endpoint=${endpoint} bytes=${bodySize}`);
 
     if (!apiKey) {
       return res.status(400).json({ error: 'API Key is required' });

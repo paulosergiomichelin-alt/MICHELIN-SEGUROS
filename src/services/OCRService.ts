@@ -276,15 +276,21 @@ export class OCRService {
 
   /**
    * Render the input (PDF page 1 or image URL) into a canvas suitable for AI OCR.
-   * Reduced scale 1.5 (previously 2.5) per the new lean pipeline: Qianfan handles
-   * resolution internally, and the body payload shrinks 4× which avoids HTTP 413.
+   * Scale is computed dynamically so the rendered canvas never exceeds 1800px on its
+   * longest dimension — keeps the JPEG payload small and Qianfan handles any further
+   * resolution internally. Avoids the 2200x3113 monsters from naive scale=1.5.
    */
   private async renderToCanvas(file: File, url: string, isPDF: boolean): Promise<HTMLCanvasElement | null> {
     if (isPDF) {
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await PDFResourceManager.getDocument(new Uint8Array(arrayBuffer), file.name);
       const page = await pdf.getPage(1);
-      const viewport = page.getViewport({ scale: 1.5 });
+      const baseViewport = page.getViewport({ scale: 1 });
+      const MAX_DIM = 1800;
+      const maxScale = MAX_DIM / Math.max(baseViewport.width, baseViewport.height);
+      const scale = Math.min(1.5, maxScale);
+      const viewport = page.getViewport({ scale });
+      console.log(`[PDF_RENDER_LEAN] page=${baseViewport.width}x${baseViewport.height} scale=${scale.toFixed(2)} -> ${Math.round(viewport.width)}x${Math.round(viewport.height)}`);
       const canvas = document.createElement('canvas');
       canvas.width = viewport.width;
       canvas.height = viewport.height;

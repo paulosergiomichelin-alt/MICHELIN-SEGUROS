@@ -52,7 +52,9 @@ export const DEFAULT_AI_OCR_CONFIG: AIOCRConfig = {
   provider: 'openrouter',
   model: 'baidu/qianfan-ocr-fast:free',
   apiKey: '',
-  fallbackEnabled: true,
+  // AI-ONLY by default: if AI fails (timeout, 413, low confidence), return error
+  // instead of running the slow legacy Tesseract pipeline (multi-rotation + anchored + regional).
+  fallbackEnabled: false,
   semanticValidation: true,
   preprocessEnabled: true,
   validateCpf: true,
