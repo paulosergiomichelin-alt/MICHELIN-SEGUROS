@@ -35,6 +35,124 @@ interface UniversalDocumentViewerProps {
   };
 }
 
+/**
+ * Per-document field schema for the validation panel. Whitelist only the
+ * canonical keys so duplicated aliases (nome/name, ownerName/nomeProprietario,
+ * alienacao_fiduciaria/fiduciaryAlienation) never render twice.
+ */
+interface FieldDef { key: string; label: string; type?: 'text' | 'boolean' | 'date'; aliases?: string[]; }
+
+const DOCUMENT_SCHEMAS: Record<string, FieldDef[]> = {
+  cnh: [
+    { key: 'name', label: 'Nome Completo', aliases: ['nome'] },
+    { key: 'cpf', label: 'CPF' },
+    { key: 'birthDate', label: 'Data de Nascimento', type: 'date', aliases: ['data_nascimento', 'nascimento'] },
+    { key: 'licenseNumber', label: 'Nº Registro', aliases: ['registration', 'registro'] },
+    { key: 'licenseExpiry', label: 'Validade CNH', type: 'date', aliases: ['validity', 'validade'] },
+    { key: 'licenseCategory', label: 'Categoria', aliases: ['category', 'categoria'] }
+  ],
+  crv: [
+    { key: 'plate', label: 'Placa', aliases: ['placa'] },
+    { key: 'chassi', label: 'Chassi', aliases: ['chassis'] },
+    { key: 'renavam', label: 'RENAVAM' },
+    { key: 'brandModel', label: 'Marca/Modelo', aliases: ['marca_modelo'] },
+    { key: 'category', label: 'Categoria', aliases: ['categoria'] },
+    { key: 'modelYear', label: 'Ano Modelo', aliases: ['ano_modelo'] },
+    { key: 'fuel', label: 'Combustível', aliases: ['combustivel'] },
+    { key: 'fiduciaryAlienation', label: 'Alienação Fiduciária', type: 'boolean', aliases: ['alienacao_fiduciaria', 'alienacaoFiduciaria'] },
+    { key: 'financialInstitution', label: 'Instituição Financeira', aliases: ['instituicao_financeira'] }
+  ],
+  policy: [
+    { key: 'policyNumber', label: 'Nº Apólice', aliases: ['numero_apolice'] },
+    { key: 'insurer', label: 'Seguradora', aliases: ['seguradora'] },
+    { key: 'brokerName', label: 'Corretora', aliases: ['corretora'] },
+    { key: 'brokerSusep', label: 'SUSEP Corretora', aliases: ['corretora_susep'] },
+    { key: 'insuredName', label: 'Nome do Segurado', aliases: ['segurado_nome'] },
+    { key: 'insuredCpf', label: 'CPF do Segurado', aliases: ['segurado_cpf'] },
+    { key: 'plate', label: 'Placa', aliases: ['placa'] },
+    { key: 'chassi', label: 'Chassi', aliases: ['chassis'] },
+    { key: 'cep', label: 'CEP' },
+    { key: 'startDate', label: 'Início Vigência', type: 'date', aliases: ['inicio_vigencia'] },
+    { key: 'insuranceExpiry', label: 'Fim da Vigência', type: 'date', aliases: ['fim_vigencia'] },
+    { key: 'commercialUse', label: 'Uso Comercial', type: 'boolean', aliases: ['uso_comercial'] },
+    { key: 'fiduciaryAlienation', label: 'Alienação Fiduciária', type: 'boolean', aliases: ['alienacao_fiduciaria'] },
+    { key: 'isOwnerDriver', label: 'Proprietário é Condutor', type: 'boolean', aliases: ['proprietario_e_condutor'] },
+    { key: 'youngDriver', label: 'Condutor Jovem (<25)', type: 'boolean', aliases: ['condutor_jovem'] },
+    { key: 'maritalStatus', label: 'Estado Civil', aliases: ['estado_civil'] }
+  ]
+};
+
+function pickValue(data: any, def: FieldDef): any {
+  if (data == null) return '';
+  const candidates = [def.key, ...(def.aliases || [])];
+  for (const k of candidates) {
+    if (data[k] !== undefined && data[k] !== null && data[k] !== '') return data[k];
+  }
+  return '';
+}
+
+function coerceBool(v: any): boolean {
+  if (typeof v === 'boolean') return v;
+  if (v == null) return false;
+  const s = String(v).toUpperCase().normalize('NFD').replace(/\p{M}/gu, '').trim();
+  return ['SIM', 'YES', 'TRUE', '1', 'POSSUI', 'CONSTA', 'VERDADEIRO'].includes(s);
+}
+
+function renderValidationFields(type: string | undefined, data: any) {
+  if (!data) return null;
+  const t = (type || '').toLowerCase();
+  // Normalize 'crlv' → 'crv', 'apolice' → 'policy'
+  const schemaKey = t === 'crlv' ? 'crv' : t === 'apolice' ? 'policy' : t;
+  const schema = DOCUMENT_SCHEMAS[schemaKey];
+
+  if (!schema) {
+    // No schema for this type — fall back to the legacy dynamic rendering
+    return Object.entries(data)
+      .filter(([k, v]) => !k.startsWith('_') && v !== '' && v != null && typeof v !== 'object')
+      .map(([key, value]: any) => (
+        <div key={key} className="space-y-1.5">
+          <label className="text-[10px] uppercase tracking-wider text-[#D4A854] font-black ml-1">{key}</label>
+          <input
+            type="text"
+            defaultValue={String(value || '')}
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-[12px] font-medium focus:border-[#D4A854]/50 outline-none transition-all"
+          />
+        </div>
+      ));
+  }
+
+  return schema.map((def) => {
+    const value = pickValue(data, def);
+    if (def.type === 'boolean') {
+      const checked = coerceBool(value);
+      return (
+        <div key={def.key} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
+          <label className="text-[11px] uppercase tracking-wider text-[#D4A854] font-black">{def.label}</label>
+          <span className={cn(
+            'px-3 py-1 rounded-md text-[10px] font-black uppercase',
+            checked ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/5 text-white/40'
+          )}>
+            {checked ? 'SIM' : 'NÃO'}
+          </span>
+        </div>
+      );
+    }
+    return (
+      <div key={def.key} className="space-y-1.5">
+        <label className="text-[10px] uppercase tracking-wider text-[#D4A854] font-black ml-1">{def.label}</label>
+        <div className="relative group">
+          <input
+            type="text"
+            defaultValue={String(value || '')}
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-[12px] font-medium focus:border-[#D4A854]/50 focus:ring-1 focus:ring-[#D4A854]/50 outline-none transition-all"
+          />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#D4A854] opacity-0 group-focus-within:opacity-100 transition-opacity shadow-[0_0_8px_#D4A854]" />
+        </div>
+      </div>
+    );
+  });
+}
+
 export const UniversalDocumentViewer: React.FC<UniversalDocumentViewerProps> = ({
   url,
   storagePath,
@@ -227,69 +345,7 @@ export const UniversalDocumentViewer: React.FC<UniversalDocumentViewerProps> = (
                   </header>
 
                   <div className="space-y-4">
-                    {Object.entries(data).map(([key, value]: any) => {
-                      if (key.startsWith('_')) return null;
-                      
-                      const fieldLabels: any = {
-                        name: 'Nome Completo',
-                        insuredName: 'Nome do Segurado',
-                        cpf: 'CPF',
-                        insuredCpf: 'CPF do Segurado',
-                        birthDate: 'Data de Nascimento',
-                        licenseExpiry: 'Validade CNH',
-                        licenseCategory: 'Categoria',
-                        plate: 'Placa',
-                        chassis: 'Chassi',
-                        renavam: 'RENAVAM',
-                        brandModel: 'Marca/Modelo',
-                        insuranceExpiry: 'Fim da Vigência',
-                        insurer: 'Seguradora',
-                        brokerName: 'Corretora',
-                        brokerSusep: 'SUSEP Corretora',
-                        financialInstitution: 'Instituição Financeira',
-                        restrictionType: 'Tipo de Restrição',
-                        fiduciaryAlienation: 'Alienação Fiduciária'
-                      };
-
-                      if (key === 'broker' && typeof value === 'object' && value !== null) {
-                         return (
-                           <div key={key} className="space-y-3 p-3 bg-[#D4A85405] border border-[#D4A85410] rounded-2xl">
-                             <div className="space-y-1.5">
-                               <label className="text-[9px] uppercase tracking-wider text-[#D4A854] font-black ml-1">Corretora (Nome)</label>
-                               <input 
-                                 type="text" 
-                                 defaultValue={value.name || ''} 
-                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-[11px] font-medium focus:border-[#D4A854]/50 outline-none transition-all" 
-                               />
-                             </div>
-                             <div className="space-y-1.5">
-                               <label className="text-[9px] uppercase tracking-wider text-[#D4A854] font-black ml-1">SUSEP</label>
-                               <input 
-                                 type="text" 
-                                 defaultValue={value.susep || ''} 
-                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-[11px] font-medium focus:border-[#D4A854]/50 outline-none transition-all" 
-                               />
-                             </div>
-                           </div>
-                         );
-                      }
-
-                      return (
-                        <div key={key} className="space-y-1.5">
-                          <label className="text-[10px] uppercase tracking-wider text-[#D4A854] font-black ml-1">
-                            {fieldLabels[key] || key}
-                          </label>
-                          <div className="relative group">
-                            <input 
-                              type="text"
-                              defaultValue={value || ''}
-                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-[12px] font-medium focus:border-[#D4A854]/50 focus:ring-1 focus:ring-[#D4A854]/50 outline-none transition-all"
-                            />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#D4A854] opacity-0 group-focus-within:opacity-100 transition-opacity shadow-[0_0_8px_#D4A854]" />
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {renderValidationFields(type, data)}
                   </div>
 
                   {/* Technical Debug Info */}
