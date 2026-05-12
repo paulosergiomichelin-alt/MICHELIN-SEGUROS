@@ -1339,11 +1339,13 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
         debug={viewerState.debug}
         onConfirm={viewerState.onConfirm}
         onClose={() => {
+          // Always release the session and clear hydration locks. release() is a no-op
+          // if there's no active session; calling it unconditionally avoids the case
+          // where state was already finalized but the viewer kept reopening on a stale
+          // subscriber tick.
+          controller.release();
+          hydrationLockRef.current.clear();
           setViewerState({ isOpen: false });
-          if (controller.isActive()) {
-            controller.release();
-            hydrationLockRef.current.clear();
-          }
         }}
       />
 

@@ -47,7 +47,7 @@ export interface AIExtractionResult {
 const MODEL_ID = 'baidu/qianfan-ocr-fast:free';
 // Cache version: bump this whenever the prompt, model, or output schema changes so
 // old cached responses (which may miss fields) are invalidated automatically.
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 const CACHE_PREFIX = `ai_ocr_cache_${CACHE_VERSION}:`;
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -304,27 +304,41 @@ export class AIHybridOCRService {
         return {
           system,
           user: [
-            'Documento: Apólice de seguro auto brasileira.',
+            'Documento: Apólice de seguro auto brasileira. EXAMINE TODAS AS PÁGINAS da imagem — os dados estão espalhados (capa, dados do segurado, dados do veículo, vigência, questionário, corretora).',
             '',
-            'Localize e extraia TODOS estes campos. Para booleanos do questionário, retorne EXATAMENTE "sim" ou "não".',
-            '- numero_apolice: número da apólice ou proposta',
-            '- seguradora: nome da seguradora',
-            '- corretora: nome da corretora',
+            'CAMPOS A EXTRAIR (procure em qualquer página/seção do documento):',
+            '',
+            'IDENTIFICAÇÃO DA APÓLICE:',
+            '- numero_apolice: pesquise "Apólice nº", "Nº da Apólice", "Número da Apólice" ou "Proposta nº" — geralmente formato 99.99.9999.9999999 ou similar',
+            '- seguradora: nome da empresa seguradora (Porto Seguro, Bradesco Seguros, Allianz, etc.)',
+            '- corretora: nome da corretora de seguros',
             '- seguradora_cnpj, corretora_cnpj: CNPJ formato XX.XXX.XXX/XXXX-XX',
-            '- corretora_susep: código SUSEP da corretora',
-            '- segurado_nome, segurado_cpf, segurado_data_nascimento: dados do segurado',
-            '- proprietario_veiculo_nome, proprietario_veiculo_cpf: dados do proprietário do veículo',
-            '- placa: placa do veículo (formato Mercosul ou antiga)',
-            '- chassi: 17 caracteres alfanuméricos',
-            '- cep: CEP formato XXXXX-XXX',
-            '- fim_vigencia, inicio_vigencia: datas DD/MM/YYYY',
-            '- uso_comercial: "sim" ou "não"',
-            '- alienacao_fiduciaria: "sim" ou "não"',
-            '- proprietario_e_condutor: "sim" se proprietário do veículo é o condutor principal',
-            '- condutor_jovem: "sim" se há condutor com idade < 25 anos',
-            '- estado_civil: SOLTEIRO, CASADO, DIVORCIADO, VIUVO, UNIAO ESTAVEL',
+            '- corretora_susep: código SUSEP da corretora (geralmente 6 dígitos com hífen)',
             '',
-            'Retorne APENAS este JSON:',
+            'SEGURADO (procure "Dados do Segurado", "Segurado", "Contratante"):',
+            '- segurado_nome: nome completo do segurado',
+            '- segurado_cpf: CPF formato XXX.XXX.XXX-XX',
+            '- segurado_data_nascimento: data DD/MM/YYYY',
+            '',
+            'VEÍCULO (procure "Dados do Veículo", "Veículo", "Bem segurado"):',
+            '- proprietario_veiculo_nome: nome do proprietário do veículo (se diferente do segurado)',
+            '- proprietario_veiculo_cpf: CPF do proprietário do veículo',
+            '- placa: placa do veículo (7 caracteres, ex: ABC1D23 ou ABC-1234)',
+            '- chassi: chassi/VIN (exatamente 17 caracteres alfanuméricos)',
+            '- cep: CEP de pernoite formato XXXXX-XXX',
+            '',
+            'VIGÊNCIA (procure "Vigência", "Período de Cobertura"):',
+            '- inicio_vigencia: data início DD/MM/YYYY',
+            '- fim_vigencia: data fim DD/MM/YYYY',
+            '',
+            'QUESTIONÁRIO DE PERFIL (procure seções "Perfil", "Questionário", "Uso do Veículo"). Para CADA campo abaixo retorne EXATAMENTE "sim" ou "não":',
+            '- uso_comercial: o veículo é usado para fins comerciais/profissionais? (sim/não)',
+            '- alienacao_fiduciaria: há alienação fiduciária/financiamento/leasing/gravame mencionado? (sim/não)',
+            '- proprietario_e_condutor: o proprietário do veículo é também o condutor principal? (sim/não)',
+            '- condutor_jovem: há condutor com idade < 25 anos? (sim/não)',
+            '- estado_civil: SOLTEIRO, CASADO, DIVORCIADO, VIUVO ou UNIAO ESTAVEL',
+            '',
+            'Retorne APENAS este JSON sem comentários:',
             '{"numero_apolice":"","seguradora":"","corretora":"","seguradora_cnpj":"","corretora_cnpj":"","corretora_susep":"","segurado_nome":"","segurado_cpf":"","segurado_data_nascimento":"","proprietario_veiculo_nome":"","proprietario_veiculo_cpf":"","placa":"","chassi":"","cep":"","fim_vigencia":"","inicio_vigencia":"","uso_comercial":"","alienacao_fiduciaria":"","proprietario_e_condutor":"","condutor_jovem":"","estado_civil":""}'
           ].join('\n')
         };

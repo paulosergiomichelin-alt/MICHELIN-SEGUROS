@@ -257,11 +257,15 @@ export const UniversalDocumentViewer: React.FC<UniversalDocumentViewerProps> = (
 
   return (
     <AnimatePresence>
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/95 backdrop-blur-md"
+        onClick={(e) => {
+          // Clicking the dark overlay (not the inner card) closes the viewer.
+          if (e.target === e.currentTarget) onClose();
+        }}
       >
         <div className="relative w-full h-full max-w-7xl flex flex-col bg-[#1A1A1A] rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
           
@@ -359,6 +363,25 @@ export const UniversalDocumentViewer: React.FC<UniversalDocumentViewerProps> = (
                   </header>
 
                   <div className="space-y-4">
+                    {(() => {
+                      const schemaKey = (type || '').toLowerCase() === 'crlv' ? 'crv' : (type || '').toLowerCase() === 'apolice' ? 'policy' : (type || '').toLowerCase();
+                      const schema = DOCUMENT_SCHEMAS[schemaKey];
+                      if (schema && data) {
+                        const filled = schema.filter(d => {
+                          const v = pickValue(data, d);
+                          return v !== '' && v !== false && v != null;
+                        }).length;
+                        const ratio = filled / schema.length;
+                        if (ratio < 0.4) {
+                          return (
+                            <div className="p-3 mb-3 rounded-xl bg-amber-950/40 border border-amber-500/30 text-amber-200 text-xs">
+                              ⚠️ Extração parcial — apenas {filled}/{schema.length} campos preenchidos. Revise manualmente ou clique <strong>Descartar</strong> e reimporte com melhor qualidade.
+                            </div>
+                          );
+                        }
+                      }
+                      return null;
+                    })()}
                     {renderValidationFields(type, data)}
                   </div>
 
