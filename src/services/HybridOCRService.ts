@@ -205,49 +205,53 @@ export class HybridOCRService {
 
   private async detectAndFixCNHOrientation(img: HTMLImageElement): Promise<HTMLCanvasElement> {
     const isPortrait = img.height > img.width;
-    console.log(`[ORIENTATION_ENGINE] Initial aspect: ${isPortrait ? 'Portrait' : 'Landscape'}`);
+    console.log(`[ORIENTATION_ENGINE] Initial aspect: ${isPortrait ? 'Portrait' : 'Landscape'} (${img.width}x${img.height})`);
 
-    const candidateRotations = isPortrait ? [90, 270] : [0, 180];
-    let bestRotation = candidateRotations[0];
-    let foundAnchor = false;
-    
-    // Quick probe for anchors in the header of each candidate
-    for (const rot of candidateRotations) {
-      const probeCanvas = document.createElement('canvas');
-      const pctx = probeCanvas.getContext('2d', { willReadFrequently: true })!;
-      
-      const pWidth = rot % 180 === 0 ? img.width : img.height;
-      const pHeight = rot % 180 === 0 ? img.height : img.width;
-      
-      probeCanvas.width = Math.min(800, pWidth);
-      probeCanvas.height = Math.min(200, pHeight);
-      
-      const tempFull = document.createElement('canvas');
-      tempFull.width = pWidth;
-      tempFull.height = pHeight;
-      const tctx = tempFull.getContext('2d')!;
-      tctx.translate(tempFull.width / 2, tempFull.height / 2);
-      tctx.rotate(rot * Math.PI / 180);
-      tctx.drawImage(img, -img.width / 2, -img.height / 2);
+    // Test ALL 4 rotations and pick the one with the highest semantic score.
+    // CNH labels are the gold standard; markers (REPUBLICA, etc) are a fallback signal.
+    const candidates = [0, 90, 180, 270];
+    const FIELD_LABELS = ['NOME', 'CPF', 'NASCIMENTO', 'VALIDADE', 'REGISTRO', 'CATEGORIA', 'FILIACAO'];
+    const DOC_MARKERS = ['REPUBLICA', 'FEDERATIVA', 'BRASIL', 'HABILITACAO', 'TERRITORIO', 'NACIONAL', 'MINISTERIO', 'TRANSITO', 'SENATRAN'];
 
-      pctx.drawImage(tempFull, 0, 0, pWidth, pHeight * 0.2, 0, 0, probeCanvas.width, probeCanvas.height);
-      
-      const probeResult = await LocalOCRService.getInstance().performStructuredOCR(probeCanvas);
-      const uProbe = probeResult.text.toUpperCase();
-      console.log(`[ORIENTATION_PROBE] Rotation ${rot} text: "${uProbe.trim()}" | Conf: ${probeResult.confidence} | Tokens: ${probeResult.words.length}`);
-      
-      const markers = ['REPUBLICA', 'FEDERATIVA', 'BRASIL', 'HABILITACAO', 'TERRITORIO', 'NACIONAL', 'DOCUMENTO', 'MINISTERIO', 'TRANSITO'];
-      if ((markers.some(m => new RegExp(`\\b${m}\\b`).test(uProbe)) && probeResult.confidence > 15) || (probeResult.words.length > 5 && probeResult.confidence > 25)) {
-        console.log(`[ORIENTATION_ENGINE] Anchor found for ${rot}deg. Confidence: ${probeResult.confidence}. Alignment locked.`);
-        bestRotation = rot;
-        foundAnchor = true;
-        break;
-      }
+    type RotationScore = { rotation: number; score: number; labelHits: number; markerHits: number; confidence: number; tokens: number };
+    const scores: RotationScore[] = [];
+
+    for (const rot of candidates) {
+      const rotW = rot % 180 === 0 ? img.width : img.height;
+      const rotH = rot % 180 === 0 ? img.height : img.width;
+
+      const rotated = document.createElement('canvas');
+      rotated.width = rotW;
+      rotated.height = rotH;
+      const rctx = rotated.getContext('2d')!;
+      rctx.translate(rotated.width / 2, rotated.height / 2);
+      rctx.rotate(rot * Math.PI / 180);
+      rctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+      // Probe the full rotated image at a lower resolution so OCR runs fast on each rotation.
+      const probe = document.createElement('canvas');
+      const probeMax = 1400;
+      const ratio = Math.min(probeMax / rotW, probeMax / rotH, 1);
+      probe.width = Math.round(rotW * ratio);
+      probe.height = Math.round(rotH * ratio);
+      const pctx = probe.getContext('2d', { willReadFrequently: true })!;
+      pctx.drawImage(rotated, 0, 0, rotW, rotH, 0, 0, probe.width, probe.height);
+      OCRPreprocessService.process(pctx, probe.width, probe.height, { pass: 1, grayscale: true, contrast: 1.5, desaturate: true });
+
+      const result = await LocalOCRService.getInstance().performStructuredOCR(probe);
+      const uText = this.normalizeForMatching(result.text);
+
+      const labelHits = FIELD_LABELS.filter(l => this.fuzzyContains(uText, l)).length;
+      const markerHits = DOC_MARKERS.filter(m => this.fuzzyContains(uText, m)).length;
+      // Score weights: real CNH field labels are worth more than generic doc markers.
+      const score = labelHits * 10 + markerHits * 3 + (result.confidence / 10) + Math.min(result.words.length, 50) * 0.1;
+      scores.push({ rotation: rot, score, labelHits, markerHits, confidence: result.confidence, tokens: result.words.length });
+      console.log(`[ORIENTATION_PROBE] rot=${rot} score=${score.toFixed(1)} labels=${labelHits} markers=${markerHits} conf=${result.confidence} tokens=${result.words.length}`);
     }
 
-    if (!foundAnchor) {
-      console.warn(`[ORIENTATION_ENGINE] No clear anchors found. Defaulting to ${bestRotation}deg approach.`);
-    }
+    scores.sort((a, b) => b.score - a.score);
+    const bestRotation = scores[0].rotation;
+    console.log(`[ORIENTATION_ENGINE] Best rotation: ${bestRotation}deg (score=${scores[0].score.toFixed(1)}, labels=${scores[0].labelHits}, markers=${scores[0].markerHits})`);
 
     const finalCanvas = document.createElement('canvas');
     const fctx = finalCanvas.getContext('2d')!;
@@ -258,12 +262,27 @@ export class HybridOCRService {
       finalCanvas.width = img.height;
       finalCanvas.height = img.width;
     }
-
     fctx.translate(finalCanvas.width / 2, finalCanvas.height / 2);
     fctx.rotate(bestRotation * Math.PI / 180);
     fctx.drawImage(img, -img.width / 2, -img.height / 2);
-    
     return finalCanvas;
+  }
+
+  /** Strip accents and special chars for marker matching. */
+  private normalizeForMatching(text: string): string {
+    return text.toUpperCase().normalize('NFD').replace(/\p{M}/gu, '').replace(/[^A-Z\s]/g, ' ');
+  }
+
+  /** Tolerant substring match: allows up to 1 character of OCR noise per 5 chars of target. */
+  private fuzzyContains(haystack: string, target: string): boolean {
+    if (haystack.includes(target)) return true;
+    if (target.length < 4) return false;
+    // Try a substring search with one missing character
+    for (let i = 0; i < target.length; i++) {
+      const variant = target.substring(0, i) + target.substring(i + 1);
+      if (variant.length >= 4 && haystack.includes(variant)) return true;
+    }
+    return false;
   }
 
   private async performCNHRegionPipelineWithCanvas(baseCanvas: HTMLCanvasElement, startTime: number): Promise<{ text: string, regions: any, structured: StructuredOCRResult, debug: any }> {

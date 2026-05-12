@@ -186,14 +186,50 @@ export class CNHAnchoredOCRService {
     out.height = canvas.height;
     const ctx = out.getContext('2d')!;
     ctx.drawImage(canvas, 0, 0);
+    // Adaptive threshold (local-window) removes the uneven security pattern far better
+    // than a global threshold. Combined with desaturation, the text isolates cleanly.
     OCRPreprocessService.process(ctx, out.width, out.height, {
       pass: 1,
       desaturate: true,
-      contrast: 1.6,
+      adaptiveThreshold: true,
       grayscale: true,
       sharpen: false
     });
     return out;
+  }
+
+  /** Levenshtein-like fuzzy substring match: target found if any window has <= maxDist edits. */
+  private fuzzyMatch(haystack: string, target: string, maxDist = 1): boolean {
+    if (haystack.includes(target)) return true;
+    if (target.length < 4) return false;
+    const win = target.length;
+    for (let i = 0; i <= haystack.length - win + maxDist; i++) {
+      const slice = haystack.substring(i, i + win);
+      if (this.editDistance(slice, target) <= maxDist) return true;
+      // Also try with one extra char in the window (insertion in haystack)
+      if (i + win + 1 <= haystack.length) {
+        const sliceExtra = haystack.substring(i, i + win + 1);
+        if (this.editDistance(sliceExtra, target) <= maxDist) return true;
+      }
+    }
+    return false;
+  }
+
+  private editDistance(a: string, b: string): number {
+    if (a === b) return 0;
+    const m = a.length, n = b.length;
+    if (Math.abs(m - n) > 2) return 999;
+    const prev = new Array(n + 1).fill(0);
+    const curr = new Array(n + 1).fill(0);
+    for (let j = 0; j <= n; j++) prev[j] = j;
+    for (let i = 1; i <= m; i++) {
+      curr[0] = i;
+      for (let j = 1; j <= n; j++) {
+        curr[j] = a[i - 1] === b[j - 1] ? prev[j - 1] : 1 + Math.min(prev[j - 1], prev[j], curr[j - 1]);
+      }
+      for (let j = 0; j <= n; j++) prev[j] = curr[j];
+    }
+    return prev[n];
   }
 
   /** Locate every CNH label inside the global OCR word list. */
@@ -220,7 +256,9 @@ export class CNHAnchoredOCRService {
     for (let i = 0; i < words.length; i++) {
       const w = words[i];
       const wNorm = normalize(w.text);
-      if (!wNorm.includes(patternTokens[0])) continue;
+      // Exact, substring, or fuzzy (1 edit) match against the first pattern token
+      const firstMatches = wNorm.includes(patternTokens[0]) || this.fuzzyMatch(wNorm, patternTokens[0], 1);
+      if (!firstMatches) continue;
 
       if (patternTokens.length === 1) {
         return { label: pattern, x: w.x, y: w.y, width: w.width, height: w.height };
@@ -234,7 +272,8 @@ export class CNHAnchoredOCRService {
         const cand = words[i + j];
         const sameLine = Math.abs(cand.y - w.y) < Math.max(w.height, cand.height) * 0.8;
         if (!sameLine) { ok = false; break; }
-        if (!normalize(cand.text).includes(patternTokens[j])) { ok = false; break; }
+        const candNorm = normalize(cand.text);
+        if (!candNorm.includes(patternTokens[j]) && !this.fuzzyMatch(candNorm, patternTokens[j], 1)) { ok = false; break; }
         lastWord = cand;
       }
       if (ok) {
@@ -327,23 +366,23 @@ export class CNHAnchoredOCRService {
     return canvas;
   }
 
-  private preprocessProfileFor(fieldKey: string, pass: number): { pass: number; sharpen?: boolean; contrast?: number; grayscale?: boolean; desaturate?: boolean } {
+  private preprocessProfileFor(fieldKey: string, pass: number): { pass: number; sharpen?: boolean; contrast?: number; grayscale?: boolean; desaturate?: boolean; adaptiveThreshold?: boolean } {
+    // Pass 1: adaptive threshold (best for uneven backgrounds).
+    // Pass 2: standard threshold with high contrast (fallback if adaptive lost too much).
+    // Pass 3: extreme contrast as last resort.
+    const useAdaptive = pass === 1;
     switch (fieldKey) {
       case 'cpf':
       case 'registro':
-        // Numeric strict: high contrast + sharpen + desaturate
-        return { pass, sharpen: true, contrast: pass === 3 ? 2.2 : 1.9, grayscale: true, desaturate: true };
+        return { pass, sharpen: true, contrast: pass === 3 ? 2.2 : 1.9, grayscale: true, desaturate: true, adaptiveThreshold: useAdaptive };
       case 'nascimento':
       case 'validade':
-        // Dates: binarization + upscale
-        return { pass, sharpen: pass >= 2, contrast: pass === 3 ? 2.0 : 1.7, grayscale: true, desaturate: true };
+        return { pass, sharpen: pass >= 2, contrast: pass === 3 ? 2.0 : 1.7, grayscale: true, desaturate: true, adaptiveThreshold: useAdaptive };
       case 'categoria':
-        // Adaptive
-        return { pass, sharpen: true, contrast: 1.8, grayscale: true, desaturate: true };
+        return { pass, sharpen: true, contrast: 1.8, grayscale: true, desaturate: true, adaptiveThreshold: useAdaptive };
       case 'nome':
       default:
-        // Text: lighter contrast, sharpen, denoise via desaturate
-        return { pass, sharpen: pass >= 2, contrast: pass === 3 ? 1.8 : 1.4, grayscale: true, desaturate: true };
+        return { pass, sharpen: pass >= 2, contrast: pass === 3 ? 1.8 : 1.4, grayscale: true, desaturate: true, adaptiveThreshold: useAdaptive };
     }
   }
 

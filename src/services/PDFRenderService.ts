@@ -20,8 +20,9 @@ export class PDFRenderService {
     height: number;
     scale: number;
   }> {
-    // Mandate high-res scales: 5.0 for documents requiring precision (CNH), 4.0 default.
-    const scale = options.scale || (options.type === 'cnh' ? 5.0 : 4.0);
+    // Empirically calibrated scales: 5x amplified the CNH-e security pattern noise; 3x retains
+    // enough resolution for Tesseract while keeping the watermark from dominating the binarization.
+    const scale = options.scale || (options.type === 'cnh' ? 3.0 : 4.0);
     const viewport = page.getViewport({ scale });
     
     const canvas = document.createElement('canvas');
