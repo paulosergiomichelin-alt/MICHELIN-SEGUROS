@@ -247,6 +247,12 @@ export class OCRService {
     if (reason === 'NO_API_KEY') return { kind: 'no_key', reason };
     if (reason === 'AI_DISABLED') return { kind: 'disabled', reason };
     if (reason === 'JSON_PARSE_FAILED') return { kind: 'parse_error', reason };
+    // HTTP 413 is a server-side body-limit misconfiguration, not an AI failure.
+    // Surface it as a transport_error with a recognizable reason so callers and the panel
+    // can tell the user to restart the dev server (the body-parser limit is set at startup).
+    if (reason.includes('HTTP_413') || reason.includes('PayloadTooLarge')) {
+      return { kind: 'transport_error', reason: 'SERVER_PAYLOAD_LIMIT_TOO_LOW (restart npm run dev to apply 25MB limit)' };
+    }
     if (reason.includes('TIMEOUT') || reason.includes('HTTP_') || reason.includes('REQUEST_FAILED') || reason.includes('NETWORK')) {
       return { kind: 'transport_error', reason };
     }
@@ -262,12 +268,17 @@ export class OCRService {
    *   3. For transport/parse failures, only allow if fallbackEnabled is true.
    */
   private async shouldAllowLegacyFallback(reason: string): Promise<boolean> {
+    // Configuration errors (413, payload limits) are NOT AI failures. Running the
+    // slow Tesseract pipeline won't fix the proxy — it just wastes 20 seconds.
+    if (reason.includes('SERVER_PAYLOAD_LIMIT_TOO_LOW') || reason.includes('PAYLOAD_TOO_LARGE')) {
+      console.error('[OCR_PIPELINE] Refusing legacy fallback — fix the server first (restart npm run dev).');
+      return false;
+    }
     try {
       const cfg = await AIOCRConfigService.load();
       if (cfg.fallbackEnabled === false) return false;
     } catch { /* default open */ }
     if (reason === 'NO_API_KEY' || reason === 'AI_DISABLED') return true;
-    // For other failures, fall back only if user kept the fallback toggle on.
     try {
       const cfg = AIOCRConfigService.peek();
       return cfg?.fallbackEnabled !== false;
