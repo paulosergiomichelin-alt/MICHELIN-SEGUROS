@@ -29,8 +29,15 @@ interface PDFViewerProps {
 type ViewerStrategy = 'pdfjs' | 'iframe';
 
 export const PDFViewer = React.memo<PDFViewerProps>(({ url, storagePath, title = 'Documento' }) => {
-  const [strategy, setStrategy] = useState<ViewerStrategy>('pdfjs');
-  const [loading, setLoading] = useState(true);
+  // Firebase Storage download URLs do not include CORS headers for cross-origin XHR.
+  // pdf.js (and getBlob) both go through XHR — both fail. iframe navigation does not
+  // trigger CORS, so we render the PDF via <iframe> when the URL is HTTPS (Firebase or
+  // any remote URL). Local blob:/data: URLs keep using pdf.js so we get the toolbar.
+  const isLocalSource = url.startsWith('blob:') || url.startsWith('data:');
+  const initialStrategy: ViewerStrategy = isLocalSource ? 'pdfjs' : 'iframe';
+
+  const [strategy, setStrategy] = useState<ViewerStrategy>(initialStrategy);
+  const [loading, setLoading] = useState(isLocalSource);
   const [error, setError] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
@@ -45,6 +52,11 @@ export const PDFViewer = React.memo<PDFViewerProps>(({ url, storagePath, title =
 
   const loadPDFJS = useCallback(async () => {
     if (!url && !storagePath) return;
+    // Skip pdf.js entirely for HTTPS URLs (CORS would block the fetch).
+    if (!isLocalSource) {
+      setLoading(false);
+      return;
+    }
 
     // Stable session key to prevent redundant triggers
     const sessionKey = `${storagePath || url}-${pageNumber}-${scale}`;
@@ -121,7 +133,7 @@ export const PDFViewer = React.memo<PDFViewerProps>(({ url, storagePath, title =
       setStrategy('iframe');
       setLoading(false);
     }
-  }, [url, storagePath, pageNumber, scale]);
+  }, [url, storagePath, pageNumber, scale, isLocalSource]);
 
   useEffect(() => {
     if (!isImage) {
@@ -214,8 +226,10 @@ export const PDFViewer = React.memo<PDFViewerProps>(({ url, storagePath, title =
             )}
 
             {strategy === 'iframe' && (
-              <iframe 
-                src={url.startsWith('blob:') ? url : googleViewerUrl} 
+              // For Firebase Storage URLs the token is already in the query string, so the
+              // browser can fetch the file directly via iframe navigation (no CORS preflight).
+              <iframe
+                src={url}
                 className="w-full h-[80vh] bg-white rounded-xl border-none shadow-2xl"
                 title={title}
               />
