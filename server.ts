@@ -11,7 +11,9 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  // Image OCR payloads carry JPEG base64 (~150-300KB). Default 100KB limit caused HTTP 413.
+  app.use(express.json({ limit: '15mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
   // Logging middleware
   app.use((req, res, next) => {
@@ -56,7 +58,9 @@ async function startServer() {
           'X-OpenRouter-Title': 'Michelin Seguros CRM'
         },
         data: data || undefined,
-        timeout: 15000
+        timeout: 30000,
+        maxBodyLength: 15 * 1024 * 1024,
+        maxContentLength: 15 * 1024 * 1024
       };
 
       const response = await axios(config);

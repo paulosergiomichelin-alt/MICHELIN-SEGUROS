@@ -324,6 +324,10 @@ export function AIDocumentExtractionPanel() {
         <h3 className={SECTION_HEADER_CLASS}>
           <Shield className="w-3.5 h-3.5" /> Configuração OCR IA
         </h3>
+        <p className="text-[10px] text-slate-500 -mt-2">
+          <strong className="text-amber-400">Fallback local desligado</strong> = modo AI-only: se a IA falhar, o sistema retorna erro
+          em vez de rodar o pipeline Tesseract (mais lento, ~10s).
+        </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Toggle label="IA OCR Ativo" checked={config.enabled} onChange={(v) => handleConfigChange('enabled', v)} />
           <Toggle label="Fallback local habilitado" checked={config.fallbackEnabled} onChange={(v) => handleConfigChange('fallbackEnabled', v)} />

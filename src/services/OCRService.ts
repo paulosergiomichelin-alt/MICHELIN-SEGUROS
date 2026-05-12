@@ -8,6 +8,7 @@ import { DocumentMemoryManager } from './DocumentMemoryManager';
 import { OCRRegionSchemaValidator } from './OCRRegionSchemaValidator';
 import { StructuredOCRResult } from '../types/OCRTypes';
 import { AIHybridOCRService, AIDocumentType } from './AIHybridOCRService';
+import { AIOCRConfigService } from './AIOCRConfigService';
 import { PDFRenderService } from './PDFRenderService';
 
 export enum ProcessingState {
@@ -93,11 +94,12 @@ export class OCRService {
 
       // PRIMARY PIPELINE: AI (Qianfan OCR via OpenRouter) — unified for CNH/CRLV/Apolice
       if (typeHint && ['cnh', 'crv', 'crlv', 'policy', 'apolice'].includes(typeHint)) {
-        const aiResult = await this.tryAIPipeline(file as File, fileUrl, isPDF, typeHint as AIDocumentType, metrics);
-        if (aiResult) {
+        const aiOutcome = await this.tryAIPipelineWithOutcome(file as File, fileUrl, isPDF, typeHint as AIDocumentType, metrics);
+
+        if (aiOutcome.kind === 'success') {
+          const aiResult = aiOutcome.result;
           metrics.totalTime = Date.now() - startTime;
           metrics.confidence = aiResult.confidence / 100;
-
           const finalResult = {
             text: aiResult.rawText,
             type: typeHint,
@@ -109,7 +111,6 @@ export class OCRService {
             provider: aiResult.provider,
             validation: aiResult.validation
           };
-
           if (isLocalFile && fingerprint && aiResult.confidence >= 60) {
             CacheManager.set(`enterprise_ocr_cache:${fingerprint}`, finalResult);
           }
@@ -117,7 +118,22 @@ export class OCRService {
           console.log(`[OCR_PIPELINE] AI_SUCCESS | Type: ${typeHint} | Conf: ${aiResult.confidence}% | Time: ${metrics.totalTime}ms`);
           return finalResult;
         }
-        console.warn('[OCR_PIPELINE] AI pipeline unavailable or low-confidence; falling back to local pipeline.');
+
+        // AI failed. Decide whether to fall back to the legacy heavy pipeline.
+        const allowLegacyFallback = await this.shouldAllowLegacyFallback(aiOutcome.reason);
+        if (!allowLegacyFallback) {
+          console.warn(`[OCR_PIPELINE] AI_ONLY mode — refusing to run legacy fallback. Reason: ${aiOutcome.reason}`);
+          if (options.onStatus) options.onStatus(ProcessingState.FAILED);
+          return {
+            success: false,
+            reason: 'AI_PIPELINE_FAILED',
+            error: aiOutcome.reason,
+            type: typeHint,
+            fileUrl,
+            metrics: { ...metrics, totalTime: Date.now() - startTime }
+          };
+        }
+        console.warn(`[OCR_PIPELINE] AI failed (${aiOutcome.reason}); legacy fallback enabled — running local pipeline.`);
       }
 
       // PIPELINE EXECUTION BY STRATEGY (fallback when AI unavailable)
@@ -190,35 +206,85 @@ export class OCRService {
   }
 
   /**
-   * Try the AI-driven OCR pipeline first. Returns null if it fails or yields
-   * low confidence, signalling the caller to fall back to the local pipeline.
+   * Run the AI pipeline and report a structured outcome:
+   *  - success: high-confidence AI result, use directly
+   *  - low_confidence: AI ran but confidence < floor; legacy fallback allowed
+   *  - no_key: API key missing; legacy fallback allowed
+   *  - disabled: AI explicitly disabled in settings; legacy fallback allowed
+   *  - transport_error: HTTP/network/timeout error; legacy fallback gated by config.fallbackEnabled
+   *  - parse_error: model returned non-JSON; legacy fallback gated by config.fallbackEnabled
    */
-  private async tryAIPipeline(file: File, url: string, isPDF: boolean, typeHint: AIDocumentType, metrics: OCRMetrics): Promise<any | null> {
+  private async tryAIPipelineWithOutcome(
+    file: File, url: string, isPDF: boolean, typeHint: AIDocumentType, _metrics: OCRMetrics
+  ): Promise<
+    | { kind: 'success'; result: any }
+    | { kind: 'low_confidence'; reason: string }
+    | { kind: 'no_key'; reason: string }
+    | { kind: 'disabled'; reason: string }
+    | { kind: 'transport_error'; reason: string }
+    | { kind: 'parse_error'; reason: string }
+  > {
+    let canvas: HTMLCanvasElement | null;
     try {
-      const canvas = await this.renderToCanvas(file, url, isPDF);
-      if (!canvas) return null;
-      const aiResult = await AIHybridOCRService.getInstance().extractFromCanvas(canvas, typeHint);
-      if (!aiResult.success) return null;
-      // Confidence floor: below 40% we don't trust the result and fall back.
-      if (aiResult.confidence < 40) {
-        console.warn(`[AI_OCR_LOW_CONFIDENCE] ${aiResult.confidence}% — using local pipeline instead.`);
-        return null;
-      }
-      return aiResult;
+      canvas = await this.renderToCanvas(file, url, isPDF);
     } catch (err: any) {
-      console.error('[AI_OCR_PIPELINE_ERROR]', err.message);
-      return null;
+      return { kind: 'transport_error', reason: `RENDER_FAILED: ${err.message}` };
     }
+    if (!canvas) return { kind: 'transport_error', reason: 'RENDER_NULL' };
+
+    let aiResult;
+    try {
+      aiResult = await AIHybridOCRService.getInstance().extractFromCanvas(canvas, typeHint);
+    } catch (err: any) {
+      return { kind: 'transport_error', reason: err.message || 'AI_THROW' };
+    }
+
+    if (aiResult.success && aiResult.confidence >= 40) {
+      return { kind: 'success', result: aiResult };
+    }
+
+    const reason = aiResult.error || 'UNKNOWN';
+    if (reason === 'NO_API_KEY') return { kind: 'no_key', reason };
+    if (reason === 'AI_DISABLED') return { kind: 'disabled', reason };
+    if (reason === 'JSON_PARSE_FAILED') return { kind: 'parse_error', reason };
+    if (reason.includes('TIMEOUT') || reason.includes('HTTP_') || reason.includes('REQUEST_FAILED') || reason.includes('NETWORK')) {
+      return { kind: 'transport_error', reason };
+    }
+    if (aiResult.success) return { kind: 'low_confidence', reason: `CONFIDENCE_${aiResult.confidence}` };
+    return { kind: 'transport_error', reason };
   }
 
-  /** Render the input (PDF page 1 or image URL) into a canvas suitable for AI OCR. */
+  /**
+   * Decide whether the legacy (Tesseract/anchored/regional) pipeline is allowed to run.
+   * Rules (in order):
+   *   1. If user has explicitly disabled the local fallback in settings, never run legacy.
+   *   2. Always allow when AI is unconfigured (no key) or explicitly disabled.
+   *   3. For transport/parse failures, only allow if fallbackEnabled is true.
+   */
+  private async shouldAllowLegacyFallback(reason: string): Promise<boolean> {
+    try {
+      const cfg = await AIOCRConfigService.load();
+      if (cfg.fallbackEnabled === false) return false;
+    } catch { /* default open */ }
+    if (reason === 'NO_API_KEY' || reason === 'AI_DISABLED') return true;
+    // For other failures, fall back only if user kept the fallback toggle on.
+    try {
+      const cfg = AIOCRConfigService.peek();
+      return cfg?.fallbackEnabled !== false;
+    } catch { return true; }
+  }
+
+  /**
+   * Render the input (PDF page 1 or image URL) into a canvas suitable for AI OCR.
+   * Reduced scale 1.5 (previously 2.5) per the new lean pipeline: Qianfan handles
+   * resolution internally, and the body payload shrinks 4× which avoids HTTP 413.
+   */
   private async renderToCanvas(file: File, url: string, isPDF: boolean): Promise<HTMLCanvasElement | null> {
     if (isPDF) {
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await PDFResourceManager.getDocument(new Uint8Array(arrayBuffer), file.name);
       const page = await pdf.getPage(1);
-      // Use the existing PDF render service; scale 2.5 is enough for vision LLM input
-      const viewport = page.getViewport({ scale: 2.5 });
+      const viewport = page.getViewport({ scale: 1.5 });
       const canvas = document.createElement('canvas');
       canvas.width = viewport.width;
       canvas.height = viewport.height;
@@ -228,7 +294,6 @@ export class OCRService {
       await page.render({ canvasContext: ctx, viewport, intent: 'display' }).promise;
       return canvas;
     }
-    // Non-PDF: load the image and draw onto a canvas
     return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';

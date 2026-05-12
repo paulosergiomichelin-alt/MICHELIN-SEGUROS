@@ -24,7 +24,7 @@ export interface PreprocessedImage {
 }
 
 const MAX_DIMENSION = 1200;
-const JPEG_QUALITY = 0.8;
+const JPEG_QUALITY = 0.75;
 
 export class ImagePreprocessor {
   /** Prepare a canvas for AI OCR. Returns a JPEG base64 string with size & dim metadata. */

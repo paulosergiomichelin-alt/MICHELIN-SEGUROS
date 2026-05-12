@@ -20,9 +20,9 @@ export class PDFRenderService {
     height: number;
     scale: number;
   }> {
-    // Empirically calibrated scales: 5x amplified the CNH-e security pattern noise; 3x retains
-    // enough resolution for Tesseract while keeping the watermark from dominating the binarization.
-    const scale = options.scale || (options.type === 'cnh' ? 3.0 : 4.0);
+    // Lean pipeline: AI vision (Qianfan) handles its own resolution.
+    // Local-only fallback gets a moderate scale; CNH-e payload stays well under the 15MB proxy limit.
+    const scale = options.scale || (options.type === 'cnh' ? 1.5 : 2.0);
     const viewport = page.getViewport({ scale });
     
     const canvas = document.createElement('canvas');
