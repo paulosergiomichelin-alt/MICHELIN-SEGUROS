@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Save, Link2, Key, Globe, RefreshCcw, CheckCircle2, AlertCircle, ShieldAlert, Code, Info, FileText, Bot, Wand2, Palette, Image as ImageIcon, Trash2, Upload, Moon, Sun, ShieldCheck, Lock, MessageSquare, BookOpen, Activity, Wrench, HelpCircle, Settings as Cog, Zap } from 'lucide-react';
-import { IntegrationConfig, VisualIdentityConfig, Theme, Permissions } from '../../types';
+import { Save, Link2, Key, Globe, RefreshCcw, CheckCircle2, AlertCircle, ShieldAlert, Code, Info, FileText, Bot, Wand2, Palette, Image as ImageIcon, Trash2, Upload, Moon, Sun, ShieldCheck, Lock, MessageSquare, BookOpen, Activity, Wrench, HelpCircle, Settings as Cog, Zap, Building2, Phone, Mail, Clock, Database, Users, Star, Shield } from 'lucide-react';
+import { IntegrationConfig, VisualIdentityConfig, Theme, Permissions, UserProfile, Empresa } from '../../types';
+import { EmpresaService } from '../../services/EmpresaService';
 import { UserManagement } from '../admin/UserManagement';
 import { SystemDocumentationModal } from './SystemDocumentationModal';
 import { PerformanceDashboard } from '../dashboard/PerformanceDashboard';
@@ -25,6 +26,7 @@ interface SettingsProps {
   visualConfig: VisualIdentityConfig;
   onUpdateVisualConfig: (config: VisualIdentityConfig) => void;
   permissions?: Permissions;
+  userProfile?: UserProfile | null;
 }
 
 const HelpButton = ({ title, description, usage }: { title: string, description: string, usage: string }) => {
@@ -68,9 +70,163 @@ const HelpButton = ({ title, description, usage }: { title: string, description:
   );
 };
 
-export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig, onUpdateVisualConfig, permissions }: SettingsProps) {
+// ---------------------------------------------------------------------------
+// Empresa Profile — read-only view for company admins
+// ---------------------------------------------------------------------------
+
+function EmpresaPerfil({ organizationId }: { organizationId: string }) {
+  const [empresa, setEmpresa] = useState<Empresa | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    EmpresaService.getEmpresa(organizationId)
+      .then(setEmpresa)
+      .finally(() => setLoading(false));
+  }, [organizationId]);
+
+  const PLAN_LABELS: Record<string, string> = {
+    basico: 'Básico',
+    profissional: 'Profissional',
+    enterprise: 'Enterprise',
+  };
+
+  const STATUS_LABELS: Record<string, string> = {
+    trial: 'Trial',
+    active: 'Ativa',
+    suspended: 'Suspensa',
+    cancelled: 'Cancelada',
+  };
+
+  const STATUS_COLORS: Record<string, string> = {
+    trial: 'text-[#D4A854] bg-[#D4A854]/10 border-[#D4A854]/20',
+    active: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+    suspended: 'text-red-400 bg-red-500/10 border-red-500/20',
+    cancelled: 'text-slate-400 bg-slate-500/10 border-slate-500/20',
+  };
+
+  const maskCnpj = (v: string) => {
+    const d = v.replace(/\D/g, '');
+    return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+  };
+
+  const formatDate = (iso?: string) => {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const formatStorage = (mb: number) => mb >= 1024 ? `${(mb / 1024).toFixed(0)} GB` : `${mb} MB`;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-32">
+        <div className="w-6 h-6 border-2 border-[#D4A854]/30 border-t-[#D4A854] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!empresa) {
+    return (
+      <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+        Perfil da empresa não encontrado.
+      </div>
+    );
+  }
+
+  const Row = ({ label, value, icon: Icon }: { label: string; value: string; icon: React.ElementType }) => (
+    <div className="flex items-center gap-3 py-3 border-b border-white/[0.04] last:border-0">
+      <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0">
+        <Icon className="w-3.5 h-3.5 text-[#8E8E93]/60" />
+      </div>
+      <div className="flex-1 flex items-baseline justify-between gap-4 min-w-0">
+        <span className="text-[10px] font-bold text-[#8E8E93]/60 uppercase tracking-widest flex-shrink-0">{label}</span>
+        <span className="text-[12px] font-semibold text-white/80 truncate text-right">{value || '—'}</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-5 max-w-2xl">
+      {/* Header */}
+      <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#D4A854]/[0.05] border border-[#D4A854]/15">
+        <div className="w-12 h-12 rounded-xl bg-[#D4A854]/10 border border-[#D4A854]/20 flex items-center justify-center flex-shrink-0">
+          <Building2 className="w-6 h-6 text-[#D4A854]" />
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-[15px] font-black text-white truncate">{empresa.nomeRazaoSocial}</h3>
+          {empresa.nomeFantasia && (
+            <p className="text-[11px] text-[#8E8E93]/70 truncate">{empresa.nomeFantasia}</p>
+          )}
+        </div>
+        <div className="ml-auto flex flex-col items-end gap-1.5 flex-shrink-0">
+          <span className={cn(
+            'text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border',
+            STATUS_COLORS[empresa.status] ?? 'text-slate-400 bg-slate-500/10 border-slate-500/20',
+          )}>
+            {STATUS_LABELS[empresa.status] ?? empresa.status}
+          </span>
+          <span className="text-[9px] font-bold text-[#D4A854]/80 uppercase tracking-widest">
+            {PLAN_LABELS[empresa.planoSaas] ?? empresa.planoSaas}
+          </span>
+        </div>
+      </div>
+
+      {/* Info card */}
+      <div className="rounded-2xl border border-white/[0.06] bg-[#0E0F11]/70 overflow-hidden">
+        <div className="px-5 py-3 border-b border-white/[0.04] bg-gradient-to-r from-[#D4A854]/[0.04] to-transparent">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#D4A854]/80">Dados Cadastrais</p>
+        </div>
+        <div className="px-5">
+          <Row label="CNPJ" value={maskCnpj(empresa.cnpj)} icon={FileText} />
+          <Row label="E-mail Corporativo" value={empresa.emailCorporativo} icon={Mail} />
+          <Row label="Telefone" value={empresa.telefone ?? '—'} icon={Phone} />
+          <Row label="Fuso Horário" value={empresa.timezone} icon={Clock} />
+        </div>
+      </div>
+
+      {/* Plan limits */}
+      <div className="rounded-2xl border border-white/[0.06] bg-[#0E0F11]/70 overflow-hidden">
+        <div className="px-5 py-3 border-b border-white/[0.04] bg-gradient-to-r from-[#D4A854]/[0.04] to-transparent">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#D4A854]/80">Limites do Plano</p>
+        </div>
+        <div className="grid grid-cols-3 gap-px bg-white/[0.04] overflow-hidden">
+          {[
+            { label: 'Usuários', value: empresa.limiteUsuarios >= 999 ? 'Ilimitado' : String(empresa.limiteUsuarios), icon: Users },
+            { label: 'Leads / mês', value: empresa.limiteLeadsMes >= 999999 ? 'Ilimitado' : empresa.limiteLeadsMes.toLocaleString('pt-BR'), icon: Star },
+            { label: 'Storage', value: formatStorage(empresa.limiteStorageMb), icon: Database },
+          ].map(({ label, value, icon: Icon }) => (
+            <div key={label} className="bg-[#0E0F11]/70 p-4 flex flex-col items-center gap-2">
+              <Icon className="w-4 h-4 text-[#D4A854]/60" />
+              <span className="text-[14px] font-black text-white">{value}</span>
+              <span className="text-[9px] font-bold text-[#8E8E93]/50 uppercase tracking-widest">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Dates */}
+      <div className="rounded-2xl border border-white/[0.06] bg-[#0E0F11]/70 overflow-hidden">
+        <div className="px-5 py-3 border-b border-white/[0.04] bg-gradient-to-r from-[#D4A854]/[0.04] to-transparent">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#D4A854]/80">Datas</p>
+        </div>
+        <div className="px-5">
+          <Row label="Cadastrada em" value={formatDate(empresa.criadoEm)} icon={Clock} />
+          {empresa.status === 'trial' && empresa.trialExpiraEm && (
+            <Row label="Trial expira em" value={formatDate(empresa.trialExpiraEm)} icon={Shield} />
+          )}
+        </div>
+      </div>
+
+      <p className="text-[10px] text-[#8E8E93]/40 text-center">
+        Para alterar esses dados, entre em contato com o suporte da plataforma.
+      </p>
+    </div>
+  );
+}
+
+export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig, onUpdateVisualConfig, permissions, userProfile }: SettingsProps) {
   const { theme: currentTheme, setTheme: setAppTheme } = useTheme();
-  const [activeSubTab, setActiveSubTab] = useState<'general' | 'diagnostic' | 'health' | 'admin' | 'visual' | 'ai_ocr'>('general');
+  const [activeSubTab, setActiveSubTab] = useState<'general' | 'diagnostic' | 'health' | 'admin' | 'visual' | 'ai_ocr' | 'empresa'>('general');
 
   const [isDocsModalOpen, setIsDocsModalOpen] = useState(false);
   const [isTestMode, setIsTestMode] = useState<boolean>(() => {
@@ -403,6 +559,18 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
           >
             <Cog className="w-3.5 h-3.5" /> GERAL
           </button>
+
+          {userProfile?.organizationId && !userProfile.superadmin && (
+            <button
+              onClick={() => setActiveSubTab('empresa')}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                activeSubTab === 'empresa' ? "bg-gold-deep text-brand-black shadow-lg shadow-gold-deep/20" : "text-slate-500 hover:text-white"
+              )}
+            >
+              <Building2 className="w-3.5 h-3.5" /> EMPRESA
+            </button>
+          )}
 
           <button
             onClick={() => setActiveSubTab('ai_ocr')}
@@ -889,6 +1057,19 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
 
         {activeSubTab === 'ai_ocr' && (
           <AIDocumentExtractionPanel />
+        )}
+
+        {activeSubTab === 'empresa' && userProfile?.organizationId && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="space-y-6"
+          >
+            <div className="flex items-center gap-3 px-1">
+              <h2 className="text-xl font-bold text-gold-deep font-display uppercase tracking-tight">Perfil da Empresa</h2>
+            </div>
+            <EmpresaPerfil organizationId={userProfile.organizationId} />
+          </motion.div>
         )}
 
         {activeSubTab === 'admin' && canManageUsers && (

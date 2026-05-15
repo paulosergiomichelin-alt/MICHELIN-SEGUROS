@@ -1,7 +1,7 @@
 
 import React, { lazy, Suspense } from 'react';
 import { useLeads } from '../contexts/LeadRealtimeContext';
-import { Permissions, VisualIdentityConfig, AgentConfig, Lead } from '../types';
+import { Permissions, VisualIdentityConfig, AgentConfig, Lead, UserProfile } from '../types';
 import { DataService } from '../services/DataService';
 
 const DashboardView = lazy(() => import('../domains/dashboard/DashboardPage').then(m => ({ default: m.DashboardView })));
@@ -17,6 +17,7 @@ const SystemHealth = lazy(() => import('../domains/settings/SystemHealth').then(
 const AdminTools = lazy(() => import('../domains/admin/AdminTools').then(m => ({ default: m.AdminTools })));
 const MensagensAtivas = lazy(() => import('../domains/leads/MensagensAtivas').then(m => ({ default: m.MensagensAtivas })));
 const DiagnosticDashboard = lazy(() => import('../domains/admin/DiagnosticDashboard').then(m => ({ default: m.DiagnosticDashboard })));
+const EmpresasManagement = lazy(() => import('../domains/admin/EmpresasManagement').then(m => ({ default: m.EmpresasManagement })));
 
 interface AppContentManagerProps {
   activeTab: string;
@@ -26,6 +27,7 @@ interface AppContentManagerProps {
   setVisualConfig: (c: VisualIdentityConfig) => void;
   agentConfig: AgentConfig;
   setAgentConfig: (c: AgentConfig) => void;
+  userProfile?: UserProfile | null;
 }
 
 const LoadingFallback = () => (
@@ -41,7 +43,8 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
   visualConfig,
   setVisualConfig,
   agentConfig,
-  setAgentConfig
+  setAgentConfig,
+  userProfile,
 }) => {
   const { leads, loading: leadsLoading } = useLeads();
 
@@ -96,16 +99,21 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
 
         {activeTab === 'settings' && permissions.canAccessSettings && (
           <div className="p-6">
-            <Settings 
-              visualConfig={visualConfig} 
-              onUpdateVisualConfig={setVisualConfig} 
+            <Settings
+              visualConfig={visualConfig}
+              onUpdateVisualConfig={setVisualConfig}
               canManageUsers={permissions.canManageUsers}
               permissions={permissions}
+              userProfile={userProfile}
             />
           </div>
         )}
 
         {activeTab === 'tech-docs' && <TechDocs onBack={() => setActiveTab('settings')} />}
+
+        {activeTab === 'empresas' && userProfile?.superadmin === true && (
+          <EmpresasManagement />
+        )}
       </div>
     </Suspense>
   );

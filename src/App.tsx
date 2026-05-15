@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, onAuthStateChanged, signOut } from './lib/firebase';
 import { Auth } from './components/Auth';
+import { CompanyRegistration } from './domains/onboarding/CompanyRegistration';
 import { MainAppContent } from './components/MainAppContent';
 import { PermissionsProvider, usePermissions } from './contexts/PermissionsContext';
 import { VisualIdentityConfig } from './types';
@@ -12,6 +13,12 @@ import { ShieldAlert } from 'lucide-react';
 import { logger } from './services/LoggerService';
 import { agentService } from './services/agentService';
 import { DataService } from './services/DataService';
+import { initDatadogRUM, setRUMUser, clearRUMUser } from './services/DatadogRUM';
+import { initDatadogLogs, ddLogInfo, ddLogError } from './services/DatadogLogs';
+
+// Initialise Datadog as early as possible (before first render)
+initDatadogRUM();
+initDatadogLogs();
 
 export default function App() {
   return (
@@ -25,28 +32,31 @@ function AppInternal() {
   const { permissions, userProfile, loading: permsLoading, error: permsError } = usePermissions();
   const [user, setUser] = useState<any>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [showRegistration, setShowRegistration] = useState(false);
   const [visualConfig, setVisualConfig] = useState<VisualIdentityConfig>({
-    companyName: 'Michelin Seguros',
-    logoDark: 'https://cdn-icons-png.flaticon.com/512/3755/3755250.png', // Generic fallback
-    logoLight: '', 
+    companyName: '',
+    logoDark: 'https://cdn-icons-png.flaticon.com/512/3755/3755250.png',
+    logoLight: '',
     primaryColor: '#CFA764',
   });
 
   // Global Error Tracking
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
-      logger.error('GLOBAL_ERROR', event.message, { 
+      logger.error('GLOBAL_ERROR', event.message, {
         filename: event.filename,
         lineno: event.lineno,
         colno: event.colno,
-        error: event.error?.stack 
+        error: event.error?.stack
       });
+      ddLogError('GLOBAL_ERROR', event.error, { filename: event.filename, lineno: event.lineno });
     };
 
     const handleRejection = (event: PromiseRejectionEvent) => {
       logger.error('UNHANDLED_REJECTION', event.reason?.message || 'Promise failed', {
         reason: event.reason?.stack || event.reason
       });
+      ddLogError('UNHANDLED_REJECTION', event.reason instanceof Error ? event.reason : new Error(String(event.reason)));
     };
 
     window.addEventListener('error', handleError);
@@ -60,6 +70,10 @@ function AppInternal() {
   useEffect(() => {
     if (userProfile) {
       console.log("USER_ROLE_IN_APP", userProfile.role);
+      setRUMUser(userProfile.uid ?? '', userProfile.name ?? '', userProfile.email ?? '');
+      ddLogInfo('USER_AUTHENTICATED', { user_id: userProfile.uid, role: userProfile.role, org: userProfile.organizationId });
+    } else {
+      clearRUMUser();
     }
     DataService.setCurrentUser(userProfile);
 
@@ -139,7 +153,10 @@ function AppInternal() {
   }
 
   if (!user) {
-    return <Auth onSuccess={() => {}} visualConfig={visualConfig} />;
+    if (showRegistration) {
+      return <CompanyRegistration onBack={() => setShowRegistration(false)} />;
+    }
+    return <Auth onSuccess={() => {}} onSignup={() => setShowRegistration(true)} visualConfig={visualConfig} />;
   }
 
   return (

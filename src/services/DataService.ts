@@ -32,10 +32,18 @@ import { QueryFingerprintService } from './QueryFingerprintService';
 import { QuotaProtectionService } from './QuotaProtectionService';
 import { SubscriptionRegistry } from './SubscriptionRegistry';
 import { DataPolicyService } from './policy/DataPolicyService';
+import { TenantIsolationService } from './TenantIsolationService';
 
 export class DataService {
   private static pendingRequests: Map<string, Promise<any>> = new Map();
   private static ECO_MODE = (import.meta as any).env.VITE_FIRESTORE_ECO_MODE === 'true';
+
+  // Entities whose documents carry an organizationId and must be org-scoped in cache
+  private static readonly ORG_SCOPED_ENTITIES = new Set([
+    'leads', 'lead', 'users', 'user', 'messages', 'message',
+    'notifications', 'notification', 'flows', 'flow',
+    'follow_ups', 'follow_up', 'empresas', 'empresa',
+  ]);
 
   private static readonly COLLECTION_MAP: Record<string, string> = {
     'leads': 'leads',
@@ -62,10 +70,21 @@ export class DataService {
     'system_metrics': 'system_metrics',
     'dead_letter_queue': 'dead_letter_queue',
     'migration_logs': 'migration_logs',
-    'processing_locks': 'processing_locks'
+    'processing_locks': 'processing_locks',
+    'empresas': 'empresas',
+    'empresa': 'empresas',
   };
 
+  private static _lastOrgId: string | null = null;
+
   public static setCurrentUser(profile: UserProfile | null) {
+    const newOrgId = profile?.organizationId ?? null;
+    if (newOrgId !== this._lastOrgId) {
+      // Tenant switched (or logout): purge ALL cached data to prevent cross-tenant leakage
+      CacheManager.flushAll();
+      logger.info('DATA_SERVICE', `TENANT_SWITCH: "${this._lastOrgId}" → "${newOrgId}". Cache flushed.`);
+    }
+    this._lastOrgId = newOrgId;
     DataPolicyService.setCurrentUser(profile);
   }
 
@@ -79,7 +98,20 @@ export class DataService {
   }
 
   private static getCacheKey(entity: string, id: string): string {
+    if (this.ORG_SCOPED_ENTITIES.has(entity)) {
+      const orgId = DataPolicyService.getCurrentUser()?.organizationId ?? 'no-org';
+      return `${orgId}:${entity}:${id}`;
+    }
     return `${entity}:${id}`;
+  }
+
+  /** Returns true if the document's org matches the current user's org (or caller is superadmin). */
+  private static isSameOrg(data: any): boolean {
+    const user = DataPolicyService.getCurrentUser();
+    if (!user) return true; // unauthenticated path — Firestore rules enforce it
+    if ((user as any).superadmin === true) return true;
+    if (!user.organizationId || !data?.organizationId) return true; // field missing — let rules decide
+    return data.organizationId === user.organizationId;
   }
 
   private static getTTL(entity: string): number {
@@ -289,20 +321,27 @@ export class DataService {
       const unsub = onSnapshot(q, (snap) => {
         console.log(`[SNAPSHOT_RECEIVED] Collection: ${collName}, size: ${snap.size}, empty: ${snap.empty}`);
         
-        const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        
-        if (collName === 'leads') {
-          console.log(`[LEADS_AFTER_PERMISSION_FILTER] Raw incoming: ${data.length}`);
-          // Double check filters in memory for extra security/debugging
-          console.log(`[LEADS_QUERY_RESULT] Successfully processed ${data.length} leads.`);
+        let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // Cross-tenant guard for realtime listeners
+        if (this.ORG_SCOPED_ENTITIES.has(entity)) {
+          const before = data.length;
+          data = data.filter(item => {
+            if (this.isSameOrg(item)) return true;
+            logger.error('SECURITY', `CROSS_TENANT_DOC_DROPPED(snapshot): ${collName}/${item.id}`);
+            return false;
+          });
+          if (collName === 'leads') {
+            console.log(`[LEADS_AFTER_PERMISSION_FILTER] Raw incoming: ${before} → after guard: ${data.length}`);
+          }
         }
 
         CacheManager.set(cacheKey, data);
-        
+
         data.forEach(item => {
           if (item?.id) CacheManager.set(this.getCacheKey(entity, item.id), item);
         });
-        
+
         callback(data);
       }, (err) => {
         if (err.code === 'resource-exhausted') {
@@ -348,7 +387,14 @@ export class DataService {
       const q = query(collection(db, collName), ...finalConstraints);
       metricsService.track('db_reads_actual', 1, { entity, type: 'list_server' });
       const snap = await getDocsFromServer(q);
-      const results = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      let results = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if (this.ORG_SCOPED_ENTITIES.has(entity)) {
+        results = results.filter(item => {
+          if (this.isSameOrg(item)) return true;
+          logger.error('SECURITY', `CROSS_TENANT_DOC_DROPPED(server): ${entity}/${item.id}`);
+          return false;
+        });
+      }
       results.forEach(item => {
         if (item.id) CacheManager.set(this.getCacheKey(entity, item.id), item);
       });
@@ -387,6 +433,13 @@ export class DataService {
         metricsService.track('db_reads_actual', 1, { entity });
         const snap = await getDoc(doc(db, collName, id));
         const data = snap.exists() ? snap.data() : null;
+
+        // Cross-tenant guard: block data that belongs to a different org
+        if (data && this.ORG_SCOPED_ENTITIES.has(entity) && !this.isSameOrg(data)) {
+          const user = DataPolicyService.getCurrentUser();
+          logger.error('SECURITY', `CROSS_TENANT_BLOCKED: ${entity}/${id} org="${data.organizationId}" caller="${user?.organizationId}" uid="${user?.uid}"`);
+          return null;
+        }
 
         if (data) {
           CacheManager.set(cacheKey, data);
@@ -445,7 +498,21 @@ export class DataService {
       try {
         metricsService.track('db_reads_actual', 1, { entity, type: 'list' });
         const snap = await getDocs(q);
-        const results = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        let results: any[] = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Cross-tenant guard: drop any documents that slipped past Firestore rules
+        if (this.ORG_SCOPED_ENTITIES.has(entity)) {
+          const before = results.length;
+          results = results.filter(item => {
+            if (this.isSameOrg(item)) return true;
+            const user = DataPolicyService.getCurrentUser();
+            logger.error('SECURITY', `CROSS_TENANT_DOC_DROPPED: ${entity}/${item.id} org="${item.organizationId}" caller="${user?.organizationId}"`);
+            return false;
+          });
+          if (results.length < before) {
+            logger.error('SECURITY', `CROSS_TENANT_FILTER: dropped ${before - results.length} docs from ${entity} list`);
+          }
+        }
 
         // Cache results
         CacheManager.set(cacheKey, results);
@@ -681,6 +748,9 @@ export class DataService {
     const finalData = this.sanitizeData(rawData);
     this.validatePayloadAgainstRules(entity, finalData);
 
+    // Tenant isolation: organizationId MUST come from server profile, not from client data
+    TenantIsolationService.assertWriteIsolation(entity, finalData);
+
     console.log(`[DataService] WRITE_ATTEMPT: CREATE ${collName}/${id}`, { origin, fields: Object.keys(finalData) });
 
     // Permission check
@@ -775,7 +845,7 @@ export class DataService {
     // Hardening: Block sensitive field updates for non-admins at code level
     const userProfile = DataPolicyService.getCurrentUser();
     if (userProfile?.role !== 'admin') {
-      const sensitiveFields = ['role', 'permissions', 'ownerId', 'createdBy', 'organizationId'];
+      const sensitiveFields = ['role', 'permissions', 'ownerId', 'createdBy', 'organizationId', 'superadmin'];
       const attemptToChange = sensitiveFields.filter(f => 
         updates[f] !== undefined && updates[f] !== before[f]
       );
@@ -791,8 +861,9 @@ export class DataService {
     const afterRaw = await this.normalizePayload(entity, { ...before, ...sanitizedUpdates });
     const after = this.sanitizeData(afterRaw);
 
-    // 2. Validation
+    // 2. Validation + tenant isolation
     this.validatePayloadAgainstRules(entity, after);
+    TenantIsolationService.assertWriteIsolation(entity, after);
 
     const hasChanges = Object.keys(sanitizedUpdates).some(key => 
       JSON.stringify(before[key]) !== JSON.stringify(sanitizedUpdates[key]) && key !== 'updatedAt' && key !== 'version'

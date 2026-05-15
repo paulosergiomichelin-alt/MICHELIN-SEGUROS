@@ -1,14 +1,15 @@
 import { storage, auth } from '../lib/firebase';
-import { 
-  ref, 
-  uploadBytesResumable, 
+import {
+  ref,
+  uploadBytesResumable,
   uploadBytes,
-  getDownloadURL, 
-  deleteObject, 
+  getDownloadURL,
+  deleteObject,
   UploadTaskSnapshot,
   StorageError
 } from 'firebase/storage';
 import { logger } from './LoggerService';
+import { DataPolicyService } from './policy/DataPolicyService';
 
 export interface UploadProgress {
   bytesTransferred: number;
@@ -80,7 +81,9 @@ export class StorageService {
     const timestamp = Date.now();
     const folder = type === 'system' ? 'branding' : type;
     const sanitizedFileName = fileName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-    const storagePath = `users/${userId}/${folder}/${timestamp}_${sanitizedFileName}`;
+    const organizationId = DataPolicyService.getCurrentUser()?.organizationId;
+    const orgPrefix = organizationId ? `orgs/${organizationId}/` : '';
+    const storagePath = `${orgPrefix}users/${userId}/${folder}/${timestamp}_${sanitizedFileName}`;
     const storageRef = ref(storage, storagePath);
     const metadata = {
       contentType: file.type || (fileName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream')

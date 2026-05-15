@@ -54,6 +54,7 @@ export const MainAppContent = ({
         setVisualConfig={setVisualConfig}
         agentConfig={agentConfig}
         setAgentConfig={setAgentConfig}
+        userProfile={userProfile}
       />
     </AppShell>
   );

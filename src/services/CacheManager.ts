@@ -114,6 +114,18 @@ export class CacheManager {
     this.memoryCache.clear();
   }
 
+  /** Flush memory cache AND all persisted cache entries in localStorage.
+   *  Call this on logout or tenant switch to prevent cross-tenant data leakage. */
+  static flushAll(): void {
+    this.memoryCache.clear();
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith('cache:')) keysToRemove.push(k);
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+  }
+
   static initFromStorage(): void {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);

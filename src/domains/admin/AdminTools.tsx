@@ -1,23 +1,27 @@
 
 import React, { useState } from 'react';
-import { 
-  Wrench, 
-  RefreshCw, 
-  Trash2, 
-  Database, 
-  Terminal, 
-  Activity, 
-  CheckCircle2, 
+import {
+  Wrench,
+  RefreshCw,
+  Trash2,
+  Database,
+  Terminal,
+  Activity,
+  CheckCircle2,
   AlertCircle,
   ShieldCheck,
-  Zap
+  Zap,
+  Crown
 } from 'lucide-react';
+import { doc, updateDoc } from 'firebase/firestore';
 import { cn } from '../../lib/utils';
+import { db, auth } from '../../lib/firebase';
 import { DataService } from '../../services/DataService';
 import { CacheManager } from '../../services/CacheManager';
 import { metricsService } from '../../services/MetricsService';
 import { QuotaProtectionService } from '../../services/QuotaProtectionService';
 import { StorageHealthService } from '../../services/StorageHealthService';
+import { TenantIsolationService } from '../../services/TenantIsolationService';
 
 interface AdminAction {
   id: string;
@@ -31,6 +35,26 @@ export function AdminTools() {
   const [logs, setLogs] = useState<{ msg: string, type: 'info' | 'success' | 'error', time: string }[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [masterConfirm, setMasterConfirm] = useState(false);
+  const [masterLoading, setMasterLoading] = useState(false);
+  const [masterDone, setMasterDone] = useState(false);
+
+  const handleActivateMaster = async () => {
+    if (!masterConfirm) { setMasterConfirm(true); return; }
+    const uid = auth.currentUser?.uid;
+    if (!uid) { addLog('Nenhum usuário autenticado.', 'error'); return; }
+    setMasterLoading(true);
+    try {
+      await updateDoc(doc(db, 'users', uid), { superadmin: true });
+      setMasterDone(true);
+      addLog('superadmin: true definido com sucesso. Recarregue a página.', 'success');
+    } catch (e: any) {
+      addLog(`Erro ao ativar modo master: ${e.message}`, 'error');
+    } finally {
+      setMasterLoading(false);
+      setMasterConfirm(false);
+    }
+  };
 
   const addLog = (msg: string, type: 'info' | 'success' | 'error' = 'info') => {
     setLogs(prev => [{ msg, type, time: new Date().toLocaleTimeString() }, ...prev].slice(0, 50));
@@ -104,6 +128,33 @@ export function AdminTools() {
           addLog(health.message, "success");
         } else {
           addLog(health.message, "error");
+        }
+        setProgress(100);
+      }
+    },
+    {
+      id: 'tenant-isolation-audit',
+      label: 'Auditoria de Isolamento Multi-Tenant',
+      description: 'Verifica se todos os documentos possuem organizationId e detecta possíveis vazamentos entre tenants.',
+      icon: ShieldCheck,
+      action: async () => {
+        addLog("Iniciando auditoria de isolamento multi-tenant...", "info");
+        const result = await TenantIsolationService.runIsolationAudit();
+        if (result.passed) {
+          addLog(`✅ Auditoria concluída: SEM violações detectadas.`, "success");
+        } else {
+          addLog(`🚨 Violações detectadas: ${result.violations.length}`, "error");
+          result.violations.forEach(v => addLog(`  → ${v}`, "error"));
+        }
+        if (result.warnings.length > 0) {
+          addLog(`⚠ ${result.warnings.length} avisos:`, "info");
+          result.warnings.slice(0, 10).forEach(w => addLog(`  → ${w}`, "info"));
+        }
+
+        const cache = TenantIsolationService.checkCacheIsolation();
+        addLog(`Cache: ${cache.keysWithOrg} chaves com org-prefix, ${cache.keysWithoutOrg} sem prefixo`, cache.suspicious.length > 0 ? "error" : "success");
+        if (cache.suspicious.length > 0) {
+          cache.suspicious.slice(0, 5).forEach(k => addLog(`  cache suspeito: ${k}`, "error"));
         }
         setProgress(100);
       }
@@ -259,6 +310,43 @@ export function AdminTools() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Master Admin Activation */}
+      <div className="p-6 bg-brand-black border border-gold-deep/20 rounded-[2rem] flex items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gold-deep/10 flex items-center justify-center text-gold-deep shrink-0">
+            <Crown className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-black text-white uppercase tracking-widest">Modo Master (Superadmin)</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              {masterDone
+                ? 'Ativado. Recarregue a página para aplicar os privilégios completos.'
+                : 'Define superadmin: true na sua conta, concedendo bypass total de todas as regras de segurança.'}
+            </p>
+          </div>
+        </div>
+        {!masterDone && (
+          <button
+            onClick={handleActivateMaster}
+            disabled={masterLoading}
+            className={cn(
+              'shrink-0 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all',
+              masterConfirm
+                ? 'bg-red-600 text-white hover:bg-red-700 border border-red-500'
+                : 'bg-gold-deep text-brand-dark hover:bg-gold-light border border-gold-deep/50'
+            )}
+          >
+            {masterLoading ? 'Aguarde...' : masterConfirm ? 'Confirmar Ativação' : 'Ativar Modo Master'}
+          </button>
+        )}
+        {masterDone && (
+          <div className="shrink-0 flex items-center gap-2 text-emerald-400">
+            <CheckCircle2 className="w-5 h-5" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Ativado</span>
+          </div>
+        )}
       </div>
     </div>
   );

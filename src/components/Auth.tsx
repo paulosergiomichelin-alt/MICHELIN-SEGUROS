@@ -18,10 +18,11 @@ import { VisualIdentityConfig } from '../types';
 
 interface AuthProps {
   onSuccess: () => void;
+  onSignup?: () => void;
   visualConfig?: VisualIdentityConfig;
 }
 
-export const Auth: React.FC<AuthProps> = ({ onSuccess, visualConfig }) => {
+export const Auth: React.FC<AuthProps> = ({ onSuccess, onSignup, visualConfig }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -176,14 +177,9 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, visualConfig }) => {
       <div className="max-w-md w-full">
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gold-deep/10 border border-gold-deep rounded-3xl mb-4 overflow-hidden">
-            {visualConfig?.logoDark ? (
-              <img src={visualConfig.logoDark} alt={visualConfig.companyName} className="w-full h-full object-contain p-2" />
-            ) : (
-              <User className="w-10 h-10 text-gold-deep" />
-            )}
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gold-deep/10 border border-gold-deep rounded-3xl mb-4">
+            <Lock className="w-10 h-10 text-gold-deep" />
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">{visualConfig?.companyName || 'Michelin Seguros'}</h1>
           <p className="text-gold-light/60 text-sm mt-1 uppercase tracking-widest font-bold">Gestão Inteligente</p>
         </div>
 
@@ -285,7 +281,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, visualConfig }) => {
               </div>
             </div>
 
-            <button 
+            <button
               type="button"
               onClick={handleGoogleLogin}
               disabled={isLoading}
@@ -296,6 +292,19 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, visualConfig }) => {
             </button>
           </form>
         </motion.div>
+
+        {onSignup && (
+          <p className="text-center mt-6 text-sm text-white/40">
+            Não tem conta?{' '}
+            <button
+              type="button"
+              onClick={onSignup}
+              className="text-[#D4A854] font-bold hover:text-[#D4A854]/80 transition-colors underline underline-offset-2"
+            >
+              Cadastre sua empresa →
+            </button>
+          </p>
+        )}
       </div>
     </div>
   );

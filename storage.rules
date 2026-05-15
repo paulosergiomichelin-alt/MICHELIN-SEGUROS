@@ -1,15 +1,74 @@
 rules_version = '2';
- 
 service firebase.storage {
   match /b/{bucket}/o {
-    match /uploads/{allPaths=**} {
-      allow read, write: if request.auth != null;
-    }
-    
-    match /health_check/{allPaths=**} {
-      allow read, write: if request.auth != null;
+
+    function isSignedIn() {
+      return request.auth != null;
     }
 
+    // Read caller's Firestore user document once per evaluation (cached by the rules engine)
+    function callerDoc() {
+      return firestore.get(
+        /databases/ai-studio-e7cf89ac-d4c5-4bef-9fa5-57e4ac67170c/documents/users/$(request.auth.uid)
+      ).data;
+    }
+
+    function callerOrgId() {
+      return callerDoc().get('organizationId', '');
+    }
+
+    function isSuperAdmin() {
+      return callerDoc().get('superadmin', false) == true;
+    }
+
+    // =========================================================
+    // 1. ORG-SCOPED USER FILES  (branding, documents, avatars)
+    //    Path: orgs/{organizationId}/users/{userId}/...
+    // =========================================================
+    match /orgs/{organizationId}/users/{userId}/{allPaths=**} {
+      // Only the file owner can write; they must belong to the org
+      allow write: if isSignedIn() &&
+                      request.auth.uid == userId &&
+                      (isSuperAdmin() || callerOrgId() == organizationId);
+
+      // Any member of the same org can read (e.g. admin viewing agent documents)
+      allow read: if isSignedIn() &&
+                     (isSuperAdmin() || callerOrgId() == organizationId);
+    }
+
+    // =========================================================
+    // 2. COMPANY LOGOS  (empresaId == organizationId)
+    //    Path: empresas/{empresaId}/...
+    // =========================================================
+    match /empresas/{empresaId}/{allPaths=**} {
+      // Logos are branding — any authenticated user can read
+      allow read: if isSignedIn();
+      // Only members of that org (or superadmin) can upload/replace
+      allow write: if isSignedIn() &&
+                      (isSuperAdmin() || callerOrgId() == empresaId);
+    }
+
+    // =========================================================
+    // 3. HEALTH CHECK  (used by SystemHealth screen)
+    //    Path: health_check/{uid}/...
+    // =========================================================
+    match /health_check/{allPaths=**} {
+      allow read, write: if isSignedIn();
+    }
+
+    // =========================================================
+    // 4. SUPERADMIN FILES WITHOUT ORG CONTEXT
+    //    Path: users/{userId}/...  (legacy / superadmin-only)
+    // =========================================================
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if isSignedIn() && (
+        request.auth.uid == userId || isSuperAdmin()
+      );
+    }
+
+    // =========================================================
+    // SAFETY NET — deny everything else
+    // =========================================================
     match /{allPaths=**} {
       allow read, write: if false;
     }

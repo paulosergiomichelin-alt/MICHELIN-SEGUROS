@@ -1,14 +1,14 @@
 import React from 'react';
-import { 
-  Users, 
-  Send, 
-  MessageSquare, 
-  Bot, 
-  FileSearch, 
-  ShieldAlert, 
-  Cog, 
-  LogOut, 
-  Menu, 
+import {
+  Users,
+  Send,
+  MessageSquare,
+  Bot,
+  FileSearch,
+  ShieldAlert,
+  Cog,
+  LogOut,
+  Menu,
   X,
   ChevronLeft,
   ChevronRight,
@@ -18,7 +18,8 @@ import {
   ClipboardList,
   FileText,
   BarChart3,
-  UserCircle
+  UserCircle,
+  Building2
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Permissions, VisualIdentityConfig } from '../types';
@@ -123,6 +124,7 @@ export const Sidebar = React.memo(({
         { id: 'chat', label: 'WhatsApp', icon: MessageSquare, permission: permissions.canReadAllLeads, badge: '12' },
         { id: 'agent', label: 'Agente de IA', icon: Bot, permission: permissions.canAccessSettings },
         { id: 'users', label: 'Equipe', icon: ShieldAlert, permission: permissions.canManageUsers },
+        { id: 'empresas', label: 'Empresas', icon: Building2, permission: userProfile?.superadmin === true },
         { id: 'settings', label: 'Configurações', icon: Cog, permission: permissions.canAccessSettings },
       ].map((item) => {
         if (!item.permission) return null;

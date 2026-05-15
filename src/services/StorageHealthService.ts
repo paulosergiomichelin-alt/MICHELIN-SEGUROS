@@ -14,7 +14,7 @@ export class StorageHealthService {
       console.warn('[STORAGE_HEALTH] Token refresh failed', e);
     }
 
-    const testPath = `users/${auth.currentUser.uid}/health_check/test_${Date.now()}.txt`;
+    const testPath = `health_check/${auth.currentUser.uid}/test_${Date.now()}.txt`;
     const testRef = ref(storage, testPath);
     const content = new Blob(['health_check'], { type: 'text/plain' });
 

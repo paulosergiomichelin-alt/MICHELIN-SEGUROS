@@ -18,22 +18,24 @@ export class DataPolicyService {
   public static checkPermissions(action: 'CREATE' | 'UPDATE' | 'DELETE', entity: string, entityData?: any): void {
     if (!this.currentUserProfile) {
       if (['system_log', 'audit_log', 'system_metrics', 'dead_letter_queue', 'migration_logs', 'processing_locks'].includes(entity)) return;
-      
+
       const firebaseUid = auth.currentUser?.uid;
       // Basic check for self-user creation
       if (action === 'CREATE' && (entity === 'user' || entity === 'users') && entityData?.uid === firebaseUid) {
         return;
       }
-      
+
       throw new Error("Sessão expirada ou usuário não autenticado.");
     }
 
     const { role, uid, organizationId } = this.currentUserProfile;
+    const isSuperAdmin = (this.currentUserProfile as any).superadmin === true;
 
-    // 1. STRICT TENANT ISOLATION
-    if (entityData?.organizationId && entityData.organizationId !== organizationId) {
-      logger.error('SECURITY', `TENANT_VIOLATION: User ${uid} (Org: ${organizationId}) tried to access resource from Org: ${entityData.organizationId}`);
-      throw new Error("Acesso negado: violação de isolamento de organização.");
+    // 1. STRICT TENANT ISOLATION — organizationId ALWAYS comes from server profile, never from client input
+    if (!isSuperAdmin && entityData?.organizationId && organizationId && entityData.organizationId !== organizationId) {
+      logger.error('SECURITY', `TENANT_VIOLATION: action=${action} entity=${entity} uid=${uid} caller_org=${organizationId} target_org=${entityData.organizationId} ua=${navigator.userAgent.substring(0, 80)}`);
+      // Generic error — never reveal what org the target data belongs to
+      throw new Error("Acesso negado.");
     }
 
     // 2. ROLE-BASED ACCESS CONTROL (RBAC)
@@ -55,23 +57,23 @@ export class DataPolicyService {
     if (!this.currentUserProfile) return constraints;
 
     const { organizationId, role, uid, permissions } = this.currentUserProfile;
-    const finalConstraints = [...constraints];
-    
+    const isSuperAdmin = (this.currentUserProfile as any).superadmin === true;
     const canReadAllLeads = permissions?.canReadAllLeads === true;
-    const canManageUsers = permissions?.canManageUsers === true;
-    const isPowerful = (collectionName === 'leads' && canReadAllLeads) || (collectionName === 'users' && canManageUsers);
-    
+    const finalConstraints = [...constraints];
     const effectiveOrgId = organizationId || 'default';
-    
-    if (!isPowerful) {
-      finalConstraints.push(where('organizationId', '==', effectiveOrgId));
-    }
+
+    // Superadmins bypass org isolation entirely
+    if (isSuperAdmin) return finalConstraints;
+
+    // Always apply org isolation — required for Firestore rules to accept collection queries
+    finalConstraints.push(where('organizationId', '==', effectiveOrgId));
 
     if (role === 'admin' || role === 'gestor') {
       return finalConstraints;
     }
 
-    if (collectionName === 'leads') {
+    // Non-admin: further restrict by ownership where applicable
+    if (collectionName === 'leads' && !canReadAllLeads) {
       finalConstraints.push(where('ownerId', '==', uid));
     } else if (collectionName === 'messages') {
       finalConstraints.push(where('leadOwnerId', '==', uid));

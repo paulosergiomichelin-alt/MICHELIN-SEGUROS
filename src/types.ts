@@ -46,6 +46,7 @@ export interface UserProfile {
   theme?: Theme;
   chatPreferences?: ChatPreferences;
   organizationId?: string;
+  superadmin?: boolean;
 }
 
 export interface SystemUser extends UserProfile {
@@ -109,6 +110,8 @@ export interface Lead {
   
   // Insurance info
   hasInsurance: boolean;
+  insurer?: string;
+  startDate?: string;
   insuranceExpiry?: string;
   
   // Personal info
@@ -190,6 +193,11 @@ export interface Lead {
   maritalStatus?: string;
   cepPernoite?: string;
   enderecoAuto?: string;
+  logradouroPernoite?: string;
+  numeroPernoite?: string;
+  bairroPernoite?: string;
+  cidadePernoite?: string;
+  estadoPernoite?: string;
   statusLead?: LeadStatus;
   temperatura?: LeadTemperature;
   perfilLead?: string;
@@ -479,4 +487,44 @@ export interface LearningMemory {
   outcome: 'fechado' | 'perdido';
   timestamp: string; // ISO
   organizationId?: string;
+}
+
+export type PlanSaas = 'basico' | 'profissional' | 'enterprise';
+
+export type StatusEmpresa = 'trial' | 'ativo' | 'suspenso' | 'inadimplente' | 'cancelado';
+
+export interface Empresa {
+  id: string;
+  nomeRazaoSocial: string;
+  nomeFantasia?: string;
+  cnpj: string;
+  emailCorporativo: string;
+  telefone?: string;
+  slug: string;
+  logoUrl?: string;
+  planoSaas: PlanSaas;
+  limiteUsuarios: number;
+  limiteLeadsMes: number;
+  limiteStorageMb: number;
+  status: StatusEmpresa;
+  trialExpiraEm?: string;
+  configuracoes?: Record<string, unknown>;
+  timezone: string;
+  idioma: string;
+  ownerUserId?: string;
+  organizationId: string;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+export interface EmpresaMetricas {
+  totalUsuarios: number;
+  totalLeadsMes: number;
+  limiteUsuarios: number;
+  limiteLeadsMes: number;
+  limiteStorageMb: number;
+  planoSaas: PlanSaas;
+  status: StatusEmpresa;
+  trialExpiraEm?: string;
+  diasRestantesTrial?: number;
 }
