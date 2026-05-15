@@ -12,6 +12,7 @@
  */
 
 import { DataService } from './DataService';
+import { DataPolicyService } from './policy/DataPolicyService';
 
 export interface AIOCRConfig {
   enabled: boolean;
@@ -47,10 +48,14 @@ const FIRESTORE_ID = 'ai_document_extraction';
 const LOCAL_KEY = 'ai_ocr_config';
 const LOCAL_KEY_LEGACY = 'app_config';
 
+// Models that have been replaced. Any saved config using one of these will be
+// silently upgraded to the current DEFAULT_AI_OCR_CONFIG.model on load.
+const DEPRECATED_MODELS = ['baidu/qianfan-ocr-fast:free', 'baidu/qianfan-ocr-fast', 'moonshotai/kimi-k2', 'openai/gpt-4o-mini'];
+
 export const DEFAULT_AI_OCR_CONFIG: AIOCRConfig = {
   enabled: true,
   provider: 'openrouter',
-  model: 'baidu/qianfan-ocr-fast:free',
+  model: 'google/gemini-2.5-pro',
   apiKey: '',
   // AI-ONLY by default: if AI fails (timeout, 413, low confidence), return error
   // instead of running the slow legacy Tesseract pipeline (multi-rotation + anchored + regional).
@@ -61,7 +66,7 @@ export const DEFAULT_AI_OCR_CONFIG: AIOCRConfig = {
   validatePlate: true,
   validateChassis: true,
   retryEnabled: true,
-  timeout: 20000,
+  timeout: 40000,
   retries: 2,
   jpegQuality: 80,
   maxWidth: 1200,
@@ -77,9 +82,16 @@ export const DEFAULT_AI_OCR_CONFIG: AIOCRConfig = {
 
 export class AIOCRConfigService {
   private static cache: AIOCRConfig | null = null;
+  private static lastOrgId: string | null = null;
 
   /** Load config: Firestore first (authoritative), then localStorage, then defaults. */
   public static async load(): Promise<AIOCRConfig> {
+    // Invalidate in-memory cache when the active org changes (tenant switch)
+    const currentOrgId = DataPolicyService.getCurrentUser()?.organizationId ?? null;
+    if (currentOrgId !== this.lastOrgId) {
+      this.cache = null;
+      this.lastOrgId = currentOrgId;
+    }
     if (this.cache) return this.cache;
 
     // 1) Firestore
@@ -87,6 +99,7 @@ export class AIOCRConfigService {
       const doc = await DataService.get(FIRESTORE_ENTITY, FIRESTORE_ID);
       if (doc && typeof doc === 'object') {
         const merged = { ...DEFAULT_AI_OCR_CONFIG, ...doc } as AIOCRConfig;
+        this.migrateModel(merged);
         this.cache = merged;
         this.writeLocal(merged);
         return merged;
@@ -98,6 +111,7 @@ export class AIOCRConfigService {
     // 2) localStorage
     const local = this.readLocal();
     if (local) {
+      this.migrateModel(local);
       this.cache = local;
       return local;
     }
@@ -107,6 +121,15 @@ export class AIOCRConfigService {
     const fresh: AIOCRConfig = { ...DEFAULT_AI_OCR_CONFIG, apiKey: legacyKey };
     this.cache = fresh;
     return fresh;
+  }
+
+  /** Upgrade deprecated model slugs to the current default. Mutates in place. */
+  private static migrateModel(cfg: AIOCRConfig) {
+    if (DEPRECATED_MODELS.includes(cfg.model)) {
+      console.warn(`[AI_OCR_CONFIG] Migrating deprecated model "${cfg.model}" → "${DEFAULT_AI_OCR_CONFIG.model}"`);
+      cfg.model = DEFAULT_AI_OCR_CONFIG.model;
+      cfg.timeout = Math.max(cfg.timeout ?? 0, DEFAULT_AI_OCR_CONFIG.timeout);
+    }
   }
 
   /** Save full config. Updates Firestore + localStorage; refreshes cache. */

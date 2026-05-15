@@ -43,7 +43,11 @@ export class DataService {
     'leads', 'lead', 'users', 'user', 'messages', 'message',
     'notifications', 'notification', 'flows', 'flow',
     'follow_ups', 'follow_up', 'empresas', 'empresa',
+    'settings', 'config',
   ]);
+
+  // Collections whose document IDs are scoped per-org: {orgId}::{docId}
+  private static readonly ORG_SETTINGS_COLLECTIONS = new Set(['settings', 'config']);
 
   private static readonly COLLECTION_MAP: Record<string, string> = {
     'leads': 'leads',
@@ -103,6 +107,20 @@ export class DataService {
       return `${orgId}:${entity}:${id}`;
     }
     return `${entity}:${id}`;
+  }
+
+  /**
+   * For settings/config collections, returns an org-scoped Firestore document ID
+   * formatted as "{orgId}::{id}" so each org stores its own settings document.
+   * All other entities return the original id unchanged.
+   */
+  private static resolveDocId(entity: string, id: string): string {
+    const collName = this.COLLECTION_MAP[entity] ?? entity;
+    if (this.ORG_SETTINGS_COLLECTIONS.has(collName)) {
+      const orgId = DataPolicyService.getCurrentUser()?.organizationId;
+      if (orgId) return `${orgId}::${id}`;
+    }
+    return id;
   }
 
   /** Returns true if the document's org matches the current user's org (or caller is superadmin). */
@@ -264,13 +282,30 @@ export class DataService {
     }
 
     const collName = this.getCollectionName(entity);
-    const key = `doc:${collName}:${id}`;
+    const docId = this.resolveDocId(entity, id);
+    const key = `doc:${collName}:${docId}`;
 
     return SubscriptionRegistry.register(key, () => {
-      console.log(`[SUBSCRIPTION_START] Document: ${collName}/${id}`);
-      const unsub = onSnapshot(doc(db, collName, id), (snap) => {
-        const data = snap.exists() ? snap.data() : null;
-        console.log(`[SNAPSHOT_RECEIVED] Doc: ${collName}/${id}, exists: ${snap.exists()}`);
+      console.log(`[SUBSCRIPTION_START] Document: ${collName}/${docId}`);
+      const unsub = onSnapshot(doc(db, collName, docId), async (snap) => {
+        let data = snap.exists() ? snap.data() : null;
+        console.log(`[SNAPSHOT_RECEIVED] Doc: ${collName}/${docId}, exists: ${snap.exists()}`);
+
+        // Migration fallback: org-scoped doc missing — copy from legacy global doc
+        if (!data && docId !== id) {
+          try {
+            const legacySnap = await getDoc(doc(db, collName, id));
+            if (legacySnap.exists()) {
+              data = legacySnap.data();
+              const migBatch = writeBatch(db);
+              migBatch.set(doc(db, collName, docId), data!, { merge: true });
+              migBatch.commit().then(() =>
+                logger.info('DATA_SERVICE', `SETTINGS_MIGRATED(subscribe): ${collName}/${id} → ${collName}/${docId}`)
+              ).catch(() => {});
+            }
+          } catch { /* noop */ }
+        }
+
         if (data) {
           CacheManager.set(cacheKey, data);
         }
@@ -279,7 +314,7 @@ export class DataService {
         if (err.code === 'resource-exhausted') {
           DataService.notifyQuotaExceeded();
         }
-        console.error(`[SNAPSHOT_ERROR] ${collName}/${id}:`, err);
+        console.error(`[SNAPSHOT_ERROR] ${collName}/${docId}:`, err);
         if (onError) onError(err);
       });
       return unsub;
@@ -360,11 +395,12 @@ export class DataService {
 
   static async getFromServer(entity: string, id: string): Promise<any | null> {
     if (this.isQuotaExceeded) return this.get(entity, id);
-    
+
     try {
       const collName = this.getCollectionName(entity);
+      const docId = this.resolveDocId(entity, id);
       metricsService.track('db_reads_actual', 1, { entity, type: 'server' });
-      const snap = await getDocFromServer(doc(db, collName, id));
+      const snap = await getDocFromServer(doc(db, collName, docId));
       const data = snap.exists() ? snap.data() : null;
       if (data) {
         CacheManager.set(this.getCacheKey(entity, id), data);
@@ -413,7 +449,7 @@ export class DataService {
       return null;
     }
     const cacheKey = this.getCacheKey(entity, id);
-    
+
     // 1. Check Cache
     const cached = CacheManager.getSmart(cacheKey, entity);
     if (cached) {
@@ -430,9 +466,25 @@ export class DataService {
     const fetchPromise = (async () => {
       try {
         const collName = this.getCollectionName(entity);
+        const docId = this.resolveDocId(entity, id);
         metricsService.track('db_reads_actual', 1, { entity });
-        const snap = await getDoc(doc(db, collName, id));
-        const data = snap.exists() ? snap.data() : null;
+        const snap = await getDoc(doc(db, collName, docId));
+        let data = snap.exists() ? snap.data() : null;
+
+        // Migration fallback: org-scoped doc missing — copy from legacy global doc
+        if (!data && docId !== id) {
+          try {
+            const legacySnap = await getDoc(doc(db, collName, id));
+            if (legacySnap.exists()) {
+              data = legacySnap.data();
+              const migBatch = writeBatch(db);
+              migBatch.set(doc(db, collName, docId), data!, { merge: true });
+              migBatch.commit().then(() =>
+                logger.info('DATA_SERVICE', `SETTINGS_MIGRATED(get): ${collName}/${id} → ${collName}/${docId}`)
+              ).catch(() => {});
+            }
+          } catch { /* noop */ }
+        }
 
         // Cross-tenant guard: block data that belongs to a different org
         if (data && this.ORG_SCOPED_ENTITIES.has(entity) && !this.isSameOrg(data)) {
@@ -698,13 +750,14 @@ export class DataService {
     return sanitized;
   }
 
-  private static async validateWrite(entity: string, id: string, expectedData: any): Promise<boolean> {
+  private static async validateWrite(entity: string, docId: string, expectedData: any): Promise<boolean> {
     const collName = this.getCollectionName(entity);
     try {
       // Relaxed validation: Check for existence and critical keys only
-      const snap = await getDoc(doc(db, collName, id));
+      // docId is already the resolved (org-scoped) document ID
+      const snap = await getDoc(doc(db, collName, docId));
       if (!snap.exists()) {
-        console.error(`[DataService] Validation failed: Document ${collName}/${id} does not exist after write.`);
+        console.error(`[DataService] Validation failed: Document ${collName}/${docId} does not exist after write.`);
         return false;
       }
       
@@ -725,7 +778,7 @@ export class DataService {
       });
 
       if (mismatches.length > 0) {
-        console.error(`[DataService] CRITICAL field mismatch for ${entity}:${id} - Keys:`, mismatches);
+        console.error(`[DataService] CRITICAL field mismatch for ${entity}:${docId} - Keys:`, mismatches);
         return false;
       }
       
@@ -743,6 +796,7 @@ export class DataService {
     // 1. Normalization
     const rawData = await this.normalizePayload(entity, data);
     const id = rawData.id;
+    const docId = this.resolveDocId(entity, id);
 
     // 2. Sanitization & Validation
     const finalData = this.sanitizeData(rawData);
@@ -751,7 +805,7 @@ export class DataService {
     // Tenant isolation: organizationId MUST come from server profile, not from client data
     TenantIsolationService.assertWriteIsolation(entity, finalData);
 
-    console.log(`[DataService] WRITE_ATTEMPT: CREATE ${collName}/${id}`, { origin, fields: Object.keys(finalData) });
+    console.log(`[DataService] WRITE_ATTEMPT: CREATE ${collName}/${docId}`, { origin, fields: Object.keys(finalData) });
 
     // Permission check
     this.checkPermissions('CREATE', entity, finalData);
@@ -768,15 +822,15 @@ export class DataService {
           const log = this.generateAuditLog('CREATE', entity, id, null, finalData, origin);
           if (log) batch.set(doc(db, 'audit_logs', log.id), log);
         }
-        
-        batch.set(doc(db, collName, id), finalData, { merge: true });
-        
+
+        batch.set(doc(db, collName, docId), finalData, { merge: true });
+
         metricsService.track('db_write_attempt', 1, { entity, action: 'create' });
         await batch.commit();
 
         if (retries > 0) await new Promise(r => setTimeout(r, 200 * retries));
 
-        const confirmed = await this.validateWrite(entity, id, finalData);
+        const confirmed = await this.validateWrite(entity, docId, finalData);
         if (confirmed) {
           logger.info('DATA_SERVICE', `PERSISTENCE_CONFIRMED for ${entity}:${id}`);
           CacheManager.set(this.getCacheKey(entity, id), finalData);
@@ -830,11 +884,12 @@ export class DataService {
     if (!updates || Object.keys(updates).length === 0) return;
 
     const collName = this.getCollectionName(entity);
+    const docId = this.resolveDocId(entity, id);
     const cacheKey = this.getCacheKey(entity, id);
     let before = CacheManager.get(cacheKey);
-    
+
     if (!before) {
-      const snap = await getDoc(doc(db, collName, id));
+      const snap = await getDoc(doc(db, collName, docId));
       if (!snap.exists()) throw new Error(`Entity ${entity} with id ${id} not found`);
       before = snap.data();
     }
@@ -883,7 +938,7 @@ export class DataService {
       after.version = currentVersion + 1;
     }
 
-    console.log(`[DataService] WRITE_ATTEMPT: UPDATE ${collName}/${id}`, { origin, keys: Object.keys(sanitizedUpdates) });
+    console.log(`[DataService] WRITE_ATTEMPT: UPDATE ${collName}/${docId}`, { origin, keys: Object.keys(sanitizedUpdates) });
     
     if (this.isQuotaExceeded || !QuotaProtectionService.canWrite()) {
       throw new Error(`[QUOTA_BLOCKED] Escrita negada para atualização de ${entity} (Quota ou Proteção)`);
@@ -895,15 +950,15 @@ export class DataService {
         const batch = writeBatch(db);
         const log = this.generateAuditLog('UPDATE', entity, id, before, after, origin);
         if (log) batch.set(doc(db, 'audit_logs', log.id), log);
-        
-        batch.set(doc(db, collName, id), after, { merge: true });
+
+        batch.set(doc(db, collName, docId), after, { merge: true });
         
         metricsService.track('db_write_attempt', 1, { entity, action: 'update' });
         await batch.commit();
 
         if (retries > 0) await new Promise(r => setTimeout(r, 200 * retries));
 
-        const confirmed = await this.validateWrite(entity, id, after);
+        const confirmed = await this.validateWrite(entity, docId, after);
         if (confirmed) {
           logger.info('DATA_SERVICE', `PERSISTENCE_CONFIRMED for ${entity}:${id}`);
           CacheManager.set(cacheKey, after);
@@ -954,7 +1009,8 @@ export class DataService {
       throw new Error(`DELETE rejected: Invalid ID for entity ${entity}`);
     }
     const collName = this.getCollectionName(entity);
-    const docRef = doc(db, collName, id);
+    const docId = this.resolveDocId(entity, id);
+    const docRef = doc(db, collName, docId);
     const snap = await getDoc(docRef);
     const before = snap.exists() ? snap.data() : null;
 
@@ -964,7 +1020,7 @@ export class DataService {
     const batch = writeBatch(db);
     const log = this.generateAuditLog('DELETE', entity, id, before, null, origin);
     if (log) batch.set(doc(db, 'audit_logs', log.id), log);
-    
+
     batch.delete(docRef);
     CacheManager.invalidate(this.getCacheKey(entity, id));
     CacheManager.invalidatePattern(`list:${entity}`);
@@ -973,19 +1029,20 @@ export class DataService {
       await batch.commit();
       this.updateAggregates(entity, before, null, true);
     } catch (error: any) {
-      handleFirestoreError(error, OperationType.DELETE, `${collName}/${id}`);
+      handleFirestoreError(error, OperationType.DELETE, `${collName}/${docId}`);
     }
   }
 
   static async save(entity: string, id: string, data: any, origin: AuditLog['origin'] = 'USUARIO'): Promise<void> {
-    // Smart save: Choose Create or Update based on existence
+    // Smart save: Choose Create or Update based on existence in org-scoped location
     const cacheKey = this.getCacheKey(entity, id);
+    const docId = this.resolveDocId(entity, id);
     let existing = CacheManager.get(cacheKey);
-    
+
     if (!existing) {
-       const collName = this.getCollectionName(entity);
-       const snap = await getDoc(doc(db, collName, id));
-       existing = snap.exists() ? snap.data() : null;
+      const collName = this.getCollectionName(entity);
+      const snap = await getDoc(doc(db, collName, docId));
+      existing = snap.exists() ? snap.data() : null;
     }
 
     if (!existing) {

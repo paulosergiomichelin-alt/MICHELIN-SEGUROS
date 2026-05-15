@@ -231,16 +231,43 @@ service cloud.firestore {
     }
 
     // =========================================================
-    // 6. CONFIGURAÇÕES GLOBAIS
+    // 6. CONFIGURAÇÕES POR EMPRESA
+    // Org-scoped docs use format: "{orgId}::{setting}"
+    // Legacy global docs (no '::') still readable during migration.
     // =========================================================
+
+    // Returns the caller's organizationId from their user doc.
+    function callerOrgId() {
+      return callerExists() ? callerDoc().get('organizationId', '') : '';
+    }
+
+    // True when docId starts with the caller's orgId followed by '::'
+    function isOrgDoc(docId) {
+      let orgId = callerOrgId();
+      return orgId != '' && docId.matches('^' + orgId + '::.*');
+    }
+
+    // Legacy global doc: no '::' separator (pre-migration format)
+    function isLegacyGlobalDoc(docId) {
+      return !docId.matches('.*::.*');
+    }
+
     match /settings/{id} {
-      allow read:  if isSignedIn();
-      allow write: if isAdmin() || isSuperAdmin();
+      allow read: if isSignedIn() && (
+        isSuperAdmin() || isOrgDoc(id) || isLegacyGlobalDoc(id)
+      );
+      allow write: if (isAdmin() || isSuperAdmin()) && (
+        isSuperAdmin() || isOrgDoc(id)
+      );
     }
 
     match /config/{id} {
-      allow read:  if isSignedIn();
-      allow write: if isAdmin() || isSuperAdmin();
+      allow read: if isSignedIn() && (
+        isSuperAdmin() || isOrgDoc(id) || isLegacyGlobalDoc(id)
+      );
+      allow write: if (isAdmin() || isSuperAdmin()) && (
+        isSuperAdmin() || isOrgDoc(id)
+      );
     }
 
     match /access_profiles/{id} {
