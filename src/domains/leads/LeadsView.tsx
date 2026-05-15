@@ -1,10 +1,7 @@
 import React from 'react';
 import {
-  LayoutGrid,
-  Users,
   MessageSquare,
   FileText,
-  TrendingUp,
   TrendingDown,
   PlusCircle,
   Search,
@@ -22,13 +19,11 @@ import {
   Bot,
   Zap,
   ZapOff,
-  RefreshCcw,
   Download,
   Filter,
   Flame,
   X,
   History,
-  Activity,
   UserCheck
 } from 'lucide-react';
 import { Lead, LeadStatus, Permissions, UserProfile } from '../../types';
@@ -129,17 +124,7 @@ export const LeadsView = React.memo(({
             <h1 className="text-base md:text-lg font-bold tracking-tight uppercase">Gestão de Leads</h1>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button 
-              onClick={handleRefresh}
-              className={cn(
-                "flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-all text-[9.5px] font-bold",
-                isRefreshing && "animate-pulse"
-              )}
-            >
-              <RefreshCcw className={cn("w-3 h-3", isRefreshing && "animate-spin")} />
-              <span className="hidden sm:inline">Atualizar</span>
-            </button>
-            <button 
+            <button
               onClick={() => setShowAddLead(true)}
               className="flex-1 sm:flex-none px-4 py-1 bg-gold-deep text-brand-dark rounded-lg font-black text-[9.5px] hover:bg-gold-light transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-gold-deep/10"
             >
@@ -148,31 +133,6 @@ export const LeadsView = React.memo(({
             </button>
           </div>
         </header>
-
-        {/* KPI CARDS */}
-        <div className="px-4 md:px-6 mb-3 md:mb-4">
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 md:gap-2.5">
-            {[
-              { label: 'TOTAL', value: stats.total.toLocaleString(), icon: LayoutGrid, color: 'text-gold-deep' },
-              { label: 'QUENTES', value: stats.quente.toLocaleString(), icon: Flame, color: 'text-red-500' },
-              { label: 'NOVOS', value: stats.novosHoje.toLocaleString(), icon: Activity, color: 'text-emerald-500' },
-              { label: 'EM SERVIÇO', value: stats.emAtendimento.toLocaleString(), icon: Users, color: 'text-blue-500' },
-              { label: 'CONVERSÃO', value: `${stats.conversao}%`, icon: TrendingUp, color: 'text-gold-deep', className: 'col-span-2 lg:col-span-1' },
-            ].map((kpi, idx) => (
-              <div key={idx} className={cn("bg-[#111214] p-2.5 md:p-3.5 rounded-xl border border-white/5 shadow-sm", kpi.className)}>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="p-1 md:p-1 bg-white/5 rounded-md">
-                    <kpi.icon className={cn("w-3 h-3 md:w-3 md:h-3", kpi.color)} />
-                  </div>
-                </div>
-                <p className="text-[6.5px] md:text-[8px] font-bold text-white/30 uppercase tracking-widest">{kpi.label}</p>
-                <div className="flex items-baseline gap-1.5 mt-0.5">
-                  <h3 className="text-base md:text-lg font-bold tracking-tight">{kpi.value}</h3>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
 
         {/* TOOLBAR */}
         <div className="px-4 md:px-6 mb-3 md:mb-3.5 space-y-2 md:space-y-2.5">

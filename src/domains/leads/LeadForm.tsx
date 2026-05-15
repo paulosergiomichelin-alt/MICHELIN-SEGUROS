@@ -16,7 +16,7 @@ import { Lead, LeadStatus, LeadTemperature, AgentConfig, UserProfile, LeadDocume
 import { agentService } from '../../services/agentService';
 import { validateLead } from '../../lib/validation';
 import { cn, formatCPF, validateCPF, generateId } from '../../lib/utils';
-import { format } from 'date-fns';
+import { format, differenceInYears, differenceInMonths, differenceInDays, addYears, addMonths, isValid, parseISO } from 'date-fns';
 import { StorageService } from '../../services/StorageService';
 import { handleFirestoreError, OperationType } from '../../lib/firestore-utils';
 import { logger } from '../../services/LoggerService';
@@ -32,6 +32,7 @@ interface LeadFormProps {
   onSave: (lead: Lead, options?: { silent?: boolean }) => void;
   onCancel: () => void;
   onDelete?: (id: string) => void;
+  onNavigateToLead?: (lead: Lead) => void;
   agentConfig?: AgentConfig;
 }
 
@@ -90,102 +91,309 @@ const formatDateDisplay = (dateStr: string) => {
   }
 };
 
+/** Parse "YYYY-MM-DD" or ISO into a Date or null. */
+const parseSafeDate = (raw?: string | null): Date | null => {
+  if (!raw) return null;
+  try {
+    const d = raw.length === 10 ? parseISO(raw) : new Date(raw);
+    return isValid(d) ? d : null;
+  } catch {
+    return null;
+  }
+};
+
+/** "31 anos" — based on the given birth date string. */
+const calculateAge = (birthDate?: string | null): string => {
+  const d = parseSafeDate(birthDate);
+  if (!d) return '';
+  const years = differenceInYears(new Date(), d);
+  if (years < 0 || years > 130) return '';
+  return `${years} anos`;
+};
+
+/**
+ * "10 meses e 11 dias" — time remaining until the next anniversary (birthday or
+ * vigência end). When the target is today, returns "Hoje". When it has already
+ * passed within the current year window, returns the next cycle's countdown.
+ */
+const formatCountdownToNext = (targetDate?: string | null, options: { recurringYearly?: boolean } = {}): string => {
+  const target = parseSafeDate(targetDate);
+  if (!target) return '';
+
+  const now = new Date();
+  let next = target;
+
+  if (options.recurringYearly) {
+    next = new Date(now.getFullYear(), target.getMonth(), target.getDate());
+    if (next.getTime() < now.getTime()) {
+      next = addYears(next, 1);
+    }
+  }
+
+  const diffMs = next.getTime() - now.getTime();
+  if (diffMs <= 0) return options.recurringYearly ? 'Hoje' : 'Vencido';
+
+  // Use date-fns diffs anchored on the wall clock, not raw ms, so DST doesn't
+  // shift the month/day counts by one.
+  const months = differenceInMonths(next, now);
+  const monthsAnchor = addMonths(now, months);
+  const days = differenceInDays(next, monthsAnchor);
+
+  const monthLabel = months === 1 ? 'mês' : 'meses';
+  const dayLabel = days === 1 ? 'dia' : 'dias';
+
+  if (months === 0) return `${days} ${dayLabel}`;
+  if (days === 0) return `${months} ${monthLabel}`;
+  return `${months} ${monthLabel} e ${days} ${dayLabel}`;
+};
+
 // --- UI COMPONENTS ---
 
 const PremiumSection = React.memo(({ title, subtitle, icon: Icon, children, badge }: any) => (
-  <div className="bg-[#111214] rounded-2xl border border-white/5 overflow-hidden mb-6 group transition-all hover:border-[#D4A85420]">
-    <div className="px-6 py-4 flex items-center justify-between border-b border-white/5 bg-gradient-to-r from-white/[0.02] to-transparent">
-      <div className="flex items-center gap-4">
-        <div className="p-2.5 rounded-xl bg-[#D4A85410] text-[#D4A854] ring-1 ring-[#D4A85420]">
-          <Icon className="w-5 h-5" />
+  <div className="relative rounded-[20px] border border-white/[0.06] bg-[#0E0F11]/85 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.35)] overflow-hidden mb-5 transition-colors hover:border-[#D4A854]/20 ring-1 ring-[#D4A854]/[0.04]">
+    {/* Subtle gold gradient sheen on the very top edge for premium feel */}
+    <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#D4A854]/30 to-transparent" />
+    <div className="px-5 py-3.5 flex items-center justify-between border-b border-white/[0.04] bg-gradient-to-r from-[#D4A854]/[0.03] to-transparent">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-[#D4A854]/[0.08] text-[#D4A854] ring-1 ring-[#D4A854]/15 flex items-center justify-center">
+          <Icon className="w-3.5 h-3.5" />
         </div>
-        <div>
-          <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-white flex items-center gap-2">
+        <div className="flex flex-col leading-tight">
+          <h4 className="text-[10.5px] font-black uppercase tracking-[0.22em] text-[#D4A854]/95 flex items-center gap-2">
             {title}
           </h4>
-          {subtitle && <p className="text-[9px] text-[#8E8E93] font-medium uppercase tracking-widest mt-1 opacity-70">{subtitle}</p>}
+          {subtitle && (
+            <p className="text-[8.5px] text-[#8E8E93]/70 font-semibold uppercase tracking-[0.18em] mt-0.5">
+              {subtitle}
+            </p>
+          )}
         </div>
       </div>
       {badge}
     </div>
-    <div className="p-6">
+    <div className="p-5">
       {children}
     </div>
   </div>
 ));
 
 const PremiumInput = React.memo(({ label, icon: Icon, required, readOnly, ...props }: any) => (
-  <div className="space-y-1.5 w-full group">
-    <label className="text-[9px] font-bold text-[#8E8E93] uppercase tracking-widest ml-1 group-focus-within:text-[#D4A854] transition-colors">
-      {label} {required && <span className="text-red-500">*</span>}
+  <div className="space-y-1 w-full group">
+    <label className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] ml-0.5 group-focus-within:text-[#D4A854] transition-colors">
+      {label} {required && <span className="text-red-500/80">*</span>}
     </label>
     <div className="relative">
       <input
         {...props}
         className={cn(
-          "w-full h-11 bg-[#1A1C1E] border border-white/10 rounded-xl px-4 text-[12px] font-medium text-white transition-all focus:ring-2 focus:ring-[#D4A85420] focus:border-[#D4A85440] placeholder:text-white/10 outline-none",
+          "w-full h-10 bg-[#16181B] border border-white/[0.07] rounded-lg px-3.5 text-[12px] font-medium text-white transition-all duration-200 focus:ring-2 focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40 focus:shadow-[0_0_0_4px_rgba(212,168,84,0.04)] hover:border-white/15 placeholder:text-white/15 outline-none",
           props.className,
-          Icon && "pl-11",
-          readOnly && "opacity-50 cursor-not-allowed bg-white/[0.02]"
+          Icon && "pl-10",
+          readOnly && "opacity-60 cursor-not-allowed bg-white/[0.015]"
         )}
         readOnly={readOnly}
       />
-      {Icon && <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8E8E93]/40 group-focus-within:text-[#D4A854]/60 transition-colors" />}
+      {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8E8E93]/40 group-focus-within:text-[#D4A854]/70 transition-colors pointer-events-none" />}
     </div>
   </div>
 ));
 
 const PremiumSelect = React.memo(({ label, icon: Icon, required, options, ...props }: any) => (
-  <div className="space-y-1.5 w-full group">
-    <label className="text-[9px] font-bold text-[#8E8E93] uppercase tracking-widest ml-1 group-focus-within:text-[#D4A854] transition-colors">
-      {label} {required && <span className="text-red-500">*</span>}
+  <div className="space-y-1 w-full group">
+    <label className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] ml-0.5 group-focus-within:text-[#D4A854] transition-colors">
+      {label} {required && <span className="text-red-500/80">*</span>}
     </label>
     <div className="relative">
       <select
         {...props}
         className={cn(
-          "w-full h-11 bg-[#1A1C1E] border border-white/10 rounded-xl px-4 pr-10 text-[12px] font-medium text-white transition-all focus:ring-2 focus:ring-[#D4A85420] focus:border-[#D4A85440] outline-none appearance-none cursor-pointer",
+          "w-full h-10 bg-[#16181B] border border-white/[0.07] rounded-lg px-3.5 pr-9 text-[12px] font-medium text-white transition-all duration-200 focus:ring-2 focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40 focus:shadow-[0_0_0_4px_rgba(212,168,84,0.04)] hover:border-white/15 outline-none appearance-none cursor-pointer",
           props.className,
-          Icon && "pl-11"
+          Icon && "pl-10"
         )}
       >
         {options.map((opt: any) => (
           <option key={opt.value} value={opt.value} className="bg-[#111214]">{opt.label}</option>
         ))}
       </select>
-      {Icon && <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8E8E93]/40 group-focus-within:text-[#D4A854]/60 transition-colors pointer-events-none" />}
-      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8E8E93]/40 pointer-events-none" />
+      {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8E8E93]/40 group-focus-within:text-[#D4A854]/70 transition-colors pointer-events-none" />}
+      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8E8E93]/40 pointer-events-none" />
+    </div>
+  </div>
+));
+
+/**
+ * CPF input com máscara em tempo real e validação mod-11 inline.
+ * Borda verde quando válido, vermelha quando incompleto/inválido, neutra quando vazio.
+ */
+const PremiumCpfInput = React.memo(({ label, name, value, onChange, onBlur, required, placeholder }: any) => {
+  const digits = (value || '').replace(/\D/g, '');
+  const hasContent = digits.length > 0;
+  const isComplete = digits.length === 11;
+  const isValidCpf = isComplete && validateCPF(digits);
+  const status: 'idle' | 'partial' | 'invalid' | 'valid' = !hasContent
+    ? 'idle'
+    : !isComplete
+      ? 'partial'
+      : isValidCpf
+        ? 'valid'
+        : 'invalid';
+
+  return (
+    <div className="space-y-1 w-full group">
+      <label className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] ml-0.5 group-focus-within:text-[#D4A854] transition-colors flex items-center gap-2">
+        <span>{label} {required && <span className="text-red-500/80">*</span>}</span>
+        {status === 'valid' && (
+          <span className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full bg-emerald-500/10 text-[8px] font-bold uppercase tracking-wide text-emerald-300/90 border border-emerald-500/20">
+            <CheckCircle2 className="w-2.5 h-2.5" /> OK
+          </span>
+        )}
+        {status === 'invalid' && (
+          <span className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full bg-red-500/10 text-[8px] font-bold uppercase tracking-wide text-red-300/90 border border-red-500/20">
+            <AlertCircle className="w-2.5 h-2.5" /> Inválido
+          </span>
+        )}
+      </label>
+      <div className="relative">
+        <input
+          name={name}
+          value={value || ''}
+          onChange={onChange}
+          onBlur={onBlur}
+          required={required}
+          placeholder={placeholder || '000.000.000-00'}
+          inputMode="numeric"
+          autoComplete="off"
+          maxLength={14}
+          className={cn(
+            'w-full h-10 bg-[#16181B] border rounded-lg px-3.5 pr-9 text-[12px] font-medium text-white tracking-wider transition-all duration-200 focus:ring-2 outline-none placeholder:text-white/15 hover:border-white/15',
+            status === 'idle' && 'border-white/[0.07] focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40 focus:shadow-[0_0_0_4px_rgba(212,168,84,0.04)]',
+            status === 'partial' && 'border-white/[0.07] focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40 focus:shadow-[0_0_0_4px_rgba(212,168,84,0.04)]',
+            status === 'valid' && 'border-emerald-500/50 focus:ring-emerald-500/25 focus:shadow-[0_0_0_4px_rgba(16,185,129,0.06)]',
+            status === 'invalid' && 'border-red-500/50 focus:ring-red-500/25 focus:shadow-[0_0_0_4px_rgba(239,68,68,0.06)]'
+          )}
+        />
+        {status === 'valid' && (
+          <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-emerald-400" />
+        )}
+        {status === 'invalid' && (
+          <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-red-400" />
+        )}
+      </div>
+    </div>
+  );
+});
+
+/**
+ * Campo readonly enxuto para valores auto-calculados (idade, aniversário, fim
+ * de vigência). Mostra placeholder discreto quando vazio.
+ */
+const PremiumComputedField = React.memo(({ label, value, icon: Icon, tone = 'gold', emptyLabel }: any) => {
+  const isEmpty = !value;
+  return (
+    <div className="space-y-1 w-full">
+      <label className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] ml-0.5">{label}</label>
+      <div
+        className={cn(
+          'w-full h-10 rounded-lg px-3.5 flex items-center justify-between gap-2 border transition-colors',
+          tone === 'gold' && 'bg-[#D4A854]/[0.05] border-[#D4A854]/15',
+          tone === 'mint' && 'bg-emerald-500/[0.06] border-emerald-500/15',
+          tone === 'sky' && 'bg-sky-500/[0.06] border-sky-500/15',
+          isEmpty && 'opacity-50'
+        )}
+      >
+        <div className="flex items-center gap-1.5 min-w-0">
+          {Icon && (
+            <Icon
+              className={cn(
+                'w-3 h-3 shrink-0',
+                tone === 'gold' && 'text-[#D4A854]',
+                tone === 'mint' && 'text-emerald-400',
+                tone === 'sky' && 'text-sky-400'
+              )}
+            />
+          )}
+          <span
+            className={cn(
+              'text-[11.5px] font-bold tracking-wide truncate',
+              tone === 'gold' && 'text-[#D4A854]',
+              tone === 'mint' && 'text-emerald-300',
+              tone === 'sky' && 'text-sky-300'
+            )}
+          >
+            {value || emptyLabel || '—'}
+          </span>
+        </div>
+        <LockIcon className="w-2.5 h-2.5 text-white/15 shrink-0" />
+      </div>
+    </div>
+  );
+});
+
+/**
+ * Linha "LABEL: [dropdown]" — usado para Status e Temperatura em layout
+ * horizontal compacto. Substitui o card vertical antigo.
+ */
+const PremiumInlineSelect = React.memo(({ label, icon: Icon, name, value, onChange, options, accent }: any) => (
+  <div
+    className={cn(
+      'h-11 bg-[#0E0F11]/85 backdrop-blur-xl border border-white/[0.06] rounded-xl px-3 flex items-center gap-2.5 transition-all hover:border-[#D4A854]/20 shadow-[0_4px_18px_rgba(0,0,0,0.25)] ring-1 ring-[#D4A854]/[0.03]',
+      accent
+    )}
+  >
+    {Icon && (
+      <div className="w-6 h-6 rounded-md bg-[#D4A854]/[0.1] text-[#D4A854] flex items-center justify-center shrink-0 ring-1 ring-[#D4A854]/15">
+        <Icon className="w-3 h-3" />
+      </div>
+    )}
+    <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#D4A854]/85 whitespace-nowrap">
+      {label}
+    </span>
+    <div className="relative flex-1 min-w-0">
+      <select
+        name={name}
+        value={value}
+        onChange={onChange}
+        className="w-full h-8 bg-[#16181B] border border-white/[0.07] rounded-md pl-2.5 pr-7 text-[11.5px] font-semibold text-white outline-none appearance-none cursor-pointer transition-all focus:ring-2 focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40 hover:border-white/15"
+      >
+        {options.map((opt: any) => (
+          <option key={opt.value} value={opt.value} className="bg-[#111214]">{opt.label}</option>
+        ))}
+      </select>
+      <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#8E8E93]/60 pointer-events-none" />
     </div>
   </div>
 ));
 
 const PremiumCardToggle = React.memo(({ label, description, icon: Icon, active, onChange }: any) => (
-  <div 
+  <button
+    type="button"
     onClick={() => onChange(!active)}
+    aria-pressed={!!active}
     className={cn(
-      "p-5 rounded-2xl border transition-all flex items-start gap-4 cursor-pointer group select-none relative overflow-hidden",
-      active 
-        ? "bg-[#D4A85408] border-[#D4A85440] ring-1 ring-[#D4A85420] shadow-[0_0_20px_rgba(212,168,84,0.05)]" 
+      "p-4 rounded-2xl border transition-all flex items-start gap-3 cursor-pointer group select-none relative overflow-hidden text-left h-[120px] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4A85460]",
+      active
+        ? "bg-[#D4A85408] border-[#D4A85440] ring-1 ring-[#D4A85420] shadow-[0_0_20px_rgba(212,168,84,0.05)]"
         : "bg-[#1A1C1E] border-white/5 hover:border-white/10 hover:bg-[#1C1E20]"
     )}
   >
     <div className={cn(
-      "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300",
+      "w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 shrink-0",
       active ? "bg-[#D4A854] text-black scale-105" : "bg-white/5 text-[#8E8E93]/40 group-hover:bg-white/10"
     )}>
-      <Icon className="w-5 h-5" />
+      <Icon className="w-4.5 h-4.5" />
     </div>
-    <div className="flex-1 min-w-0 pr-8">
-      <p className={cn("text-[11px] font-black uppercase tracking-tight transition-colors", active ? "text-[#D4A854]" : "text-white")}>{label}</p>
-      <p className="text-[9px] text-[#8E8E93] font-medium leading-relaxed mt-1 opacity-70">{description}</p>
+    <div className="flex-1 min-w-0 pr-7">
+      <p className={cn("text-[10.5px] font-black uppercase tracking-tight transition-colors leading-tight", active ? "text-[#D4A854]" : "text-white")}>{label}</p>
+      <p className="text-[9px] text-[#8E8E93] font-medium leading-snug mt-1 opacity-70 line-clamp-3">{description}</p>
     </div>
     <div className={cn(
-      "absolute top-5 right-5 w-5 h-5 rounded-md border transition-all flex items-center justify-center",
+      "absolute top-4 right-4 w-5 h-5 rounded-md border transition-all flex items-center justify-center",
       active ? "bg-[#D4A854] border-[#D4A854]" : "border-white/10 bg-black/20"
     )}>
       {active && <CheckCircle2 className="w-3 h-3 text-black" strokeWidth={3} />}
     </div>
-  </div>
+  </button>
 ));
 
 // --- COMPONENTS ---
@@ -423,13 +631,14 @@ const QuoteItem = React.memo(({ file, index, onPreview, onDelete }: any) => {
 
 // --- MAIN COMPONENT ---
 
-export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentConfig: externalAgentConfig }: LeadFormProps) => {
+export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNavigateToLead, agentConfig: externalAgentConfig }: LeadFormProps) => {
   const viewport = useViewport();
   const [formData, setFormData] = useState<Partial<Lead>>(() => {
     const initial = lead ? { ...INITIAL_LEAD, ...lead } : {
       ...INITIAL_LEAD,
       id: generateId()
     };
+    if (initial.phone) initial.phone = formatPhone(initial.phone as string);
     console.log('[LEAD_FORM_INIT]', { id: initial.id, hasDocuments: !!initial.documents, hasQuotes: !!initial.cotacaoFiles });
     return initial;
   });
@@ -459,6 +668,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
     setIsDirty(true);
   }, []);
   const [errors, setErrors] = useState<{ field: string, message: string }[]>([]);
+  const [duplicateAlert, setDuplicateAlert] = useState<{ lead: Lead; field: 'cpf' | 'phone' } | null>(null);
   const [crmUsers, setCrmUsers] = useState<UserProfile[]>([]);
   const [viewerState, setViewerState] = useState<{
     isOpen: boolean;
@@ -539,7 +749,14 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
         flattenedData.brokerEmail = validatedData.broker.email;
         delete flattenedData.broker;
       }
-      
+
+      // Never overwrite an existing valid CPF with an invalid/incomplete one from OCR.
+      const existingCpf = (formData.cpf || '').replace(/\D/g, '');
+      const incomingCpf = (flattenedData.cpf || '').replace(/\D/g, '');
+      if (existingCpf.length === 11 && incomingCpf.length !== 11) {
+        delete flattenedData.cpf;
+      }
+
       const updated: Lead = {
         ...formData,
         ...flattenedData,
@@ -643,6 +860,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
         setFormData(prev => ({
           ...prev,
           ...lead,
+          phone: formatPhone(lead.phone || ''),
           documents: {
             ...(prev.documents || {}),
             ...docs
@@ -701,25 +919,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
   }, []);
 
 
-  const handleChange = (e: any) => {
-    const { name, value, type, checked } = e.target;
-    let val = type === 'checkbox' ? checked : value;
-    
-    if (name === 'phone') val = formatPhone(value);
-    if (name === 'cpf' || name === 'cpfProprietario') val = formatCpf(value);
-    if (name === 'name' || name === 'nomeProprietario' || name === 'plate' || name === 'chassi') {
-      val = typeof val === 'string' ? val.toUpperCase() : val;
-    }
-
-    setFormData(prev => ({ ...prev, [name]: val }));
-    setIsDirty(true);
-
-    if (name === 'cepPernoite' && value.replace(/\D/g, '').length === 8) {
-      handleCepLookup(value);
-    }
-  };
-
-  const handleCepLookup = async (cep: string) => {
+  const handleCepLookup = useCallback(async (cep: string) => {
     const cleanCep = cep.replace(/\D/g, '');
     if (cleanCep.length !== 8) return;
 
@@ -729,14 +929,80 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
       const data = await response.json();
       if (!data.erro) {
         const address = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`;
-        setFormData(prev => ({ ...prev, enderecoAuto: address }));
+        setFormData(prev => ({
+          ...prev,
+          logradouroPernoite: data.logradouro || '',
+          bairroPernoite: data.bairro || '',
+          cidadePernoite: data.localidade || '',
+          estadoPernoite: data.uf || '',
+          enderecoAuto: address,
+          addressOvernight: address
+        }));
       }
     } catch (error) {
       console.error('Error fetching CEP:', error);
     } finally {
       setLoadingCep(false);
     }
-  };
+  }, []);
+
+  const checkDuplicate = useCallback(async (field: 'cpf' | 'phone', rawValue: string) => {
+    if (!rawValue) { setDuplicateAlert(null); return; }
+    const clean = rawValue.replace(/\D/g, '');
+    if (field === 'phone' && clean.length < 10) { setDuplicateAlert(null); return; }
+    if (field === 'cpf' && clean.length !== 11) { setDuplicateAlert(null); return; }
+    const allLeads = await DataService.list('leads') as Lead[];
+    const duplicate = allLeads.find(l => {
+      if (l.id === formData.id) return false;
+      return (l[field] || '').replace(/\D/g, '') === clean;
+    });
+    setDuplicateAlert(duplicate ? { lead: duplicate, field } : null);
+  }, [formData.id]);
+
+  const handlePhoneBlur = useCallback(() => {
+    checkDuplicate('phone', formData.phone || '');
+  }, [formData.phone, checkDuplicate]);
+
+  const handleCpfBlur = useCallback(() => {
+    checkDuplicate('cpf', formData.cpf || '');
+  }, [formData.cpf, checkDuplicate]);
+
+  const handleChange = useCallback((e: any) => {
+    const { name, value, type, checked } = e.target;
+    let val = type === 'checkbox' ? checked : value;
+
+    if (name === 'phone') val = formatPhone(value);
+    if (name === 'cpf' || name === 'cpfProprietario') val = formatCpf(value);
+    if (name === 'name' || name === 'nomeProprietario' || name === 'plate' || name === 'chassi') {
+      val = typeof val === 'string' ? val.toUpperCase() : val;
+    }
+
+    setFormData(prev => ({ ...prev, [name]: val }));
+    setIsDirty(true);
+
+    if (name === 'cepPernoite' && typeof value === 'string' && value.replace(/\D/g, '').length === 8) {
+      handleCepLookup(value);
+    }
+  }, [handleCepLookup]);
+
+  // Auto-calculated fields. Recompute only when their inputs change, and refresh
+  // on a 60s tick so countdowns stay live without forcing a render every frame.
+  const [nowTick, setNowTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(t => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const ageDisplay = useMemo(() => calculateAge(formData.birthDate || ''), [formData.birthDate, nowTick]);
+  const birthdayCountdown = useMemo(
+    () => formatCountdownToNext(formData.birthDate || '', { recurringYearly: true }),
+    [formData.birthDate, nowTick]
+  );
+  const vigenciaCountdown = useMemo(
+    () => formatCountdownToNext(formData.insuranceExpiry || (formData as any).fimVigencia || ''),
+    [formData.insuranceExpiry, (formData as any).fimVigencia, nowTick]
+  );
+  const possuiSeguro = !!(formData.possuiSeguro ?? formData.hasInsurance);
 
 
   const renderQuotesList = useMemo(() => {
@@ -783,7 +1049,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
     if (type === 'policy') policyInputRef.current?.click();
   }, []);
 
-  const handleDocUpload = async (e: any) => {
+  const handleDocUpload = useCallback(async (e: any) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -801,28 +1067,29 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
       hydrationLockRef.current.add(type);
       console.log(`[OCR_PIPELINE_START] Type: ${type} | Session: ${session.sessionId}`);
       
-      const { structuredData, debug, fileUrl } = await OCRService.processDocument(file, { 
+      const { structuredData, debug } = await OCRService.processDocument(file, {
         leadId,
         mimeType: file.type,
         onStatus: (status) => console.log(`[OCR_STATUS] ${status}`),
         hintType: type
       });
-      
+
       if (debug) {
         controller.updateDebug(debug);
       }
 
       // FAIL FAST: If structuredData is empty (DeterministicParser returned {}), the pipeline FAILED.
       const hasData = structuredData && Object.keys(structuredData).length > 0;
-      
+
       if (!hasData) {
         throw new Error('PIPELINE_FAILED: Extração estrutural não retornou dados válidos para este documento.');
       }
 
       const mappedData = standardizeLeadData(structuredData);
-      
-      // Update session with data and move to validating
-      controller.updateState(DocumentPipelineState.VALIDATING, mappedData, undefined, fileUrl);
+
+      // Keep the session's original fileUrl (created in startSession via createObjectURL)
+      // instead of the OCRService blob — the OCRService blob is revoked after processing.
+      controller.updateState(DocumentPipelineState.VALIDATING, mappedData);
       console.log(`[OCR_PIPELINE_VALIDATION_OPEN] Extraction success`);
     } catch (error: any) {
       console.error('[OCR_PIPELINE_FAILED]', error);
@@ -833,9 +1100,9 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
       hydrationLockRef.current.delete(type);
       controller.updateState(DocumentPipelineState.FAILED, null, userMsg);
     }
-  };
+  }, [controller, formData.id, lead?.id]);
 
-  const handleQuoteUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleQuoteUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -870,9 +1137,9 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [formData, lead?.id, onSave]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors([]);
     setIsSaving(true);
@@ -885,7 +1152,17 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
       iaActive: formData.iaEnabled ?? formData.iaActive,
       hasInsurance: formData.possuiSeguro ?? formData.hasInsurance,
       zipCodeOvernight: formData.cepPernoite || formData.zipCodeOvernight,
-      addressOvernight: formData.enderecoAuto || formData.addressOvernight,
+      numberOvernight: formData.numeroPernoite || formData.numberOvernight,
+      addressOvernight: (() => {
+        const parts = [
+          formData.logradouroPernoite,
+          formData.numeroPernoite ? `nº ${formData.numeroPernoite}` : null,
+          formData.bairroPernoite,
+          formData.cidadePernoite,
+          formData.estadoPernoite
+        ].filter(Boolean);
+        return parts.length > 0 ? parts.join(', ') : (formData.enderecoAuto || formData.addressOvernight || '');
+      })(),
       civilStatus: formData.maritalStatus || formData.civilStatus,
       isOwnerDriver: formData.proprietarioEhCondutor ?? formData.isOwnerDriver,
       ownerName: formData.nomeProprietario || formData.ownerName,
@@ -911,10 +1188,32 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
     } catch (err) {
       setIsSaving(false);
     }
-  };
+  }, [formData, crmUsers, onSave]);
 
   return (
-    <div className="fixed inset-0 w-screen h-[100dvh] z-[9999] flex flex-col bg-[#050505] text-white overflow-hidden isolate">
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-6"
+      >
+        {/* Backdrop premium: clique fora fecha (com confirmação se dirty) */}
+        <div
+          onClick={() => isDirty ? setShowExitConfirm(true) : onCancel()}
+          className="absolute inset-0 bg-black/70 backdrop-blur-md cursor-pointer"
+          aria-hidden="true"
+        />
+
+        {/* Card centralizado responsivo — sobrepõe menu lateral via z-index */}
+        <motion.div
+          initial={{ opacity: 0, y: 18, scale: 0.985 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 18, scale: 0.985 }}
+          transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+          className="relative w-full max-w-[1100px] max-h-[92vh] flex flex-col bg-[#050505] text-white rounded-3xl border border-white/10 shadow-[0_50px_120px_rgba(0,0,0,0.75)] overflow-hidden isolate"
+        >
       {/* Header - Always Fixed at Top */}
       <div className="shrink-0 h-16 border-b border-white/5 bg-[#0B0B0D]/90 backdrop-blur-2xl px-6 md:px-8 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.8)] z-50">
         <div className="flex items-center gap-3">
@@ -936,17 +1235,44 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
       </div>
 
       {/* Form Content - Robust Scroll Area */}
-      <form 
-        id="lead-form" 
-        onSubmit={handleSubmit} 
+      <form
+        id="lead-form"
+        onSubmit={handleSubmit}
         className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar bg-[#050505] selection:bg-[#D4A85420] selection:text-[#D4A854] min-h-0"
       >
-        <div className="w-full max-w-5xl mx-auto py-12 px-6 md:px-12 space-y-16 pb-40">
+        <div className="w-full py-6 px-5 md:px-7 lg:px-9 space-y-5 pb-20">
           
+          {duplicateAlert && (
+            <motion.div
+              initial={{ opacity: 0, y: -12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-between gap-4 shadow-[0_8px_30px_rgba(245,158,11,0.08)]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="shrink-0 w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+                  <AlertCircle className="w-4 h-4 text-amber-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-400">Lead duplicado detectado</p>
+                  <p className="text-[9.5px] text-amber-300/70 font-medium mt-0.5 truncate">
+                    Já existe um lead com {duplicateAlert.field === 'phone' ? 'este telefone' : 'este CPF'}: <span className="font-bold text-amber-300">{duplicateAlert.lead.name}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { onNavigateToLead?.(duplicateAlert.lead); }}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 text-[9px] font-black uppercase tracking-[0.15em] rounded-lg transition-all"
+              >
+                Editar lead <ArrowRight className="w-3 h-3" />
+              </button>
+            </motion.div>
+          )}
+
           {errors.length > 0 && (
-            <motion.div 
-              initial={{ opacity: 0, y: -20, scale: 0.98 }} 
-              animate={{ opacity: 1, y: 0, scale: 1 }} 
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
               className="p-6 bg-red-500/10 border border-red-500/20 rounded-3xl flex items-start gap-5 shadow-[0_10px_40px_rgba(239,68,68,0.1)] backdrop-blur-md"
             >
               <div className="p-2 bg-red-500/20 rounded-xl">
@@ -967,175 +1293,328 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
             </motion.div>
           )}
 
-          {/* Section 1: Contato e Condutor */}
+          {/* Section 1: Contato e Condutor — layout premium horizontal compacto */}
           <PremiumSection title="Informações de Contato e Condutor" icon={UserIcon} subtitle="Identificação e localização do segurado">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <PremiumInput label="Nome Completo" name="name" value={formData.name || ''} onChange={handleChange} required placeholder="Digite o nome completo" />
-              <PremiumInput label="Telefone (WhatsApp)" name="phone" value={formData.phone || ''} onChange={handleChange} required placeholder="(00) 00000-0000" icon={Smartphone} />
-              
-              <div className="grid grid-cols-2 gap-6">
-                <PremiumInput label="CPF" name="cpf" value={formData.cpf || ''} onChange={handleChange} required placeholder="000.000.000-00" />
-                <PremiumInput label="Data de Nascimento" name="birthDate" type="date" value={formData.birthDate || ''} onChange={handleChange} required className="[color-scheme:dark]" />
+            <div className="space-y-4">
+              {/* Linha 1: Nome + Telefone */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <PremiumInput label="Nome Completo" name="name" value={formData.name || ''} onChange={handleChange} required placeholder="Digite o nome completo" icon={UserIcon} />
+                <PremiumInput label="Telefone (WhatsApp)" name="phone" value={formData.phone || ''} onChange={handleChange} onBlur={handlePhoneBlur} required placeholder="(00) 00000-0000" icon={Smartphone} inputMode="tel" maxLength={15} />
               </div>
-              
-              <PremiumInput label="E-mail" name="email" value={formData.email || ''} onChange={handleChange} placeholder="seu@email.com" icon={Mail} />
-              
-              <PremiumSelect 
-                label="Estado Civil" 
-                name="maritalStatus" 
-                value={formData.maritalStatus || formData.civilStatus || ''} 
-                onChange={handleChange} 
-                options={[
-                  { value: '', label: 'Selecione...' },
-                  { value: 'Solteiro', label: 'Solteiro(a)' },
-                  { value: 'Casado', label: 'Casado(a)' },
-                  { value: 'Divorciado', label: 'Divorciado(a)' },
-                  { value: 'Viuvo', label: 'Viúvo(a)' },
-                ]} 
-              />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:col-span-2">
+
+              {/* Linha 2: CPF + Data Nascimento + Idade + Aniversário */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <PremiumCpfInput
+                  label="CPF"
+                  name="cpf"
+                  value={formData.cpf || ''}
+                  onChange={handleChange}
+                  onBlur={handleCpfBlur}
+                  placeholder="000.000.000-00"
+                />
+                <PremiumInput
+                  label="Data de Nascimento"
+                  name="birthDate"
+                  type="date"
+                  value={formData.birthDate || ''}
+                  onChange={handleChange}
+                  className="[color-scheme:dark]"
+                />
+                <PremiumComputedField
+                  label="Idade"
+                  value={ageDisplay}
+                  icon={Calendar}
+                  tone="gold"
+                  emptyLabel="—"
+                />
+                <PremiumComputedField
+                  label="Falta p/ Aniversário"
+                  value={birthdayCountdown}
+                  icon={Clock}
+                  tone="mint"
+                  emptyLabel="—"
+                />
+              </div>
+
+              {/* Linha 3: E-mail + Estado Civil + CEP Pernoite */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <PremiumInput
+                  label="E-mail"
+                  name="email"
+                  value={formData.email || ''}
+                  onChange={handleChange}
+                  placeholder="seu@email.com"
+                  icon={Mail}
+                />
+                <PremiumSelect
+                  label="Estado Civil"
+                  name="maritalStatus"
+                  value={formData.maritalStatus || formData.civilStatus || ''}
+                  onChange={handleChange}
+                  options={[
+                    { value: '', label: 'Selecione...' },
+                    { value: 'Solteiro', label: 'Solteiro(a)' },
+                    { value: 'Casado', label: 'Casado(a)' },
+                    { value: 'Divorciado', label: 'Divorciado(a)' },
+                    { value: 'Viuvo', label: 'Viúvo(a)' },
+                  ]}
+                />
                 <div className="relative group">
-                  <PremiumInput label="CEP Pernoite" name="cepPernoite" value={formData.cepPernoite || formData.zipCodeOvernight || ''} onChange={handleChange} placeholder="00000-000" icon={MapPin} />
-                  {loadingCep && <Loader2 className="absolute right-4 top-10 w-4 h-4 animate-spin text-[#D4A854]" />}
+                  <PremiumInput
+                    label="CEP Pernoite"
+                    name="cepPernoite"
+                    value={formData.cepPernoite || formData.zipCodeOvernight || ''}
+                    onChange={handleChange}
+                    placeholder="00000-000"
+                    icon={MapPin}
+                  />
+                  {loadingCep && <Loader2 className="absolute right-3 top-[34px] w-3.5 h-3.5 animate-spin text-[#D4A854]" />}
                 </div>
-                <PremiumInput label="Endereço Auto-preenchido" name="enderecoAuto" value={formData.enderecoAuto || formData.addressOvernight || ''} readOnly placeholder="Informe o CEP acima" />
+              </div>
+
+              {/* Linha 4: Endereço desmembrado */}
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4">
+                <PremiumInput
+                  label="Logradouro"
+                  name="logradouroPernoite"
+                  value={formData.logradouroPernoite || ''}
+                  onChange={handleChange}
+                  placeholder="Rua / Av. / Alameda..."
+                  icon={MapPin}
+                />
+                <PremiumInput
+                  label="Número"
+                  name="numeroPernoite"
+                  value={formData.numeroPernoite || formData.numberOvernight || ''}
+                  onChange={handleChange}
+                  placeholder="S/N"
+                  className="w-28"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <PremiumInput
+                  label="Bairro"
+                  name="bairroPernoite"
+                  value={formData.bairroPernoite || ''}
+                  onChange={handleChange}
+                  placeholder="Bairro"
+                />
+                <PremiumInput
+                  label="Cidade"
+                  name="cidadePernoite"
+                  value={formData.cidadePernoite || ''}
+                  onChange={handleChange}
+                  placeholder="Cidade"
+                />
+                <PremiumInput
+                  label="Estado (UF)"
+                  name="estadoPernoite"
+                  value={formData.estadoPernoite || ''}
+                  onChange={handleChange}
+                  placeholder="SP"
+                />
               </div>
             </div>
           </PremiumSection>
 
-          {/* Section 2: Inteligência Comercial */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-[#111214] rounded-2xl border border-white/5 p-6 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Flame className="w-5 h-5 text-[#D4A854]" />
-                  <p className="text-[10px] font-black uppercase tracking-widest">Status do Lead</p>
-                </div>
-                <div className="px-3 py-1 rounded-full bg-[#D4A85410] border border-[#D4A85420] text-[#D4A854] text-[8px] font-black uppercase tracking-tighter shadow-[0_0_10px_rgba(212,168,84,0.1)]">
-                  {formData.statusLead || formData.status}
-                </div>
-              </div>
-              <PremiumSelect 
-                className="mt-4 border-none bg-transparent h-10 px-0 focus:ring-0"
-                name="statusLead" 
-                value={formData.statusLead || formData.status || 'Novo Lead'} 
-                onChange={handleChange} 
-                options={[
-                  { value: 'Novo Lead', label: 'Novo Lead' },
-                  { value: 'Em Atendimento', label: 'Em Atendimento' },
-                  { value: 'Em Cotação', label: 'Em Cotação' },
-                  { value: 'Proposta Enviada', label: 'Proposta Enviada' },
-                  { value: 'Negociação', label: 'Negociação' },
-                  { value: 'Fechado', label: 'Fechado' },
-                  { value: 'Perdido', label: 'Perdido' },
-                ]} 
-              />
-            </div>
-            <div className="bg-[#111214] rounded-2xl border border-white/5 p-6 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Thermometer className="w-5 h-5 text-[#D4A854]" />
-                  <p className="text-[10px] font-black uppercase tracking-widest">Temperatura</p>
-                </div>
-                <div className={cn(
-                  "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-tighter shadow-sm",
-                  formData.temperatura === 'quente' ? "bg-red-500/10 border border-red-500/20 text-red-500" :
-                  formData.temperatura === 'morno' ? "bg-orange-500/10 border border-orange-500/20 text-orange-500" :
-                  "bg-blue-500/10 border border-blue-500/20 text-blue-500"
-                )}>
-                  <div className="flex items-center gap-1.5">
-                    <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", formData.temperatura === 'quente' ? "bg-red-500" : formData.temperatura === 'morno' ? "bg-orange-500" : "bg-blue-500")} />
-                    {(formData.temperatura || formData.temperature || 'morno').toUpperCase()}
-                  </div>
-                </div>
-              </div>
-              <PremiumSelect 
-                className="mt-4 border-none bg-transparent h-10 px-0 focus:ring-0"
-                name="temperatura" 
-                value={formData.temperatura || formData.temperature || 'morno'} 
-                onChange={handleChange} 
-                options={[
-                  { value: 'frio', label: 'Frio' },
-                  { value: 'morno', label: 'Morno' },
-                  { value: 'quente', label: 'Quente' },
-                ]} 
-              />
-            </div>
+          {/* Inteligência Comercial — dropdowns inline compactos */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <PremiumInlineSelect
+              label="Status do Lead:"
+              icon={Flame}
+              name="statusLead"
+              value={formData.statusLead || formData.status || 'Novo Lead'}
+              onChange={handleChange}
+              options={[
+                { value: 'Novo Lead', label: 'Novo Lead' },
+                { value: 'Em Atendimento', label: 'Em Atendimento' },
+                { value: 'Em Cotação', label: 'Em Cotação' },
+                { value: 'Proposta Enviada', label: 'Proposta Enviada' },
+                { value: 'Negociação', label: 'Negociação' },
+                { value: 'Fechado', label: 'Fechado' },
+                { value: 'Perdido', label: 'Perdido' },
+              ]}
+            />
+            <PremiumInlineSelect
+              label="Temperatura:"
+              icon={Thermometer}
+              name="temperatura"
+              value={formData.temperatura || formData.temperature || 'morno'}
+              onChange={handleChange}
+              options={[
+                { value: 'frio', label: 'Frio' },
+                { value: 'morno', label: 'Morno' },
+                { value: 'quente', label: 'Quente' },
+              ]}
+            />
           </div>
 
-          {/* Section 3: Classificação */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <PremiumSelect 
-              label="Origem" name="origin" value={formData.origin || ''} onChange={handleChange} 
+          {/* Classificação — grid compacto horizontal */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <PremiumSelect
+              label="Origem" name="origin" value={formData.origin || ''} onChange={handleChange}
+              icon={Filter}
               options={[
                 { value: 'Manual', label: 'Manual' },
                 { value: 'WhatsApp', label: 'WhatsApp' },
                 { value: 'Importado', label: 'Importado' },
                 { value: 'Instagram', label: 'Instagram' },
-              ]} 
+              ]}
             />
-            <PremiumSelect 
-              label="Perfil do Lead" name="perfilLead" value={formData.perfilLead || ''} onChange={handleChange} 
+            <PremiumSelect
+              label="Perfil do Lead" name="perfilLead" value={formData.perfilLead || ''} onChange={handleChange}
+              icon={Target}
               options={[
                 { value: '', label: 'Não identificado' },
                 { value: 'residencial', label: 'Residencial' },
                 { value: 'comercial', label: 'Comercial' },
                 { value: 'frota', label: 'Frota' },
-              ]} 
+              ]}
             />
-            <PremiumInput label="Score (0-10)" type="number" min="0" max="10" name="score" value={formData.score || 0} onChange={handleChange} />
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-bold text-[#8E8E93] uppercase tracking-widest ml-1">IA Inteligente</label>
-              <div className="h-11 flex items-center justify-between px-4 bg-[#1A1C1E] border border-white/10 rounded-xl group hover:border-[#D4A85440] transition-all">
-                <span className="text-[9px] font-black uppercase text-white/40 tracking-wider">{(formData.iaEnabled ?? formData.iaActive) ? 'Ativada' : 'Desativada'}</span>
+            <PremiumInput
+              label="Score (0-10)"
+              type="number"
+              min="0"
+              max="10"
+              name="score"
+              value={formData.score || 0}
+              onChange={handleChange}
+              icon={TrendingUp}
+            />
+            <div className="space-y-1">
+              <label className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] ml-0.5">IA Inteligente</label>
+              <div className="h-10 flex items-center justify-between px-3 bg-[#16181B] border border-white/[0.07] rounded-lg group hover:border-[#D4A854]/30 transition-all">
+                <div className="flex items-center gap-1.5">
+                  <Bot className={cn('w-3 h-3 transition-colors', (formData.iaEnabled ?? formData.iaActive) ? 'text-[#D4A854]' : 'text-white/30')} />
+                  <span className={cn('text-[9.5px] font-bold uppercase tracking-wider transition-colors', (formData.iaEnabled ?? formData.iaActive) ? 'text-[#D4A854]' : 'text-white/40')}>
+                    {(formData.iaEnabled ?? formData.iaActive) ? 'Ativada' : 'Desativada'}
+                  </span>
+                </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" name="iaEnabled" checked={!!(formData.iaEnabled ?? formData.iaActive)} onChange={handleChange} className="sr-only peer" />
-                  <div className="w-9 h-5 bg-white/5 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-[#D4A854] after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-[#D4A854]"></div>
+                  <div className="w-8 h-4 bg-white/5 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-[#D4A854] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-[#D4A854]" />
                 </label>
               </div>
             </div>
           </div>
 
-          {/* Justificativa */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between px-1">
-              <label className="text-[9px] font-bold text-[#8E8E93] uppercase tracking-widest">Justificativa da Classificação</label>
-              <span className="text-[8px] text-[#8E8E93]/40 font-mono">{(formData.justificativa || '').length}/500</span>
+          {/* Justificativa — textarea refinada */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between px-0.5">
+              <label className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] flex items-center gap-1.5">
+                <ClipboardList className="w-3 h-3" /> Justificativa da Classificação
+              </label>
+              <span className="text-[8px] text-[#8E8E93]/40 font-mono tabular-nums">
+                {(formData.justificativa || '').length}/500
+              </span>
             </div>
-            <textarea 
-              name="justificativa" 
-              value={formData.justificativa || formData.classificationReason || ''} 
-              onChange={handleChange} 
-              rows={4} 
+            <textarea
+              name="justificativa"
+              value={formData.justificativa || formData.classificationReason || ''}
+              onChange={handleChange}
+              rows={3}
               maxLength={500}
-              placeholder="Descreva o motivo da pontuação e temperatura..."
-              className="w-full p-4 bg-[#1A1C1E] border border-white/10 rounded-2xl text-[12px] font-medium text-white transition-all focus:ring-2 focus:ring-[#D4A85420] focus:border-[#D4A85440] outline-none placeholder:text-white/5 resize-none"
+              placeholder="Descreva brevemente o motivo da pontuação e temperatura atribuídas…"
+              className="w-full p-3.5 bg-[#16181B] border border-white/[0.07] rounded-xl text-[12px] font-medium text-white leading-relaxed transition-all duration-200 focus:ring-2 focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40 focus:shadow-[0_0_0_4px_rgba(212,168,84,0.04)] hover:border-white/15 outline-none placeholder:text-white/15 resize-none"
             />
           </div>
 
 
           {/* Veículo e Seguro */}
           <PremiumSection title="Veículo e Seguro" icon={ShieldCheck} subtitle="Dados técnicos do bem segurado">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <PremiumInput label="Placa" name="plate" value={formData.plate || ''} onChange={handleChange} placeholder="ABC1D23" />
-              <PremiumInput label="Chassi" name="chassi" value={formData.chassi || formData.chassis || ''} onChange={handleChange} placeholder="Identificador do Chassi" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <PremiumInput label="Placa" name="plate" value={formData.plate || ''} onChange={handleChange} placeholder="ABC1D23" icon={Car} />
+              <PremiumInput label="Chassi" name="chassi" value={formData.chassi || formData.chassis || ''} onChange={handleChange} placeholder="17 caracteres alfanuméricos" />
             </div>
-            <div className="mt-8 flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+
+            <div className="mt-5 flex items-center justify-between p-3.5 bg-white/[0.02] border border-white/5 rounded-2xl transition-colors hover:border-[#D4A85420]">
               <div className="flex items-center gap-3">
-                <div className={cn("w-2 h-2 rounded-full", (formData.possuiSeguro ?? formData.hasInsurance) ? "bg-[#D4A854] shadow-[0_0_8px_rgba(212,168,84,0.5)]" : "bg-white/10")} />
+                <div className={cn(
+                  "w-2 h-2 rounded-full transition-all",
+                  possuiSeguro ? "bg-[#D4A854] shadow-[0_0_10px_rgba(212,168,84,0.6)]" : "bg-white/10"
+                )} />
                 <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Já possui seguro ativo?</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" name="possuiSeguro" checked={!!(formData.possuiSeguro ?? formData.hasInsurance)} onChange={handleChange} className="sr-only peer" />
-                <div className="w-10 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-[#D4A854] after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-[#D4A854]"></div>
+                <input
+                  type="checkbox"
+                  name="possuiSeguro"
+                  checked={possuiSeguro}
+                  onChange={handleChange}
+                  className="sr-only peer"
+                />
+                <div className="w-10 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-[#D4A854] after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-[#D4A854]" />
               </label>
             </div>
+
+            {/* Campos expandidos inline — sem nova aba/seção/modal */}
+            <AnimatePresence initial={false}>
+              {possuiSeguro && (
+                <motion.div
+                  key="active-insurance-fields"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-4 p-5 bg-[#0E0F11] border border-[#D4A85420] rounded-2xl space-y-5">
+                    <div className="flex items-center gap-2 text-[#D4A854]">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <p className="text-[9px] font-black uppercase tracking-[0.2em]">Apólice Vigente</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <PremiumInput
+                        label="Seguradora"
+                        name="insurer"
+                        value={formData.insurer || ''}
+                        onChange={handleChange}
+                        placeholder="Ex: Porto Seguro"
+                      />
+                      <PremiumInput
+                        label="Corretora"
+                        name="brokerName"
+                        value={formData.brokerName || ''}
+                        onChange={handleChange}
+                        placeholder="Nome da corretora"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                      <PremiumInput
+                        label="Início da Vigência"
+                        type="date"
+                        name="startDate"
+                        value={formData.startDate || ''}
+                        onChange={handleChange}
+                        className="[color-scheme:dark]"
+                      />
+                      <PremiumInput
+                        label="Fim da Vigência"
+                        type="date"
+                        name="insuranceExpiry"
+                        value={formData.insuranceExpiry || ''}
+                        onChange={handleChange}
+                        className="[color-scheme:dark]"
+                      />
+                      <PremiumComputedField
+                        label="Falta para o Fim da Vigência"
+                        value={vigenciaCountdown}
+                        icon={Clock}
+                        tone="sky"
+                        emptyLabel="Informe o fim da vigência"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </PremiumSection>
 
           {/* Perfil de Uso */}
           <PremiumSection title="Perfil de Uso" icon={TrendingUp} subtitle="Hábito de utilização do veículo">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <PremiumCardToggle 
                 label="Uso Comercial" 
                 description="Uso do veículo 2+ dias da semana para visitas ou serviços" 
@@ -1216,120 +1695,121 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
               />
           </div>
 
-          {/* Uploads */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-3">
-                  <FileText className="w-5 h-5 text-[#D4A854]" />
-                   <p className="text-[10px] font-black uppercase tracking-widest">Documentação e Extração IA</p>
-                </div>
-                <span className="text-[9px] font-bold text-[#8E8E93] uppercase">{Object.keys(formData.documents || {}).length} anexos</span>
+          {/* Documentação e Extração IA — largura total */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-[#D4A854]" />
+                <p className="text-[10px] font-black uppercase tracking-widest">Documentação e Extração IA</p>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <input type="file" id="crv" ref={crvInputRef} className="hidden" onChange={handleDocUpload} accept="image/*,application/pdf" />
-                <input type="file" id="cnh" ref={cnhInputRef} className="hidden" onChange={handleDocUpload} accept="image/*,application/pdf" />
-                <input type="file" id="policy" ref={policyInputRef} className="hidden" onChange={handleDocUpload} accept="image/*,application/pdf" />
-                
-                <DocUploadCard 
-                  label="CRV / CRLV" 
-                  type="crv"
-                  icon={Car} 
-                  hasFile={!!getDocUrl(formData.documents?.crv)} 
-                  fileUrl={getDocUrl(formData.documents?.crv)}
-                  fileName={getDocName(formData.documents?.crv, (formData.documents as any)?.crvMetadata?.fileName)}
-                  onUpload={handleDocUploadTrigger} 
-                  onView={handleDocView} 
-                  onDelete={handleDocDeleteStable} 
-                  loading={activeSession?.type === 'crv' && activeSession?.state === DocumentPipelineState.PROCESSING} 
-                  error={analysisErrorMessage['crv']}
-                />
-                <DocUploadCard 
-                  label="CNH Condutor" 
-                  type="cnh"
-                  icon={UserIcon} 
-                  hasFile={!!getDocUrl(formData.documents?.cnh)} 
-                  fileUrl={getDocUrl(formData.documents?.cnh)}
-                  fileName={getDocName(formData.documents?.cnh, (formData.documents as any)?.cnhMetadata?.fileName)}
-                  onUpload={handleDocUploadTrigger} 
-                  onView={handleDocView} 
-                  onDelete={handleDocDeleteStable} 
-                  loading={activeSession?.type === 'cnh' && activeSession?.state === DocumentPipelineState.PROCESSING} 
-                  error={analysisErrorMessage['cnh']}
-                />
-                <DocUploadCard 
-                  label="Apólice Atual" 
-                  type="policy"
-                  icon={ShieldCheck} 
-                  hasFile={!!getDocUrl(formData.documents?.policy)} 
-                  fileUrl={getDocUrl(formData.documents?.policy)}
-                  fileName={getDocName(formData.documents?.policy, (formData.documents as any)?.policyMetadata?.fileName)}
-                  onUpload={handleDocUploadTrigger} 
-                  onView={handleDocView} 
-                  onDelete={handleDocDeleteStable} 
-                  loading={activeSession?.type === 'policy' && activeSession?.state === DocumentPipelineState.PROCESSING} 
-                  error={analysisErrorMessage['policy']}
-                />
-              </div>
+              <span className="text-[9px] font-bold text-[#8E8E93] uppercase">{Object.keys(formData.documents || {}).length} anexos</span>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <input type="file" id="crv" ref={crvInputRef} className="hidden" onChange={handleDocUpload} accept="image/*,application/pdf" />
+              <input type="file" id="cnh" ref={cnhInputRef} className="hidden" onChange={handleDocUpload} accept="image/*,application/pdf" />
+              <input type="file" id="policy" ref={policyInputRef} className="hidden" onChange={handleDocUpload} accept="image/*,application/pdf" />
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-3">
-                  <TrendingUp className="w-5 h-5 text-[#D4A854]" />
-                   <p className="text-[10px] font-black uppercase tracking-widest">Cotação apresentada ao cliente</p>
-                </div>
-                <span className="text-[9px] font-bold text-[#8E8E93] uppercase">{formData.cotacaoFiles?.length || 0} anexos</span>
-              </div>
-              <div className="grid grid-cols-1 gap-4">
-                <div 
-                  onClick={() => quoteInputRef.current?.click()}
-                  className="h-36 border-2 border-dashed border-white/5 bg-[#1A1C1E] hover:border-[#D4A85440] hover:bg-[#D4A85408] rounded-2xl flex flex-col items-center justify-center gap-3 transition-all group"
-                >
-                  <input type="file" ref={quoteInputRef} className="hidden" onChange={handleQuoteUpload} accept="image/*,application/pdf" />
-                  <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-[#8E8E93] group-hover:bg-[#D4A854] group-hover:text-black transition-all">
-                    <FilePlus className="w-6 h-6" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[10px] font-black uppercase text-white tracking-widest">Anexar Nova Cotação</p>
-                    <p className="text-[8px] text-[#8E8E93] font-bold uppercase tracking-[0.2em] mt-1">PDF, JPG ou PNG até 10MB</p>
-                  </div>
-                </div>
-                {/* List of Quotes */}
-                <div className="space-y-3">
-                  {renderQuotesList}
-                </div>
-              </div>
+              <DocUploadCard
+                label="CRV / CRLV"
+                type="crv"
+                icon={Car}
+                hasFile={!!getDocUrl(formData.documents?.crv)}
+                fileUrl={getDocUrl(formData.documents?.crv)}
+                fileName={getDocName(formData.documents?.crv, (formData.documents as any)?.crvMetadata?.fileName)}
+                onUpload={handleDocUploadTrigger}
+                onView={handleDocView}
+                onDelete={handleDocDeleteStable}
+                loading={activeSession?.type === 'crv' && activeSession?.state === DocumentPipelineState.PROCESSING}
+                error={analysisErrorMessage['crv']}
+              />
+              <DocUploadCard
+                label="CNH Condutor"
+                type="cnh"
+                icon={UserIcon}
+                hasFile={!!getDocUrl(formData.documents?.cnh)}
+                fileUrl={getDocUrl(formData.documents?.cnh)}
+                fileName={getDocName(formData.documents?.cnh, (formData.documents as any)?.cnhMetadata?.fileName)}
+                onUpload={handleDocUploadTrigger}
+                onView={handleDocView}
+                onDelete={handleDocDeleteStable}
+                loading={activeSession?.type === 'cnh' && activeSession?.state === DocumentPipelineState.PROCESSING}
+                error={analysisErrorMessage['cnh']}
+              />
+              <DocUploadCard
+                label="Apólice Atual"
+                type="policy"
+                icon={ShieldCheck}
+                hasFile={!!getDocUrl(formData.documents?.policy)}
+                fileUrl={getDocUrl(formData.documents?.policy)}
+                fileName={getDocName(formData.documents?.policy, (formData.documents as any)?.policyMetadata?.fileName)}
+                onUpload={handleDocUploadTrigger}
+                onView={handleDocView}
+                onDelete={handleDocDeleteStable}
+                loading={activeSession?.type === 'policy' && activeSession?.state === DocumentPipelineState.PROCESSING}
+                error={analysisErrorMessage['policy']}
+              />
             </div>
           </div>
 
-          {/* Form Actions - Integrated at the end of content per design */}
-          <section className="pt-16 border-t border-white/5 relative">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button 
-                type="button" 
+          {/* Cotação apresentada ao cliente — agora ABAIXO da Documentação */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-3">
+                <TrendingUp className="w-5 h-5 text-[#D4A854]" />
+                <p className="text-[10px] font-black uppercase tracking-widest">Cotação apresentada ao cliente</p>
+              </div>
+              <span className="text-[9px] font-bold text-[#8E8E93] uppercase">{formData.cotacaoFiles?.length || 0} anexos</span>
+            </div>
+            <div
+              onClick={() => quoteInputRef.current?.click()}
+              className="h-32 border-2 border-dashed border-white/5 bg-[#1A1C1E] hover:border-[#D4A85440] hover:bg-[#D4A85408] rounded-2xl flex flex-col items-center justify-center gap-2 transition-all group cursor-pointer"
+            >
+              <input type="file" ref={quoteInputRef} className="hidden" onChange={handleQuoteUpload} accept="image/*,application/pdf" />
+              <div className="w-11 h-11 bg-white/5 rounded-xl flex items-center justify-center text-[#8E8E93] group-hover:bg-[#D4A854] group-hover:text-black transition-all">
+                <FilePlus className="w-5 h-5" />
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] font-black uppercase text-white tracking-widest">Anexar Nova Cotação</p>
+                <p className="text-[8px] text-[#8E8E93] font-bold uppercase tracking-[0.2em] mt-1">PDF, JPG ou PNG até 10MB</p>
+              </div>
+            </div>
+            {(formData.cotacaoFiles?.length ?? 0) > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {renderQuotesList}
+              </div>
+            )}
+          </div>
+
+          {/* Form Actions */}
+          <section className="pt-6 border-t border-white/5">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
                 onClick={() => isDirty ? setShowExitConfirm(true) : onCancel()}
-                className="flex-1 h-16 bg-[#1A1C1E] border border-white/5 rounded-2xl text-[#8E8E93] font-black uppercase text-[11px] tracking-[0.3em] hover:bg-[#1C1E20] hover:text-white transition-all shadow-xl active:scale-[0.99]"
+                className="flex-1 h-12 bg-[#1A1C1E] border border-white/5 rounded-xl text-[#8E8E93] font-black uppercase text-[10px] tracking-[0.3em] hover:bg-[#1C1E20] hover:text-white transition-all active:scale-[0.99]"
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 type="submit"
                 disabled={isSaving}
-                className="flex-[2] h-16 bg-gradient-to-r from-[#D4A854] to-[#CFA764] text-black rounded-2xl font-black uppercase text-[12px] tracking-[0.4em] flex items-center justify-center gap-3 shadow-[0_15px_60px_rgba(212,168,84,0.25)] hover:scale-[1.02] hover:brightness-110 active:scale-[0.98] transition-all border-b-4 border-[#8B6B2D] relative overflow-hidden group/save"
+                className="flex-[2] h-12 bg-gradient-to-r from-[#D4A854] to-[#CFA764] text-black rounded-xl font-black uppercase text-[11px] tracking-[0.35em] flex items-center justify-center gap-2.5 shadow-[0_10px_40px_rgba(212,168,84,0.22)] hover:brightness-110 active:scale-[0.98] transition-all border-b-2 border-[#8B6B2D] relative overflow-hidden group/save disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isSaving ? <Loader2 className="w-7 h-7 animate-spin" /> : <Save className="w-5 h-5 group-hover/save:scale-110 transition-transform" />}
+                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-4 h-4 group-hover/save:scale-110 transition-transform" />}
                 <span>{isSaving ? 'Processando...' : 'Salvar Cadastro'}</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
               </button>
             </div>
-            <p className="text-center text-[10px] text-[#8E8E93]/40 font-bold uppercase tracking-[0.3em] mt-8">CRM Michelin Seguros • v1.0 • 2026</p>
+            <p className="text-center text-[9px] text-[#8E8E93]/40 font-bold uppercase tracking-[0.3em] mt-4">CRM Michelin Seguros • v1.0 • 2026</p>
           </section>
         </div>
       </form>
 
+        </motion.div>
+      </motion.div>
+
       {/* Universal Document Viewer & Validator */}
-      <UniversalDocumentViewer 
+      <UniversalDocumentViewer
         isOpen={viewerState.isOpen}
         url={viewerState.url}
         storagePath={viewerState.storagePath}
@@ -1364,6 +1844,6 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, agentCon
           </Modal>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 });

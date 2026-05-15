@@ -79,10 +79,14 @@ export const LeadRealtimeProvider: React.FC<{ children: React.ReactNode, userPro
             if (isSame) return prev;
           }
 
-          // Merge realtime updates with existing leads
+          // When the snapshot has fewer items than the page size it is
+          // authoritative (all leads fit on page 1), so use it directly.
+          // When it is full we may have page-2+ leads in prev — keep those.
           const updatedIds = new Set(data.map(l => l.id));
-          const filteredPrev = prev.filter(l => !updatedIds.has(l.id));
-          const combined = [...data, ...filteredPrev];
+          const combined =
+            data.length < LEADS_PER_PAGE
+              ? data
+              : [...data, ...prev.filter(l => !updatedIds.has(l.id))];
           
           // Deduplication
           const seen = new Set();

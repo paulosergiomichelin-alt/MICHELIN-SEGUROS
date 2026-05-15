@@ -4,6 +4,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   getDocs,
@@ -318,5 +319,16 @@ export const EmpresaService = {
       status,
       atualizadoEm: new Date().toISOString(),
     });
+  },
+
+  async deleteEmpresa(id: string): Promise<void> {
+    await deleteDoc(doc(db, 'empresas', id));
+  },
+
+  async countUsuarios(organizationId: string): Promise<number> {
+    const snap = await getDocs(
+      query(collection(db, 'users'), where('organizationId', '==', organizationId))
+    );
+    return snap.size;
   },
 };

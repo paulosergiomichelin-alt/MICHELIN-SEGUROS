@@ -261,9 +261,9 @@ export function AIDocumentExtractionPanel() {
             className={INPUT_CLASS}
             value={config.model}
             onChange={(e) => handleConfigChange('model', e.target.value)}
-            placeholder="baidu/qianfan-ocr-fast:free"
+            placeholder="google/gemini-2.5-pro"
           />
-          <p className="text-[10px] text-slate-500">Padrão: <span className="text-gold-light/70 font-mono">baidu/qianfan-ocr-fast:free</span></p>
+          <p className="text-[10px] text-slate-500">Padrão: <span className="text-gold-light/70 font-mono">google/gemini-2.5-pro</span></p>
         </div>
 
         <div className="space-y-3">

@@ -11,6 +11,11 @@ import { AIHybridOCRService, AIDocumentType } from './AIHybridOCRService';
 import { AIOCRConfigService } from './AIOCRConfigService';
 import { PDFRenderService } from './PDFRenderService';
 
+// Bump this when the result-shape or merge logic changes so previously-cached
+// results (which may be missing fields the new pipeline would have added) are
+// invalidated automatically on the next import.
+const ENTERPRISE_CACHE_PREFIX = 'enterprise_ocr_cache_v2';
+
 export enum ProcessingState {
   IDLE = 'IDLE',
   RENDERING = 'RENDERING',
@@ -69,7 +74,7 @@ export class OCRService {
 
     if (isLocalFile) {
       fingerprint = await DocumentFingerprintService.generate(file as File);
-      const cachedResult = CacheManager.get(`enterprise_ocr_cache:${fingerprint}`);
+      const cachedResult = CacheManager.get(`${ENTERPRISE_CACHE_PREFIX}:${fingerprint}`);
       if (cachedResult) {
         if (options.onStatus) options.onStatus(ProcessingState.COMPLETED);
         return cachedResult;
@@ -98,21 +103,29 @@ export class OCRService {
 
         if (aiOutcome.kind === 'success') {
           const aiResult = aiOutcome.result;
+          // Even when AI succeeds, the deterministic text-layer parser often finds
+          // fields the vision model missed (broker name/SUSEP/CNPJ live in dense
+          // small print that Qianfan tends to skip). Run it and merge — AI wins
+          // for any field it already populated; empty AI slots get filled from
+          // the text layer.
+          const enrichedFields = await this.enrichAIFieldsFromTextLayer(
+            file, isPDF, isLocalFile, typeHint, aiResult.fields
+          );
           metrics.totalTime = Date.now() - startTime;
           metrics.confidence = aiResult.confidence / 100;
           const finalResult = {
             text: aiResult.rawText,
             type: typeHint,
-            structuredData: aiResult.fields,
+            structuredData: enrichedFields,
             confidence: aiResult.confidence / 100,
-            regions: aiResult.fields,
+            regions: enrichedFields,
             metrics,
             fileUrl,
             provider: aiResult.provider,
             validation: aiResult.validation
           };
           if (isLocalFile && fingerprint && aiResult.confidence >= 60) {
-            CacheManager.set(`enterprise_ocr_cache:${fingerprint}`, finalResult);
+            CacheManager.set(`${ENTERPRISE_CACHE_PREFIX}:${fingerprint}`, finalResult);
           }
           if (options.onStatus) options.onStatus(ProcessingState.COMPLETED);
           console.log(`[OCR_PIPELINE] AI_SUCCESS | Type: ${typeHint} | Conf: ${aiResult.confidence}% | Time: ${metrics.totalTime}ms`);
@@ -188,7 +201,7 @@ export class OCRService {
       };
 
       if (isLocalFile && fingerprint && engineResult.confidence > 0.6) {
-        CacheManager.set(`enterprise_ocr_cache:${fingerprint}`, finalResult);
+        CacheManager.set(`${ENTERPRISE_CACHE_PREFIX}:${fingerprint}`, finalResult);
       }
 
       if (options.onStatus) options.onStatus(ProcessingState.COMPLETED);
@@ -496,6 +509,122 @@ export class OCRService {
 
     console.log(`[OCR_PIPELINE] [PDF_STRUCTURED_EXTRACT] Generated ${structured.words.length} spatial tokens from PDF layer.`);
     return { text: fullText, structured };
+  }
+
+  /**
+   * After a successful AI extraction, run the deterministic text-layer parser
+   * and use it to fill any fields the AI left empty. Currently scoped to
+   * policy/apolice PDFs because that's where Qianfan most consistently misses
+   * dense small-print fields (broker name, SUSEP, CNPJs). AI values always
+   * win when both pipelines extracted something for the same field.
+   */
+  private async enrichAIFieldsFromTextLayer(
+    file: File | string,
+    isPDF: boolean,
+    isLocalFile: boolean,
+    typeHint: string | undefined,
+    aiFields: Record<string, any>
+  ): Promise<Record<string, any>> {
+    if (!isPDF || !isLocalFile) return aiFields;
+    if (typeHint !== 'policy' && typeHint !== 'apolice') return aiFields;
+
+    try {
+      console.log('[OCR_TEXT_LAYER_ENRICH] Running deterministic parser on PDF text layer to fill AI gaps...');
+      const textResult = await this.executeTextPipeline(file as File, '', true, typeHint);
+      const engineResult = await DocumentEngine.getInstance().process(
+        textResult.text,
+        typeHint,
+        undefined,
+        textResult.structured
+      );
+
+      const detFields: Record<string, any> = engineResult.structuredData || {};
+      const merged: Record<string, any> = { ...aiFields };
+
+      // [deterministicKey, aiSchemaKeys[]] — schemaKeys are the names the AI uses
+      // in its JSON output. We fill ALL of them with the same value so legacy
+      // aliases stay consistent.
+      const POLICY_FIELD_MAP: Array<[string, string[]]> = [
+        ['brokerName',     ['corretora', 'brokerName']],
+        ['brokerSusep',    ['corretora_susep', 'brokerSusep']],
+        ['policyNumber',   ['numero_apolice', 'policyNumber']],
+        ['insurer',        ['seguradora', 'insurer']],
+        ['insuredName',    ['segurado_nome', 'insuredName']],
+        ['insuredCpf',     ['segurado_cpf', 'insuredCpf']],
+        ['plate',          ['placa']],
+        ['chassis',        ['chassi']],
+        ['cep',            ['cep']],
+        ['startDate',      ['inicio_vigencia', 'startDate']],
+        ['insuranceExpiry',['fim_vigencia', 'insuranceExpiry']]
+      ];
+
+      let filled = 0;
+      for (const [detKey, schemaKeys] of POLICY_FIELD_MAP) {
+        const rawDetValue = detFields[detKey];
+        if (rawDetValue == null) continue;
+        const detValue = this.trimDeterministicValue(detKey, String(rawDetValue));
+        if (!detValue || detValue.length < 2) continue;
+
+        const aiHasIt = schemaKeys.some(k => {
+          const v = merged[k];
+          return typeof v === 'string' && v.trim().length > 0;
+        });
+        if (aiHasIt) continue;
+
+        for (const k of schemaKeys) merged[k] = detValue;
+        filled++;
+        console.log(`[OCR_MERGE] Filled "${schemaKeys[0]}" from text layer: "${detValue.substring(0, 60)}"`);
+      }
+
+      // Bonus: if brokerName carries a CNPJ inline, mine it out into corretora_cnpj
+      // (the deterministic engine doesn't separate them).
+      if (!merged.corretora_cnpj) {
+        const brokerSource = String(detFields.brokerName ?? aiFields.corretora ?? aiFields.brokerName ?? '');
+        const cnpjMatch = brokerSource.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
+        if (cnpjMatch) {
+          merged.corretora_cnpj = cnpjMatch[0];
+          filled++;
+          console.log(`[OCR_MERGE] Extracted "corretora_cnpj" from broker block: "${cnpjMatch[0]}"`);
+        }
+      }
+
+      if (filled > 0) {
+        console.log(`[OCR_MERGE] ${filled} field(s) added from deterministic text-layer parser.`);
+      } else {
+        console.log('[OCR_MERGE] No additional fields available from text layer.');
+      }
+      return merged;
+    } catch (err: any) {
+      console.warn('[OCR_MERGE_FAILED] Text-layer enrichment failed; using AI fields as-is:', err.message);
+      return aiFields;
+    }
+  }
+
+  /**
+   * The deterministic parser often returns broker info with the CNPJ and
+   * address concatenated onto the company name ("ADM DE SEGUROS LTDA
+   * 10.609.165/0001-19 Endereço RUA AXUA, 12 Bairro"). Trim those tails so
+   * the field carries just the entity name.
+   */
+  private trimDeterministicValue(field: string, value: string): string {
+    const trimmed = value.trim();
+    if (field === 'brokerName') {
+      const cnpjMatch = trimmed.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
+      if (cnpjMatch && typeof cnpjMatch.index === 'number' && cnpjMatch.index > 0) {
+        return trimmed.substring(0, cnpjMatch.index).trim();
+      }
+      const lowered = trimmed.toLowerCase();
+      for (const stop of ['endereço', 'endereco', 'bairro', 'susep', 'cep']) {
+        const idx = lowered.indexOf(stop);
+        if (idx > 5) return trimmed.substring(0, idx).trim();
+      }
+      return trimmed;
+    }
+    if (field === 'brokerSusep') {
+      // Trailing dashes/spaces ("518-5 -" → "518-5")
+      return trimmed.replace(/[\s-]+$/, '').trim();
+    }
+    return trimmed;
   }
 }
 

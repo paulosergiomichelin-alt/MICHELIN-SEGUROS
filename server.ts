@@ -38,6 +38,37 @@ async function startServer() {
 
   app.get('/favicon.ico', (req, res) => res.status(204).end());
 
+  // ── Datadog LLM Observability proxy ────────────────────────────────────────
+  // Forwards browser-collected LLM spans to Datadog without exposing the API key.
+  app.post('/api/datadog/llm-obs', async (req, res) => {
+    const apiKey = process.env.DD_API_KEY;
+    const site   = process.env.DD_SITE || 'us5.datadoghq.com';
+
+    if (!apiKey) {
+      // DD not configured — silently drop the span so the app keeps working
+      return res.status(204).end();
+    }
+
+    try {
+      const response = await axios.post(
+        `https://api.${site}/api/intake/llm-observability/v1/api/traces`,
+        req.body,
+        {
+          headers: {
+            'DD-API-KEY':   apiKey,
+            'Content-Type': 'application/json',
+          },
+          timeout: 5000,
+        }
+      );
+      res.status(response.status).end();
+    } catch (error: any) {
+      // Never propagate DD errors to the client
+      console.error('[DD_LLM_OBS] Failed to forward span:', error?.response?.status, error?.message);
+      res.status(204).end();
+    }
+  });
+
   // Body-parser error handler (catches 413 before routes see it).
   app.use((err: any, _req: any, res: any, next: any) => {
     if (err && (err.type === 'entity.too.large' || err.status === 413)) {

@@ -1,0 +1,104 @@
+{
+  "tests": [
+    {
+      "name": "Frontend - App Load",
+      "config": {
+        "request": {
+          "method": "GET",
+          "url": "https://michelin-seguros.com",
+          "timeout": 15
+        },
+        "assertions": [
+          {
+            "type": "statusCode",
+            "operator": "is",
+            "target": 200
+          },
+          {
+            "type": "responseTime",
+            "operator": "lessThan",
+            "target": 3000
+          }
+        ],
+        "locations": ["aws:us-east-1", "aws:sa-east-1"],
+        "frequency": 300,
+        "tags": [
+          "service:michelin-crm",
+          "type:frontend-health",
+          "critical"
+        ]
+      }
+    },
+    {
+      "name": "Frontend - Login Page",
+      "config": {
+        "type": "browser",
+        "request": {
+          "url": "https://michelin-seguros.com"
+        },
+        "steps": [
+          {
+            "name": "Navigate to app",
+            "type": "navigate",
+            "params": {
+              "url": "https://michelin-seguros.com"
+            }
+          },
+          {
+            "name": "Wait for auth screen",
+            "type": "wait",
+            "params": {
+              "value": 2000
+            }
+          },
+          {
+            "name": "Check login form present",
+            "type": "assertElementPresent",
+            "params": {
+              "element": {
+                "userLocator": {
+                  "values": [
+                    {
+                      "type": "css",
+                      "value": "input[type='email']"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "locations": ["aws:us-east-1"],
+        "frequency": 900,
+        "tags": [
+          "service:michelin-crm",
+          "type:user-journey",
+          "critical"
+        ]
+      }
+    },
+    {
+      "name": "Firebase - Auth Endpoint",
+      "config": {
+        "request": {
+          "method": "GET",
+          "url": "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=PLACEHOLDER",
+          "timeout": 10
+        },
+        "assertions": [
+          {
+            "type": "statusCode",
+            "operator": "isNot",
+            "target": 500
+          }
+        ],
+        "locations": ["aws:us-east-1"],
+        "frequency": 600,
+        "tags": [
+          "service:michelin-crm",
+          "type:firebase-health"
+        ]
+      }
+    }
+  ]
+}

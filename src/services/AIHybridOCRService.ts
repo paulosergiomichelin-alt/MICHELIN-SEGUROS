@@ -44,10 +44,10 @@ export interface AIExtractionResult {
   error?: string;
 }
 
-const MODEL_ID = 'baidu/qianfan-ocr-fast:free';
+const MODEL_ID = 'google/gemini-2.5-pro';
 // Cache version: bump this whenever the prompt, model, or output schema changes so
 // old cached responses (which may miss fields) are invalidated automatically.
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v13';
 const CACHE_PREFIX = `ai_ocr_cache_${CACHE_VERSION}:`;
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -114,7 +114,7 @@ export class AIHybridOCRService {
     // AI call
     const prompt = this.buildPrompt(type);
     const activeModel = cfg?.model || MODEL_ID;
-    const activeTimeout = cfg?.timeout || 20000;
+    const activeTimeout = cfg?.timeout || 40000;
     const maxRetries = cfg?.retryEnabled === false ? 0 : Math.min(2, cfg?.retries ?? 2);
 
     // Build the provider routing block from settings. This sorts by throughput by
@@ -133,7 +133,7 @@ export class AIHybridOCRService {
     const payload: OpenRouterChatRequest = {
       model: activeModel,
       temperature: 0,
-      max_tokens: 1024,
+      max_tokens: 8192,
       provider: routing,
       messages: [
         { role: 'system', content: prompt.system },
@@ -149,9 +149,9 @@ export class AIHybridOCRService {
 
     console.log(`[AI_PIPELINE_PRIMARY] model=${activeModel} type=${type}`);
     console.log(`[OPENROUTER_ROUTING] sort=${routing.sort} maxLatencyP90=${routing.preferred_max_latency.p90}s minThroughputP90=${routing.preferred_min_throughput.p90}t/s data=${routing.data_collection}${routing.zdr ? ' zdr=on' : ''}`);
-    console.log(`[QIANFAN_REQUEST] model=${activeModel} bytes=${preprocessed.bytes}`);
+    console.log(`[AI_REQUEST] model=${activeModel} bytes=${preprocessed.bytes}`);
     AIOCRMetricsService.recordEvent('OPENROUTER_ROUTING', `sort=${routing.sort} lat<=${routing.preferred_max_latency.p90}s thr>=${routing.preferred_min_throughput.p90}t/s`, { type, sort: routing.sort });
-    AIOCRMetricsService.recordEvent('QIANFAN_REQUEST', `model=${activeModel}`, { type, bytes: preprocessed.bytes });
+    AIOCRMetricsService.recordEvent('AI_REQUEST', `model=${activeModel}`, { type, bytes: preprocessed.bytes });
     let raw = '';
     let tokensUsed = 0;
     // Retry loop: provider routing lets OpenRouter switch providers on its end,
@@ -165,9 +165,9 @@ export class AIHybridOCRService {
         tokensUsed = response.usage?.total_tokens || 0;
         modelEcho = response.model || activeModel;
         console.log(`[OPENROUTER_SUCCESS] provider-resolved-model=${modelEcho} attempt=${attempt + 1}`);
-        console.log(`[QIANFAN_RESPONSE] tokens=${tokensUsed} finish=${response.choices?.[0]?.finish_reason}`);
+        console.log(`[AI_RESPONSE] tokens=${tokensUsed} finish=${response.choices?.[0]?.finish_reason}`);
         AIOCRMetricsService.recordEvent('OPENROUTER_SUCCESS', `model=${modelEcho} attempt=${attempt + 1}`, { type, attempts: attempt + 1 });
-        AIOCRMetricsService.recordEvent('QIANFAN_RESPONSE', `tokens=${tokensUsed}`, { type, tokens: tokensUsed });
+        AIOCRMetricsService.recordEvent('AI_RESPONSE', `tokens=${tokensUsed}`, { type, tokens: tokensUsed });
         lastError = null;
         break;
       } catch (err: any) {
@@ -217,7 +217,7 @@ export class AIHybridOCRService {
     const result: AIExtractionResult = {
       success: true,
       documentType: type,
-      provider: 'QIANFAN_OCR_FAST',
+      provider: modelEcho || activeModel,
       confidence,
       fields: normalizedFields,
       rawText: this.maskSensitive(raw),
@@ -257,16 +257,16 @@ export class AIHybridOCRService {
             '',
             'Localize e extraia EXATAMENTE estes campos:',
             '- nome: nome completo do condutor (texto em maiúsculas)',
-            '- cpf: número do CPF, 11 dígitos (formato XXX.XXX.XXX-XX)',
+            '- cpf: campo explicitamente rotulado "CPF" no documento, 11 dígitos, formato XXX.XXX.XXX-XX',
             '- data_nascimento: data de nascimento (DD/MM/YYYY)',
-            '- registro: número de registro da CNH, 9 a 11 dígitos',
+            '- registro: campo explicitamente rotulado "REGISTRO" ou "Nº REGISTRO" no documento. Retorne APENAS os dígitos, sem pontos ou traços. Exemplo correto: "04743029112". NÃO é o CPF.',
             '- validade: data de validade (DD/MM/YYYY)',
             '- categoria: categoria da habilitação (A, B, AB, C, D, E, ACC)',
             '- filiacao_pai: nome completo do pai',
             '- filiacao_mae: nome completo da mãe',
             '- primeira_habilitacao: data da primeira habilitação (DD/MM/YYYY)',
             '',
-            'IMPORTANTE: Examine a CNH inteira com atenção. Os números (CPF, registro) e datas estão visíveis claramente.',
+            'ATENÇÃO: CPF e REGISTRO são campos DIFERENTES. CPF tem formato "000.000.000-00". REGISTRO é só números sem formatação.',
             'Retorne APENAS este JSON, sem comentários:',
             '{"nome":"","cpf":"","data_nascimento":"","registro":"","validade":"","categoria":"","filiacao_pai":"","filiacao_mae":"","primeira_habilitacao":""}'
           ].join('\n')
@@ -381,13 +381,42 @@ export class AIHybridOCRService {
     };
 
     if (type === 'cnh') {
-      runValidator('cpf', () => DocumentValidator.validateCPF(String(parsed.cpf)));
-      runValidator('nome', () => DocumentValidator.validateName(String(parsed.nome)));
-      runValidator('data_nascimento', () => DocumentValidator.validateDate(String(parsed.data_nascimento), { allowFuture: false }));
-      runValidator('validade', () => DocumentValidator.validateDate(String(parsed.validade)));
-      // Map to legacy field names so existing form code keeps working
+      // Detect CPF↔registro swap — Pattern A only: if registro has explicit CPF
+      // formatting (XXX.XXX.XXX-XX) the AI clearly put the CPF in the wrong field.
+      // Pattern B (registro is 11 raw digits passing mod-11) is intentionally
+      // excluded: the Nº Registro is itself an 11-digit number that can pass the
+      // CPF mod-11 check by coincidence, so acting on that alone swaps correct
+      // values into wrong fields.
+      const rawCpf = String(parsed.cpf || '');
+      const rawRegistro = String(parsed.registro || '');
+      const cpfDigits = rawCpf.replace(/\D/g, '');
+      const registroDigits = rawRegistro.replace(/\D/g, '');
+      const registroLooksCpf = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(rawRegistro);
+      const cpfValid = DocumentValidator.validateCPF(rawCpf);
+
+      if (!cpfValid.ok && registroLooksCpf) {
+        // Move the formatted CPF from registro into cpf; keep registro as digits only.
+        const correctedCpf = registroDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+        out.cpf = correctedCpf;
+        out.registro = cpfDigits.length >= 8 ? cpfDigits : rawRegistro;
+        console.warn('[CNH_FIELD_SWAP] CPF was in registro field; corrected.', { from: rawRegistro, to: correctedCpf });
+        runValidator('cpf', () => DocumentValidator.validateCPF(out.cpf));
+      } else {
+        runValidator('cpf', () => DocumentValidator.validateCPF(rawCpf));
+        // If registro came formatted (e.g. XXX.XXX.XXX-XX) but swap didn't trigger,
+        // strip the formatting so it stores as raw digits.
+        if (registroLooksCpf) out.registro = registroDigits;
+      }
+      runValidator('nome', () => DocumentValidator.validateName(String(out.nome)));
+      runValidator('data_nascimento', () => DocumentValidator.validateDate(String(out.data_nascimento), { allowFuture: false }));
+      runValidator('validade', () => DocumentValidator.validateDate(String(out.validade)));
+      // Map to legacy field names so existing downstream code keeps working
       out.name = out.nome;
       out.birthDate = out.data_nascimento;
+      out.licenseNumber = out.registro;
+      out.licenseExpiry = out.validade;
+      out.licenseCategory = out.categoria;
+      out.licenseIssueDate = out.primeira_habilitacao;
     } else if (type === 'crv' || type === 'crlv') {
       runValidator('placa', () => DocumentValidator.validatePlate(String(parsed.placa)));
       runValidator('chassi', () => DocumentValidator.validateChassis(String(parsed.chassi)));
@@ -527,7 +556,7 @@ export class AIHybridOCRService {
     return {
       success: false,
       documentType: type,
-      provider: 'QIANFAN_OCR_FAST',
+      provider: MODEL_ID,
       confidence: 0,
       fields: {},
       rawText: '',

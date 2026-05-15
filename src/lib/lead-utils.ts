@@ -118,8 +118,11 @@ export const standardizeLeadData = (data: any, existingLead?: Partial<Lead>): Pa
     'category': 'licenseCategory',
     'license_category': 'licenseCategory',
     'registration': 'licenseNumber',
+    'registro': 'licenseNumber',
     'renach': 'renach',
     'firstLicenseDate': 'licenseIssueDate',
+    'primeira_habilitacao': 'licenseIssueDate',
+    'validade': 'licenseExpiry',
     'endereco': 'enderecoAuto',
     'logradouro': 'enderecoAuto',
     'address_overnight': 'enderecoAuto'

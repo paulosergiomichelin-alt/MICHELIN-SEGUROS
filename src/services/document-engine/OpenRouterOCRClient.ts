@@ -7,6 +7,7 @@
  *
  * Used by AIHybridOCRService to dispatch image+prompt requests to vision models.
  */
+import { traceLLM } from '../DatadogLLMObs';
 
 export interface OpenRouterMessage {
   role: 'system' | 'user' | 'assistant';
@@ -67,18 +68,31 @@ export class OpenRouterOCRClient {
   ): Promise<OpenRouterChatResponse> {
     if (!apiKey) throw new Error('OPENROUTER_API_KEY_MISSING');
 
-    try {
-      return await this.chatCompletionDirect(apiKey, payload, timeoutMs);
-    } catch (err: any) {
-      const msg = err?.message || '';
-      // CORS errors / network blockages → try proxy. Real HTTP errors (4xx/5xx) bubble up.
-      const transient = msg.includes('CORS') || msg.includes('NetworkError') || msg.includes('Failed to fetch') || msg === 'DIRECT_NETWORK_ERROR';
-      if (transient) {
-        console.warn('[OPENROUTER_DIRECT_FAIL] Falling back to local proxy:', msg);
-        return await this.chatCompletionViaProxy(apiKey, payload, timeoutMs);
-      }
-      throw err;
-    }
+    // Normalise messages for LLM Obs (image_url content becomes a text summary)
+    const obsMessages = payload.messages.map(m => ({
+      role: m.role,
+      content: typeof m.content === 'string'
+        ? m.content
+        : JSON.stringify(m.content).slice(0, 200) + '…',
+    }));
+
+    return traceLLM(
+      { model: payload.model, provider: 'openrouter', messages: obsMessages },
+      async () => {
+        try {
+          return await this.chatCompletionDirect(apiKey, payload, timeoutMs);
+        } catch (err: any) {
+          const msg = err?.message || '';
+          const transient = msg.includes('CORS') || msg.includes('NetworkError') || msg.includes('Failed to fetch') || msg === 'DIRECT_NETWORK_ERROR';
+          if (transient) {
+            console.warn('[OPENROUTER_DIRECT_FAIL] Falling back to local proxy:', msg);
+            return await this.chatCompletionViaProxy(apiKey, payload, timeoutMs);
+          }
+          throw err;
+        }
+      },
+      { spanName: 'openrouter.ocr_chat', tags: ['feature:document-ocr'] }
+    );
   }
 
   /** Direct browser→OpenRouter chat completion (preferred). */

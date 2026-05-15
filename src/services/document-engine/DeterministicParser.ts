@@ -11,6 +11,7 @@ import { InsurerDetectorService } from './InsurerDetectorService';
 import { BrokerExtractionEngine } from './BrokerExtractionEngine';
 import { StructuredOCRResult } from '../../types/OCRTypes';
 import { LayoutAwareExtractionEngine } from './LayoutAwareExtractionEngine';
+import { UniversalRegexExtractor } from './UniversalRegexExtractor';
 
 export class DeterministicParser {
   private static instance: DeterministicParser;
@@ -401,8 +402,46 @@ export class DeterministicParser {
     }
     
     const brokerDetails = BrokerExtractionEngine.extract(text);
+    // The text-based broker extractor often finds the corretora when the spatial
+    // pass missed it (small print, multi-page, label far from value). Fall back
+    // to it for BOTH name and susep so callers downstream (OCRService merge,
+    // form hydration) can rely on the flat keys.
+    if (!data.brokerName && brokerDetails.name) {
+      data.brokerName = brokerDetails.name;
+    }
     if (!data.brokerSusep && brokerDetails.susep) {
       data.brokerSusep = brokerDetails.susep;
+    }
+
+    // Vehicle data is often present in the policy text (insured asset block).
+    // The AI model sometimes misses it because the plate/chassi sit far from any
+    // explicit label or appear in a side column — regex over the raw text is
+    // reliable.
+    const regexHits = UniversalRegexExtractor.extract(text);
+    if (!data.plate) {
+      const plateHit = regexHits.find(r => r.field === 'placa');
+      if (plateHit) data.plate = plateHit.value;
+    }
+    if (!data.chassis) {
+      const chassisHit = regexHits.find(r => r.field === 'chassi');
+      if (chassisHit) data.chassis = chassisHit.value;
+    }
+
+    // CEP de pernoite: prefer values within ~80 chars after a "CEP" label, fall
+    // back to the first plausible XXXXX-XXX / 8-digit run anywhere. The labeled
+    // search avoids picking up unrelated 8-digit numbers (e.g. SUSEP, prêmio).
+    if (!data.cep) {
+      const cepLabelMatch = text.toUpperCase().match(/CEP[\s:\-]{0,3}(\d{5}-?\d{3})/);
+      if (cepLabelMatch) {
+        const cleaned = cepLabelMatch[1].replace(/\D/g, '');
+        if (cleaned.length === 8) {
+          data.cep = `${cleaned.slice(0, 5)}-${cleaned.slice(5)}`;
+        }
+      }
+      if (!data.cep) {
+        const cepFallback = text.match(/\b(\d{5})-(\d{3})\b/);
+        if (cepFallback) data.cep = `${cepFallback[1]}-${cepFallback[2]}`;
+      }
     }
 
     return this.validateExtraction(data);

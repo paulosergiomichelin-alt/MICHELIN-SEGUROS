@@ -243,12 +243,16 @@ export const LeadsPage = React.memo(({
 
       {/* MODALS */}
       {showAddLead && (
-        <LeadForm 
+        <LeadForm
+          key={editingLead?.id || 'new'}
           lead={editingLead}
           onSave={handleSaveLead}
           onCancel={() => {
             setShowAddLead(false);
             setEditingLead(null);
+          }}
+          onNavigateToLead={(targetLead) => {
+            setEditingLead(targetLead);
           }}
         />
       )}

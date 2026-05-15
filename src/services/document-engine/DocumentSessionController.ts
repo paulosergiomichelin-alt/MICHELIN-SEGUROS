@@ -141,6 +141,9 @@ export class DocumentSessionController {
 
   public subscribe(listener: (session: DocumentSession | null) => void) {
     this.listeners.push(listener);
+    // Fire immediately so callers that mount after a state change (e.g. HMR) can
+    // recover the correct UI without waiting for the next notify() call.
+    listener(this.currentSession);
     return () => {
       this.listeners = this.listeners.filter(l => l !== listener);
     };
