@@ -1,15 +1,12 @@
 
-import React, { Suspense, useState } from 'react';
+import React, { Suspense } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { useChatPreferences } from '../hooks/useAppContexts';
 import { useViewport } from '../hooks/useAppContexts';
 import { ShellProviders } from './ShellProviders';
 import { MobileHeader } from './MobileHeader';
 import { VisualIdentityConfig, Permissions, UserProfile } from '../types';
-import { UserProfileModal } from './UserProfileModal';
-import { motion, AnimatePresence } from 'motion/react';
-import { X } from 'lucide-react';
-import { cn } from '../lib/utils';
 
 interface AppShellProps {
   user: any;
@@ -32,9 +29,9 @@ export const AppShell: React.FC<AppShellProps> = ({
   visualConfig,
   children
 }) => {
+  const navigate = useNavigate();
   const viewport = useViewport();
   const { preferences } = useChatPreferences();
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(() => {
     if (typeof window !== 'undefined') {
@@ -60,7 +57,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           userProfile={userProfile}
           visualConfig={visualConfig}
           onMenuClick={() => toggleSidebar(true)}
-          onProfileClick={() => setIsProfileOpen(true)}
+          onProfileClick={() => navigate('/users/' + (userProfile?.uid ?? ''))}
         />
 
         {/* Sidebar — never unmounts, always present */}
@@ -71,7 +68,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           visualConfig={visualConfig}
           isSidebarOpen={isSidebarOpen}
           toggleSidebar={toggleSidebar}
-          onProfileClick={() => setIsProfileOpen(true)}
+          onProfileClick={() => navigate('/users/' + (userProfile?.uid ?? ''))}
         />
 
         <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
@@ -88,39 +85,6 @@ export const AppShell: React.FC<AppShellProps> = ({
           </Suspense>
         </main>
 
-        {/* Profile Unified Modal */}
-        <AnimatePresence>
-          {isProfileOpen && (
-            <div className="fixed inset-0 z-[2000] flex items-center justify-center">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsProfileOpen(false)}
-                className="absolute inset-0 bg-black/95 backdrop-blur-xl"
-              />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: viewport.isMobile ? 0 : 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: viewport.isMobile ? 0 : 20 }}
-                className={cn(
-                  "relative w-full h-full bg-[#050505] z-[2001] shadow-[0_0_100px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col",
-                  viewport.isMobile ? "rounded-0" : "max-w-[1400px] max-h-[95vh] rounded-[2.5rem] border border-white/10"
-                )}
-              >
-                <UserProfileModal
-                  mode="edit"
-                  user={user}
-                  profile={userProfile}
-                  onClose={() => setIsProfileOpen(false)}
-                  onUpdate={() => {
-                    // handled by subscription
-                  }}
-                />
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
       </div>
     </ShellProviders>
   );

@@ -3,6 +3,7 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import { UserProfileModal } from '../../components/UserProfileModal';
+import { auth } from '../../lib/firebase';
 
 export const UserProfilePage: React.FC = () => {
   const { uid } = useParams<{ uid: string }>();
@@ -13,9 +14,9 @@ export const UserProfilePage: React.FC = () => {
     <UserProfileModal
       mode="edit"
       targetUserId={uid}
-      user={userProfile}
+      user={auth.currentUser}
       profile={userProfile}
-      onClose={() => navigate('/users')}
+      onClose={() => navigate(-1)}
     />
   );
 };
