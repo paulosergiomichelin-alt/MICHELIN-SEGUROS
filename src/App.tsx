@@ -127,6 +127,18 @@ function AppInternal() {
     };
   }, []);
 
+  // Check onboarding completion whenever the org changes — must be before any conditional returns
+  useEffect(() => {
+    if (!userProfile?.organizationId) return;
+    templateService.isOnboardingComplete(userProfile.organizationId)
+      .then(complete => setNeedsOnboarding(!complete))
+      .catch(() => setNeedsOnboarding(false));
+
+    DataService.get('config', 'agent_config').then((cfg: any) => {
+      if (cfg?.openrouterApiKey) setAgentApiKey(cfg.openrouterApiKey);
+    }).catch(() => {});
+  }, [userProfile?.organizationId]);
+
   if (!isAuthReady || permsLoading) {
     return (
       <div className="min-h-screen bg-brand-dark flex items-center justify-center">
@@ -159,19 +171,6 @@ function AppInternal() {
       </div>
     );
   }
-
-  // Check onboarding completion after user profile loads
-  useEffect(() => {
-    if (!userProfile?.organizationId) return;
-    templateService.isOnboardingComplete(userProfile.organizationId)
-      .then(complete => setNeedsOnboarding(!complete))
-      .catch(() => setNeedsOnboarding(false));
-
-    // Also fetch agent config API key for wizard preview
-    DataService.get('config', 'agent_config').then((cfg: any) => {
-      if (cfg?.openrouterApiKey) setAgentApiKey(cfg.openrouterApiKey);
-    }).catch(() => {});
-  }, [userProfile?.organizationId]);
 
   if (!user) {
     if (showRegistration) {
