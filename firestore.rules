@@ -1,9 +1,39 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Apenas usuários autenticados podem acessar qualquer documento
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isSameTenant(tenantId) {
+      return isAuth() && request.auth.token.organizationId == tenantId;
+    }
+
+    // ── Catch-all: any authenticated user (existing behaviour) ────────────────
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAuth();
+    }
+
+    // ── Platform templates and guardrails (read: authenticated; write: never from client) ──
+    match /platform_agent_templates/{templateId} {
+      allow read: if isAuth();
+      allow write: if false; // managed via Admin SDK / Firebase Console
+    }
+
+    match /platform_guardrails/{docId} {
+      allow read: if isAuth();
+      allow write: if false;
+    }
+
+    // ── Tenant-scoped agent config and wizard state ───────────────────────────
+    match /tenants/{tenantId}/config/{docId} {
+      allow read, write: if isAuth();
+    }
+
+    match /tenants/{tenantId}/onboarding/{docId} {
+      allow read, write: if isAuth();
     }
   }
 }

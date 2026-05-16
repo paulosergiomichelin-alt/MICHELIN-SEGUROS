@@ -160,8 +160,17 @@ export class TemplateService {
   }
 
   async isOnboardingComplete(organizationId: string): Promise<boolean> {
-    const config = await this.getTenantConfig(organizationId);
-    return config?.onboarding?.completed === true;
+    try {
+      const snap = await getDoc(
+        doc(db, 'tenants', organizationId, 'config', 'agent_config')
+      );
+      // Document doesn't exist → tenant pre-dates this feature, skip wizard
+      if (!snap.exists()) return true;
+      return snap.data()?.onboarding?.completed === true;
+    } catch (_) {
+      // Permission denied or network error → skip wizard (conservative)
+      return true;
+    }
   }
 
   // ─── 3-layer config resolution ───────────────────────────────────────────────
