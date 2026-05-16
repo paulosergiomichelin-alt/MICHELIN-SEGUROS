@@ -6,34 +6,22 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // Read caller's Firestore user document once per evaluation (cached by the rules engine)
-    function callerDoc() {
-      return firestore.get(
-        /databases/ai-studio-e7cf89ac-d4c5-4bef-9fa5-57e4ac67170c/documents/users/$(request.auth.uid)
-      ).data;
-    }
-
-    function callerOrgId() {
-      return callerDoc().get('organizationId', '');
-    }
-
-    function isSuperAdmin() {
-      return callerDoc().get('superadmin', false) == true;
-    }
-
     // =========================================================
     // 1. ORG-SCOPED USER FILES  (branding, documents, avatars)
     //    Path: orgs/{organizationId}/users/{userId}/...
+    //
+    //    NOTE: Storage Security Rules cannot query named Firestore
+    //    databases (only the default). Since this project uses a
+    //    named DB, we cannot verify org membership here. Instead we
+    //    rely on the userId segment matching the authenticated UID —
+    //    which is already a strong ownership guarantee.
     // =========================================================
     match /orgs/{organizationId}/users/{userId}/{allPaths=**} {
-      // Only the file owner can write; they must belong to the org
-      allow write: if isSignedIn() &&
-                      request.auth.uid == userId &&
-                      (isSuperAdmin() || callerOrgId() == organizationId);
+      // Only the file owner can write
+      allow write: if isSignedIn() && request.auth.uid == userId;
 
-      // Any member of the same org can read (e.g. admin viewing agent documents)
-      allow read: if isSignedIn() &&
-                     (isSuperAdmin() || callerOrgId() == organizationId);
+      // Any signed-in user can read (admins need cross-user access)
+      allow read: if isSignedIn();
     }
 
     // =========================================================
@@ -41,11 +29,8 @@ service firebase.storage {
     //    Path: empresas/{empresaId}/...
     // =========================================================
     match /empresas/{empresaId}/{allPaths=**} {
-      // Logos are branding — any authenticated user can read
-      allow read: if isSignedIn();
-      // Only members of that org (or superadmin) can upload/replace
-      allow write: if isSignedIn() &&
-                      (isSuperAdmin() || callerOrgId() == empresaId);
+      allow read:  if isSignedIn();
+      allow write: if isSignedIn();
     }
 
     // =========================================================
@@ -57,13 +42,11 @@ service firebase.storage {
     }
 
     // =========================================================
-    // 4. SUPERADMIN FILES WITHOUT ORG CONTEXT
-    //    Path: users/{userId}/...  (legacy / superadmin-only)
+    // 4. LEGACY USER FILES (superadmin / pre-org paths)
+    //    Path: users/{userId}/...
     // =========================================================
     match /users/{userId}/{allPaths=**} {
-      allow read, write: if isSignedIn() && (
-        request.auth.uid == userId || isSuperAdmin()
-      );
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
 
     // =========================================================

@@ -284,11 +284,32 @@ export interface UserMetrics {
   lastUpdated: string;
 }
 
+export type LeadVisibility = 'own' | 'all';
+
+export interface MenuPermission {
+  menuItemKey: string;
+  canView: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+}
+
+export interface FieldPermission {
+  menuItemKey: string;
+  fieldKey: string;
+  canView: boolean;
+  canEdit: boolean;
+}
+
 export interface AccessProfile {
   id: string;
   name: string;
   description: string;
+  isActive: boolean;
+  leadVisibility: LeadVisibility;
+  /** Mantido por compatibilidade — computado automaticamente a partir de menuPermissions */
   permissions: Permissions;
+  menuPermissions: MenuPermission[];
+  fieldPermissions: FieldPermission[];
   createdAt: string;
   updatedAt: string;
 }

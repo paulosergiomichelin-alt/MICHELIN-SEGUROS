@@ -1,11 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { AgentConfig, UserProfile, Permissions, VisualIdentityConfig } from '../types';
-import { DataService } from '../services/DataService';
 import { AppShell } from './AppShell';
 import { AppContentManager } from './AppContentManager';
-import { ChatPreferencesProvider } from '../contexts/ChatPreferencesContext';
 import { useAgentConfig } from '../hooks/useAgentConfig';
+import { ScrollToTop } from './ScrollToTop';
 
 interface MainAppContentProps {
   user: any;
@@ -17,16 +16,15 @@ interface MainAppContentProps {
   setVisualConfig: (c: VisualIdentityConfig) => void;
 }
 
-export const MainAppContent = ({ 
-  user, 
-  userProfile, 
-  isAuthReady, 
-  permissions, 
-  permsLoading, 
+export const MainAppContent = ({
+  user,
+  userProfile,
+  isAuthReady,
+  permissions,
+  permsLoading,
   visualConfig,
-  setVisualConfig
+  setVisualConfig,
 }: MainAppContentProps) => {
-  const [activeTab, setActiveTab] = useState<any>('pipeline');
   const { agentConfig, setAgentConfig } = useAgentConfig(user, userProfile, visualConfig);
 
   if (permsLoading || !isAuthReady) {
@@ -38,24 +36,23 @@ export const MainAppContent = ({
   }
 
   return (
-    <AppShell
-      user={user}
-      userProfile={userProfile}
-      permissions={permissions}
-      visualConfig={visualConfig}
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
-    >
-      <AppContentManager
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
+    <>
+      <ScrollToTop />
+      <AppShell
+        user={user}
+        userProfile={userProfile}
         permissions={permissions}
         visualConfig={visualConfig}
-        setVisualConfig={setVisualConfig}
-        agentConfig={agentConfig}
-        setAgentConfig={setAgentConfig}
-        userProfile={userProfile}
-      />
-    </AppShell>
+      >
+        <AppContentManager
+          permissions={permissions}
+          visualConfig={visualConfig}
+          setVisualConfig={setVisualConfig}
+          agentConfig={agentConfig}
+          setAgentConfig={setAgentConfig}
+          userProfile={userProfile}
+        />
+      </AppShell>
+    </>
   );
 };

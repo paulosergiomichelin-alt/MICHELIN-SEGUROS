@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DataService } from '../../services/DataService';
@@ -117,11 +118,12 @@ const MetricCard = ({ title, value, label, subLabel, icon: Icon, color, trend }:
 
 export const TeamPage = () => {
   const { userProfile: currentUser, permissions } = usePermissions();
+  const navigate = useNavigate();
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [profiles, setProfiles] = useState<AccessProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'usuarios' | 'perfis' | 'permissoes'>('usuarios');
-  
+
   // Filters
   const [search, setSearch] = useState('');
   const [filterProfile, setFilterProfile] = useState<string>('all');
@@ -132,8 +134,8 @@ export const TeamPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(8);
 
-  // New User Modal replaced by UserProfileModal
-  const [showUserManagement, setShowUserManagement] = useState<{ mode: 'create' | 'edit', userId?: string } | null>(null);
+  // Modal only used for creating new users; editing navigates to /users/:uid
+  const [showUserManagement, setShowUserManagement] = useState<{ mode: 'create' } | null>(null);
 
   // Fetch Data
   useEffect(() => {
@@ -360,7 +362,7 @@ export const TeamPage = () => {
                              key={userKey}
                              initial={{ opacity: 0, y: 10 }}
                              animate={{ opacity: 1, y: 0 }}
-                             onClick={() => setShowUserManagement({ mode: 'edit', userId: u.uid })}
+                             onClick={() => navigate('/users/' + u.uid)}
                              className="bg-[#0B0B0D] rounded-2xl border border-white/5 p-6 flex flex-col items-center text-center relative group hover:border-[#D4A94D]/30 transition-all border-glow cursor-pointer"
                            >
                             <button className="absolute top-4 right-4 text-[#9CA3AF] hover:text-white transition-colors">
@@ -560,9 +562,8 @@ export const TeamPage = () => {
                exit={{ opacity: 0, scale: 0.95, y: 20 }}
                className="relative w-full h-full md:max-w-[1400px] md:max-h-[95vh] overflow-hidden md:rounded-[2.5rem] md:border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.8)]"
              >
-               <UserProfileModal 
-                 mode={showUserManagement.mode}
-                 targetUserId={showUserManagement.userId}
+               <UserProfileModal
+                 mode="create"
                  user={currentUser}
                  profile={currentUser}
                  onClose={() => setShowUserManagement(null)}

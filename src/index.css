@@ -28,59 +28,264 @@
     width: 100vw;
   }
 
+  /* ============================================================
+     DESIGN TOKENS — ambos os temas usam as mesmas variáveis;
+     apenas os valores mudam. Adicione novos tokens nos dois blocos.
+     ============================================================ */
+
   :root {
-    --bg-primary: #0B0B0D;
+    /* Backgrounds */
+    --bg-primary:   #0B0B0D;
     --bg-secondary: #111214;
+    --bg-elevated:  #18191b;
+    --bg-input:     #111214;
+    --bg-overlay:   rgba(0, 0, 0, 0.70);
+
+    /* Text */
     --text-primary: #ffffff;
-    --text-muted: #8E8E93;
-    --border-main: rgba(255, 255, 255, 0.05);
+    --text-muted:   #8E8E93;
+    --text-subtle:  rgba(255, 255, 255, 0.20);
+    --text-inverse: #0B0B0D;
+
+    /* Borders */
+    --border-subtle: rgba(255, 255, 255, 0.05);
+    --border-medium: rgba(255, 255, 255, 0.10);
+    --border-strong: rgba(255, 255, 255, 0.20);
+    --border-main:   var(--border-subtle);   /* alias de compatibilidade */
+
+    /* Scrollbar */
+    --scrollbar-thumb:       #374151;
+    --scrollbar-thumb-hover: #4b5563;
   }
 
   .light {
-    --bg-primary: #ffffff;
+    /* Backgrounds */
+    --bg-primary:   #ffffff;
     --bg-secondary: #f8fafc;
-    --text-primary: #000000;
-    --text-muted: #1a1a1a;
-    --border-main: rgba(0, 0, 0, 0.2);
+    --bg-elevated:  #f1f5f9;
+    --bg-input:     #f8fafc;
+    --bg-overlay:   rgba(0, 0, 0, 0.40);
+
+    /* Text */
+    --text-primary: #0f172a;
+    --text-muted:   #475569;
+    --text-subtle:  rgba(15, 23, 42, 0.30);
+    --text-inverse: #ffffff;
+
+    /* Borders */
+    --border-subtle: rgba(0, 0, 0, 0.08);
+    --border-medium: rgba(0, 0, 0, 0.15);
+    --border-strong: rgba(0, 0, 0, 0.25);
+    --border-main:   var(--border-subtle);
+
+    /* Scrollbar */
+    --scrollbar-thumb:       #cbd5e1;
+    --scrollbar-thumb-hover: #94a3b8;
   }
 
-  /* Force Solid Black for Light Mode Text */
+  /* Overrides de modo claro — mantidos até migração completa dos componentes (Fase 3) */
   .light, .light body {
-    color: #000000 !important;
-    background-color: #FFFFFF !important;
+    color: var(--text-primary) !important;
+    background-color: var(--bg-primary) !important;
   }
-  
+
   .light * {
-    color: #000000 !important;
+    color: var(--text-primary) !important;
   }
 
   .light .bg-brand-black, .light .bg-brand-dark, .light .bg-slate-900, .light .bg-slate-800 {
-    background-color: #f8fafc !important; /* Lighter background for light mode */
+    background-color: var(--bg-secondary) !important;
   }
 
   .light .text-white {
-    color: #000000 !important;
+    color: var(--text-primary) !important;
   }
 
-  .light .text-gold-deep, .light .text-gold-light {
+  /* === FASE 3: cobertura completa de classes hardcoded ============= */
+
+  /* --- Backgrounds dark → surface tokens ----------------------- */
+
+  /* superfície primária (mais escura) */
+  .light .bg-\[\#0B0B0D\],
+  .light .bg-\[\#050505\],
+  .light .bg-\[\#000000\] {
+    background-color: var(--bg-primary) !important;
+  }
+
+  /* superfície secundária (cards/painéis) */
+  .light .bg-\[\#111214\],
+  .light .bg-\[\#0E0F11\],
+  .light .bg-\[\#121212\] {
+    background-color: var(--bg-secondary) !important;
+  }
+
+  /* superfície elevada (hover, inputs) */
+  .light .bg-\[\#16181B\],
+  .light .bg-\[\#18191b\],
+  .light .bg-\[\#1A1A1A\],
+  .light .bg-\[\#1A1A1F\],
+  .light .bg-\[\#1A1C1E\],
+  .light .bg-\[\#1E1E1E\] {
+    background-color: var(--bg-elevated) !important;
+  }
+
+  /* WhatsApp shell — mantém identidade visual mesmo em light */
+  .light .bg-\[\#202c33\],
+  .light .bg-\[\#111b21\],
+  .light .bg-\[\#0b141a\],
+  .light .bg-\[\#2a3942\],
+  .light .bg-\[\#233138\],
+  .light .bg-\[\#374248\] {
+    background-color: var(--bg-secondary) !important;
+  }
+
+  /* --- Borders ------------------------------------------------- */
+  .light .border-white\/5,
+  .light .border-slate-800,
+  .light .border-slate-700 {
+    border-color: var(--border-subtle) !important;
+  }
+
+  .light .border-white\/10 {
+    border-color: var(--border-medium) !important;
+  }
+
+  .light .border-white\/20,
+  .light .border-white\/30,
+  .light .border-white\/50 {
+    border-color: var(--border-strong) !important;
+  }
+
+  /* --- Ring / focus outlines ----------------------------------- */
+  .light .ring-white\/5  { --tw-ring-color: var(--border-subtle) !important; }
+  .light .ring-white\/10 { --tw-ring-color: var(--border-medium) !important; }
+
+  /* --- Text em superfícies coloridas (botões gold, badge, etc.) - */
+  /* text-brand-dark e text-black em botões dourados devem ser escuros em ambos os temas */
+  .light .text-brand-dark {
+    color: #0B0B0D !important;
+  }
+
+  /* brand-black como texto = praticamente inexistente, mas cobre o caso */
+  .light .text-brand-black {
+    color: var(--text-primary) !important;
+  }
+
+  /* Exceções de cor que o nuclear override não deve sobrescrever */
+  .light .text-gold-deep,
+  .light .text-gold-light {
     color: #CFA764 !important;
   }
 
-  .light .text-emerald-500, .light .text-emerald-600 {
+  .light .text-emerald-400,
+  .light .text-emerald-500,
+  .light .text-emerald-600 {
     color: #059669 !important;
   }
 
-  .light .text-red-500, .light .text-red-600 {
+  .light .text-red-400,
+  .light .text-red-500,
+  .light .text-red-600 {
     color: #dc2626 !important;
   }
-  
-  .light .text-slate-400, .light .text-slate-500, .light .text-slate-600 {
-     color: #000000 !important;
-     opacity: 0.9 !important;
+
+  .light .text-orange-400,
+  .light .text-orange-500 {
+    color: #ea580c !important;
   }
 
-  .light .border-white/5, .light .border-slate-800, .light .border-slate-700 {
-    border-color: #e2e8f0 !important;
+  .light .text-blue-400,
+  .light .text-blue-500 {
+    color: #2563eb !important;
+  }
+
+  .light .text-yellow-400,
+  .light .text-yellow-500 {
+    color: #ca8a04 !important;
+  }
+
+  .light .text-purple-400,
+  .light .text-purple-500 {
+    color: #9333ea !important;
+  }
+
+  /* Slate — text-muted range */
+  .light .text-slate-400,
+  .light .text-slate-500,
+  .light .text-slate-600 {
+    color: var(--text-muted) !important;
+  }
+
+  /* --- Inputs e selects ---------------------------------------- */
+  .light input,
+  .light select,
+  .light textarea {
+    background-color: var(--bg-input) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-medium) !important;
+  }
+
+  .light input::placeholder,
+  .light textarea::placeholder {
+    color: var(--text-muted) !important;
+    opacity: 0.6;
+  }
+
+  /* ── ZONA PROTEGIDA: WhatsApp Shell ─────────────────────────────
+     O painel WhatsApp mantém identidade visual própria em qualquer
+     tema. Seletores mais específicos que os overrides genéricos
+     acima vencem sem precisar de hacks extras.
+     ─────────────────────────────────────────────────────────────── */
+  .light .whatsapp-shell {
+    color: #e9edef !important;
+  }
+  /* Todos os descendentes herdam a cor do shell (sobrepõe o nuclear override) */
+  .light .whatsapp-shell * {
+    color: inherit !important;
+  }
+
+  /* Exceções de cor dentro do shell */
+  .light .whatsapp-shell .text-gold-deep,
+  .light .whatsapp-shell .text-gold-light         { color: #CFA764 !important; }
+  .light .whatsapp-shell .text-emerald-400,
+  .light .whatsapp-shell .text-emerald-500        { color: #25d366 !important; }
+  .light .whatsapp-shell .text-emerald-300        { color: #86efac !important; }
+  .light .whatsapp-shell .text-red-500            { color: #ef4444 !important; }
+  .light .whatsapp-shell .text-\[\#e9edef\]       { color: #e9edef !important; }
+  .light .whatsapp-shell .text-\[\#d1d7db\]       { color: #d1d7db !important; }
+  .light .whatsapp-shell .text-\[\#8696a0\]       { color: #8696a0 !important; }
+  .light .whatsapp-shell .text-\[\#aebac1\]       { color: #aebac1 !important; }
+  .light .whatsapp-shell .text-white              { color: #ffffff !important; }
+
+  /* Backgrounds — restaura cada tom WhatsApp */
+  .light .whatsapp-shell .bg-\[\#0b141a\]  { background-color: #0b141a  !important; }
+  .light .whatsapp-shell .bg-\[\#111b21\]  { background-color: #111b21  !important; }
+  .light .whatsapp-shell .bg-\[\#202c33\]  { background-color: #202c33  !important; }
+  .light .whatsapp-shell .bg-\[\#2a3942\]  { background-color: #2a3942  !important; }
+  .light .whatsapp-shell .bg-\[\#233138\]  { background-color: #233138  !important; }
+  .light .whatsapp-shell .bg-\[\#374248\]  { background-color: #374248  !important; }
+  .light .whatsapp-shell .bg-\[\#005c4b\]  { background-color: #005c4b  !important; }
+  .light .whatsapp-shell .bg-\[\#006e5a\]  { background-color: #006e5a  !important; }
+  /* CRM panel lateral (bg-[#111b21]) — coberto acima */
+
+  /* Borders */
+  .light .whatsapp-shell .border-white\/5  { border-color: rgba(255,255,255,0.05) !important; }
+  .light .whatsapp-shell .border-white\/10 { border-color: rgba(255,255,255,0.10) !important; }
+  .light .whatsapp-shell .border-white\/20 { border-color: rgba(255,255,255,0.20) !important; }
+  .light .whatsapp-shell .border-\[\#202c33\] { border-color: #202c33 !important; }
+
+  /* Inputs dentro do shell (barra de mensagem, busca) */
+  .light .whatsapp-shell input,
+  .light .whatsapp-shell select,
+  .light .whatsapp-shell textarea {
+    background-color: transparent !important;
+    color: inherit !important;
+    border-color: transparent !important;
+  }
+  .light .whatsapp-shell input::placeholder,
+  .light .whatsapp-shell textarea::placeholder {
+    color: #8696a0 !important;
+    opacity: 1;
   }
 
   /* Global Typography Standard - Responsive Base (Scaled Down -15%) */
@@ -237,22 +442,13 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #374151;
+    background: var(--scrollbar-thumb);
     border-radius: 10px;
     border: 2px solid transparent;
     background-clip: content-box;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #4b5563;
-    background-clip: content-box;
-  }
-  
-  .light ::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    background-clip: content-box;
-  }
-  .light ::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    background: var(--scrollbar-thumb-hover);
     background-clip: content-box;
   }
 }

@@ -1,0 +1,59 @@
+name: Datadog - Deployment Event
+on:
+  push:
+    branches: [main, production, staging]
+  workflow_dispatch:
+
+jobs:
+  deployment-event:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Deployment Event to Datadog
+        env:
+          DD_API_KEY: ${{ secrets.DATADOG_API_KEY }}
+          DD_SITE: ${{ secrets.DATADOG_SITE }}
+          DD_SERVICE: ${{ vars.DATADOG_SERVICE_NAME }}
+          DD_ENV: ${{ vars.DATADOG_ENVIRONMENT }}
+          DD_VERSION: ${{ github.sha }}
+          GIT_BRANCH: ${{ github.ref_name }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          EVENT_TITLE="Deploy: ${{ github.event.repository.name }} -> ${GIT_BRANCH}"
+          EVENT_TEXT="Service: ${DD_SERVICE}\nEnvironment: ${DD_ENV}\nCommit: ${DD_VERSION}\nAuthor: ${ACTOR}\nMessage: ${COMMIT_MESSAGE}"
+
+          curl -s -o /dev/null -w "%{http_code}" -X POST "https://${DD_SITE}/api/v1/events" \
+            -H "DD-API-KEY: ${DD_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"title\": \"${EVENT_TITLE}\",
+              \"text\": \"${EVENT_TEXT}\",
+              \"tags\": [
+                \"service:${DD_SERVICE}\",
+                \"env:${DD_ENV}\",
+                \"version:${DD_VERSION}\",
+                \"branch:${GIT_BRANCH}\",
+                \"ci:github\",
+                \"type:deployment\"
+              ],
+              \"alert_type\": \"info\"
+            }"
+
+      - name: Comment PR with Datadog Links
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ddSite = '${{ secrets.DATADOG_SITE }}';
+            const svc = '${{ vars.DATADOG_SERVICE_NAME }}';
+            const comment = `## Datadog Monitoring
+            - [Deployment Events](https://app.${ddSite}/event/explorer?query=type:deployment%20service:${svc})
+            - [APM Traces](https://app.${ddSite}/apm/traces?query=service:${svc})
+            - [Logs](https://app.${ddSite}/logs?query=service:${svc})
+            - [RUM Sessions](https://app.${ddSite}/rum/sessions?query=service:${svc})`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

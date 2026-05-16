@@ -1,0 +1,105 @@
+name: Datadog - Build Metrics
+on:
+  push:
+    branches: [main, production, staging]
+
+jobs:
+  metrics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build
+        id: build
+        run: |
+          START=$(date +%s%3N)
+          npm run build
+          END=$(date +%s%3N)
+          echo "build_duration_ms=$((END - START))" >> $GITHUB_OUTPUT
+          echo "build_exit=0" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Calculate Repo Metrics
+        id: metrics
+        run: |
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          echo "commit_count=${COMMIT_COUNT}" >> $GITHUB_OUTPUT
+
+          if [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            FILES_CHANGED=$(git diff --name-only ${{ github.event.before }}..${{ github.sha }} | wc -l | tr -d ' ')
+          else
+            FILES_CHANGED=0
+          fi
+          echo "files_changed=${FILES_CHANGED}" >> $GITHUB_OUTPUT
+
+          # Bundle size (dist folder after build)
+          if [ -d "dist" ]; then
+            BUNDLE_SIZE=$(du -sb dist | awk '{print $1}')
+          else
+            BUNDLE_SIZE=0
+          fi
+          echo "bundle_size=${BUNDLE_SIZE}" >> $GITHUB_OUTPUT
+
+          echo "ts=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Send Metrics to Datadog
+        env:
+          DD_API_KEY: ${{ secrets.DATADOG_API_KEY }}
+          DD_SITE: ${{ secrets.DATADOG_SITE }}
+          DD_SERVICE: ${{ vars.DATADOG_SERVICE_NAME }}
+          DD_ENV: ${{ vars.DATADOG_ENVIRONMENT }}
+          COMMIT_COUNT: ${{ steps.metrics.outputs.commit_count }}
+          FILES_CHANGED: ${{ steps.metrics.outputs.files_changed }}
+          BUNDLE_SIZE: ${{ steps.metrics.outputs.bundle_size }}
+          BUILD_MS: ${{ steps.build.outputs.build_duration_ms }}
+          TS: ${{ steps.metrics.outputs.ts }}
+        run: |
+          BUILD_SUCCESS=$([[ "${{ steps.build.outputs.build_exit }}" == "0" ]] && echo 1 || echo 0)
+
+          curl -s -X POST "https://${DD_SITE}/api/v1/series" \
+            -H "DD-API-KEY: ${DD_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"series\": [
+                {
+                  \"metric\": \"custom.github.commit_count\",
+                  \"points\": [[${TS}, ${COMMIT_COUNT}]],
+                  \"type\": \"gauge\",
+                  \"tags\": [\"service:${DD_SERVICE}\",\"env:${DD_ENV}\",\"branch:${{ github.ref_name }}\"]
+                },
+                {
+                  \"metric\": \"custom.github.files_changed\",
+                  \"points\": [[${TS}, ${FILES_CHANGED}]],
+                  \"type\": \"gauge\",
+                  \"tags\": [\"service:${DD_SERVICE}\",\"env:${DD_ENV}\",\"branch:${{ github.ref_name }}\"]
+                },
+                {
+                  \"metric\": \"custom.github.bundle_size_bytes\",
+                  \"points\": [[${TS}, ${BUNDLE_SIZE}]],
+                  \"type\": \"gauge\",
+                  \"tags\": [\"service:${DD_SERVICE}\",\"env:${DD_ENV}\"]
+                },
+                {
+                  \"metric\": \"custom.github.build_duration_ms\",
+                  \"points\": [[${TS}, ${BUILD_MS:-0}]],
+                  \"type\": \"gauge\",
+                  \"tags\": [\"service:${DD_SERVICE}\",\"env:${DD_ENV}\",\"branch:${{ github.ref_name }}\"]
+                },
+                {
+                  \"metric\": \"custom.github.build_success\",
+                  \"points\": [[${TS}, ${BUILD_SUCCESS}]],
+                  \"type\": \"gauge\",
+                  \"tags\": [\"service:${DD_SERVICE}\",\"env:${DD_ENV}\",\"branch:${{ github.ref_name }}\"]
+                }
+              ]
+            }"

@@ -1,27 +1,25 @@
 
 import React, { lazy, Suspense } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useLeads } from '../contexts/LeadRealtimeContext';
-import { Permissions, VisualIdentityConfig, AgentConfig, Lead, UserProfile } from '../types';
+import { Permissions, VisualIdentityConfig, AgentConfig, UserProfile } from '../types';
 import { DataService } from '../services/DataService';
 
-const DashboardView = lazy(() => import('../domains/dashboard/DashboardPage').then(m => ({ default: m.DashboardView })));
-const LeadsView = lazy(() => import('../domains/leads/LeadsPage').then(m => ({ default: m.LeadsPage })));
-const ChatView = lazy(() => import('../domains/leads/ChatView').then(m => ({ default: m.ChatView })));
-const SalesPipeline = lazy(() => import('../domains/leads/SalesPipeline').then(m => ({ default: m.SalesPipeline })));
-const TeamPage = lazy(() => import('../domains/admin/TeamPage').then(m => ({ default: m.TeamPage })));
-const Settings = lazy(() => import('../domains/settings/SettingsPage').then(m => ({ default: m.Settings })));
-const TechDocs = lazy(() => import('../domains/settings/TechDocs').then(m => ({ default: m.TechDocs })));
-const AgentSettings = lazy(() => import('../domains/settings/AgentSettings').then(m => ({ default: m.AgentSettings })));
-const UserLogsView = lazy(() => import('../domains/admin/UserLogsView').then(m => ({ default: m.UserLogsView })));
-const SystemHealth = lazy(() => import('../domains/settings/SystemHealth').then(m => ({ default: m.SystemHealth })));
-const AdminTools = lazy(() => import('../domains/admin/AdminTools').then(m => ({ default: m.AdminTools })));
-const MensagensAtivas = lazy(() => import('../domains/leads/MensagensAtivas').then(m => ({ default: m.MensagensAtivas })));
-const DiagnosticDashboard = lazy(() => import('../domains/admin/DiagnosticDashboard').then(m => ({ default: m.DiagnosticDashboard })));
+const DashboardView    = lazy(() => import('../domains/dashboard/DashboardPage').then(m => ({ default: m.DashboardView })));
+const LeadsView        = lazy(() => import('../domains/leads/LeadsPage').then(m => ({ default: m.LeadsPage })));
+const ChatView         = lazy(() => import('../domains/leads/ChatView').then(m => ({ default: m.ChatView })));
+const SalesPipeline    = lazy(() => import('../domains/leads/SalesPipeline').then(m => ({ default: m.SalesPipeline })));
+const TeamPage         = lazy(() => import('../domains/admin/TeamPage').then(m => ({ default: m.TeamPage })));
+const Settings         = lazy(() => import('../domains/settings/SettingsPage').then(m => ({ default: m.Settings })));
+const TechDocs         = lazy(() => import('../domains/settings/TechDocs').then(m => ({ default: m.TechDocs })));
+const AgentSettings    = lazy(() => import('../domains/settings/AgentSettings').then(m => ({ default: m.AgentSettings })));
+const UserLogsView     = lazy(() => import('../domains/admin/UserLogsView').then(m => ({ default: m.UserLogsView })));
+const MensagensAtivas  = lazy(() => import('../domains/leads/MensagensAtivas').then(m => ({ default: m.MensagensAtivas })));
 const EmpresasManagement = lazy(() => import('../domains/admin/EmpresasManagement').then(m => ({ default: m.EmpresasManagement })));
+const UserProfilePage    = lazy(() => import('../domains/admin/UserProfilePage').then(m => ({ default: m.UserProfilePage })));
+const LeadPage           = lazy(() => import('../domains/leads/LeadPage').then(m => ({ default: m.LeadPage })));
 
 interface AppContentManagerProps {
-  activeTab: string;
-  setActiveTab: (tab: any) => void;
   permissions: Permissions;
   visualConfig: VisualIdentityConfig;
   setVisualConfig: (c: VisualIdentityConfig) => void;
@@ -37,8 +35,6 @@ const LoadingFallback = () => (
 );
 
 export const AppContentManager: React.FC<AppContentManagerProps> = ({
-  activeTab,
-  setActiveTab,
   permissions,
   visualConfig,
   setVisualConfig,
@@ -46,74 +42,165 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
   setAgentConfig,
   userProfile,
 }) => {
-  const { leads, loading: leadsLoading } = useLeads();
+  const navigate = useNavigate();
+  const { leads } = useLeads();
+
+  // Programmatic navigation — passed as prop to pages that need it
+  const setActiveTab = (tab: string) => navigate('/' + tab);
 
   return (
     <Suspense fallback={<LoadingFallback />}>
       <div className="flex-1 overflow-auto">
+        <Routes>
 
-        {activeTab === 'dashboard' && (
-          <DashboardView visualConfig={visualConfig} setActiveTab={setActiveTab} />
-        )}
-        
-        {activeTab === 'leads' && (
-          <LeadsView 
-            visualConfig={visualConfig}
-            permissions={permissions}
-            setActiveTab={setActiveTab}
+          {/* Default: redirect / to /pipeline */}
+          <Route path="/" element={<Navigate to="/pipeline" replace />} />
+
+          <Route
+            path="/pipeline"
+            element={
+              <SalesPipeline
+                visualConfig={visualConfig}
+                permissions={permissions}
+                setActiveTab={setActiveTab}
+              />
+            }
           />
-        )}
 
-        {activeTab === 'pipeline' && (
-          <SalesPipeline visualConfig={visualConfig} permissions={permissions} setActiveTab={setActiveTab} />
-        )}
-
-        {activeTab === 'chat' && (
-          <ChatView 
-            visualConfig={visualConfig} 
-            permissions={permissions} 
-            agentConfig={agentConfig}
-            setActiveTab={setActiveTab}
-            isSlow={false}
+          <Route
+            path="/dashboard"
+            element={
+              <DashboardView
+                visualConfig={visualConfig}
+                setActiveTab={setActiveTab}
+              />
+            }
           />
-        )}
 
-        {activeTab === 'active_messages' && permissions.canReadAllLeads && (
-          <MensagensAtivas leads={leads} visualConfig={visualConfig} />
-        )}
+          <Route
+            path="/leads"
+            element={
+              <LeadsView
+                visualConfig={visualConfig}
+                permissions={permissions}
+                setActiveTab={setActiveTab}
+              />
+            }
+          />
 
-        {activeTab === 'logs' && permissions.canAccessSettings && <UserLogsView />}
-        
-        {activeTab === 'users' && permissions.canManageUsers && (
-          <TeamPage />
-        )}
+          <Route path="/leads/new" element={<LeadPage />} />
+          <Route path="/leads/:id" element={<LeadPage />} />
 
-        {activeTab === 'agent' && permissions.canAccessSettings && (
-          <div className="p-6">
-            <AgentSettings visualConfig={visualConfig} onUpdate={async (c: any) => {
-              await DataService.update('config', 'agent', c);
-              setAgentConfig(c);
-            }} />
-          </div>
-        )}
+          <Route
+            path="/chat"
+            element={
+              <ChatView
+                visualConfig={visualConfig}
+                permissions={permissions}
+                agentConfig={agentConfig}
+                setActiveTab={setActiveTab}
+                isSlow={false}
+              />
+            }
+          />
 
-        {activeTab === 'settings' && permissions.canAccessSettings && (
-          <div className="p-6">
-            <Settings
-              visualConfig={visualConfig}
-              onUpdateVisualConfig={setVisualConfig}
-              canManageUsers={permissions.canManageUsers}
-              permissions={permissions}
-              userProfile={userProfile}
-            />
-          </div>
-        )}
+          {/* Ativos / Mensagens Ativas */}
+          <Route
+            path="/ativos"
+            element={
+              permissions.canReadAllLeads
+                ? <MensagensAtivas leads={leads} visualConfig={visualConfig} />
+                : <Navigate to="/pipeline" replace />
+            }
+          />
+          <Route
+            path="/active_messages"
+            element={<Navigate to="/ativos" replace />}
+          />
 
-        {activeTab === 'tech-docs' && <TechDocs onBack={() => setActiveTab('settings')} />}
+          <Route
+            path="/logs"
+            element={
+              permissions.canAccessSettings
+                ? <UserLogsView />
+                : <Navigate to="/pipeline" replace />
+            }
+          />
 
-        {activeTab === 'empresas' && userProfile?.superadmin === true && (
-          <EmpresasManagement />
-        )}
+          <Route
+            path="/users"
+            element={
+              permissions.canManageUsers
+                ? <TeamPage />
+                : <Navigate to="/pipeline" replace />
+            }
+          />
+
+          <Route
+            path="/users/:uid"
+            element={
+              permissions.canManageUsers
+                ? <UserProfilePage />
+                : <Navigate to="/pipeline" replace />
+            }
+          />
+
+          <Route
+            path="/agent"
+            element={
+              permissions.canAccessSettings
+                ? (
+                  <div className="p-6">
+                    <AgentSettings
+                      visualConfig={visualConfig}
+                      onUpdate={async (c: any) => {
+                        await DataService.update('config', 'agent', c);
+                        setAgentConfig(c);
+                      }}
+                    />
+                  </div>
+                )
+                : <Navigate to="/pipeline" replace />
+            }
+          />
+
+          <Route
+            path="/settings"
+            element={
+              permissions.canAccessSettings
+                ? (
+                  <div className="p-6">
+                    <Settings
+                      visualConfig={visualConfig}
+                      onUpdateVisualConfig={setVisualConfig}
+                      canManageUsers={permissions.canManageUsers}
+                      permissions={permissions}
+                      userProfile={userProfile}
+                    />
+                  </div>
+                )
+                : <Navigate to="/pipeline" replace />
+            }
+          />
+
+          <Route
+            path="/tech-docs"
+            element={<TechDocs onBack={() => setActiveTab('settings')} />}
+          />
+
+          <Route
+            path="/empresas"
+            element={
+              userProfile?.superadmin === true
+                ? <EmpresasManagement />
+                : <Navigate to="/pipeline" replace />
+            }
+          />
+
+          {/* Fallback: any unknown path → pipeline */}
+          <Route path="*" element={<Navigate to="/pipeline" replace />} />
+
+        </Routes>
       </div>
     </Suspense>
   );

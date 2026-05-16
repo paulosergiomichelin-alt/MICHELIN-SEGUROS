@@ -261,19 +261,22 @@ export const LeadsView = React.memo(({
                       </div>
                     </td>
                     <td className="px-4 py-2.5 hidden lg:table-cell">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-slate-800 overflow-hidden border border-white/10 flex items-center justify-center shrink-0">
-                          {(() => {
-                            const user = crmUsers.find(u => u.uid === (lead.responsibleAgentId || lead.responsibleUserId));
-                            if (user?.photoURL) {
-                              return <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" />;
-                            }
-                            const initial = (lead.responsibleAgentName || user?.name || 'S').charAt(0).toUpperCase();
-                            return <span className="text-[10px] font-bold text-white/40">{initial}</span>;
-                          })()}
-                        </div>
-                        <span className="text-[9px] font-bold text-white/50 truncate max-w-[90px]">{lead.responsibleAgentName || 'Sem agente'}</span>
-                      </div>
+                      {(() => {
+                        const uid = lead.responsibleAgentId || lead.responsibleUserId || lead.ownerId;
+                        const user = uid ? crmUsers.find(u => (u.uid || (u as any).id) === uid) : undefined;
+                        const displayName = lead.responsibleAgentName || user?.name || user?.email || 'Sem agente';
+                        return (
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-slate-800 overflow-hidden border border-white/10 flex items-center justify-center shrink-0">
+                              {user?.photoURL
+                                ? <img src={user.photoURL} alt={displayName} className="w-full h-full object-cover" />
+                                : <span className="text-[10px] font-bold text-white/40">{displayName.charAt(0).toUpperCase()}</span>
+                              }
+                            </div>
+                            <span className="text-[9px] font-bold text-white/50 truncate max-w-[90px]">{displayName}</span>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-2.5 hidden xl:table-cell">
                       <div className="flex flex-col">

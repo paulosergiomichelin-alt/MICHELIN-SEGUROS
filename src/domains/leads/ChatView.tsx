@@ -181,7 +181,7 @@ export const ChatView = React.memo(({
   };
 
   return (
-    <div className="flex h-full w-full bg-[#0b141a] text-[#e9edef] overflow-hidden">
+    <div className="whatsapp-shell flex h-full w-full bg-[#0b141a] text-[#e9edef] overflow-hidden">
       {/* COLUMN 1: Conversations List (320px) */}
       <div className={cn(
         "flex flex-col border-r border-[#202c33] shrink-0 transition-all duration-300",

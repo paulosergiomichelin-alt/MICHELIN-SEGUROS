@@ -1,0 +1,69 @@
+name: Datadog - Lint & Build Check
+on:
+  push:
+    branches: [main, production, staging]
+  pull_request:
+
+jobs:
+  lint-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint
+        id: lint
+        run: npm run lint 2>&1 | tee lint-output.log; echo "lint_exit=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Type Check
+        id: typecheck
+        run: npx tsc --noEmit 2>&1 | tee tsc-output.log; echo "tsc_exit=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Build
+        id: build
+        run: npm run build 2>&1 | tee build-output.log; echo "build_exit=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Send Check Result to Datadog
+        if: always()
+        env:
+          DD_API_KEY: ${{ secrets.DATADOG_API_KEY }}
+          DD_SITE: ${{ secrets.DATADOG_SITE }}
+          DD_SERVICE: ${{ vars.DATADOG_SERVICE_NAME }}
+          LINT_OK: ${{ steps.lint.outputs.lint_exit == '0' && 'passed' || 'failed' }}
+          TSC_OK: ${{ steps.typecheck.outputs.tsc_exit == '0' && 'passed' || 'failed' }}
+          BUILD_OK: ${{ steps.build.outputs.build_exit == '0' && 'passed' || 'failed' }}
+        run: |
+          OVERALL=$([[ "$BUILD_OK" == "passed" ]] && echo "success" || echo "error")
+
+          curl -s -X POST "https://${DD_SITE}/api/v1/events" \
+            -H "DD-API-KEY: ${DD_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"title\": \"CI Check: ${BUILD_OK} — ${{ github.ref_name }}\",
+              \"text\": \"Lint: ${LINT_OK} | TypeCheck: ${TSC_OK} | Build: ${BUILD_OK}\nCommit: ${{ github.sha }}\nBranch: ${{ github.ref_name }}\nAuthor: ${{ github.actor }}\",
+              \"tags\": [
+                \"service:${DD_SERVICE}\",
+                \"branch:${{ github.ref_name }}\",
+                \"lint:${LINT_OK}\",
+                \"typecheck:${TSC_OK}\",
+                \"build:${BUILD_OK}\",
+                \"type:ci\"
+              ],
+              \"alert_type\": \"${OVERALL}\"
+            }"
+
+          # Fail the job if build failed
+          if [[ "${{ steps.build.outputs.build_exit }}" != "0" ]]; then
+            echo "Build failed — see build-output.log"
+            exit 1
+          fi

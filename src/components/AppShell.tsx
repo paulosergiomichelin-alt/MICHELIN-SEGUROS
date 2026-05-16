@@ -16,8 +16,6 @@ interface AppShellProps {
   userProfile: UserProfile | null;
   permissions: Permissions;
   visualConfig: VisualIdentityConfig;
-  activeTab: string;
-  setActiveTab: (tab: any) => void;
   children: React.ReactNode;
 }
 
@@ -27,24 +25,22 @@ const LoadingFallback = () => (
   </div>
 );
 
-export const AppShell: React.FC<AppShellProps> = ({ 
+export const AppShell: React.FC<AppShellProps> = ({
   user,
   userProfile,
   permissions,
   visualConfig,
-  activeTab,
-  setActiveTab,
-  children 
+  children
 }) => {
   const viewport = useViewport();
   const { preferences } = useChatPreferences();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  
+
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('michelin_sidebar_open');
       if (saved !== null) return saved === 'true';
-      
+
       // Default behavior: closed on mobile, open on desktop
       return window.innerWidth >= 768;
     }
@@ -59,7 +55,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   return (
     <ShellProviders user={user} userProfile={userProfile}>
       <div className="flex flex-col md:flex-row h-screen h-[100dvh] overflow-hidden bg-brand-dark text-white font-sans selection:bg-gold-deep/30">
-        <MobileHeader 
+        <MobileHeader
           user={user}
           userProfile={userProfile}
           visualConfig={visualConfig}
@@ -67,9 +63,8 @@ export const AppShell: React.FC<AppShellProps> = ({
           onProfileClick={() => setIsProfileOpen(true)}
         />
 
-        <Sidebar 
-          activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
+        {/* Sidebar — never unmounts, always present */}
+        <Sidebar
           user={user}
           userProfile={userProfile}
           permissions={permissions}
@@ -78,16 +73,16 @@ export const AppShell: React.FC<AppShellProps> = ({
           toggleSidebar={toggleSidebar}
           onProfileClick={() => setIsProfileOpen(true)}
         />
-        
+
         <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
           {/* Overlay for mobile sidebar */}
           {isSidebarOpen && viewport.isMobile && (
-            <div 
+            <div
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] md:hidden transition-all duration-300 animate-in fade-in"
               onClick={() => toggleSidebar(false)}
             />
           )}
-          
+
           <Suspense fallback={<LoadingFallback />}>
             {children}
           </Suspense>
@@ -113,7 +108,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                   viewport.isMobile ? "rounded-0" : "max-w-[1400px] max-h-[95vh] rounded-[2.5rem] border border-white/10"
                 )}
               >
-                <UserProfileModal 
+                <UserProfileModal
                   mode="edit"
                   user={user}
                   profile={userProfile}

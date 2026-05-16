@@ -41,16 +41,18 @@ import { ContactImport } from './ContactImport';
 import { Modal } from '../../components/Modal';
 
 import { LeadsView } from './LeadsView';
+import { useNavigate } from 'react-router-dom';
 
-export const LeadsPage = React.memo(({ 
+export const LeadsPage = React.memo(({
   permissions,
   visualConfig,
   setActiveTab
-}: { 
+}: {
   permissions: Permissions;
   visualConfig: any;
   setActiveTab: (tab: any) => void;
 }) => {
+  const navigate = useNavigate();
   const { leads, loading: leadsLoading, setSelectedLeadId, hasMore: hasMoreLeads, loadMoreLeads } = useLeads();
   const [searchLeads, setSearchLeads] = React.useState('');
   const [showAddLead, setShowAddLead] = React.useState(false);
@@ -122,8 +124,7 @@ export const LeadsPage = React.memo(({
   };
 
   const handleEditLead = (lead: Lead) => {
-    setEditingLead(lead);
-    setShowAddLead(true);
+    navigate('/leads/' + lead.id);
   };
 
   const handleExportLeads = () => {
@@ -230,7 +231,7 @@ export const LeadsPage = React.memo(({
         setActiveTab={setActiveTab}
         setShowDeleteAllConfirm={setShowDeleteAllConfirm}
         setShowImport={setShowImport}
-        setShowAddLead={setShowAddLead}
+        setShowAddLead={(show) => { if (show) navigate('/leads/new'); }}
         isImporting={isImporting}
         loadMoreLeads={loadMoreLeads}
         hasMoreLeads={hasMoreLeads}
@@ -242,21 +243,6 @@ export const LeadsPage = React.memo(({
       />
 
       {/* MODALS */}
-      {showAddLead && (
-        <LeadForm
-          key={editingLead?.id || 'new'}
-          lead={editingLead}
-          onSave={handleSaveLead}
-          onCancel={() => {
-            setShowAddLead(false);
-            setEditingLead(null);
-          }}
-          onNavigateToLead={(targetLead) => {
-            setEditingLead(targetLead);
-          }}
-        />
-      )}
-
       {showImport && (
         <Modal 
           isOpen={showImport} 

@@ -1,0 +1,52 @@
+name: Datadog - Synthetic Tests
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Datadog CI
+        run: npm install -g @datadog/datadog-ci
+
+      - name: Run Synthetic Tests
+        env:
+          DD_API_KEY: ${{ secrets.DATADOG_API_KEY }}
+          DD_APP_KEY: ${{ secrets.DATADOG_APP_KEY }}
+          DD_SITE: ${{ secrets.DATADOG_SITE }}
+        run: |
+          datadog-ci synthetics run-tests \
+            --apiKey "${DD_API_KEY}" \
+            --appKey "${DD_APP_KEY}" \
+            --datadogSite "${DD_SITE}" \
+            --configPath ./datadog-ci.json \
+            --failOnCriticalErrors true \
+            --failOnTimeout true
+        continue-on-error: true
+
+      - name: Report Synthetic Result
+        if: always()
+        env:
+          DD_API_KEY: ${{ secrets.DATADOG_API_KEY }}
+          DD_SITE: ${{ secrets.DATADOG_SITE }}
+          DD_SERVICE: ${{ vars.DATADOG_SERVICE_NAME }}
+          RESULT: ${{ job.status }}
+        run: |
+          ALERT=$([[ "$RESULT" == "success" ]] && echo "success" || echo "error")
+          curl -s -X POST "https://${DD_SITE}/api/v1/events" \
+            -H "DD-API-KEY: ${DD_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"title\": \"Synthetic Tests: ${RESULT}\",
+              \"text\": \"Scheduled synthetic run completed: ${RESULT}\nService: ${DD_SERVICE}\",
+              \"tags\": [\"service:${DD_SERVICE}\",\"type:synthetic\",\"result:${RESULT}\"],
+              \"alert_type\": \"${ALERT}\"
+            }"

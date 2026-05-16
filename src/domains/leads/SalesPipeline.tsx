@@ -32,11 +32,12 @@ import {
   List
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Lead, LeadStatus, LeadTemperature, Permissions } from '../../types';
+import { Lead, LeadStatus, LeadTemperature, Permissions, UserProfile } from '../../types';
 import { cn, maskCPF, maskPhone } from '../../lib/utils';
 import { format, differenceInMinutes, differenceInHours, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useViewport } from '../../hooks/useAppContexts';
+import { useNavigate } from 'react-router-dom';
 import { useLeads } from '../../contexts/LeadRealtimeContext';
 import { DataService } from '../../services/DataService';
 
@@ -85,20 +86,22 @@ const TemperatureBadge = ({ temp }: { temp?: LeadTemperature }) => {
   );
 };
 
-const PipelineCard = React.memo(({ 
-  lead, 
-  index, 
-  stageIndex, 
-  onEditLead, 
-  onOpenChat, 
-  canEditLeads 
-}: { 
-  lead: Lead; 
-  index: number; 
-  stageIndex: number; 
+const PipelineCard = React.memo(({
+  lead,
+  index,
+  stageIndex,
+  onEditLead,
+  onOpenChat,
+  canEditLeads,
+  crmUsers
+}: {
+  lead: Lead;
+  index: number;
+  stageIndex: number;
   onEditLead: (lead: Lead) => void;
   onOpenChat: (leadId: string) => void;
   canEditLeads: boolean;
+  crmUsers: UserProfile[];
 }) => {
   return (
     <motion.div 
@@ -139,16 +142,25 @@ const PipelineCard = React.memo(({
 
         <div className="flex items-center justify-between pt-2.5 mt-0.5 border-t border-white/5">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-gold-deep/10 border border-gold-deep/20 flex items-center justify-center overflow-hidden">
-               {(() => {
-                 const agentName = lead.responsibleAgentName || 'S';
-                 const initials = agentName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-                 return <span className="text-[8px] font-black text-gold-deep">{initials}</span>;
-               })()}
-            </div>
-            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest truncate max-w-[70px]">
-              {lead.responsibleAgentName || 'Sem agente'}
-            </span>
+            {(() => {
+              const uid = lead.responsibleAgentId || lead.responsibleUserId || lead.ownerId;
+              const user = uid ? crmUsers.find(u => (u.uid || (u as any).id) === uid) : undefined;
+              const displayName = lead.responsibleAgentName || user?.name || user?.email || 'Sem agente';
+              const initials = displayName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
+              return (
+                <>
+                  <div className="w-6 h-6 rounded-full bg-gold-deep/10 border border-gold-deep/20 flex items-center justify-center overflow-hidden">
+                    {user?.photoURL
+                      ? <img src={user.photoURL} alt={displayName} className="w-full h-full object-cover" />
+                      : <span className="text-[8px] font-black text-gold-deep">{initials}</span>
+                    }
+                  </div>
+                  <span className="text-[8px] font-black text-white/20 uppercase tracking-widest truncate max-w-[70px]">
+                    {displayName}
+                  </span>
+                </>
+              );
+            })()}
           </div>
           <button 
             onClick={(e) => { e.stopPropagation(); onOpenChat(lead.id); }}
@@ -177,7 +189,7 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
     </div>
   ), []);
 
-  const PipelineStage = React.useMemo(() => ({ stage, stageLeads, sIdx, draggedLeadId, handleDragOver, handleDrop, onEditLead, onOpenChat, canEditLeads }: any) => {
+  const PipelineStage = React.useMemo(() => ({ stage, stageLeads, sIdx, draggedLeadId, handleDragOver, handleDrop, onEditLead, onOpenChat, canEditLeads, crmUsers }: any) => {
     const { color, icon: Icon } = STAGE_CONFIG[stage] || STAGE_CONFIG['Novo Lead'];
     const Empty = EmptyColumn;
     return (
@@ -217,6 +229,7 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
                 onEditLead={onEditLead}
                 onOpenChat={onOpenChat}
                 canEditLeads={canEditLeads}
+                crmUsers={crmUsers}
               />
             ))}
           </AnimatePresence>
@@ -225,10 +238,16 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
       </div>
     );
   }, [EmptyColumn]);
-  const { leads, setSelectedLeadId } = useLeads();
+  const { leads, loading: leadsLoading, setSelectedLeadId } = useLeads();
+  const navigate = useNavigate();
   const viewport = useViewport();
   const [draggedLeadId, setDraggedLeadId] = React.useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [crmUsers, setCrmUsers] = React.useState<UserProfile[]>([]);
+
+  React.useEffect(() => {
+    DataService.list('users').then(users => setCrmUsers(users as UserProfile[])).catch(() => {});
+  }, []);
 
   const initialRender = React.useRef(true);
 
@@ -261,8 +280,7 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
   };
 
   const onEditLead = (lead: Lead) => {
-    // Lead details can be handled by passing the lead to a parent or shared context
-    console.log('Edit lead:', lead.id);
+    navigate('/leads/' + lead.id);
   };
 
   const groupedLeads = useMemo(() => {
@@ -321,7 +339,7 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
             <RefreshCcw className={cn("w-3.5 h-3.5", isRefreshing && "animate-spin")} />
           </button>
           <button 
-            onClick={() => setActiveTab?.('leads')}
+            onClick={() => navigate('/leads/new')}
             className="flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-1.5 rounded-lg bg-gold-deep text-brand-dark hover:bg-gold-deep/90 transition-all font-black text-[9px] uppercase tracking-widest shadow-[0_0_15px_rgba(207,167,100,0.1)]"
           >
             <PlusCircle className="w-3.5 h-3.5" />
@@ -366,7 +384,15 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
       </div>
 
       {/* KANBAN BOARD */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden bg-[#0B0B0D] scrollbar-hide snap-x snap-mandatory">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden bg-[#0B0B0D] scrollbar-hide snap-x snap-mandatory relative">
+        {leadsLoading && leads.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center z-10 bg-[#0B0B0D]/80 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-8 h-8 border-2 border-gold-deep/30 border-t-gold-deep rounded-full animate-spin" />
+              <span className="text-[9px] font-bold text-white/30 uppercase tracking-[0.2em]">Carregando leads...</span>
+            </div>
+          </div>
+        )}
         <div className="flex h-full p-3 md:p-4 gap-3 min-w-max">
           {STAGES.map((stage, sIdx) => (
             <PipelineStage
@@ -380,6 +406,7 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
               onEditLead={onEditLead}
               onOpenChat={onOpenChat}
               canEditLeads={permissions.canWriteAllLeads}
+              crmUsers={crmUsers}
             />
           ))}
         </div>

@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PDFViewer } from '../../components/PDFViewer';
-import { Modal } from '../../components/Modal';
 import { useViewport } from '../../hooks/useAppContexts';
 import { Lead, LeadStatus, LeadTemperature, AgentConfig, UserProfile, LeadDocument, DocumentProcessingStage } from '../../types';
 import { agentService } from '../../services/agentService';
@@ -34,6 +33,7 @@ interface LeadFormProps {
   onDelete?: (id: string) => void;
   onNavigateToLead?: (lead: Lead) => void;
   agentConfig?: AgentConfig;
+  pageMode?: boolean;
 }
 
 const INITIAL_LEAD: Partial<Lead> = {
@@ -631,7 +631,7 @@ const QuoteItem = React.memo(({ file, index, onPreview, onDelete }: any) => {
 
 // --- MAIN COMPONENT ---
 
-export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNavigateToLead, agentConfig: externalAgentConfig }: LeadFormProps) => {
+export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNavigateToLead, agentConfig: externalAgentConfig, pageMode = false }: LeadFormProps) => {
   const viewport = useViewport();
   const [formData, setFormData] = useState<Partial<Lead>>(() => {
     const initial = lead ? { ...INITIAL_LEAD, ...lead } : {
@@ -1170,7 +1170,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
       fiduciaryAlienation: formData.alienacaoFiduciaria ?? formData.fiduciaryAlienation,
       nextReturnAt: formData.proximoRetorno || formData.nextReturnAt,
       responsibleAgentId: formData.responsibleUserId || formData.responsibleAgentId,
-      responsibleAgentName: formData.responsibleAgentName || crmUsers.find(u => u.uid === (formData.responsibleUserId || formData.responsibleAgentId))?.name || 'Sem agente',
+      responsibleAgentName: formData.responsibleAgentName || crmUsers.find(u => (u.uid || (u as any).id) === (formData.responsibleUserId || formData.responsibleAgentId))?.name || 'Sem agente',
       updatedAt: new Date().toISOString()
     } as Lead;
 
@@ -1197,22 +1197,30 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.18 }}
-        className="fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-6"
+        className={pageMode
+          ? "flex-1 flex flex-col bg-[#050505] text-white overflow-hidden relative"
+          : "fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-6"
+        }
       >
-        {/* Backdrop premium: clique fora fecha (com confirmação se dirty) */}
-        <div
-          onClick={() => isDirty ? setShowExitConfirm(true) : onCancel()}
-          className="absolute inset-0 bg-black/70 backdrop-blur-md cursor-pointer"
-          aria-hidden="true"
-        />
+        {/* Backdrop — only in modal mode */}
+        {!pageMode && (
+          <div
+            onClick={() => isDirty ? setShowExitConfirm(true) : onCancel()}
+            className="absolute inset-0 bg-black/70 backdrop-blur-md cursor-pointer"
+            aria-hidden="true"
+          />
+        )}
 
-        {/* Card centralizado responsivo — sobrepõe menu lateral via z-index */}
+        {/* Card: bounded modal or full-height page */}
         <motion.div
           initial={{ opacity: 0, y: 18, scale: 0.985 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 18, scale: 0.985 }}
           transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-          className="relative w-full max-w-[1100px] max-h-[92vh] flex flex-col bg-[#050505] text-white rounded-3xl border border-white/10 shadow-[0_50px_120px_rgba(0,0,0,0.75)] overflow-hidden isolate"
+          className={pageMode
+            ? "flex-1 flex flex-col bg-[#050505] text-white overflow-hidden"
+            : "relative w-full max-w-[1100px] max-h-[92vh] flex flex-col bg-[#050505] text-white rounded-3xl border border-white/10 shadow-[0_50px_120px_rgba(0,0,0,0.75)] overflow-hidden isolate"
+          }
         >
       {/* Header - Always Fixed at Top */}
       <div className="shrink-0 h-16 border-b border-white/5 bg-[#0B0B0D]/90 backdrop-blur-2xl px-6 md:px-8 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.8)] z-50">
@@ -1785,7 +1793,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
-                onClick={() => isDirty ? setShowExitConfirm(true) : onCancel()}
+                onClick={() => onCancel()}
                 className="flex-1 h-12 bg-[#1A1C1E] border border-white/5 rounded-xl text-[#8E8E93] font-black uppercase text-[10px] tracking-[0.3em] hover:bg-[#1C1E20] hover:text-white transition-all active:scale-[0.99]"
               >
                 Cancelar
@@ -1806,6 +1814,49 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
       </form>
 
         </motion.div>
+
+        {/* Exit confirm — rendered inside the z-[9999] container so it sits above the backdrop */}
+        <AnimatePresence>
+          {showExitConfirm && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowExitConfirm(false)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.94, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.94, y: 12 }}
+                transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                className="bg-[#0B0B0D] border border-white/10 rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl"
+                onClick={e => e.stopPropagation()}
+              >
+                <AlertCircle className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+                <p className="text-sm font-black text-white uppercase tracking-widest">Alterações não salvas</p>
+                <p className="text-[11px] text-[#8E8E93] mt-2 mb-8 leading-relaxed">
+                  Campos foram alterados mas não foram salvos.<br />Deseja sair sem salvar?
+                </p>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => setShowExitConfirm(false)}
+                    className="h-12 bg-gradient-to-r from-[#D4A854] to-[#CFA764] text-black font-black uppercase text-[10px] tracking-widest rounded-xl hover:brightness-110 transition-all active:scale-[0.98]"
+                  >
+                    Continuar Editando
+                  </button>
+                  <button
+                    onClick={() => { setShowExitConfirm(false); onCancel(); }}
+                    className="h-12 bg-white/5 border border-white/10 text-red-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-red-500/10 hover:border-red-500/30 transition-all active:scale-[0.98]"
+                  >
+                    Sair sem salvar
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       {/* Universal Document Viewer & Validator */}
@@ -1819,31 +1870,11 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
         debug={viewerState.debug}
         onConfirm={viewerState.onConfirm}
         onClose={() => {
-          // Always release the session and clear hydration locks. release() is a no-op
-          // if there's no active session; calling it unconditionally avoids the case
-          // where state was already finalized but the viewer kept reopening on a stale
-          // subscriber tick.
           controller.release();
           hydrationLockRef.current.clear();
           setViewerState({ isOpen: false });
         }}
       />
-
-      <AnimatePresence>
-        {showExitConfirm && (
-          <Modal isOpen={showExitConfirm} onClose={() => setShowExitConfirm(false)} title="Abandonar?" maxWidth="max-w-sm">
-            <div className="p-8 text-center bg-[#0B0B0D]">
-               <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-               <p className="text-sm font-bold text-white uppercase tracking-tight">Alterações não salvas</p>
-               <p className="text-[10px] text-[#8E8E93] mt-2 mb-8">Deseja realmente sair sem salvar?</p>
-               <div className="flex flex-col gap-3">
-                 <button onClick={() => setShowExitConfirm(false)} className="h-12 bg-[#D4A854] text-black font-black uppercase text-[10px] tracking-widest rounded-xl">Continuar Editando</button>
-                 <button onClick={() => onCancel()} className="h-12 bg-white/5 text-red-500 font-bold uppercase text-[10px] tracking-widest rounded-xl">Sair sem salvar</button>
-               </div>
-            </div>
-          </Modal>
-        )}
-      </AnimatePresence>
     </>
   );
 });
