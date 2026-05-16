@@ -150,15 +150,13 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
             element={
               permissions.canAccessSettings
                 ? (
-                  <div className="p-6">
-                    <AgentSettings
-                      visualConfig={visualConfig}
-                      onUpdate={async (c: any) => {
-                        await DataService.update('config', 'agent', c);
-                        setAgentConfig(c);
-                      }}
-                    />
-                  </div>
+                  <AgentSettings
+                    visualConfig={visualConfig}
+                    onUpdate={async (c: any) => {
+                      await DataService.update('config', 'agent', c);
+                      setAgentConfig(c);
+                    }}
+                  />
                 )
                 : <Navigate to="/pipeline" replace />
             }
@@ -169,15 +167,13 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
             element={
               permissions.canAccessSettings
                 ? (
-                  <div className="p-6">
-                    <Settings
-                      visualConfig={visualConfig}
-                      onUpdateVisualConfig={setVisualConfig}
-                      canManageUsers={permissions.canManageUsers}
-                      permissions={permissions}
-                      userProfile={userProfile}
-                    />
-                  </div>
+                  <Settings
+                    visualConfig={visualConfig}
+                    onUpdateVisualConfig={setVisualConfig}
+                    canManageUsers={permissions.canManageUsers}
+                    permissions={permissions}
+                    userProfile={userProfile}
+                  />
                 )
                 : <Navigate to="/pipeline" replace />
             }

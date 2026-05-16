@@ -292,107 +292,72 @@ CLASSIFICAÇÃO:
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 font-sans pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gold-deep font-display uppercase tracking-tight flex items-center gap-3">
-             <Bot className="w-8 h-8" />
-             Configuração do Agente IA
-          </h2>
-          <div className="flex items-center gap-2 mt-1">
-            <p className="text-slate-400 text-[10px] sm:text-xs uppercase tracking-widest font-bold">Personalidade e diretrizes</p>
-            <AnimatePresence>
-              {autoSaveStatus !== 'idle' && (
-                <motion.div 
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0 }}
-                  className={cn(
-                    "flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-widest",
-                    autoSaveStatus === 'saving' ? "bg-brand-black text-gold-deep border-gold-deep/20" :
-                    autoSaveStatus === 'saved' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
-                    "bg-red-500/10 text-red-500 border-red-500/20"
-                  )}
-                >
-                  {autoSaveStatus === 'saving' ? (
-                    <>
-                      <RefreshCcw className="w-2 h-2 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : autoSaveStatus === 'saved' ? (
-                    <>
-                      <CheckCircle2 className={cn("w-2 h-2", "lucide-check-circle-2")} />
-                      Salvo
-                    </>
-                  ) : (
-                    <>
-                      <ShieldAlert className="w-2 h-2" />
-                      Erro
-                    </>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-3 px-4 py-2 rounded-2xl border transition-all bg-emerald-500/10 border-emerald-500/20 text-emerald-500">
-           <Zap className="w-4 h-4 animate-pulse" />
-           <span className="text-[10px] font-bold uppercase tracking-widest">Agente Always-On Ativado</span>
-        </div>
-      </div>
-
-      <div className="flex border-b border-white/5 gap-8 overflow-x-auto no-scrollbar">
-        <button 
+    <div className="flex flex-col min-h-full font-sans">
+      {/* Horizontal Tab Bar */}
+      <nav className="flex-shrink-0 sticky top-0 z-10 bg-[#050505] border-b border-white/5 px-2 flex items-center overflow-x-auto">
+        <button
           onClick={() => setActiveTab('flows')}
           className={cn(
-            "pb-4 px-2 text-xs font-bold uppercase tracking-widest transition-all relative shrink-0",
-            activeTab === 'flows' ? "text-gold-deep" : "text-slate-500 hover:text-slate-400"
+            "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
+            activeTab === 'flows' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
           )}
         >
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4" />
-            Fluxos Inteligentes
-          </div>
-          {activeTab === 'flows' && (
-            <motion.div layoutId="agent-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-deep shadow-[0_0_10px_rgba(212,175,55,0.5)]" />
-          )}
+          <Zap className="w-3.5 h-3.5 flex-shrink-0" /> Fluxos Inteligentes
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('documents')}
           className={cn(
-            "pb-4 px-2 text-xs font-bold uppercase tracking-widest transition-all relative shrink-0",
-            activeTab === 'documents' ? "text-gold-deep" : "text-slate-500 hover:text-slate-400"
+            "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
+            activeTab === 'documents' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
           )}
         >
-          <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            Extração de Documentos
-          </div>
-          {activeTab === 'documents' && (
-            <motion.div layoutId="agent-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-deep shadow-[0_0_10px_rgba(212,175,55,0.5)]" />
-          )}
+          <FileText className="w-3.5 h-3.5 flex-shrink-0" /> Extração de Docs
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('automation')}
           className={cn(
-            "pb-4 px-2 text-xs font-bold uppercase tracking-widest transition-all relative shrink-0",
-            activeTab === 'automation' ? "text-gold-deep" : "text-slate-500 hover:text-slate-400"
+            "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
+            activeTab === 'automation' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
           )}
         >
-          <div className="flex items-center gap-2">
-            <History className="w-4 h-4" />
-            Automação & Follow-up
-          </div>
-          {activeTab === 'automation' && (
-            <motion.div layoutId="agent-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-deep shadow-[0_0_10px_rgba(212,175,55,0.5)]" />
-          )}
+          <History className="w-3.5 h-3.5 flex-shrink-0" /> Automação & Follow-up
         </button>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Persona Settings */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="ml-auto flex items-center gap-3 pl-4 py-2 flex-shrink-0">
+          <AnimatePresence>
+            {autoSaveStatus !== 'idle' && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className={cn(
+                  "flex items-center gap-1.5 px-2 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest",
+                  autoSaveStatus === 'saving' ? "bg-brand-black text-gold-deep border-gold-deep/20" :
+                  autoSaveStatus === 'saved' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
+                  "bg-red-500/10 text-red-500 border-red-500/20"
+                )}
+              >
+                {autoSaveStatus === 'saving' ? (
+                  <><RefreshCcw className="w-2 h-2 animate-spin" /> Salvando...</>
+                ) : autoSaveStatus === 'saved' ? (
+                  <><CheckCircle2 className="w-2 h-2" /> Salvo</>
+                ) : (
+                  <><ShieldAlert className="w-2 h-2" /> Erro</>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+            <Zap className="w-3 h-3 text-emerald-400 animate-pulse" />
+            <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-widest">Always-On</span>
+          </div>
+        </div>
+      </nav>
+
+      {/* Dynamic Content Area */}
+      <div className="flex-1 min-w-0 overflow-y-auto">
+        <div className="p-8 space-y-6">
+          <div>
           {activeTab === 'flows' ? (
             <div className="space-y-6">
               <section className="bg-brand-dark p-3 md:p-4 rounded-[1.5rem] border border-gold-deep/20 shadow-lg space-y-3">
@@ -402,7 +367,7 @@ CLASSIFICAÇÃO:
                 </div>
 
                 <div className="space-y-4">
-                  <div className="p-4 bg-brand-black/60 rounded-2xl border border-slate-800">
+                  <div className="p-4 bg-brand-black/60 rounded-2xl border border-white/5">
                     <div className="mb-4 pb-4 border-b border-white/5 space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
@@ -423,7 +388,7 @@ CLASSIFICAÇÃO:
                     </div>
 
                     {config.provider === 'openrouter' && (
-                      <div className="mb-4 p-3 bg-brand-black/40 border border-slate-800 rounded-xl">
+                      <div className="mb-4 p-3 bg-brand-black/40 border border-white/5 rounded-xl">
                         <div className="flex items-center justify-between">
                           <p className="text-[9px] font-bold text-gold-light uppercase tracking-widest flex items-center gap-2">
                              <Key className="w-3 h-3" />
@@ -461,7 +426,7 @@ CLASSIFICAÇÃO:
                         <select
                           value={config.model}
                           onChange={(e) => handleModelChange(e.target.value)}
-                          className="w-full px-3 py-2 bg-brand-black border border-slate-700 rounded-xl text-xs font-bold text-gold-deep focus:ring-2 focus:ring-gold-deep/20 focus:border-gold-deep outline-none appearance-none cursor-pointer"
+                          className="w-full px-3 py-2 bg-brand-black border border-white/5 rounded-xl text-xs font-bold text-gold-deep focus:ring-2 focus:ring-gold-deep/20 focus:border-gold-deep outline-none appearance-none cursor-pointer"
                         >
                           <optgroup label="Recomendados (Estáveis)">
                              <option value="openai/gpt-4o-mini">GPT-4o Mini (Sales Primary)</option>
@@ -491,7 +456,7 @@ CLASSIFICAÇÃO:
                 </div>
 
                 <div className="space-y-4">
-                  <div className="p-4 bg-brand-black/60 rounded-2xl border border-slate-800">
+                  <div className="p-4 bg-brand-black/60 rounded-2xl border border-white/5">
                     <p className="text-[9px] font-bold text-gold-light uppercase mb-3 tracking-widest">Motor de Extração</p>
                     <div className="grid grid-cols-1 gap-2 mb-4">
                       <button
@@ -511,7 +476,7 @@ CLASSIFICAÇÃO:
                       <select
                         value={config.extraction?.model || config.model}
                         onChange={(e) => handleModelChange(e.target.value)}
-                        className="w-full px-3 py-2 bg-brand-black border border-slate-700 rounded-xl text-xs font-bold text-gold-deep focus:ring-2 focus:ring-gold-deep/20 focus:border-gold-deep outline-none appearance-none cursor-pointer"
+                        className="w-full px-3 py-2 bg-brand-black border border-white/5 rounded-xl text-xs font-bold text-gold-deep focus:ring-2 focus:ring-gold-deep/20 focus:border-gold-deep outline-none appearance-none cursor-pointer"
                       >
                         <optgroup label="Recomendados (Document AI)">
                            <option value="gpt-4o">GPT-4o (Precisão Máxima)</option>
@@ -547,7 +512,7 @@ CLASSIFICAÇÃO:
                         value={config.extraction?.name || 'Analisador de Documentos'}
                         onChange={handleChange}
                         placeholder="Ex: Assistente Michelin"
-                        className="w-full pl-10 pr-4 py-3 bg-brand-black border border-slate-700 rounded-2xl focus:ring-2 focus:ring-gold-deep/20 focus:border-gold-deep text-white text-sm font-medium"
+                        className="w-full pl-10 pr-4 py-3 bg-brand-black border border-white/5 rounded-2xl focus:ring-2 focus:ring-gold-deep/20 focus:border-gold-deep text-white text-sm font-medium"
                       />
                     </div>
                   </div>
@@ -562,7 +527,7 @@ CLASSIFICAÇÃO:
                         value={config.extraction?.persona || 'Especialista em OCR e Extração de Dados'}
                         onChange={handleChange}
                         placeholder="Ex: Consultor de Seguros Auto"
-                        className="w-full pl-10 pr-4 py-3 bg-brand-black border border-slate-700 rounded-2xl focus:ring-2 focus:ring-gold-deep/20 focus:border-gold-deep text-white text-sm font-medium"
+                        className="w-full pl-10 pr-4 py-3 bg-brand-black border border-white/5 rounded-2xl focus:ring-2 focus:ring-gold-deep/20 focus:border-gold-deep text-white text-sm font-medium"
                       />
                     </div>
                   </div>
@@ -576,7 +541,7 @@ CLASSIFICAÇÃO:
                     onChange={handleChange}
                     rows={6}
                     placeholder="Descreva detalhadamente como o agente deve se comportar..."
-                    className="w-full p-4 bg-brand-black border border-slate-700 rounded-2xl focus:ring-2 focus:ring-gold-deep/20 focus:border-gold-deep text-white text-sm font-medium leading-relaxed resize-none"
+                    className="w-full p-4 bg-brand-black border border-white/5 rounded-2xl focus:ring-2 focus:ring-gold-deep/20 focus:border-gold-deep text-white text-sm font-medium leading-relaxed resize-none"
                   />
                   <p className="text-[9px] text-slate-500 mt-1 italic italic-medium px-2 italic text-left">
                     Defina como a IA deve extrair e validar os campos dos documentos (Placa, CPF, etc).
@@ -588,7 +553,7 @@ CLASSIFICAÇÃO:
                 <Info className="w-6 h-6 text-gold-deep shrink-0" />
                 <div>
                     <h4 className="text-xs font-bold text-gold-light uppercase mb-1">Dica de Extração</h4>
-                    <p className="text-[11px] text-black leading-relaxed font-bold bg-gold-deep/10 p-2 rounded-lg">
+                    <p className="text-[11px] text-white/70 leading-relaxed font-bold bg-gold-deep/10 p-2 rounded-lg">
                       O Agente de Documentos é especializado em ler fotos de CNH, CRV e Apólices. Recomendamos o **Claude 3.5 Sonnet** (via OpenRouter) para uma visão computacional superior em documentos complexos.
                     </p>
                 </div>
@@ -613,14 +578,14 @@ CLASSIFICAÇÃO:
 
                 <div className="space-y-4">
                   {config.followUps.length === 0 ? (
-                    <div className="text-center py-12 px-6 border-2 border-dashed border-slate-800 rounded-[2rem]">
+                    <div className="text-center py-12 px-6 border-2 border-dashed border-white/5 rounded-[2rem]">
                       <MessageSquare className="w-12 h-12 text-slate-700 mx-auto mb-4" />
                       <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Nenhum follow-up configurado</p>
                       <p className="text-[10px] text-slate-600 mt-2">Clique em "Novo Follow-up" para criar uma regra de retorno automático.</p>
                     </div>
                   ) : (
                     config.followUps.map((fu) => (
-                      <div key={fu.id} className="p-6 bg-brand-black/60 border border-slate-800 rounded-3xl space-y-6 group relative">
+                      <div key={fu.id} className="p-6 bg-brand-black/60 border border-white/5 rounded-3xl space-y-6 group relative">
                         <button 
                           onClick={() => handleRemoveFollowUp(fu.id)}
                           className="absolute top-6 right-6 p-2 text-slate-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
@@ -635,7 +600,7 @@ CLASSIFICAÇÃO:
                               type="text" 
                               value={fu.description}
                               onChange={(e) => handleUpdateFollowUp(fu.id, 'description', e.target.value)}
-                              className="w-full px-4 py-2.5 bg-brand-black border border-slate-700 rounded-xl text-xs text-white"
+                              className="w-full px-4 py-2.5 bg-brand-black border border-white/5 rounded-xl text-xs text-white"
                             />
                           </div>
 
@@ -646,7 +611,7 @@ CLASSIFICAÇÃO:
                                 type="number" 
                                 value={fu.daysDelay}
                                 onChange={(e) => handleUpdateFollowUp(fu.id, 'daysDelay', parseInt(e.target.value))}
-                                className="w-full px-4 py-2.5 bg-brand-black border border-slate-700 rounded-xl text-xs text-white"
+                                className="w-full px-4 py-2.5 bg-brand-black border border-white/5 rounded-xl text-xs text-white"
                               />
                             </div>
                             <div className="space-y-2">
@@ -655,7 +620,7 @@ CLASSIFICAÇÃO:
                                 type="number" 
                                 value={fu.hoursDelay}
                                 onChange={(e) => handleUpdateFollowUp(fu.id, 'hoursDelay', parseInt(e.target.value))}
-                                className="w-full px-4 py-2.5 bg-brand-black border border-slate-700 rounded-xl text-xs text-white"
+                                className="w-full px-4 py-2.5 bg-brand-black border border-white/5 rounded-xl text-xs text-white"
                               />
                             </div>
                           </div>
@@ -666,7 +631,7 @@ CLASSIFICAÇÃO:
                           <select 
                             value={fu.condition}
                             onChange={(e) => handleUpdateFollowUp(fu.id, 'condition', e.target.value)}
-                            className="w-full px-4 py-2.5 bg-brand-black border border-slate-700 rounded-xl text-xs text-gold-deep font-bold"
+                            className="w-full px-4 py-2.5 bg-brand-black border border-white/5 rounded-xl text-xs text-gold-deep font-bold"
                           >
                             <option value="status == 'Novo Lead'">Se Status for "Novo Lead"</option>
                             <option value="status == 'Em Atendimento'">Se Status for "Em Atendimento"</option>
@@ -682,19 +647,19 @@ CLASSIFICAÇÃO:
                             value={fu.template}
                             onChange={(e) => handleUpdateFollowUp(fu.id, 'template', e.target.value)}
                             rows={3}
-                            className="w-full p-4 bg-brand-black border border-slate-700 rounded-2xl text-xs text-white leading-relaxed resize-none"
+                            className="w-full p-4 bg-brand-black border border-white/5 rounded-2xl text-xs text-white leading-relaxed resize-none"
                             placeholder="Escreva a mensagem que o agente enviará..."
                           />
                         </div>
 
-                        <div className="pt-4 border-t border-slate-800">
+                        <div className="pt-4 border-t border-white/5">
                           <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
                              <Clock className="w-3 h-3" />
                              Janelas de Horário para este Follow-up
                           </p>
                           <div className="grid grid-cols-2 gap-3">
                             {fu.windows.map((window, wIdx) => (
-                              <div key={wIdx} className="p-3 bg-brand-black/40 border border-slate-800 rounded-xl space-y-3">
+                              <div key={wIdx} className="p-3 bg-brand-black/40 border border-white/5 rounded-xl space-y-3">
                                 <input 
                                   type="text"
                                   value={window.label}
@@ -706,14 +671,14 @@ CLASSIFICAÇÃO:
                                     type="time" 
                                     value={window.start}
                                     onChange={(e) => handleUpdateFollowUpWindow(fu.id, wIdx, 'start', e.target.value)}
-                                    className="bg-transparent border border-slate-700 rounded px-1 text-[9px] text-white"
+                                    className="bg-transparent border border-white/5 rounded px-1 text-[9px] text-white"
                                   />
                                   <span className="text-slate-600">às</span>
                                   <input 
                                     type="time" 
                                     value={window.end}
                                     onChange={(e) => handleUpdateFollowUpWindow(fu.id, wIdx, 'end', e.target.value)}
-                                    className="bg-transparent border border-slate-700 rounded px-1 text-[9px] text-white"
+                                    className="bg-transparent border border-white/5 rounded px-1 text-[9px] text-white"
                                   />
                                 </div>
                               </div>
@@ -748,7 +713,7 @@ CLASSIFICAÇÃO:
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 p-4 bg-slate-900/50 rounded-2xl border border-slate-800">
+                <div className="flex items-center gap-3 p-4 bg-black/20 rounded-2xl border border-white/5">
                   <Globe className="w-4 h-4 text-slate-500" />
                   <div className="flex-1">
                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Fuso Horário</p>
@@ -770,10 +735,6 @@ CLASSIFICAÇÃO:
             </div>
           )}
         </div>
-
-        {/* Sidebar Settings */}
-        <div className="space-y-6">
-          {/* Sidebar content removed as requested to keep only main sections */}
         </div>
       </div>
     </div>

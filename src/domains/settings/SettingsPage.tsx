@@ -541,182 +541,159 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
   ];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 font-sans">
-      <SystemDocumentationModal 
-        isOpen={isDocsModalOpen} 
-        onClose={() => setIsDocsModalOpen(false)} 
+    <div className="flex flex-col min-h-full font-sans">
+      <SystemDocumentationModal
+        isOpen={isDocsModalOpen}
+        onClose={() => setIsDocsModalOpen(false)}
       />
-      
-      {/* Tab Navigation */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 px-1">
-        <div className="flex bg-brand-dark p-1 rounded-2xl border border-white/5 backdrop-blur-md">
+
+      {/* Horizontal Tab Bar */}
+      <nav className="flex-shrink-0 sticky top-0 z-10 bg-[#050505] border-b border-white/5 px-2 flex items-center overflow-x-auto">
+        <button
+          onClick={() => setActiveSubTab('general')}
+          className={cn(
+            "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
+            activeSubTab === 'general' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+          )}
+        >
+          <Cog className="w-3.5 h-3.5 flex-shrink-0" /> Geral
+        </button>
+
+        {userProfile?.organizationId && !userProfile.superadmin && (
           <button
-            onClick={() => setActiveSubTab('general')}
+            onClick={() => setActiveSubTab('empresa')}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-              activeSubTab === 'general' ? "bg-gold-deep text-brand-black shadow-lg shadow-gold-deep/20" : "text-slate-500 hover:text-white"
+              "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
+              activeSubTab === 'empresa' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
             )}
           >
-            <Cog className="w-3.5 h-3.5" /> GERAL
+            <Building2 className="w-3.5 h-3.5 flex-shrink-0" /> Empresa
           </button>
+        )}
 
-          {userProfile?.organizationId && !userProfile.superadmin && (
-            <button
-              onClick={() => setActiveSubTab('empresa')}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                activeSubTab === 'empresa' ? "bg-gold-deep text-brand-black shadow-lg shadow-gold-deep/20" : "text-slate-500 hover:text-white"
-              )}
-            >
-              <Building2 className="w-3.5 h-3.5" /> EMPRESA
-            </button>
+        <button
+          onClick={() => setActiveSubTab('ai_ocr')}
+          className={cn(
+            "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
+            activeSubTab === 'ai_ocr' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
           )}
+        >
+          <Bot className="w-3.5 h-3.5 flex-shrink-0" /> OCR IA
+        </button>
 
+        {canManageUsers && (
           <button
-            onClick={() => setActiveSubTab('ai_ocr')}
+            onClick={() => setActiveSubTab('diagnostic')}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-              activeSubTab === 'ai_ocr' ? "bg-gold-deep text-brand-black shadow-lg shadow-gold-deep/20" : "text-slate-500 hover:text-white"
+              "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
+              activeSubTab === 'diagnostic' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
             )}
           >
-            <Bot className="w-3.5 h-3.5" /> OCR IA
+            <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" /> Diagnóstico
           </button>
+        )}
 
-          {canManageUsers && (
+        {canManageUsers && (
+          <button
+            onClick={() => setActiveSubTab('health')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
+              activeSubTab === 'health' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+            )}
+          >
+            <Activity className="w-3.5 h-3.5 flex-shrink-0" /> Saúde
+          </button>
+        )}
+
+        {canManageUsers && (
+          <button
+            onClick={() => setActiveSubTab('admin')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
+              activeSubTab === 'admin' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+            )}
+          >
+            <Wrench className="w-3.5 h-3.5 flex-shrink-0" /> Admin
+          </button>
+        )}
+
+        <div className="ml-auto flex items-center gap-3 pl-4 py-2 flex-shrink-0">
+          <AnimatePresence>
+            {autoSaveStatus !== 'idle' && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className={cn(
+                  "flex items-center gap-1.5 px-2 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest",
+                  autoSaveStatus === 'saving' ? "bg-brand-black text-gold-deep border-gold-deep/20" :
+                  autoSaveStatus === 'saved' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
+                  "bg-red-500/10 text-red-500 border-red-500/20"
+                )}
+              >
+                {autoSaveStatus === 'saving' ? (
+                  <><RefreshCcw className="w-2 h-2 animate-spin" /> Salvando...</>
+                ) : autoSaveStatus === 'saved' ? (
+                  <><CheckCircle2 className="w-2 h-2" /> Salvo</>
+                ) : (
+                  <><AlertCircle className="w-2 h-2" /> Erro</>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <div className="flex gap-1 p-1 bg-white/5 rounded-xl border border-white/5">
             <button
-              onClick={() => setActiveSubTab('diagnostic')}
+              onClick={() => setAppTheme('light')}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                activeSubTab === 'diagnostic' ? "bg-gold-deep text-brand-black shadow-lg shadow-gold-deep/20" : "text-slate-500 hover:text-white"
+                "flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                currentTheme === 'light' ? "bg-white text-brand-black shadow-lg" : "text-white/40 hover:text-white"
               )}
             >
-              <ShieldAlert className="w-3.5 h-3.5" /> DIAGNÓSTICO
+              <Sun className="w-2.5 h-2.5" /> Light
             </button>
-          )}
-
-          {canManageUsers && (
-            <button 
-              onClick={() => setActiveSubTab('health')}
+            <button
+              onClick={() => setAppTheme('dark')}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                activeSubTab === 'health' ? "bg-gold-deep text-brand-black shadow-lg shadow-gold-deep/20" : "text-slate-500 hover:text-white"
+                "flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                currentTheme === 'dark' ? "bg-slate-800 text-white shadow-xl" : "text-white/40 hover:text-white"
               )}
             >
-              <Activity className="w-3.5 h-3.5" /> SAÚDE
+              <Moon className="w-2.5 h-2.5" /> Dark
             </button>
-          )}
-
-          {canManageUsers && (
-            <button 
-              onClick={() => setActiveSubTab('admin')}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                activeSubTab === 'admin' ? "bg-gold-deep text-brand-black shadow-lg shadow-gold-deep/20" : "text-slate-500 hover:text-white"
-              )}
-            >
-              <Wrench className="w-3.5 h-3.5" /> ADMIN
-            </button>
-          )}
+          </div>
         </div>
+      </nav>
 
-        <div className="flex items-center gap-1 p-1 bg-brand-black rounded-xl border border-white/5">
-           <button 
-             onClick={() => setAppTheme('light')}
-             className={cn(
-               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
-               currentTheme === 'light' ? "bg-white text-brand-black shadow-lg" : "text-slate-500 hover:text-white"
-             )}
-           >
-             <Sun className="w-2.5 h-2.5" /> Light
-           </button>
-           <button 
-             onClick={() => setAppTheme('dark')}
-             className={cn(
-               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
-               currentTheme === 'dark' ? "bg-slate-800 text-white shadow-xl" : "text-slate-500 hover:text-white"
-             )}
-           >
-             <Moon className="w-2.5 h-2.5" /> Dark
-           </button>
-        </div>
-      </div>
-
-      <div className="space-y-6">
+      {/* Dynamic Content Area */}
+      <div className="flex-1 min-w-0 overflow-y-auto">
+        <div className="p-8 space-y-6">
         {activeSubTab === 'general' && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold text-gold-deep font-display uppercase tracking-tight">Configurações Gerais</h2>
-                  <HelpButton 
-                    title="Configurações Gerais"
-                    description="Central de controle de recursos vitais do CRM, incluindo identidade visual, chaves de API e ambiente de simulação."
-                    usage="Atualize o nome e logo da sua corretora para personalizar o ambiente. Configure a chave OpenRouter para ativar a inteligência artificial."
-                  />
-                </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <p className="text-slate-400 text-[9px] uppercase tracking-widest font-bold">Identidade visual e segurança</p>
-                  <AnimatePresence>
-                    {autoSaveStatus !== 'idle' && (
-                      <motion.div 
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0 }}
-                        className={cn(
-                          "flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-widest",
-                          autoSaveStatus === 'saving' ? "bg-brand-black text-gold-deep border-gold-deep/20" :
-                          autoSaveStatus === 'saved' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
-                          "bg-red-500/10 text-red-500 border-red-500/20"
-                        )}
-                      >
-                        {autoSaveStatus === 'saving' ? (
-                          <>
-                            <RefreshCcw className="w-2 h-2 animate-spin" />
-                            Sincronizando...
-                          </>
-                        ) : autoSaveStatus === 'saved' ? (
-                          <>
-                            <CheckCircle2 className="w-2 h-2" />
-                            Salvo
-                          </>
-                        ) : (
-                          <>
-                            <AlertCircle className="w-2 h-2" />
-                            Erro
-                          </>
-                        )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-            </div>
-
-            {/* Existing Sections for General */}
-            <section className="bg-brand-dark p-6 rounded-[2rem] border border-blue-500/20 shadow-xl space-y-6">
+            {/* Sections for General */}
+            <section className="bg-brand-dark p-6 rounded-[2rem] border border-white/5 shadow-xl space-y-6">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 border-l-4 border-blue-500 pl-4">
-                  <BookOpen className="w-5 h-5 text-blue-500" />
-                  <h3 className="text-sm font-bold text-blue-100 uppercase tracking-widest">Documentação & Auditoria</h3>
+                <div className="flex items-center gap-3 border-l-4 border-gold-deep pl-4">
+                  <BookOpen className="w-5 h-5 text-gold-deep" />
+                  <h3 className="text-sm font-bold text-gold-light uppercase tracking-widest">Documentação & Auditoria</h3>
                 </div>
-                <div className="px-3 py-1 bg-blue-500/10 rounded-full border border-blue-500/20">
-                  <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest">v2.5.0 Auto-Gen</span>
+                <div className="px-3 py-1 bg-gold-deep/10 rounded-full border border-gold-deep/20">
+                  <span className="text-[8px] font-black text-gold-deep uppercase tracking-widest">v2.5.0 Auto-Gen</span>
                 </div>
               </div>
-              
+
               <div className="flex flex-col sm:flex-row items-center gap-4">
                 <div className="flex-1">
-                  <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                  <p className="text-xs text-white/50 leading-relaxed font-medium">
                     Visualize a arquitetura completa do sistema, fluxos ativos, regras de extração e o pipeline de IA atualizado em tempo real.
                   </p>
                 </div>
                 <button
                   onClick={() => setIsDocsModalOpen(true)}
-                  className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20"
+                  className="flex items-center gap-2 px-6 py-3 bg-gold-deep/10 hover:bg-gold-deep/20 text-gold-deep border border-gold-deep/30 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-gold-deep/10"
                 >
                   <FileText size={14} />
                   Documentação do Sistema
@@ -925,7 +902,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
             </div>
             
             <div className="space-y-4">
-               <div className="flex items-center justify-between p-4 bg-brand-black/40 rounded-2xl border border-slate-800 transition-all hover:border-gold-deep/30">
+               <div className="flex items-center justify-between p-4 bg-brand-black/40 rounded-2xl border border-white/5 transition-all hover:border-gold-deep/30">
                 <div className="flex items-center gap-4">
                   <div className={cn(
                     "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
@@ -1020,37 +997,21 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
   )}
 
         {activeSubTab === 'diagnostic' && canManageUsers && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             className="space-y-6"
           >
-            <div className="flex items-center gap-3 px-1">
-              <h2 className="text-xl font-bold text-gold-deep font-display uppercase tracking-tight">Diagnóstico do Sistema</h2>
-              <HelpButton 
-                title="Diagnóstico do Sistema"
-                description="Ferramenta avançada para identificar falhas na arquitetura, latência excessiva e inconsistências de banco de dados."
-                usage="Utilize esta tela para rodar scans de segurança e verificar se há 'deadlocks' ou tarefas presas na fila de processamento."
-              />
-            </div>
             <DiagnosticDashboard />
           </motion.div>
         )}
 
         {activeSubTab === 'health' && canManageUsers && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             className="space-y-6"
           >
-            <div className="flex items-center gap-3 px-1">
-              <h2 className="text-xl font-bold text-gold-deep font-display uppercase tracking-tight">Saúde da Infraestrutura</h2>
-              <HelpButton 
-                title="Saúde da Infraestrutura"
-                description="Monitoramento em tempo real do consumo de recursos, cotas do Firestore e performance das APIs externas (OpenRouter/Meta)."
-                usage="Monitore o 'Circuit Breaker' para ver se as integrações estão estáveis. Se o gráfico ficar vermelho, verifique as chaves de API."
-              />
-            </div>
             <SystemHealth />
           </motion.div>
         )}
@@ -1065,9 +1026,6 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
             animate={{ opacity: 1, x: 0 }}
             className="space-y-6"
           >
-            <div className="flex items-center gap-3 px-1">
-              <h2 className="text-xl font-bold text-gold-deep font-display uppercase tracking-tight">Perfil da Empresa</h2>
-            </div>
             <EmpresaPerfil organizationId={userProfile.organizationId} />
           </motion.div>
         )}
@@ -1078,14 +1036,6 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
             animate={{ opacity: 1, x: 0 }}
             className="space-y-6"
           >
-            <div className="flex items-center gap-3 px-1">
-              <h2 className="text-xl font-bold text-gold-deep font-display uppercase tracking-tight">Painel Administrativo</h2>
-              <HelpButton 
-                title="Painel Administrativo"
-                description="Painel de controle para migração de dados, gestão de equipe, auditoria de logs e resets de emergência."
-                usage="Crie ou remova usuários da sua equipe. Execute migrações de dados legados apenas quando orientado pelo suporte técnico."
-              />
-            </div>
             <div className="space-y-8">
               <UserManagement />
               <AdminTools />
@@ -1093,35 +1043,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
             </div>
           </motion.div>
         )}
-      </div>
-
-      <div className="flex flex-col sm:flex-row items-center justify-between p-8 bg-brand-dark rounded-[2.5rem] border border-gold-deep/20 shadow-2xl mt-8">
-        <div className="mb-4 sm:mb-0">
-          <AnimatePresence>
-            {autoSaveStatus === 'saved' && (
-              <motion.div 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center gap-3 text-emerald-500"
-              >
-                <div className="w-8 h-8 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/20">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Sincronização Completa</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
-        
-        <button 
-          onClick={() => handleSave(config, isTestMode)}
-          disabled={autoSaveStatus === 'saving'}
-          className="w-full sm:w-auto px-10 py-4 bg-gold-deep text-brand-black font-black rounded-2xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-4 uppercase text-xs tracking-[0.2em] shadow-xl shadow-gold-deep/20 disabled:opacity-50"
-        >
-          {autoSaveStatus === 'saving' ? <RefreshCcw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-          Salvar Dados Michelin
-        </button>
       </div>
     </div>
   );
