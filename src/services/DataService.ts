@@ -37,6 +37,11 @@ import { TenantIsolationService } from './TenantIsolationService';
 export class DataService {
   private static pendingRequests: Map<string, Promise<any>> = new Map();
   private static ECO_MODE = (import.meta as any).env.VITE_FIRESTORE_ECO_MODE === 'true';
+  private static cachedDeviceInfo: { ip?: string; userAgent?: string; deviceType?: string; browser?: string; os?: string; location?: string } | null = null;
+
+  static setDeviceInfo(info: typeof DataService.cachedDeviceInfo): void {
+    DataService.cachedDeviceInfo = info;
+  }
 
   // Entities whose documents carry an organizationId and must be org-scoped in cache
   private static readonly ORG_SCOPED_ENTITIES = new Set([
@@ -176,6 +181,7 @@ export class DataService {
       if (Object.keys(changesAfter).length === 0) return null;
     }
 
+    const di = DataService.cachedDeviceInfo;
     return {
       id: logId,
       timestamp: new Date().toISOString(),
@@ -189,7 +195,14 @@ export class DataService {
       after: action === 'CREATE' ? after : (action === 'UPDATE' ? changesAfter : null),
       origin,
       details,
-      userAgent: navigator.userAgent
+      result: 'success' as const,
+      context: typeof window !== 'undefined' ? window.location.pathname : undefined,
+      userAgent: di?.userAgent || navigator.userAgent,
+      ip: di?.ip || '0.0.0.0',
+      deviceType: di?.deviceType as AuditLog['deviceType'],
+      browser: di?.browser,
+      os: di?.os,
+      location: di?.location,
     };
   }
 

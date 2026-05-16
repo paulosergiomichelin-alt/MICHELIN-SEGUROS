@@ -13,12 +13,16 @@ import { ShieldAlert } from 'lucide-react';
 import { logger } from './services/LoggerService';
 import { agentService } from './services/agentService';
 import { DataService } from './services/DataService';
+import { DeviceInfoService } from './services/DeviceInfoService';
 import { initDatadogRUM, setRUMUser, clearRUMUser } from './services/DatadogRUM';
 import { initDatadogLogs, ddLogInfo, ddLogError } from './services/DatadogLogs';
 
 // Initialise Datadog as early as possible (before first render)
 initDatadogRUM();
 initDatadogLogs();
+
+// Prefetch device/IP info once at app start so audit logs always carry it
+DeviceInfoService.getInfo().then(info => DataService.setDeviceInfo(info));
 
 export default function App() {
   return (

@@ -342,6 +342,10 @@ export interface AuditLog {
   userName?: string;
   ip?: string;
   userAgent?: string;
+  deviceType?: 'desktop' | 'mobile' | 'tablet';
+  browser?: string;
+  os?: string;
+  location?: string;
   action: string;
   category: 'auth' | 'leads' | 'team' | 'security' | 'intelligence' | 'system';
   entity: string; // lead, user, config, profile, notification, etc
@@ -351,6 +355,8 @@ export interface AuditLog {
   origin: 'ai' | 'USUARIO' | 'sistema';
   details?: string;
   status?: string;
+  result?: 'success' | 'denied' | 'error';
+  context?: string; // rota/página onde a ação ocorreu
   metadata?: any;
   organizationId?: string;
 }

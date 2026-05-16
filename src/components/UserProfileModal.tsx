@@ -1,22 +1,28 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  X, User, Phone, Briefcase, Lock, Save, Loader2, KeyRound, 
-  AlertCircle, CheckCircle2, Camera, Eye, EyeOff, Mail, 
+import {
+  X, User, Phone, Briefcase, Lock, Save, Loader2, KeyRound,
+  AlertCircle, CheckCircle2, Camera, Eye, EyeOff, Mail,
   Building2, ShieldCheck, Settings2, Bell, LogOut, Globe,
-  Fingerprint, Monitor, Calendar, Trash2, UserPlus, 
-  ChevronLeft, Info, Activity, FileText, UserCog, UserMinus, ShieldAlert
+  Fingerprint, Monitor, Calendar, Trash2, UserPlus,
+  ChevronLeft, Info, Activity, FileText, UserCog, UserMinus, ShieldAlert,
+  Laptop2, Smartphone, Tablet, MapPin, Clock, PlusCircle, RefreshCw,
+  TrendingDown, TrendingUp, ChevronDown, ChevronRight, Bot, Shield,
+  MousePointer2
 } from 'lucide-react';
 import { updatePassword, updateProfile, getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { initializeApp } from 'firebase/app';
 import { auth, signOut, db } from '../lib/firebase';
 import { DataService } from '../services/DataService';
-import { UserProfile, AccessProfile, UserRole, SystemUser } from '../types';
+import { UserProfile, AccessProfile, UserRole, SystemUser, AuditLog } from '../types';
 import { cn } from '../lib/utils';
 import { useTheme } from '../hooks/useAppContexts';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { auditLogger } from '../services/AuditLogger';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { orderBy, where, QueryDocumentSnapshot } from 'firebase/firestore';
 
 interface UserProfileModalProps {
   mode?: 'create' | 'edit';
@@ -69,9 +75,17 @@ export function UserProfileModal({
   // Lists for dropdowns
   const [accessProfiles, setAccessProfiles] = useState<AccessProfile[]>([]);
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
-  
+
   // Target User State (Hydrated if edit)
   const [targetProfile, setTargetProfile] = useState<Partial<any>>({});
+
+  // Activity log state
+  const [activityLogs, setActivityLogs] = useState<AuditLog[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityLastVisible, setActivityLastVisible] = useState<QueryDocumentSnapshot | null>(null);
+  const [activityHasMore, setActivityHasMore] = useState(true);
+  const [expandedLog, setExpandedLog] = useState<string | null>(null);
+  const ACTIVITY_PAGE_SIZE = 15;
 
   const isSelf = mode === 'edit' && (!targetUserId || targetUserId === currentUserAuth?.uid);
   const isAdmin = currentUserProfile?.role === 'admin' || currentUserProfile?.permissions?.canManageUsers;
@@ -138,6 +152,41 @@ export function UserProfileModal({
     loadProfile();
     return () => { isMounted = false; };
   }, [mode, targetUserId, currentUserAuth, currentUserProfile]);
+
+  const fetchActivityLogs = useCallback(async (isMore = false) => {
+    const uid = targetUserId || currentUserAuth?.uid;
+    if (!uid) return;
+    if (!isMore) setActivityLoading(true);
+    try {
+      const constraints: any[] = [
+        where('userId', '==', uid),
+        orderBy('timestamp', 'desc'),
+      ];
+      const result = await DataService.listPaginated(
+        'audit_logs',
+        constraints,
+        ACTIVITY_PAGE_SIZE,
+        isMore ? (activityLastVisible || undefined) : undefined
+      );
+      const formatted = result.data.map((log: any) => ({
+        ...log,
+        timestamp: log.timestamp?.toDate ? log.timestamp.toDate().toISOString() : log.timestamp,
+      })) as AuditLog[];
+      setActivityLogs(prev => isMore ? [...prev, ...formatted] : formatted);
+      setActivityLastVisible(result.lastVisible);
+      setActivityHasMore(result.hasMore);
+    } catch (err: any) {
+      console.warn('[UserProfileModal] activity logs error:', err?.message);
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [targetUserId, currentUserAuth, activityLastVisible, ACTIVITY_PAGE_SIZE]);
+
+  useEffect(() => {
+    if (activeTab === 'atividade' && activityLogs.length === 0 && !activityLoading) {
+      fetchActivityLogs();
+    }
+  }, [activeTab]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -756,7 +805,219 @@ export function UserProfileModal({
                  </div>
                </div>
             )}
-            
+
+            {activeTab === 'atividade' && (
+              <div className="space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-[#D4A94D]/10 flex items-center justify-center">
+                      <Activity className="w-5 h-5 text-[#D4A94D]" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black uppercase tracking-widest">Atividade e Acessos</h3>
+                      <p className="text-[9px] font-bold text-[#9CA3AF] uppercase tracking-widest mt-0.5">Trilha de auditoria completa</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setActivityLogs([]); setActivityLastVisible(null); setActivityHasMore(true); fetchActivityLogs(); }}
+                    disabled={activityLoading}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all disabled:opacity-40"
+                  >
+                    <RefreshCw className={cn('w-3.5 h-3.5', activityLoading && 'animate-spin')} />
+                    Atualizar
+                  </button>
+                </div>
+
+                {/* Logs */}
+                <div className="space-y-2">
+                  {activityLoading && activityLogs.length === 0 ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="h-16 bg-white/3 animate-pulse rounded-2xl border border-white/5" />
+                    ))
+                  ) : activityLogs.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                      <Activity className="w-10 h-10 text-white/10 mb-4" />
+                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">Nenhuma atividade registrada</p>
+                    </div>
+                  ) : (
+                    activityLogs.map((log) => {
+                      const isExpanded = expandedLog === log.id;
+                      const actionColor =
+                        log.action === 'DELETE' ? 'text-red-400 bg-red-500/10 border-red-500/20' :
+                        log.action === 'CREATE' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
+                        log.action === 'UPDATE' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' :
+                        log.action.includes('LOGIN') ? 'text-[#D4A94D] bg-[#D4A94D]/10 border-[#D4A94D]/20' :
+                        'text-white/50 bg-white/5 border-white/10';
+                      const ActionIcon =
+                        log.action === 'DELETE' ? Trash2 :
+                        log.action === 'CREATE' ? PlusCircle :
+                        log.action === 'UPDATE' ? RefreshCw :
+                        log.action.includes('LOGIN') ? Shield :
+                        MousePointer2;
+                      const DeviceIcon =
+                        log.deviceType === 'mobile' ? Smartphone :
+                        log.deviceType === 'tablet' ? Tablet :
+                        Laptop2;
+
+                      return (
+                        <div key={log.id} className="bg-white/3 border border-white/5 rounded-2xl overflow-hidden transition-all">
+                          {/* Row */}
+                          <button
+                            type="button"
+                            onClick={() => setExpandedLog(isExpanded ? null : log.id)}
+                            className="w-full flex items-center gap-3 p-4 text-left hover:bg-white/3 transition-colors"
+                          >
+                            {/* Action badge */}
+                            <div className={cn('flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border shrink-0', actionColor)}>
+                              <ActionIcon className="w-3 h-3" />
+                              <span className="text-[9px] font-black uppercase tracking-wider hidden sm:inline">{log.action}</span>
+                            </div>
+
+                            {/* QUEM fez O QUÊ EM QUAL RECURSO */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[11px] font-black text-white truncate">{log.userName || 'Sistema'}</span>
+                                <span className="text-[9px] text-white/30 font-bold">→</span>
+                                <span className="text-[10px] font-bold text-white/60 uppercase tracking-tight">{log.entity}</span>
+                                {log.entityId && (
+                                  <span className="text-[9px] font-mono text-white/20 truncate max-w-[80px]">#{log.entityId.slice(-6)}</span>
+                                )}
+                              </div>
+                              {/* QUANDO + DE ONDE */}
+                              <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                <span className="flex items-center gap-1 text-[9px] text-white/30 font-bold">
+                                  <Clock className="w-2.5 h-2.5" />
+                                  {log.timestamp ? format(new Date(log.timestamp), "dd/MM/yy HH:mm", { locale: ptBR }) : '-'}
+                                </span>
+                                {log.location && (
+                                  <span className="flex items-center gap-1 text-[9px] text-white/30 font-bold">
+                                    <MapPin className="w-2.5 h-2.5" />
+                                    {log.location}
+                                  </span>
+                                )}
+                                {(log.browser || log.os) && (
+                                  <span className="flex items-center gap-1 text-[9px] text-white/30 font-bold">
+                                    <DeviceIcon className="w-2.5 h-2.5" />
+                                    {[log.browser, log.os].filter(Boolean).join(' / ')}
+                                  </span>
+                                )}
+                                {log.ip && log.ip !== '0.0.0.0' && (
+                                  <span className="text-[9px] font-mono text-white/20">{log.ip}</span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* RESULTADO */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={cn(
+                                'px-2 py-0.5 rounded-lg border text-[8px] font-black uppercase tracking-wider',
+                                log.result === 'denied' || log.result === 'error' || log.status === 'failed' || log.status === 'error'
+                                  ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                                  : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                              )}>
+                                {log.result || log.status || 'ok'}
+                              </span>
+                              {isExpanded
+                                ? <ChevronDown className="w-3.5 h-3.5 text-white/30" />
+                                : <ChevronRight className="w-3.5 h-3.5 text-white/30" />
+                              }
+                            </div>
+                          </button>
+
+                          {/* Expanded detail */}
+                          {isExpanded && (
+                            <div className="border-t border-white/5 p-4 space-y-4">
+                              {/* Grid de metadados */}
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div className="bg-white/3 rounded-xl p-3 space-y-1">
+                                  <p className="text-[8px] font-black text-[#D4A94D] uppercase tracking-widest">DE ONDE</p>
+                                  <p className="text-[10px] font-bold text-white">{log.ip || '—'}</p>
+                                  <p className="text-[9px] text-white/40">{log.location || '—'}</p>
+                                </div>
+                                <div className="bg-white/3 rounded-xl p-3 space-y-1">
+                                  <p className="text-[8px] font-black text-[#D4A94D] uppercase tracking-widest">DISPOSITIVO</p>
+                                  <p className="text-[10px] font-bold text-white capitalize">{log.deviceType || '—'}</p>
+                                  <p className="text-[9px] text-white/40">{[log.browser, log.os].filter(Boolean).join(' · ') || '—'}</p>
+                                </div>
+                                <div className="bg-white/3 rounded-xl p-3 space-y-1">
+                                  <p className="text-[8px] font-black text-[#D4A94D] uppercase tracking-widest">CONTEXTO</p>
+                                  <p className="text-[10px] font-bold text-white font-mono truncate">{log.context || '—'}</p>
+                                  <p className="text-[9px] text-white/40 capitalize">{log.origin}</p>
+                                </div>
+                                <div className="bg-white/3 rounded-xl p-3 space-y-1">
+                                  <p className="text-[8px] font-black text-[#D4A94D] uppercase tracking-widest">RESULTADO</p>
+                                  <p className={cn(
+                                    'text-[10px] font-bold uppercase',
+                                    log.result === 'denied' || log.result === 'error' ? 'text-red-400' : 'text-emerald-400'
+                                  )}>{log.result || log.status || 'success'}</p>
+                                  {log.details && <p className="text-[9px] text-white/40 line-clamp-2">{log.details}</p>}
+                                </div>
+                              </div>
+
+                              {/* O QUE MUDOU */}
+                              {(log.before || log.after) && (
+                                <div className="space-y-2">
+                                  <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">O QUE MUDOU</p>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {log.before && (
+                                      <div className="space-y-1.5">
+                                        <p className="text-[9px] font-black text-red-400 flex items-center gap-1.5">
+                                          <TrendingDown className="w-3 h-3" /> ANTES
+                                        </p>
+                                        <div className="bg-black/60 rounded-xl p-3 border border-white/5">
+                                          <pre className="text-[10px] font-mono text-red-300/70 overflow-x-auto max-h-40 leading-relaxed whitespace-pre-wrap break-all">
+                                            {JSON.stringify(log.before, null, 2)}
+                                          </pre>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {log.after && (
+                                      <div className="space-y-1.5">
+                                        <p className="text-[9px] font-black text-emerald-400 flex items-center gap-1.5">
+                                          <TrendingUp className="w-3 h-3" /> DEPOIS
+                                        </p>
+                                        <div className="bg-black/60 rounded-xl p-3 border border-white/5">
+                                          <pre className="text-[10px] font-mono text-emerald-300/70 overflow-x-auto max-h-40 leading-relaxed whitespace-pre-wrap break-all">
+                                            {JSON.stringify(log.after, null, 2)}
+                                          </pre>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* User Agent raw */}
+                              {log.userAgent && (
+                                <p className="text-[8px] font-mono text-white/15 break-all">{log.userAgent}</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+
+                  {/* Load more */}
+                  {activityHasMore && activityLogs.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => fetchActivityLogs(true)}
+                      disabled={activityLoading}
+                      className="w-full py-3 bg-white/3 hover:bg-white/5 border border-white/5 rounded-2xl text-[9px] font-black text-white/40 uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-40"
+                    >
+                      {activityLoading
+                        ? <><RefreshCw className="w-3 h-3 animate-spin" /> Carregando...</>
+                        : <><ChevronDown className="w-3 h-3" /> Carregar mais</>
+                      }
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col sm:flex-row items-center gap-4 pt-6 md:pt-10 border-t border-white/5">
                <button
                  type="button"
