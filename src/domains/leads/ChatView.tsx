@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { 
-  Search, 
-  ChevronLeft, 
-  Cog, 
-  Menu, 
-  X, 
-  MessageSquare, 
-  CheckCircle2, 
+import {
+  Search,
+  ChevronLeft,
+  Cog,
+  Menu,
+  X,
+  MessageSquare,
+  CheckCircle2,
   FileText,
   ShieldAlert,
   Bot,
@@ -16,6 +16,7 @@ import {
   Headphones,
   RefreshCcw,
   Eye,
+  EyeOff,
   Download,
   AlertTriangle,
   MoreVertical,
@@ -23,6 +24,7 @@ import {
   Image as ImageIcon,
   Video,
   User as UserIcon,
+  Users,
   MapPin,
   FileDown,
   Send,
@@ -35,7 +37,8 @@ import {
   Flame,
   Check,
   CheckCheck,
-  Lock
+  Lock,
+  Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -51,6 +54,7 @@ import { StorageService } from '../../services/StorageService';
 import { LeadCRMPanel } from './LeadCRMPanel';
 import { auth } from '../../lib/firebase';
 import { SecurityService } from '../../services/SecurityService';
+import { OrchestratorService } from '../../services/OrchestratorService';
 
 export const ChatView = React.memo(({
   visualConfig,
@@ -71,6 +75,9 @@ export const ChatView = React.memo(({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [isTestMode] = useState(() => localStorage.getItem('michelin_test_mode') === 'true');
+  const [isSimulatingLead, setIsSimulatingLead] = useState(false);
+  const [isClearingTest, setIsClearingTest] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -116,14 +123,63 @@ export const ChatView = React.memo(({
     return result;
   }, [leads, searchQuery, filter]);
 
+  const handleSimulatedLeadMessage = async (text: string) => {
+    if (!selectedLead || !text.trim()) return;
+    const msg: Message = {
+      id: SecurityService.generateId('messages'),
+      leadId: selectedLead.id,
+      sender: 'user',
+      text: text.trim(),
+      timestamp: new Date().toISOString(),
+      organizationId: selectedLead.organizationId,
+    };
+    await DataService.create('messages', msg, 'USUARIO');
+    await DataService.update('leads', selectedLead.id, {
+      lastInteraction: msg.timestamp,
+      lastMessageText: text,
+      lastMessageSender: 'user',
+      updatedAt: msg.timestamp,
+    }, 'USUARIO');
+    OrchestratorService.handleIncomingMessage(msg, agentConfig).catch(err => {
+      console.error('Simulation AI trigger failed:', err);
+    });
+  };
+
+  const handleClearTestConversation = async () => {
+    if (!selectedLead || isClearingTest) return;
+    setIsClearingTest(true);
+    try {
+      await Promise.all(messages.map(m => DataService.delete('messages', m.id)));
+      await DataService.update('leads', selectedLead.id, {
+        status: 'Novo Lead',
+        documentStatus: null as any,
+        documents: null as any,
+        cpf: null as any,
+        plate: null as any,
+        isRenewal: null as any,
+        contextSummary: null as any,
+        lastMessageText: '',
+        lastMessageSender: null as any,
+        iaActive: false,
+        updatedAt: new Date().toISOString(),
+      }, 'USUARIO');
+    } catch (err) {
+      console.error('Clear test conversation failed:', err);
+    } finally {
+      setIsClearingTest(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedLead) return;
-    
     const text = newMessage;
     setNewMessage('');
-    
     try {
-      await sendMessage(text, selectedLead);
+      if (isTestMode && isSimulatingLead) {
+        await handleSimulatedLeadMessage(text);
+      } else {
+        await sendMessage(text, selectedLead);
+      }
     } catch (err) {
       console.error('Send message failed:', err);
     }
@@ -448,9 +504,43 @@ export const ChatView = React.memo(({
 
                 {/* Input Area */}
                 <footer className={cn(
-                  "bg-[#202c33] p-1.5 md:p-2 flex flex-col gap-1 shrink-0 border-t border-white/5 relative z-20",
+                  "bg-[#202c33] flex flex-col shrink-0 border-t border-white/5 relative z-20",
                   viewport.isMobile && "pb-6"
                 )}>
+                   {/* Test Mode Banner */}
+                   {isTestMode && (
+                     <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20">
+                       <Zap className="w-3 h-3 text-amber-400 shrink-0" />
+                       <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Modo de Teste</span>
+                       <button
+                         onClick={() => setIsSimulatingLead(s => !s)}
+                         className={cn(
+                           "flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest transition-all border",
+                           isSimulatingLead
+                             ? "bg-amber-500 text-white border-amber-500"
+                             : "bg-transparent text-amber-400/60 border-amber-400/30 hover:border-amber-400/60 hover:text-amber-400"
+                         )}
+                       >
+                         {isSimulatingLead ? <><EyeOff className="w-2.5 h-2.5" /> Simulando Lead</> : <><Eye className="w-2.5 h-2.5" /> Simular Lead</>}
+                       </button>
+                       {isSimulatingLead && (
+                         <span className="text-[8px] text-amber-400/50 italic">suas msgs disparam a IA</span>
+                       )}
+                       <div className="ml-auto flex items-center gap-1.5">
+                         <button
+                           onClick={handleClearTestConversation}
+                           disabled={isClearingTest || !selectedLead || messages.length === 0}
+                           className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                         >
+                           {isClearingTest
+                             ? <><Loader2 className="w-2.5 h-2.5 animate-spin" /> Limpando...</>
+                             : <><Trash2 className="w-2.5 h-2.5" /> Limpar Conversa</>
+                           }
+                         </button>
+                       </div>
+                     </div>
+                   )}
+                   <div className="p-1.5 md:p-2">
                    <div className="flex items-center gap-2 md:gap-3 relative">
                       <div className="flex items-center gap-1">
                          <button 
@@ -499,9 +589,9 @@ export const ChatView = React.memo(({
                          <button className="p-1 text-[#8696a0] hover:text-[#d1d7db] transition-colors">
                             <Smile className="w-4 h-4" />
                          </button>
-                         <input 
+                         <input
                            type="text"
-                           placeholder="Mensagem..."
+                           placeholder={isTestMode && isSimulatingLead ? "Simule uma mensagem do lead..." : "Mensagem..."}
                            value={newMessage}
                            onChange={(e) => setNewMessage(e.target.value)}
                            onKeyDown={(e) => {
@@ -538,6 +628,7 @@ export const ChatView = React.memo(({
                         multiple 
                         className="hidden" 
                       />
+                   </div>
                    </div>
                 </footer>
               </motion.div>
