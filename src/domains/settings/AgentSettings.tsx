@@ -239,7 +239,21 @@ CLASSIFICAÇÃO:
         if (parsed.extraction?.model?.toLowerCase().includes('gemini')) {
           parsed.extraction.model = 'openai/gpt-4o';
         }
-        
+
+        // Detect and fix mojibake in salesBlocks (double-encoded UTF-8)
+        const isMojibake = (s: string) => /Ã[§£©¡³ºª­]|â€|Ã‡|ÃŠ|Ã‰|Ãµ|Ãƒ/.test(s);
+        if (parsed.salesBlocks) {
+          const sample = Object.values(parsed.salesBlocks).join('');
+          if (isMojibake(sample)) {
+            parsed.salesBlocks = DEFAULT_SALES_BLOCKS;
+            // Flush corrected value to localStorage immediately
+            try {
+              const corrected = { ...initial, ...parsed };
+              localStorage.setItem('michelin_agent_config', JSON.stringify(corrected));
+            } catch (_) {}
+          }
+        }
+
         return { ...initial, ...parsed };
       }
     } catch (e) {
