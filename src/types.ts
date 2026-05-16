@@ -228,6 +228,7 @@ export interface Lead {
 
   profileType?: 'residencial' | 'comercial' | 'frota' | 'direto' | 'indeciso' | 'desconfiado';
   contextSummary?: string;
+  isRenewal?: boolean;
 
   // Seção 7 — Cotação Apresentada ao Cliente
   quoteAttachment?: {
@@ -408,7 +409,63 @@ export interface Flow {
   organizationId?: string;
 }
 
+// ─── Agent Brain Types ────────────────────────────────────────────────────────
+
+export type LeadStep =
+  | 'NOVO_LEAD'
+  | 'COLETAR_NOME'
+  | 'IDENTIFICAR_INTENCAO'
+  | 'SOLICITAR_CNH'
+  | 'SOLICITAR_CRLV'
+  | 'SOLICITAR_APOLICE'
+  | 'AGUARDANDO_COTACAO'
+  | 'APRESENTAR_PROPOSTA'
+  | 'NEGOCIACAO'
+  | 'FECHAMENTO'
+  | 'REENGAJAMENTO'
+  | 'OCR_FALHOU';
+
+export type SalesBlockKey =
+  | 'quebra_de_gelo'
+  | 'primeiro_atendimento'
+  | 'reducao_atrito'
+  | 'gatilhos_mentais'
+  | 'objecoes'
+  | 'venda_por_cenario'
+  | 'urgencia_suave'
+  | 'fechamento';
+
+export interface AgentPersona {
+  name: string;
+  role: string;
+  tone: string;
+  usesFormalTreatment: boolean;
+}
+
+export interface AgentLLMConfig {
+  provider: 'anthropic' | 'openrouter';
+  model: string;
+  maxTokens: number;
+  temperature: number;
+}
+
+export type SalesBlocks = Record<SalesBlockKey, string>;
+
+export interface AgentHardRules {
+  blockExpiredLicense: boolean;
+  requireCrlvForQuote: boolean;
+  maxInactivityHours: number;
+  escalateToHumanScore: number;
+}
+
+export interface TenantConfig {
+  name: string;
+  insurers: string[];
+  organizationId: string;
+}
+
 export interface AgentConfig {
+  // Legacy fields (kept for backward compat with extraction config)
   name: string;
   persona: string;
   instructions: string;
@@ -417,7 +474,22 @@ export interface AgentConfig {
   model: string;
   whatsappEnabled: boolean;
   openrouterApiKey?: string;
-  
+
+  // New: Structured persona (AgentBrain uses this)
+  agentPersona?: AgentPersona;
+
+  // New: LLM settings
+  llm?: AgentLLMConfig;
+
+  // New: Sales behavior blocks
+  salesBlocks?: SalesBlocks;
+
+  // New: Hard validation rules
+  hardRules?: AgentHardRules;
+
+  // New: feature flag — activates AgentBrain instead of deterministic strings
+  useLLMAgent?: boolean;
+
   // Extraction specific config
   extraction: {
     name: string;
@@ -433,23 +505,24 @@ export interface AgentConfig {
     description: string;
     daysDelay: number;
     hoursDelay: number;
-    condition: string; // e.g. "status == 'Sem Contato'"
+    condition: string;
     template: string;
     windows: {
-      start: string; // HH:mm
-      end: string;   // HH:mm
-      label: string; // e.g. "Manhã"
+      start: string;
+      end: string;
+      label: string;
     }[];
   }[];
-  
+
   scheduling: {
     timezone: string;
     enabled: boolean;
   };
 
-  // Sales Intelligence Configuration
+  // Legacy Sales Intelligence
   classificationRules?: string;
   automaticActions?: string;
+  version?: number;
 }
 
 export type FollowUpStatus = 'pending' | 'executed' | 'cancelled';

@@ -1,5 +1,5 @@
 import { where, QueryConstraint } from 'firebase/firestore';
-import { Lead, Message, AgentConfig, FollowUpStatus, FollowUpOrigin } from '../types';
+import { Lead, Message, AgentConfig, TenantConfig } from '../types';
 import { DataService } from './DataService';
 import { agentService } from './agentService';
 import { metricsService } from './MetricsService';
@@ -10,6 +10,9 @@ import { LockService } from './LockService';
 import { SecurityService } from './SecurityService';
 import { ExecutionGuard } from './ExecutionGuard';
 import { DeadLetterQueue } from './DeadLetterQueue';
+import { getStepContext } from './StepRouter';
+import { generateReply as agentBrainReply } from './AgentBrain';
+import { updateContextSummary } from './ContextSummarizer';
 
 export enum OrchestratorAction {
   PROCESS_DOCUMENT = 'PROCESS_DOCUMENT',
@@ -186,7 +189,53 @@ export class OrchestratorService {
         await DataService.update('leads', context.lead.id, decision.updates, 'ai');
         return { updatedLead: { ...context.lead, ...decision.updates } };
       case OrchestratorAction.FALLBACK: {
-        const text = await agentService.generateReply(context.lead, context.messages);
+        let text: string;
+
+        if (config.useLLMAgent) {
+          // ── AgentBrain path (LLM-generated, guardrail-validated) ──
+          const stepCtx = getStepContext(context.lead, config);
+          const tenantConfig: TenantConfig = {
+            name: (config as any).tenantName || 'Michelin Seguros',
+            insurers: (config as any).tenantInsurers || [],
+            organizationId: context.lead.organizationId || 'default',
+          };
+
+          const output = await agentBrainReply({
+            lead: context.lead,
+            step: stepCtx.step,
+            stepContext: stepCtx,
+            recentMessages: context.messages.slice(-5),
+            agentConfig: config,
+            tenantConfig,
+          });
+
+          text = output.message;
+          logger.info('ORCHESTRATOR', 'AgentBrain reply', {
+            step: stepCtx.step,
+            fallbackUsed: output.fallbackUsed,
+            tokens: output.tokensUsed,
+            latency: output.latencyMs,
+          });
+
+          // Update context summary after LLM interaction
+          try {
+            const newSummary = await updateContextSummary(
+              context.lead,
+              context.messages.slice(-5),
+              config.openrouterApiKey,
+              config.llm?.model ?? config.model
+            );
+            if (newSummary) {
+              await DataService.update('leads', context.lead.id, { contextSummary: newSummary }, 'ai');
+            }
+          } catch (err) {
+            logger.warn('ORCHESTRATOR', 'ContextSummarizer failed (non-critical)', err);
+          }
+        } else {
+          // ── Legacy path (deterministic strings) ──
+          text = await agentService.generateReply(context.lead, context.messages);
+        }
+
         await this.sendResponse(context.lead, text);
         break;
       }
