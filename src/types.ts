@@ -464,6 +464,139 @@ export interface TenantConfig {
   organizationId: string;
 }
 
+// ─── Multi-Tenant Agent Templates ──────────────────────────────────────────────
+
+export type BusinessSegment =
+  | 'corretora_seguros'
+  | 'imobiliaria'
+  | 'clinica_odontologica'
+  | 'concessionaria'
+  | 'custom';
+
+export interface FunnelStep {
+  key: string;
+  label: string;
+  objective: string;
+  requiredFields: string[];
+  salesBlockKey?: SalesBlockKey;
+  fallbackMessage: string;
+}
+
+export interface LeadFieldConfig {
+  key: string;
+  label: string;
+  required: boolean;
+  type: 'text' | 'date' | 'select' | 'phone' | 'cpf';
+  options?: string[];
+}
+
+export interface BusinessContext {
+  insurers?: string[];
+  insuranceTypes?: string[];
+  propertyTypes?: string[];
+  operationTypes?: ('venda' | 'aluguel')[];
+  specialties?: string[];
+  planTypes?: string[];
+  brands?: string[];
+  vehicleTypes?: string[];
+  serviceAreas?: string[];
+  workingHours?: string;
+  website?: string;
+  [key: string]: any;
+}
+
+export interface WizardQuestion {
+  id: string;
+  label: string;
+  type: 'text' | 'select' | 'multiselect' | 'textarea' | 'toggle';
+  placeholder?: string;
+  options?: string[];
+  required: boolean;
+  segment?: BusinessSegment;
+  contextKey: keyof BusinessContext;
+  helpText?: string;
+}
+
+export interface PreviewMessage {
+  sender: 'ai' | 'user';
+  text: string;
+  step?: LeadStep;
+}
+
+export interface WizardState {
+  currentStep: number;
+  completedSteps: number[];
+  segment?: BusinessSegment;
+  templateId?: string;
+  persona: Partial<AgentPersona>;
+  businessContext: Partial<BusinessContext>;
+  tone?: string;
+  completed: boolean;
+  startedAt: string;
+  completedAt?: string;
+  lastSavedStep: number;
+}
+
+export interface AgentTemplate {
+  id: string;
+  segment: BusinessSegment;
+  name: string;
+  description: string;
+  version: number;
+  publishedAt: string;
+  publishedBy: string;
+  defaultPersona: AgentPersona;
+  defaultSalesBlocks: SalesBlocks;
+  defaultHardRules: AgentHardRules;
+  funnelSteps: FunnelStep[];
+  leadFields: LeadFieldConfig[];
+  wizardQuestions: WizardQuestion[];
+  previewConversation: PreviewMessage[];
+  lockedFields: string[];
+  suggestedInsurers?: string[];
+}
+
+export interface TenantAgentConfig {
+  organizationId: string;
+  templateId: string;
+  templateVersion: number;
+  segment: BusinessSegment;
+  customPersona?: Partial<AgentPersona>;
+  customSalesBlocks?: Partial<SalesBlocks>;
+  customHardRules?: Partial<AgentHardRules>;
+  businessContext: BusinessContext;
+  onboarding: {
+    completed: boolean;
+    completedAt?: string;
+    wizardVersion: number;
+  };
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface UniversalGuardrails {
+  hardProhibitions: string[];
+  hardRequirements: string[];
+  maxResponseLength: number;
+  maxQuestionsPerMessage: number;
+  forbiddenPhrases: string[];
+  version: number;
+  updatedAt: string;
+}
+
+export interface ResolvedAgentConfig {
+  persona: AgentPersona;
+  salesBlocks: SalesBlocks;
+  hardRules: AgentHardRules;
+  businessContext: BusinessContext;
+  segment: BusinessSegment;
+  templateId: string;
+  templateVersion: number;
+  guardrails: UniversalGuardrails;
+  funnelSteps: FunnelStep[];
+  lockedFields: string[];
+}
+
 export interface AgentConfig {
   // Legacy fields (kept for backward compat with extraction config)
   name: string;

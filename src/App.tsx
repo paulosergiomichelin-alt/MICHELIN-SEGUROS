@@ -13,6 +13,8 @@ import { ShieldAlert } from 'lucide-react';
 import { logger } from './services/LoggerService';
 import { agentService } from './services/agentService';
 import { DataService } from './services/DataService';
+import { templateService } from './services/TemplateService';
+import { SetupWizard } from './domains/onboarding/SetupWizard';
 import { DeviceInfoService } from './services/DeviceInfoService';
 import { initDatadogRUM, setRUMUser, clearRUMUser } from './services/DatadogRUM';
 import { initDatadogLogs, ddLogInfo, ddLogError } from './services/DatadogLogs';
@@ -37,6 +39,8 @@ function AppInternal() {
   const [user, setUser] = useState<any>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [showRegistration, setShowRegistration] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [agentApiKey, setAgentApiKey] = useState<string | undefined>(undefined);
   const [visualConfig, setVisualConfig] = useState<VisualIdentityConfig>({
     companyName: '',
     logoDark: 'https://cdn-icons-png.flaticon.com/512/3755/3755250.png',
@@ -156,11 +160,36 @@ function AppInternal() {
     );
   }
 
+  // Check onboarding completion after user profile loads
+  useEffect(() => {
+    if (!userProfile?.organizationId) return;
+    templateService.isOnboardingComplete(userProfile.organizationId)
+      .then(complete => setNeedsOnboarding(!complete))
+      .catch(() => setNeedsOnboarding(false));
+
+    // Also fetch agent config API key for wizard preview
+    DataService.get('config', 'agent_config').then((cfg: any) => {
+      if (cfg?.openrouterApiKey) setAgentApiKey(cfg.openrouterApiKey);
+    }).catch(() => {});
+  }, [userProfile?.organizationId]);
+
   if (!user) {
     if (showRegistration) {
       return <CompanyRegistration onBack={() => setShowRegistration(false)} />;
     }
     return <Auth onSuccess={() => {}} onSignup={() => setShowRegistration(true)} visualConfig={visualConfig} />;
+  }
+
+  if (needsOnboarding && userProfile?.organizationId) {
+    return (
+      <SetupWizard
+        organizationId={userProfile.organizationId}
+        organizationName={visualConfig.companyName || 'sua empresa'}
+        openrouterApiKey={agentApiKey}
+        updatedBy={userProfile.uid}
+        onComplete={() => setNeedsOnboarding(false)}
+      />
+    );
   }
 
   return (

@@ -1,9 +1,11 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, Sparkles, ShieldCheck, Zap, ShieldAlert, Globe, RefreshCcw, Clock, Plus, Trash2, CalendarRange, History, CheckCircle2, User, Brain, Shield, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
-import { AgentConfig, SalesBlocks, SalesBlockKey } from '../../types';
+import { MessageSquare, Sparkles, ShieldCheck, Zap, ShieldAlert, Globe, RefreshCcw, Clock, Plus, Trash2, CalendarRange, History, CheckCircle2, User, Brain, Shield, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, RotateCcw, Layers, Lock, RefreshCw, AlertTriangle } from 'lucide-react';
+import { AgentConfig, SalesBlocks, SalesBlockKey, ResolvedAgentConfig } from '../../types';
 import { cn } from '../../lib/utils';
 import { DataService } from '../../services/DataService';
+import { templateService } from '../../services/TemplateService';
+import { usePermissions } from '../../contexts/PermissionsContext';
 
 import { VisualIdentityConfig } from '../../types';
 
@@ -100,10 +102,33 @@ interface AgentSettingsProps {
   visualConfig?: VisualIdentityConfig;
 }
 
+const SEGMENT_LABELS: Record<string, string> = {
+  corretora_seguros: 'Corretora de Seguros',
+  imobiliaria: 'Imobiliária',
+  clinica_odontologica: 'Clínica Odontológica',
+  concessionaria: 'Concessionária',
+  custom: 'Personalizado',
+};
+
 export function AgentSettings({ onUpdate, visualConfig }: AgentSettingsProps) {
-  const [activeTab, setActiveTab] = useState<'identity' | 'sales' | 'rules'>('identity');
+  const { userProfile } = usePermissions();
+  const [activeTab, setActiveTab] = useState<'identity' | 'sales' | 'rules' | 'template'>('identity');
+  const [resolvedConfig, setResolvedConfig] = useState<ResolvedAgentConfig | null>(null);
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateError, setTemplateError] = useState<string | null>(null);
+  const [seeding, setSeeding] = useState(false);
 
   const [expandedBlock, setExpandedBlock] = useState<SalesBlockKey | null>(null);
+
+  useEffect(() => {
+    if (activeTab !== 'template' || !userProfile?.organizationId) return;
+    setTemplateLoading(true);
+    setTemplateError(null);
+    templateService.resolveConfig(userProfile.organizationId)
+      .then(setResolvedConfig)
+      .catch(() => setTemplateError('Não foi possível carregar o template do agente.'))
+      .finally(() => setTemplateLoading(false));
+  }, [activeTab, userProfile?.organizationId]);
 
   const [config, setConfig] = useState<AgentConfig>(() => {
     const initial: AgentConfig = {
@@ -416,6 +441,15 @@ CLASSIFICAÇÃO:
         >
           <Shield className="w-3.5 h-3.5 flex-shrink-0" /> Regras e Limites
         </button>
+        <button
+          onClick={() => setActiveTab('template')}
+          className={cn(
+            "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
+            activeTab === 'template' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+          )}
+        >
+          <Layers className="w-3.5 h-3.5 flex-shrink-0" /> Template e Segmento
+        </button>
 
         <div className="ml-auto flex items-center gap-3 pl-4 py-2 flex-shrink-0">
           <AnimatePresence>
@@ -677,7 +711,7 @@ CLASSIFICAÇÃO:
                 );
               })}
             </div>
-          ) : (
+          ) : activeTab === 'rules' ? (
             /* ── ABA 3: REGRAS E LIMITES ──────────────────────────────────────── */
             <div className="space-y-6">
               {/* Hard rules */}
@@ -884,7 +918,145 @@ CLASSIFICAÇÃO:
                 </div>
               </section>
             </div>
-          )}
+          ) : activeTab === 'template' ? (
+            /* ── ABA 4: TEMPLATE E SEGMENTO ──────────────────────────────── */
+            <div className="space-y-4">
+              {templateLoading && (
+                <div className="flex items-center justify-center py-16">
+                  <RefreshCw className="w-5 h-5 text-gold-deep animate-spin" />
+                </div>
+              )}
+
+              {templateError && (
+                <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 text-sm">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                  {templateError}
+                </div>
+              )}
+
+              {!templateLoading && !resolvedConfig && !templateError && (
+                <div className="text-center py-16 space-y-4">
+                  <Layers className="w-10 h-10 text-white/20 mx-auto" />
+                  <div>
+                    <p className="text-white/40 text-sm font-medium">Nenhum template configurado</p>
+                    <p className="text-white/20 text-xs mt-1">Complete o wizard de configuração para ativar o agente IA.</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setSeeding(true);
+                      try { await templateService.seedTemplates(); } catch (_) {}
+                      setSeeding(false);
+                    }}
+                    disabled={seeding}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gold-deep/10 border border-gold-deep/20 text-gold-deep rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-gold-deep/20 transition-all disabled:opacity-50"
+                  >
+                    {seeding ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                    Carregar Templates Padrão
+                  </button>
+                </div>
+              )}
+
+              {!templateLoading && resolvedConfig && (
+                <>
+                  {/* Segment badge */}
+                  <section className="bg-[#0B0B0D] rounded-3xl border border-white/5 p-6 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gold-deep/10 rounded-xl border border-gold-deep/20">
+                        <Layers className="w-4 h-4 text-gold-deep" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-white uppercase tracking-widest">Template Ativo</p>
+                        <p className="text-[9px] text-white/30">Modelo de agente em uso para este tenant</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-gold-deep/5 border border-gold-deep/10 rounded-xl">
+                      <div>
+                        <p className="text-xs font-bold text-white">
+                          {SEGMENT_LABELS[resolvedConfig.segment] ?? resolvedConfig.segment}
+                        </p>
+                        <p className="text-[9px] text-white/40 mt-0.5">
+                          Template: <span className="text-gold-deep">{resolvedConfig.templateId}</span> · v{resolvedConfig.templateVersion}
+                        </p>
+                      </div>
+                      <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-bold uppercase tracking-wider rounded-full">
+                        Ativo
+                      </span>
+                    </div>
+                  </section>
+
+                  {/* Locked fields */}
+                  {resolvedConfig.lockedFields.length > 0 && (
+                    <section className="bg-[#0B0B0D] rounded-3xl border border-white/5 p-6 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/5 rounded-xl border border-white/5">
+                          <Lock className="w-4 h-4 text-white/50" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black text-white uppercase tracking-widest">Campos Bloqueados</p>
+                          <p className="text-[9px] text-white/30">Definidos pela plataforma — não podem ser alterados pelo tenant</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {resolvedConfig.lockedFields.map(f => (
+                          <span key={f} className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-mono rounded-lg">
+                            <Lock className="w-2.5 h-2.5" />{f}
+                          </span>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Platform guardrails */}
+                  <section className="bg-[#0B0B0D] rounded-3xl border border-white/5 p-6 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-white/5 rounded-xl border border-white/5">
+                        <ShieldCheck className="w-4 h-4 text-white/50" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-white uppercase tracking-widest">Guardrails da Plataforma</p>
+                        <p className="text-[9px] text-white/30">Regras invioláveis aplicadas em todos os tenants · v{resolvedConfig.guardrails.version}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      {resolvedConfig.guardrails.hardProhibitions.slice(0, 4).map((r, i) => (
+                        <div key={i} className="flex items-start gap-2 text-[9px] text-white/40">
+                          <span className="text-red-400 mt-0.5 flex-shrink-0">✗</span>{r}
+                        </div>
+                      ))}
+                      {resolvedConfig.guardrails.hardRequirements.slice(0, 3).map((r, i) => (
+                        <div key={i} className="flex items-start gap-2 text-[9px] text-white/40">
+                          <span className="text-emerald-400 mt-0.5 flex-shrink-0">✓</span>{r}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* Seed button for admins */}
+                  {(userProfile as any)?.superadmin && (
+                    <section className="bg-[#0B0B0D] rounded-3xl border border-amber-500/10 p-4 flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Admin · Re-seed de Templates</p>
+                        <p className="text-[9px] text-white/30">Atualiza os templates padrão no Firestore</p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          setSeeding(true);
+                          try { await templateService.seedTemplates(); } catch (_) {}
+                          setSeeding(false);
+                        }}
+                        disabled={seeding}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-amber-500/20 transition-all disabled:opacity-50"
+                      >
+                        {seeding ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RefreshCcw className="w-3 h-3" />}
+                        Re-seed
+                      </button>
+                    </section>
+                  )}
+                </>
+              )}
+            </div>
+          ) : null}
         </div>
         </div>
       </div>
