@@ -150,17 +150,50 @@ export const ChatView = React.memo(({
     setIsClearingTest(true);
     try {
       await Promise.all(messages.map(m => DataService.delete('messages', m.id)));
+      // Reset every field the AI pipeline can mutate back to initial state
       await DataService.update('leads', selectedLead.id, {
+        // Pipeline state
         status: 'Novo Lead',
+        score: 0,
+        temperature: 'frio' as any,
+        profileType: null as any,
+        classificationReason: null as any,
+        stuckSince: null as any,
+        nextAction: null as any,
+        // Documents & OCR
         documentStatus: null as any,
         documents: null as any,
+        processingDocument: false,
+        // Personal data extracted by OCR / collected by AI
+        name: null as any,
         cpf: null as any,
         plate: null as any,
+        chassi: null as any,
+        brandModel: null as any,
+        birthDate: null as any,
+        gender: null as any,
+        maritalStatus: null as any,
+        cepPernoite: null as any,
+        nomeProprietario: null as any,
+        cpfProprietario: null as any,
+        licenseExpiry: null as any,
+        licenseCategory: null as any,
+        licenseNumber: null as any,
+        licenseIssueDate: null as any,
+        renach: null as any,
+        renavam: null as any,
+        rg: null as any,
+        enderecoAuto: null as any,
+        insuranceExpiry: null as any,
+        insuranceStart: null as any,
+        insuranceType: null as any,
         isRenewal: null as any,
+        // AI conversation state
+        iaActive: false,
         contextSummary: null as any,
         lastMessageText: '',
         lastMessageSender: null as any,
-        iaActive: false,
+        lastInteraction: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }, 'USUARIO');
     } catch (err) {
