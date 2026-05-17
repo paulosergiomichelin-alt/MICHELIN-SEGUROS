@@ -437,7 +437,7 @@ export const ChatView = React.memo(({
                   }}
                 >
                    {messages.map((msg, idx) => {
-                     const isSelf = msg.sender === 'user' || msg.sender === 'ai';
+                     const isSelf = msg.sender === 'user';
                      const isFirstInGroup = idx === 0 || messages[idx-1].sender !== msg.sender;
 
                      return (

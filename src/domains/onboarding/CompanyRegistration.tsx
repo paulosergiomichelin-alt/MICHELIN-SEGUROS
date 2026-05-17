@@ -379,81 +379,156 @@ PremiumSelect.displayName = 'PremiumSelect';
 // ---------------------------------------------------------------------------
 
 function StepEmpresa({
-  data,
-  errors,
-  onChange,
+  data, errors, onChange, grid = false,
 }: {
-  data: FormData;
-  errors: FieldError;
+  data: FormData; errors: FieldError;
   onChange: (field: keyof FormData, value: string) => void;
+  grid?: boolean;
 }) {
-  return (
-    <div className="space-y-4">
-      <PremiumInput
-        label="Razão Social"
-        icon={Building2}
-        required
-        placeholder="Ex: Michelin Seguros Corretora LTDA"
-        value={data.razao_social}
-        onChange={(e) => onChange('razao_social', e.target.value)}
-        error={errors.razao_social}
-      />
-      <PremiumInput
-        label="Nome Fantasia"
-        icon={Briefcase}
+  return grid ? (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="md:col-span-2">
+        <PremiumInput label="Razão Social" icon={Building2} required
+          placeholder="Ex: Michelin Seguros Corretora LTDA"
+          value={data.razao_social} onChange={(e) => onChange('razao_social', e.target.value)}
+          error={errors.razao_social} />
+      </div>
+      <PremiumInput label="Nome Fantasia" icon={Briefcase}
         placeholder="Ex: Michelin Seguros"
-        value={data.nome_fantasia}
-        onChange={(e) => onChange('nome_fantasia', e.target.value)}
-        error={errors.nome_fantasia}
-        hint="Nome público da sua empresa"
-      />
-      <PremiumInput
-        label="CNPJ"
-        icon={FileText}
-        required
+        value={data.nome_fantasia} onChange={(e) => onChange('nome_fantasia', e.target.value)}
+        error={errors.nome_fantasia} hint="Nome público da sua empresa" />
+      <PremiumInput label="CNPJ" icon={FileText} required
         placeholder="00.000.000/0000-00"
-        value={data.cnpj}
-        onChange={(e) => onChange('cnpj', maskCnpj(e.target.value))}
-        error={errors.cnpj}
-        maxLength={18}
-        inputMode="numeric"
-      />
-      <PremiumInput
-        label="E-mail Corporativo"
-        icon={Mail}
-        required
-        type="email"
+        value={data.cnpj} onChange={(e) => onChange('cnpj', maskCnpj(e.target.value))}
+        error={errors.cnpj} maxLength={18} inputMode="numeric" />
+      <PremiumInput label="E-mail Corporativo" icon={Mail} required type="email"
         placeholder="contato@suaempresa.com.br"
-        value={data.email_corporativo}
-        onChange={(e) => onChange('email_corporativo', e.target.value)}
-        error={errors.email_corporativo}
-      />
-      <PremiumInput
-        label="Telefone"
-        icon={Phone}
+        value={data.email_corporativo} onChange={(e) => onChange('email_corporativo', e.target.value)}
+        error={errors.email_corporativo} />
+      <PremiumInput label="Telefone" icon={Phone}
         placeholder="(00) 00000-0000"
-        value={data.telefone}
-        onChange={(e) => onChange('telefone', maskPhone(e.target.value))}
-        error={errors.telefone}
-        maxLength={15}
-        inputMode="tel"
-      />
+        value={data.telefone} onChange={(e) => onChange('telefone', maskPhone(e.target.value))}
+        error={errors.telefone} maxLength={15} inputMode="tel" />
+    </div>
+  ) : (
+    <div className="space-y-4">
+      <PremiumInput label="Razão Social" icon={Building2} required
+        placeholder="Ex: Michelin Seguros Corretora LTDA"
+        value={data.razao_social} onChange={(e) => onChange('razao_social', e.target.value)}
+        error={errors.razao_social} />
+      <PremiumInput label="Nome Fantasia" icon={Briefcase}
+        placeholder="Ex: Michelin Seguros"
+        value={data.nome_fantasia} onChange={(e) => onChange('nome_fantasia', e.target.value)}
+        error={errors.nome_fantasia} hint="Nome público da sua empresa" />
+      <PremiumInput label="CNPJ" icon={FileText} required
+        placeholder="00.000.000/0000-00"
+        value={data.cnpj} onChange={(e) => onChange('cnpj', maskCnpj(e.target.value))}
+        error={errors.cnpj} maxLength={18} inputMode="numeric" />
+      <PremiumInput label="E-mail Corporativo" icon={Mail} required type="email"
+        placeholder="contato@suaempresa.com.br"
+        value={data.email_corporativo} onChange={(e) => onChange('email_corporativo', e.target.value)}
+        error={errors.email_corporativo} />
+      <PremiumInput label="Telefone" icon={Phone}
+        placeholder="(00) 00000-0000"
+        value={data.telefone} onChange={(e) => onChange('telefone', maskPhone(e.target.value))}
+        error={errors.telefone} maxLength={15} inputMode="tel" />
     </div>
   );
 }
 
 function StepResponsavel({
-  data,
-  errors,
-  onChange,
+  data, errors, onChange, grid = false,
 }: {
-  data: FormData;
-  errors: FieldError;
+  data: FormData; errors: FieldError;
   onChange: (field: keyof FormData, value: string) => void;
+  grid?: boolean;
 }) {
   const [showSenha, setShowSenha] = useState(false);
   const [showConfirmar, setShowConfirmar] = useState(false);
   const strength = useMemo(() => getPasswordStrength(data.owner_senha), [data.owner_senha]);
+
+  const passwordField = (
+    <div className="space-y-1 w-full group">
+      <label className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] ml-0.5 group-focus-within:text-[#D4A854] transition-colors">
+        Senha <span className="text-red-500/80">*</span>
+      </label>
+      <div className="relative">
+        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8E8E93]/40 group-focus-within:text-[#D4A854]/70 transition-colors pointer-events-none" />
+        <input type={showSenha ? 'text' : 'password'} value={data.owner_senha}
+          onChange={(e) => onChange('owner_senha', e.target.value)}
+          placeholder="Mínimo 8 caracteres"
+          className={cn('w-full h-10 bg-[#16181B] border rounded-lg pl-10 pr-10 text-[12px] font-medium text-white transition-all duration-200 focus:ring-2 focus:shadow-[0_0_0_4px_rgba(212,168,84,0.04)] hover:border-white/15 placeholder:text-white/15 outline-none',
+            errors.owner_senha ? 'border-red-500/50 focus:ring-red-500/20 focus:border-red-500/60' : 'border-white/[0.07] focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40')} />
+        <button type="button" onClick={() => setShowSenha((v) => !v)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8E8E93]/40 hover:text-[#8E8E93]/80 transition-colors">
+          {showSenha ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+      {data.owner_senha && (
+        <div className="mt-2 space-y-1">
+          <div className="flex gap-1">
+            {[1,2,3,4,5,6].map((i) => (
+              <div key={i} className="h-1 flex-1 rounded-full transition-all duration-300"
+                style={{ backgroundColor: i <= strength.score ? strength.color : '#1E2025' }} />
+            ))}
+          </div>
+          <p className="text-[10px] font-semibold ml-0.5" style={{ color: strength.color }}>{strength.label}</p>
+        </div>
+      )}
+      {errors.owner_senha && (
+        <p className="text-[10px] text-red-400/90 flex items-center gap-1 ml-0.5">
+          <AlertCircle className="w-3 h-3 flex-shrink-0" />{errors.owner_senha}
+        </p>
+      )}
+    </div>
+  );
+
+  const confirmField = (
+    <div className="space-y-1 w-full group">
+      <label className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] ml-0.5 group-focus-within:text-[#D4A854] transition-colors">
+        Confirmar Senha <span className="text-red-500/80">*</span>
+      </label>
+      <div className="relative">
+        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8E8E93]/40 pointer-events-none" />
+        <input type={showConfirmar ? 'text' : 'password'} value={data.confirmar_senha}
+          onChange={(e) => onChange('confirmar_senha', e.target.value)}
+          placeholder="Repita a senha"
+          className={cn('w-full h-10 bg-[#16181B] border rounded-lg pl-10 pr-10 text-[12px] font-medium text-white transition-all duration-200 focus:ring-2 focus:shadow-[0_0_0_4px_rgba(212,168,84,0.04)] hover:border-white/15 placeholder:text-white/15 outline-none',
+            errors.confirmar_senha ? 'border-red-500/50 focus:ring-red-500/20 focus:border-red-500/60' : 'border-white/[0.07] focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40')} />
+        <button type="button" onClick={() => setShowConfirmar((v) => !v)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8E8E93]/40 hover:text-[#8E8E93]/80 transition-colors">
+          {showConfirmar ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+      {errors.confirmar_senha && (
+        <p className="text-[10px] text-red-400/90 flex items-center gap-1 ml-0.5">
+          <AlertCircle className="w-3 h-3 flex-shrink-0" />{errors.confirmar_senha}
+        </p>
+      )}
+      {data.confirmar_senha && data.owner_senha === data.confirmar_senha && !errors.confirmar_senha && (
+        <p className="text-[10px] text-green-400/90 flex items-center gap-1 ml-0.5">
+          <CheckCircle2 className="w-3 h-3 flex-shrink-0" />Senhas coincidem
+        </p>
+      )}
+    </div>
+  );
+
+  if (grid) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <PremiumInput label="Nome Completo" icon={User} required placeholder="Seu nome completo"
+          value={data.owner_nome} onChange={(e) => onChange('owner_nome', e.target.value)} error={errors.owner_nome} />
+        <PremiumInput label="E-mail" icon={Mail} required type="email" placeholder="seu@email.com.br"
+          value={data.owner_email} onChange={(e) => onChange('owner_email', e.target.value)} error={errors.owner_email} />
+        <PremiumInput label="Telefone" icon={Phone} placeholder="(00) 00000-0000"
+          value={data.owner_telefone} onChange={(e) => onChange('owner_telefone', maskPhone(e.target.value))}
+          error={errors.owner_telefone} maxLength={15} inputMode="tel" />
+        <div />
+        {passwordField}
+        {confirmField}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -487,116 +562,18 @@ function StepResponsavel({
         inputMode="tel"
       />
 
-      {/* Password field */}
-      <div className="space-y-1 w-full group">
-        <label className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] ml-0.5 group-focus-within:text-[#D4A854] transition-colors">
-          Senha <span className="text-red-500/80">*</span>
-        </label>
-        <div className="relative">
-          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8E8E93]/40 group-focus-within:text-[#D4A854]/70 transition-colors pointer-events-none" />
-          <input
-            type={showSenha ? 'text' : 'password'}
-            value={data.owner_senha}
-            onChange={(e) => onChange('owner_senha', e.target.value)}
-            placeholder="Mínimo 8 caracteres"
-            className={cn(
-              'w-full h-10 bg-[#16181B] border rounded-lg pl-10 pr-10 text-[12px] font-medium text-white transition-all duration-200 focus:ring-2 focus:shadow-[0_0_0_4px_rgba(212,168,84,0.04)] hover:border-white/15 placeholder:text-white/15 outline-none',
-              errors.owner_senha
-                ? 'border-red-500/50 focus:ring-red-500/20 focus:border-red-500/60'
-                : 'border-white/[0.07] focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40',
-            )}
-          />
-          <button
-            type="button"
-            onClick={() => setShowSenha((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8E8E93]/40 hover:text-[#8E8E93]/80 transition-colors"
-          >
-            {showSenha ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-          </button>
-        </div>
-
-        {/* Password strength bar */}
-        {data.owner_senha && (
-          <div className="mt-2 space-y-1">
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div
-                  key={i}
-                  className="h-1 flex-1 rounded-full transition-all duration-300"
-                  style={{
-                    backgroundColor:
-                      i <= strength.score ? strength.color : '#1E2025',
-                  }}
-                />
-              ))}
-            </div>
-            <p
-              className="text-[10px] font-semibold ml-0.5"
-              style={{ color: strength.color }}
-            >
-              {strength.label}
-            </p>
-          </div>
-        )}
-
-        {errors.owner_senha && (
-          <p className="text-[10px] text-red-400/90 flex items-center gap-1 ml-0.5">
-            <AlertCircle className="w-3 h-3 flex-shrink-0" />
-            {errors.owner_senha}
-          </p>
-        )}
-      </div>
-
-      {/* Confirm password */}
-      <div className="space-y-1 w-full group">
-        <label className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] ml-0.5 group-focus-within:text-[#D4A854] transition-colors">
-          Confirmar Senha <span className="text-red-500/80">*</span>
-        </label>
-        <div className="relative">
-          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8E8E93]/40 pointer-events-none" />
-          <input
-            type={showConfirmar ? 'text' : 'password'}
-            value={data.confirmar_senha}
-            onChange={(e) => onChange('confirmar_senha', e.target.value)}
-            placeholder="Repita a senha"
-            className={cn(
-              'w-full h-10 bg-[#16181B] border rounded-lg pl-10 pr-10 text-[12px] font-medium text-white transition-all duration-200 focus:ring-2 focus:shadow-[0_0_0_4px_rgba(212,168,84,0.04)] hover:border-white/15 placeholder:text-white/15 outline-none',
-              errors.confirmar_senha
-                ? 'border-red-500/50 focus:ring-red-500/20 focus:border-red-500/60'
-                : 'border-white/[0.07] focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40',
-            )}
-          />
-          <button
-            type="button"
-            onClick={() => setShowConfirmar((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8E8E93]/40 hover:text-[#8E8E93]/80 transition-colors"
-          >
-            {showConfirmar ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-          </button>
-        </div>
-        {errors.confirmar_senha && (
-          <p className="text-[10px] text-red-400/90 flex items-center gap-1 ml-0.5">
-            <AlertCircle className="w-3 h-3 flex-shrink-0" />
-            {errors.confirmar_senha}
-          </p>
-        )}
-        {data.confirmar_senha && data.owner_senha === data.confirmar_senha && !errors.confirmar_senha && (
-          <p className="text-[10px] text-green-400/90 flex items-center gap-1 ml-0.5">
-            <CheckCircle2 className="w-3 h-3 flex-shrink-0" />
-            Senhas coincidem
-          </p>
-        )}
-      </div>
+      {passwordField}
+      {confirmField}
     </div>
   );
 }
 
 function StepConfiguracao({
-  data,
-  onChange,
+  data, onChange, grid = false,
 }: {
   data: FormData;
   onChange: (field: keyof FormData, value: string) => void;
+  grid?: boolean;
 }) {
   return (
     <div className="space-y-6">
@@ -605,7 +582,7 @@ function StepConfiguracao({
         <p className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] ml-0.5">
           Plano <span className="text-red-500/80">*</span>
         </p>
-        <div className="grid grid-cols-1 gap-3">
+        <div className={grid ? 'grid grid-cols-1 md:grid-cols-3 gap-3' : 'grid grid-cols-1 gap-3'}>
           {PLANOS.map((plan) => {
             const IconComp = plan.icon;
             const isSelected = data.plano_saas === plan.value;
@@ -674,40 +651,25 @@ function StepConfiguracao({
         </div>
       </div>
 
-      {/* Timezone */}
-      <PremiumSelect
-        label="Fuso Horário"
-        icon={Clock}
-        required
-        value={data.timezone}
-        onChange={(e) => onChange('timezone', e.target.value)}
-      >
-        {TIMEZONES.map((tz) => (
-          <option key={tz.value} value={tz.value} className="bg-[#16181B]">
-            {tz.label}
-          </option>
-        ))}
-      </PremiumSelect>
-
-      {/* Idioma */}
-      <PremiumSelect
-        label="Idioma"
-        icon={Globe}
-        required
-        value={data.idioma}
-        onChange={(e) => onChange('idioma', e.target.value)}
-      >
-        {IDIOMAS.map((lang) => (
-          <option key={lang.value} value={lang.value} className="bg-[#16181B]">
-            {lang.label}
-          </option>
-        ))}
-      </PremiumSelect>
+      <div className={grid ? 'grid grid-cols-1 md:grid-cols-2 gap-6' : 'space-y-6'}>
+        <PremiumSelect label="Fuso Horário" icon={Clock} required
+          value={data.timezone} onChange={(e) => onChange('timezone', e.target.value)}>
+          {TIMEZONES.map((tz) => (
+            <option key={tz.value} value={tz.value} className="bg-[#16181B]">{tz.label}</option>
+          ))}
+        </PremiumSelect>
+        <PremiumSelect label="Idioma" icon={Globe} required
+          value={data.idioma} onChange={(e) => onChange('idioma', e.target.value)}>
+          {IDIOMAS.map((lang) => (
+            <option key={lang.value} value={lang.value} className="bg-[#16181B]">{lang.label}</option>
+          ))}
+        </PremiumSelect>
+      </div>
     </div>
   );
 }
 
-function StepConfirmacao({ data }: { data: FormData }) {
+function StepConfirmacao({ data, grid = false }: { data: FormData; grid?: boolean }) {
   const selectedPlan = PLANOS.find((p) => p.value === data.plano_saas);
 
   return (
@@ -719,19 +681,14 @@ function StepConfirmacao({ data }: { data: FormData }) {
             Resumo do Cadastro
           </h4>
         </div>
-        <div className="p-4 space-y-3">
+        <div className={grid ? 'p-4 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3' : 'p-4 space-y-3'}>
           <SummaryRow label="Empresa" value={data.razao_social || '—'} icon={Building2} />
           <SummaryRow label="Nome Fantasia" value={data.nome_fantasia || '—'} icon={Briefcase} />
           <SummaryRow label="CNPJ" value={data.cnpj || '—'} icon={FileText} />
           <SummaryRow label="E-mail Corporativo" value={data.email_corporativo || '—'} icon={Mail} />
           <SummaryRow label="Responsável" value={data.owner_nome || '—'} icon={User} />
           <SummaryRow label="E-mail Responsável" value={data.owner_email || '—'} icon={Mail} />
-          <SummaryRow
-            label="Plano"
-            value={selectedPlan?.label ?? '—'}
-            icon={selectedPlan?.icon ?? Shield}
-            highlight
-          />
+          <SummaryRow label="Plano" value={selectedPlan?.label ?? '—'} icon={selectedPlan?.icon ?? Shield} highlight />
           <SummaryRow label="Fuso Horário" value={TIMEZONES.find((t) => t.value === data.timezone)?.label ?? '—'} icon={Clock} />
           <SummaryRow label="Idioma" value={IDIOMAS.find((l) => l.value === data.idioma)?.label ?? '—'} icon={Globe} />
         </div>
@@ -828,9 +785,10 @@ function ToastList({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: num
 interface CompanyRegistrationProps {
   onBack?: () => void;
   onSuccess?: () => void;
+  pageMode?: boolean;
 }
 
-export function CompanyRegistration({ onBack, onSuccess }: CompanyRegistrationProps = {}) {
+export function CompanyRegistration({ onBack, onSuccess, pageMode = false }: CompanyRegistrationProps = {}) {
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM);
   const [errors, setErrors] = useState<FieldError>({});
@@ -916,236 +874,302 @@ export function CompanyRegistration({ onBack, onSuccess }: CompanyRegistrationPr
 
   const progress = ((step + 1) / STEPS.length) * 100;
 
+  // ── Shared card content (used in both layouts) ────────────────────────────
+  const cardContent = (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.1 }}
+      className="w-full max-w-lg relative rounded-[20px] border border-white/[0.06] bg-[#0E0F11]/85 backdrop-blur-xl shadow-[0_24px_60px_rgba(0,0,0,0.5)] overflow-hidden ring-1 ring-[#D4A854]/[0.04]"
+    >
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#D4A854]/40 to-transparent" />
+
+      {/* Progress bar */}
+      <div className="h-1 bg-white/[0.04] relative">
+        <motion.div
+          className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#D4A854]/80 to-[#D4A854]"
+          initial={{ width: 0 }}
+          animate={{ width: `${progress}%` }}
+          transition={{ duration: 0.4, ease: 'easeInOut' }}
+        />
+      </div>
+
+      {/* Step indicators */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04]">
+        {STEPS.map((s, i) => {
+          const StepIcon = s.icon;
+          const isPast = i < step;
+          const isCurrent = i === step;
+          return (
+            <div key={i} className="flex items-center gap-2">
+              <div className={cn(
+                'w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300',
+                isPast && 'bg-green-500/20 border border-green-500/30',
+                isCurrent && 'bg-[#D4A854]/10 border border-[#D4A854]/30',
+                !isPast && !isCurrent && 'bg-white/[0.04] border border-white/[0.08]',
+              )}>
+                {isPast ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                ) : (
+                  <StepIcon className={cn('w-3.5 h-3.5', isCurrent ? 'text-[#D4A854]' : 'text-[#8E8E93]/40')} />
+                )}
+              </div>
+              <span className={cn(
+                'text-[9px] font-bold uppercase tracking-[0.15em] hidden sm:block',
+                isCurrent ? 'text-[#D4A854]/90' : isPast ? 'text-green-400/70' : 'text-[#8E8E93]/40',
+              )}>
+                {s.label}
+              </span>
+              {i < STEPS.length - 1 && (
+                <ChevronRight className="w-3 h-3 text-white/[0.12] mx-1" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Step content */}
+      <div className="p-6">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.25 }}
+          >
+            <div className="mb-5">
+              <h2 className="text-[16px] font-black text-white">
+                {step === 0 && 'Dados da Empresa'}
+                {step === 1 && 'Dados do Responsável'}
+                {step === 2 && 'Configuração Inicial'}
+                {step === 3 && 'Confirmação'}
+              </h2>
+              <p className="text-[11px] text-[#8E8E93]/60 mt-0.5">
+                {step === 0 && 'Informe os dados cadastrais da sua empresa'}
+                {step === 1 && 'Dados do proprietário da conta'}
+                {step === 2 && 'Escolha seu plano e preferências'}
+                {step === 3 && 'Revise os dados e finalize o cadastro'}
+              </p>
+            </div>
+
+            {step === 0 && <StepEmpresa data={formData} errors={errors} onChange={handleChange} />}
+            {step === 1 && <StepResponsavel data={formData} errors={errors} onChange={handleChange} />}
+            {step === 2 && <StepConfiguracao data={formData} onChange={handleChange} />}
+            {step === 3 && <StepConfirmacao data={formData} />}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Navigation */}
+      <div className="px-6 pb-6 flex items-center gap-3">
+        {step > 0 && (
+          <button type="button" onClick={goBack} disabled={isSubmitting}
+            className="flex items-center gap-2 h-10 px-4 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[12px] font-semibold text-[#8E8E93]/80 hover:border-white/[0.15] hover:text-white transition-all duration-200 disabled:opacity-50">
+            <ChevronLeft className="w-4 h-4" /> Voltar
+          </button>
+        )}
+        <button type="button" onClick={step < STEPS.length - 1 ? goNext : handleSubmit}
+          disabled={isSubmitting}
+          className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-gradient-to-r from-[#D4A854] to-[#B8922E] text-[12px] font-bold text-[#050505] hover:from-[#DDB868] hover:to-[#C8A040] transition-all duration-200 shadow-[0_4px_20px_rgba(212,168,84,0.25)] disabled:opacity-60 disabled:cursor-not-allowed">
+          {isSubmitting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : step < STEPS.length - 1 ? (
+            <><span>Continuar</span><ChevronRight className="w-4 h-4" /></>
+          ) : (
+            <><CheckCircle2 className="w-4 h-4" /><span>Finalizar Cadastro</span></>
+          )}
+        </button>
+      </div>
+
+      <div className="pb-4 text-center">
+        <p className="text-[9.5px] text-[#8E8E93]/40">Etapa {step + 1} de {STEPS.length}</p>
+      </div>
+    </motion.div>
+  );
+
+  // ── Success state ──────────────────────────────────────────────────────────
   if (isSuccess) {
+    const successContent = (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="w-full max-w-md text-center space-y-6"
+      >
+        <motion.div
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.4, type: 'spring', stiffness: 200 }}
+          className="w-20 h-20 mx-auto rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center"
+        >
+          <CheckCircle2 className="w-10 h-10 text-green-400" />
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+          <h2 className="text-2xl font-black text-white mb-2">
+            Bem-vindo(a), {formData.owner_nome.split(' ')[0]}!
+          </h2>
+          <p className="text-[#8E8E93]/70 text-[13px]">
+            <span className="text-white font-semibold">{formData.razao_social}</span> foi cadastrada com sucesso.
+            <br />
+            Você tem <strong className="text-[#D4A854]">14 dias de trial gratuito</strong>.
+          </p>
+        </motion.div>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
+          className="flex items-center justify-center gap-2 text-[11px] text-[#8E8E93]/50">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          Preparando seu painel...
+        </motion.div>
+      </motion.div>
+    );
+
+    if (pageMode) {
+      return (
+        <div className="flex flex-col h-full bg-[#050505] text-white overflow-hidden items-center justify-center">
+          {successContent}
+          <ToastList toasts={toasts} onDismiss={dismissToast} />
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
-          className="w-full max-w-md text-center space-y-6"
-        >
-          <motion.div
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.4, type: 'spring', stiffness: 200 }}
-            className="w-20 h-20 mx-auto rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center"
-          >
-            <CheckCircle2 className="w-10 h-10 text-green-400" />
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <h2 className="text-2xl font-black text-white mb-2">
-              Bem-vindo(a), {formData.owner_nome.split(' ')[0]}!
-            </h2>
-            <p className="text-[#8E8E93]/70 text-[13px]">
-              <span className="text-white font-semibold">{formData.razao_social}</span> foi cadastrada com sucesso.
-              <br />
-              Você tem <strong className="text-[#D4A854]">14 dias de trial gratuito</strong>.
-            </p>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            className="flex items-center justify-center gap-2 text-[11px] text-[#8E8E93]/50"
-          >
-            <Loader2 className="w-3 h-3 animate-spin" />
-            Preparando seu painel...
-          </motion.div>
-        </motion.div>
+        {successContent}
         <ToastList toasts={toasts} onDismiss={dismissToast} />
       </div>
     );
   }
 
+  // ── Page mode — single scrollable page, all sections visible at once ─────────
+  if (pageMode) {
+    const handleSubmitAll = () => {
+      const e0 = validateStep(0, formData);
+      const e1 = validateStep(1, formData);
+      const allErrors = { ...e0, ...e1 };
+      if (Object.keys(allErrors).length > 0) {
+        setErrors(allErrors);
+        addToast('error', 'Preencha os campos obrigatórios corretamente');
+        return;
+      }
+      setErrors({});
+      handleSubmit();
+    };
+
+    return (
+      <div className="flex flex-col h-full bg-[#050505] text-white overflow-hidden">
+        {/* Fixed header */}
+        <div className="shrink-0 h-16 border-b border-white/5 bg-[#0B0B0D]/90 backdrop-blur-2xl px-6 md:px-8 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.8)] z-50">
+          <div className="flex items-center gap-3">
+            {onBack && (
+              <button type="button" onClick={onBack}
+                className="p-2 rounded-lg hover:bg-white/5 text-white/50 hover:text-white transition-colors">
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            )}
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-[#D4A854]/[0.08] border border-[#D4A854]/15 flex items-center justify-center">
+                <Building2 className="w-4 h-4 text-[#D4A854]" />
+              </div>
+              <div>
+                <h1 className="text-[13px] font-black uppercase tracking-widest text-white leading-tight">Nova Empresa</h1>
+                <p className="text-[9px] text-[#8E8E93]/50 leading-tight">Preencha os dados para cadastrar</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-[10px] text-[#8E8E93]/30">
+            <Shield className="w-3 h-3" />
+            <span className="hidden md:inline">Dados protegidos com criptografia</span>
+          </div>
+        </div>
+
+        {/* Single scrollable page with all sections */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <div className="p-6 md:p-10 space-y-10 pb-10">
+
+            {/* ── Seção 1: Empresa ─────────────────────────────────────────── */}
+            <section>
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/[0.05]">
+                <div className="w-8 h-8 rounded-lg bg-[#D4A854]/[0.08] border border-[#D4A854]/15 flex items-center justify-center shrink-0">
+                  <Building2 className="w-4 h-4 text-[#D4A854]" />
+                </div>
+                <div>
+                  <h2 className="text-[15px] font-black text-white tracking-tight">Dados da Empresa</h2>
+                  <p className="text-[11px] text-[#8E8E93]/50">Informações cadastrais da empresa</p>
+                </div>
+              </div>
+              <StepEmpresa data={formData} errors={errors} onChange={handleChange} grid />
+            </section>
+
+            {/* ── Seção 2: Responsável ─────────────────────────────────────── */}
+            <section>
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/[0.05]">
+                <div className="w-8 h-8 rounded-lg bg-[#5E85FF]/[0.08] border border-[#5E85FF]/15 flex items-center justify-center shrink-0">
+                  <User className="w-4 h-4 text-[#5E85FF]" />
+                </div>
+                <div>
+                  <h2 className="text-[15px] font-black text-white tracking-tight">Responsável</h2>
+                  <p className="text-[11px] text-[#8E8E93]/50">Proprietário e credenciais de acesso</p>
+                </div>
+              </div>
+              <StepResponsavel data={formData} errors={errors} onChange={handleChange} grid />
+            </section>
+
+            {/* ── Seção 3: Plano e Configuração ────────────────────────────── */}
+            <section>
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/[0.05]">
+                <div className="w-8 h-8 rounded-lg bg-[#22C55E]/[0.08] border border-[#22C55E]/15 flex items-center justify-center shrink-0">
+                  <Settings className="w-4 h-4 text-[#22C55E]" />
+                </div>
+                <div>
+                  <h2 className="text-[15px] font-black text-white tracking-tight">Plano e Configuração</h2>
+                  <p className="text-[11px] text-[#8E8E93]/50">Escolha o plano, fuso horário e idioma</p>
+                </div>
+              </div>
+              <StepConfiguracao data={formData} onChange={handleChange} grid />
+            </section>
+
+          </div>
+        </div>
+
+        {/* Fixed footer */}
+        <div className="shrink-0 border-t border-white/5 bg-[#0B0B0D]/90 backdrop-blur-xl px-6 md:px-10 py-4 flex items-center justify-end gap-3">
+          {onBack && (
+            <button type="button" onClick={onBack} disabled={isSubmitting}
+              className="flex items-center gap-2 h-10 px-5 rounded-xl border border-white/[0.08] bg-white/[0.03] text-[12px] font-semibold text-[#8E8E93]/80 hover:border-white/[0.15] hover:text-white transition-all disabled:opacity-50">
+              Cancelar
+            </button>
+          )}
+          <button type="button" onClick={handleSubmitAll} disabled={isSubmitting}
+            className="flex items-center gap-2 h-10 px-8 rounded-xl bg-gradient-to-r from-[#D4A854] to-[#B8922E] text-[12px] font-bold text-[#050505] hover:from-[#DDB868] hover:to-[#C8A040] transition-all shadow-[0_4px_20px_rgba(212,168,84,0.25)] disabled:opacity-60 disabled:cursor-not-allowed">
+            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle2 className="w-4 h-4" /><span>Finalizar Cadastro</span></>}
+          </button>
+        </div>
+
+        <ToastList toasts={toasts} onDismiss={dismissToast} />
+      </div>
+    );
+  }
+
+  // ── Standalone page mode (used from App.tsx public registration) ───────────
   return (
     <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-start pt-8 pb-16 px-4">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8"
-      >
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
         <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#D4A854]/[0.08] border border-[#D4A854]/15 flex items-center justify-center">
           <Building2 className="w-6 h-6 text-[#D4A854]" />
         </div>
-        <h1 className="text-2xl font-black text-white tracking-tight">
-          Cadastro de Empresa
-        </h1>
-        <p className="text-[#8E8E93]/60 text-[12px] mt-1">
-          Preencha os dados e comece a usar em minutos
-        </p>
+        <h1 className="text-2xl font-black text-white tracking-tight">Cadastro de Empresa</h1>
+        <p className="text-[#8E8E93]/60 text-[12px] mt-1">Preencha os dados e comece a usar em minutos</p>
         {onBack && (
-          <button
-            type="button"
-            onClick={onBack}
-            className="mt-4 flex items-center gap-2 mx-auto h-9 px-4 rounded-lg border border-white/[0.10] bg-white/[0.04] text-[11px] font-bold text-[#8E8E93]/80 hover:border-white/20 hover:text-white transition-all duration-200"
-          >
+          <button type="button" onClick={onBack}
+            className="mt-4 flex items-center gap-2 mx-auto h-9 px-4 rounded-lg border border-white/[0.10] bg-white/[0.04] text-[11px] font-bold text-[#8E8E93]/80 hover:border-white/20 hover:text-white transition-all duration-200">
             <X className="w-3.5 h-3.5" /> Cancelar
           </button>
         )}
       </motion.div>
 
-      {/* Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="w-full max-w-lg relative rounded-[20px] border border-white/[0.06] bg-[#0E0F11]/85 backdrop-blur-xl shadow-[0_24px_60px_rgba(0,0,0,0.5)] overflow-hidden ring-1 ring-[#D4A854]/[0.04]"
-      >
-        {/* Top gold line */}
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#D4A854]/40 to-transparent" />
+      {cardContent}
 
-        {/* Progress bar */}
-        <div className="h-1 bg-white/[0.04] relative">
-          <motion.div
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#D4A854]/80 to-[#D4A854]"
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.4, ease: 'easeInOut' }}
-          />
-        </div>
-
-        {/* Step indicators */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04]">
-          {STEPS.map((s, i) => {
-            const StepIcon = s.icon;
-            const isPast = i < step;
-            const isCurrent = i === step;
-            return (
-              <div key={i} className="flex items-center gap-2">
-                <div
-                  className={cn(
-                    'w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300',
-                    isPast && 'bg-green-500/20 border border-green-500/30',
-                    isCurrent && 'bg-[#D4A854]/10 border border-[#D4A854]/30',
-                    !isPast && !isCurrent && 'bg-white/[0.04] border border-white/[0.08]',
-                  )}
-                >
-                  {isPast ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                  ) : (
-                    <StepIcon
-                      className={cn(
-                        'w-3.5 h-3.5',
-                        isCurrent ? 'text-[#D4A854]' : 'text-[#8E8E93]/40',
-                      )}
-                    />
-                  )}
-                </div>
-                <span
-                  className={cn(
-                    'text-[9px] font-bold uppercase tracking-[0.15em] hidden sm:block',
-                    isCurrent ? 'text-[#D4A854]/90' : isPast ? 'text-green-400/70' : 'text-[#8E8E93]/40',
-                  )}
-                >
-                  {s.label}
-                </span>
-                {i < STEPS.length - 1 && (
-                  <ChevronRight className="w-3 h-3 text-white/[0.12] mx-1" />
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Step content */}
-        <div className="p-6">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={step}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-            >
-              {/* Step title */}
-              <div className="mb-5">
-                <h2 className="text-[16px] font-black text-white">
-                  {step === 0 && 'Dados da Empresa'}
-                  {step === 1 && 'Dados do Responsável'}
-                  {step === 2 && 'Configuração Inicial'}
-                  {step === 3 && 'Confirmação'}
-                </h2>
-                <p className="text-[11px] text-[#8E8E93]/60 mt-0.5">
-                  {step === 0 && 'Informe os dados cadastrais da sua empresa'}
-                  {step === 1 && 'Dados do proprietário da conta'}
-                  {step === 2 && 'Escolha seu plano e preferências'}
-                  {step === 3 && 'Revise os dados e finalize o cadastro'}
-                </p>
-              </div>
-
-              {step === 0 && (
-                <StepEmpresa data={formData} errors={errors} onChange={handleChange} />
-              )}
-              {step === 1 && (
-                <StepResponsavel data={formData} errors={errors} onChange={handleChange} />
-              )}
-              {step === 2 && (
-                <StepConfiguracao data={formData} onChange={handleChange} />
-              )}
-              {step === 3 && (
-                <StepConfirmacao data={formData} />
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* Navigation */}
-        <div className="px-6 pb-6 flex items-center gap-3">
-          {step > 0 && (
-            <button
-              type="button"
-              onClick={goBack}
-              disabled={isSubmitting}
-              className="flex items-center gap-2 h-10 px-4 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[12px] font-semibold text-[#8E8E93]/80 hover:border-white/[0.15] hover:text-white transition-all duration-200 disabled:opacity-50"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Voltar
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={step < STEPS.length - 1 ? goNext : handleSubmit}
-            disabled={isSubmitting}
-            className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-gradient-to-r from-[#D4A854] to-[#B8922E] text-[12px] font-bold text-[#050505] hover:from-[#DDB868] hover:to-[#C8A040] transition-all duration-200 shadow-[0_4px_20px_rgba(212,168,84,0.25)] disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : step < STEPS.length - 1 ? (
-              <>
-                Continuar
-                <ChevronRight className="w-4 h-4" />
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="w-4 h-4" />
-                Finalizar Cadastro
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Step counter */}
-        <div className="pb-4 text-center">
-          <p className="text-[9.5px] text-[#8E8E93]/40">
-            Etapa {step + 1} de {STEPS.length}
-          </p>
-        </div>
-      </motion.div>
-
-      {/* Security note */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="mt-4 flex items-center gap-2 text-[10px] text-[#8E8E93]/40"
-      >
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+        className="mt-4 flex items-center gap-2 text-[10px] text-[#8E8E93]/40">
         <Shield className="w-3 h-3" />
         <span>Dados protegidos com criptografia. Nenhum cartão necessário para o trial.</span>
       </motion.div>

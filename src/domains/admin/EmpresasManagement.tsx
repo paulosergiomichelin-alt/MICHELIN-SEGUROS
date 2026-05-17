@@ -74,11 +74,13 @@ function PlanBadge({ plan }: { plan: string }) {
 function SkeletonRow() {
   return (
     <tr className="border-t border-white/[0.04]">
-      {[1,2,3,4,5,6,7].map(i => (
-        <td key={i} className="px-4 py-3.5">
-          <div className="h-3 rounded-full bg-white/[0.06] animate-pulse" style={{ width:`${40+Math.random()*40}%` }} />
-        </td>
-      ))}
+      <td className="px-4 py-3.5"><div className="h-3 rounded-full bg-white/[0.06] animate-pulse w-3/4" /></td>
+      <td className="px-4 py-3.5 hidden sm:table-cell"><div className="h-3 rounded-full bg-white/[0.06] animate-pulse w-2/3" /></td>
+      <td className="px-4 py-3.5 hidden md:table-cell"><div className="h-3 rounded-full bg-white/[0.06] animate-pulse w-1/2" /></td>
+      <td className="px-4 py-3.5"><div className="h-3 rounded-full bg-white/[0.06] animate-pulse w-1/2" /></td>
+      <td className="px-4 py-3.5 hidden lg:table-cell"><div className="h-3 rounded-full bg-white/[0.06] animate-pulse w-1/3" /></td>
+      <td className="px-4 py-3.5 hidden lg:table-cell"><div className="h-3 rounded-full bg-white/[0.06] animate-pulse w-1/2" /></td>
+      <td className="px-4 py-3.5"><div className="h-3 rounded-full bg-white/[0.06] animate-pulse w-1/4" /></td>
     </tr>
   );
 }
@@ -637,8 +639,19 @@ export function EmpresasManagement() {
     </button>
   );
 
+  if (showNew) {
+    return (
+      <CompanyRegistration
+        pageMode
+        onBack={() => setShowNew(false)}
+        onSuccess={() => { setShowNew(false); fetchEmpresas(); }}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#050505] p-6">
+    <div className="flex flex-col h-full bg-[#050505] overflow-hidden">
+    <div className="flex-1 overflow-y-auto p-4 md:p-6">
       {/* Header */}
       <motion.div initial={{opacity:0,y:-16}} animate={{opacity:1,y:0}} className="mb-6">
         <div className="flex items-center gap-3 mb-1">
@@ -653,8 +666,8 @@ export function EmpresasManagement() {
       </motion.div>
 
       {/* Toolbar */}
-      <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:.05}} className="flex items-center gap-3 mb-4">
-        <div className="relative flex-1 max-w-sm">
+      <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:.05}} className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="relative w-full sm:flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8E8E93]/40 pointer-events-none" />
           <input type="text" placeholder="Buscar por nome ou CNPJ..." value={search} onChange={e => setSearch(e.target.value)}
             className="w-full h-9 bg-[#16181B] border border-white/[0.07] rounded-lg pl-9 pr-3.5 text-[12px] font-medium text-white placeholder:text-white/20 focus:outline-none focus:border-[#D4A854]/40 focus:ring-2 focus:ring-[#D4A854]/10 transition-all" />
@@ -669,7 +682,7 @@ export function EmpresasManagement() {
           <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} /> Atualizar
         </button>
         <button onClick={() => setShowNew(true)}
-          className="h-9 px-4 rounded-lg bg-[#D4A854] text-[#050505] text-[11px] font-black uppercase tracking-wide flex items-center gap-2 hover:bg-[#C49844] transition-all ml-auto">
+          className="h-9 px-4 rounded-lg bg-[#D4A854] text-[#050505] text-[11px] font-black uppercase tracking-wide flex items-center gap-2 hover:bg-[#C49844] transition-all sm:ml-auto">
           <Plus className="w-3.5 h-3.5" /> Nova Empresa
         </button>
       </motion.div>
@@ -704,15 +717,15 @@ export function EmpresasManagement() {
               <thead>
                 <tr className="border-b border-white/[0.05] bg-white/[0.015]">
                   {[
-                    { col: <SortHeader field="nomeRazaoSocial" label="Empresa" /> },
-                    { col: 'CNPJ' },
-                    { col: <SortHeader field="planoSaas" label="Plano" /> },
-                    { col: <SortHeader field="status" label="Status" /> },
-                    { col: 'Usuários' },
-                    { col: 'Trial / Criação' },
-                    { col: 'Ações', right: true },
-                  ].map(({ col, right }, i) => (
-                    <th key={i} className={cn('px-4 py-3', right && 'text-right')}>
+                    { col: <SortHeader field="nomeRazaoSocial" label="Empresa" />, cls: '' },
+                    { col: 'CNPJ', cls: 'hidden sm:table-cell' },
+                    { col: <SortHeader field="planoSaas" label="Plano" />, cls: 'hidden md:table-cell' },
+                    { col: <SortHeader field="status" label="Status" />, cls: '' },
+                    { col: 'Usuários', cls: 'hidden lg:table-cell' },
+                    { col: 'Trial / Criação', cls: 'hidden lg:table-cell' },
+                    { col: 'Ações', right: true, cls: '' },
+                  ].map(({ col, right, cls }, i) => (
+                    <th key={i} className={cn('px-4 py-3', right && 'text-right', cls)}>
                       <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[#8E8E93]/70">{col}</span>
                     </th>
                   ))}
@@ -744,18 +757,18 @@ export function EmpresasManagement() {
                         </td>
 
                         {/* CNPJ */}
-                        <td className="px-4 py-3.5">
+                        <td className="px-4 py-3.5 hidden sm:table-cell">
                           <span className="text-[11px] font-mono text-white/60">{formatCnpj(e.cnpj)}</span>
                         </td>
 
                         {/* Plan */}
-                        <td className="px-4 py-3.5"><PlanBadge plan={e.planoSaas} /></td>
+                        <td className="px-4 py-3.5 hidden md:table-cell"><PlanBadge plan={e.planoSaas} /></td>
 
                         {/* Status */}
                         <td className="px-4 py-3.5"><StatusBadge status={e.status} /></td>
 
                         {/* Users */}
-                        <td className="px-4 py-3.5">
+                        <td className="px-4 py-3.5 hidden lg:table-cell">
                           <div className="flex items-center gap-1.5 text-[11px] text-white/60">
                             <Users className="w-3 h-3 text-[#8E8E93]/40" />
                             <span>{userCounts[e.id] ?? '—'} / {e.limiteUsuarios}</span>
@@ -763,7 +776,7 @@ export function EmpresasManagement() {
                         </td>
 
                         {/* Trial/Date */}
-                        <td className="px-4 py-3.5">
+                        <td className="px-4 py-3.5 hidden lg:table-cell">
                           {e.status === 'trial' && e.trialExpiraEm ? (
                             <div className="space-y-0.5">
                               <p className={cn('text-[11px] font-semibold', expiring ? 'text-red-400' : 'text-[#FBBF24]/80')}>
@@ -842,22 +855,7 @@ export function EmpresasManagement() {
         empresa={deleteTarget} onConfirm={handleDelete} onCancel={() => !deleteLoading && setDeleteTarget(null)} loading={deleteLoading}
       />
 
-      {/* New company modal */}
-      <AnimatePresence>
-        {showNew && (
-          <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowNew(false)} />
-            <motion.div initial={{opacity:0,scale:.96,y:16}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:.96,y:16}}
-              className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[24px] shadow-2xl" onClick={e => e.stopPropagation()}>
-              <button onClick={() => setShowNew(false)}
-                className="absolute top-4 right-4 z-10 p-1.5 rounded-lg bg-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-              <CompanyRegistration onBack={() => setShowNew(false)} onSuccess={() => { setShowNew(false); fetchEmpresas(); }} />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    </div>
     </div>
   );
 }
