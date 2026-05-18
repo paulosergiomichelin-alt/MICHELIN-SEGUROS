@@ -1,4 +1,4 @@
-import { createSign } from 'crypto';
+import { createSign } from 'node:crypto';
 
 const PROJECT_ID  = 'gen-lang-client-0929974546';
 const DATABASE_ID = 'ai-studio-e7cf89ac-d4c5-4bef-9fa5-57e4ac67170c';

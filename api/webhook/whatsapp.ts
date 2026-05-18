@@ -1,4 +1,4 @@
-import { fsSet, fsUpdate, fsQuery } from '../lib/adminFirebase';
+import { fsSet, fsUpdate, fsQuery } from '../lib/adminFirebase.js';
 
 export default function handler(req: any, res: any) {
   // ── GET: verificação de propriedade ──────────────────────────────────────────
