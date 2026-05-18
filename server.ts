@@ -69,6 +69,53 @@ async function startServer() {
     }
   });
 
+  // ── WhatsApp Webhook ───────────────────────────────────────────────────────
+  // GET: verificação de propriedade pelo Meta (chamado 1x ao cadastrar o webhook)
+  app.get('/api/webhook/whatsapp', (req, res) => {
+    const mode      = req.query['hub.mode'];
+    const token     = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
+
+    if (mode === 'subscribe' && token === verifyToken) {
+      console.log('[WHATSAPP_WEBHOOK] Verificação concluída com sucesso');
+      res.status(200).send(challenge); // Meta exige a resposta como texto simples
+    } else {
+      console.warn('[WHATSAPP_WEBHOOK] Falha na verificação — token inválido');
+      res.sendStatus(403);
+    }
+  });
+
+  // POST: recebe mensagens e eventos do WhatsApp em tempo real
+  app.post('/api/webhook/whatsapp', (req, res) => {
+    const body = req.body;
+
+    if (body?.object === 'whatsapp_business_account') {
+      const entries = body.entry ?? [];
+      for (const entry of entries) {
+        for (const change of entry.changes ?? []) {
+          if (change.field === 'messages') {
+            const messages = change.value?.messages ?? [];
+            const statuses = change.value?.statuses ?? [];
+
+            for (const msg of messages) {
+              console.log('[WHATSAPP_WEBHOOK] Mensagem recebida:', JSON.stringify(msg));
+              // TODO: processar mensagem recebida (ex: criar lead, responder via IA)
+            }
+
+            for (const status of statuses) {
+              console.log('[WHATSAPP_WEBHOOK] Status de entrega:', status.id, '->', status.status);
+            }
+          }
+        }
+      }
+      res.sendStatus(200); // Meta exige 200 em até 20s ou vai retentar
+    } else {
+      res.sendStatus(404);
+    }
+  });
+
   // Body-parser error handler (catches 413 before routes see it).
   app.use((err: any, _req: any, res: any, next: any) => {
     if (err && (err.type === 'entity.too.large' || err.status === 413)) {
