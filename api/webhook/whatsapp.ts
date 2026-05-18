@@ -1,7 +1,7 @@
-import { getAdminDb } from '../lib/adminFirebase';
+import { fsSet, fsUpdate, fsQuery } from '../lib/adminFirebase';
 
 export default function handler(req: any, res: any) {
-  // ── GET: verificação de propriedade (chamado 1× ao cadastrar webhook) ──────
+  // ── GET: verificação de propriedade ──────────────────────────────────────────
   if (req.method === 'GET') {
     const mode      = req.query?.['hub.mode'];
     const token     = req.query?.['hub.verify_token'];
@@ -19,11 +19,10 @@ export default function handler(req: any, res: any) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
-  // ── POST: recebe eventos do WhatsApp em tempo real ────────────────────────
+  // ── POST: recebe eventos do WhatsApp ──────────────────────────────────────────
   if (req.method === 'POST') {
     const body = req.body;
     if (body?.object === 'whatsapp_business_account') {
-      // Responde 200 imediatamente (Meta exige em ≤20s)
       res.status(200).json({ status: 'ok' });
       processEvents(body).catch(err => console.error('[WEBHOOK] Erro ao processar evento:', err));
     } else {
@@ -34,8 +33,6 @@ export default function handler(req: any, res: any) {
 
   res.status(405).end();
 }
-
-// ── Processamento assíncrono após o ack ──────────────────────────────────────
 
 async function processEvents(body: any) {
   for (const entry of body.entry ?? []) {
@@ -58,51 +55,38 @@ async function processEvents(body: any) {
 }
 
 async function handleIncomingMessage(msg: any) {
-  const from:      string = msg.from;                              // ex: "5567996748603"
+  const from:      string = msg.from;
   const text:      string = msg.text?.body ?? `[${msg.type}]`;
   const wamid:     string = msg.id;
   const timestamp: string = new Date(Number(msg.timestamp) * 1000).toISOString();
 
   console.log(`[WEBHOOK] Mensagem de ${from}: ${text}`);
 
-  const db = getAdminDb();
-
-  // 1. Busca lead existente pelo telefone
-  const lead = await findOrCreateLead(db, from, timestamp, msg.profile?.name);
-
-  // 2. Salva mensagem (com deduplicação via wamid)
-  await saveMessage(db, lead.id, lead.organizationId, text, wamid, timestamp);
+  const lead = await findOrCreateLead(from, timestamp, msg.profile?.name);
+  await saveMessage(lead.id, lead.organizationId, text, wamid, timestamp);
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 async function findOrCreateLead(
-  db: FirebaseFirestore.Firestore,
   phone: string,
   timestamp: string,
   profileName?: string,
 ): Promise<{ id: string; organizationId: string }> {
   const orgId = 'default';
 
-  // Procura lead existente
-  const snap = await db.collection('leads')
-    .where('phone', '==', phone)
-    .where('organizationId', '==', orgId)
-    .limit(1)
-    .get();
+  const existing = await fsQuery('leads', [
+    { field: 'phone',          value: phone  },
+    { field: 'organizationId', value: orgId  },
+  ]);
 
-  if (!snap.empty) {
-    const existing = snap.docs[0];
-    // Atualiza updatedAt
-    await existing.ref.update({ updatedAt: timestamp });
-    return { id: existing.id, organizationId: orgId };
+  if (existing.length > 0) {
+    await fsUpdate('leads', existing[0].id, { updatedAt: timestamp });
+    return { id: existing[0].id, organizationId: orgId };
   }
 
-  // Cria novo lead
   const id   = `wa_${phone}_${Date.now()}`;
   const name = profileName || `WhatsApp ${phone}`;
 
-  const lead = {
+  await fsSet('leads', id, {
     id,
     phone,
     name,
@@ -114,34 +98,27 @@ async function findOrCreateLead(
     createdAt:            timestamp,
     updatedAt:            timestamp,
     ownerId:              'system',
-  };
+  });
 
-  await db.collection('leads').doc(id).set(lead);
   console.log(`[WEBHOOK] Novo lead criado: ${id} (${phone})`);
   return { id, organizationId: orgId };
 }
 
 async function saveMessage(
-  db: FirebaseFirestore.Firestore,
   leadId: string,
   organizationId: string,
   text: string,
   wamid: string,
   timestamp: string,
 ) {
-  // Deduplicação: ignora se o wamid já existe
-  const dup = await db.collection('messages')
-    .where('wamid', '==', wamid)
-    .limit(1)
-    .get();
-
-  if (!dup.empty) {
+  const dup = await fsQuery('messages', [{ field: 'wamid', value: wamid }]);
+  if (dup.length > 0) {
     console.log(`[WEBHOOK] Mensagem ${wamid} já salva, ignorando`);
     return;
   }
 
   const id = `msg_${wamid}`;
-  await db.collection('messages').doc(id).set({
+  await fsSet('messages', id, {
     id,
     leadId,
     organizationId,
