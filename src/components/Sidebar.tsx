@@ -19,6 +19,7 @@ import { cn } from '../lib/utils';
 import { Permissions, VisualIdentityConfig } from '../types';
 import { useTheme, useViewport } from '../hooks/useAppContexts';
 import { auth, signOut } from '../lib/firebase';
+import { AggerInstallBanner } from './AggerInstallBanner';
 
 interface SidebarProps {
   permissions: Permissions;
@@ -156,6 +157,8 @@ export const Sidebar = React.memo(({
       </nav>
 
       <div className="p-3 mt-auto border-t border-white/5 space-y-3 shrink-0 bg-brand-black">
+        <AggerInstallBanner isSidebarOpen={isSidebarOpen} />
+
         {/* User Profile Card */}
         <button
           onClick={onProfileClick}

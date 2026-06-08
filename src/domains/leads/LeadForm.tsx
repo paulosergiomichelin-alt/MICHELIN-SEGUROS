@@ -25,6 +25,8 @@ import { auth } from '../../lib/firebase';
 import { OCRService } from '../../services/OCRService';
 import { DocumentSessionController, DocumentPipelineState } from '../../services/document-engine/DocumentSessionController';
 import { UniversalDocumentViewer } from '../../components/UniversalDocumentViewer';
+import { buildAggerQuoteUrl } from '../../lib/agger-quote';
+import { useAggerUserscriptInstalled } from '../../lib/agger-userscript';
 
 interface LeadFormProps {
   lead?: Lead | null;
@@ -1790,6 +1792,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
 
           {/* Form Actions */}
           <section className="pt-6 border-t border-white/5">
+            <AggerQuoteButton formData={formData} />
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
@@ -1878,3 +1881,39 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
     </>
   );
 });
+
+const AggerQuoteButton: React.FC<{ formData: Partial<Lead> }> = ({ formData }) => {
+  const { installed } = useAggerUserscriptInstalled();
+  const canQuote = !!formData.name && !!formData.cpf && !!formData.plate;
+
+  const handleClick = () => {
+    if (!canQuote) return;
+    const url = buildAggerQuoteUrl(formData as Lead);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <div className="mb-4">
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={!canQuote}
+        className={cn(
+          "w-full h-12 rounded-xl font-black uppercase text-[11px] tracking-[0.3em] flex items-center justify-center gap-2.5 transition-all border-b-2",
+          canQuote
+            ? "bg-gradient-to-r from-amber-500 to-gold-deep text-brand-dark border-amber-700 hover:brightness-110 active:scale-[0.99] shadow-[0_8px_30px_rgba(212,168,84,0.18)]"
+            : "bg-white/5 text-white/30 border-transparent cursor-not-allowed"
+        )}
+        title={!canQuote ? 'Preencha nome, CPF e placa para cotar' : 'Abre o Aggilizador e preenche os dados deste lead'}
+      >
+        <ArrowRight className="w-4 h-4" />
+        <span>Cotar no Agger</span>
+      </button>
+      {!installed && canQuote && (
+        <p className="text-center text-[9px] text-amber-300/60 font-bold uppercase tracking-[0.2em] mt-2">
+          Instale a ferramenta no menu lateral para preenchimento automático
+        </p>
+      )}
+    </div>
+  );
+};

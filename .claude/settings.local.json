@@ -49,7 +49,29 @@
       "PowerShell($config = Get-Content \"C:\\\\Users\\\\paulo\\\\.config\\\\configstore\\\\firebase-tools.json\" | ConvertFrom-Json; $tokens = $config.tokens; Write-Host \"Token keys: $\\($tokens.PSObject.Properties.Name -join ', '\\)\")",
       "Bash(findstr /R \"settings|config|visual_identity\" \"C:\\\\Users\\\\paulo\\\\OneDrive\\\\Documentos\\\\GitHub\\\\MICHELIN-SEGUROS\\\\src\\\\components\\\\AppContentManager.tsx\")",
       "Bash(npx firebase *)",
-      "Bash(claude --dangerously-skip-permissions --version)"
+      "Bash(claude --dangerously-skip-permissions --version)",
+      "Bash(Select-String -Pattern \"scripts\" -A 10)",
+      "PowerShell(npm run *)",
+      "Skill(update-config)",
+      "Bash(xargs grep -l \"STAGES\\\\|stages\\\\|pipeline\")",
+      "Bash(git restore *)",
+      "Bash(git commit -m 'fix: simplify webhook handler to use req.query \\(Vercel native\\) *)",
+      "Bash(vercel *)",
+      "mcp__plugin_vercel_vercel__list_deployments",
+      "Bash(Select-Object -Last 4)",
+      "Bash(git commit -m 'feat: webhook saves incoming WhatsApp messages to Firestore *)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\paulo\\\\AppData\\\\Local\\\\Temp\\\\fb_sa_temp.json\" -Force -ErrorAction SilentlyContinue)",
+      "Bash(Write-Output \"done\")",
+      "mcp__plugin_vercel_vercel__get_runtime_logs",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\('firebase-admin in deps:', !!p.dependencies['firebase-admin']\\); console.log\\('firebase-admin in devDeps:', !!\\(p.devDependencies && p.devDependencies['firebase-admin']\\)\\); console.log\\('version:', p.dependencies['firebase-admin'] || p.devDependencies?.['firebase-admin']\\)\")",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\('type:', p.type || 'commonjs'\\); console.log\\('node engines:', JSON.stringify\\(p.engines\\)\\); console.log\\('firebase-admin version:', p.dependencies['firebase-admin']\\)\")",
+      "mcp__plugin_vercel_vercel__get_deployment_build_logs",
+      "Bash(node -e \"const t = require\\('./tsconfig.json'\\); console.log\\('module:', t.compilerOptions?.module\\); console.log\\('moduleResolution:', t.compilerOptions?.moduleResolution\\); console.log\\('target:', t.compilerOptions?.target\\)\")",
+      "Bash(git commit *)",
+      "mcp__plugin_vercel_vercel__get_deployment",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\(JSON.stringify\\({name: p.name, version: p.version, engines: p.engines, scripts: Object.keys\\(p.scripts\\)}\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(npm uninstall *)"
     ]
   }
 }

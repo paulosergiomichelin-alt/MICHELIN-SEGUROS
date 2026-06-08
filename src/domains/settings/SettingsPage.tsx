@@ -18,6 +18,7 @@ import { AdminTools } from '../admin/AdminTools';
 import { auth } from '../../lib/firebase';
 import { CacheManager } from '../../services/CacheManager';
 import { AIDocumentExtractionPanel } from './AIDocumentExtractionPanel';
+import { AggerToolSettings } from '../../components/AggerToolSettings';
 
 interface SettingsProps {
   canManageUsers?: boolean;
@@ -668,11 +669,14 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
       <div className="flex-1 min-w-0 overflow-y-auto">
         <div className="p-8 space-y-6">
         {activeSubTab === 'general' && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
+            {/* Ferramenta Cotar no Agger — destaque no topo */}
+            <AggerToolSettings />
+
             {/* Sections for General */}
             <section className="bg-brand-dark p-6 rounded-[2rem] border border-white/5 shadow-xl space-y-6">
               <div className="flex items-center justify-between">
@@ -730,7 +734,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Logo (Fundo Escuro)</label>
-                  <div className="relative group aspect-video max-w-md">
+                  <div className="relative group aspect-[5/2] max-w-[220px]">
                     <div 
                       onClick={() => fileInputRef.current?.click()}
                       className={cn(
@@ -783,7 +787,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Logo (Fundo Claro)</label>
-                  <div className="relative group aspect-video max-w-md">
+                  <div className="relative group aspect-[5/2] max-w-[220px]">
                     <div 
                       onClick={() => lightLogoInputRef.current?.click()}
                       className={cn(
@@ -835,61 +839,6 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="bg-brand-black/50 rounded-3xl p-6 border border-white/5 space-y-5 h-full flex flex-col">
-                <h4 className="text-[10px] font-black text-gold-deep uppercase tracking-[0.2em] flex items-center gap-2">
-                  <Bot className="w-4 h-4" />
-                  Preview Adaptativo em Tempo Real
-                </h4>
-                
-                <div className="grid grid-cols-2 gap-4 flex-1">
-                  <div className="p-4 bg-black rounded-2xl border border-white/10 space-y-2">
-                    <p className="text-[7px] font-black uppercase text-slate-600 mb-1">Modo Dark</p>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center p-1 border border-white/10 bg-white/5">
-                        {localVisualConfig.logoDark ? (
-                          <img src={localVisualConfig.logoDark} alt="Logo" className="w-full h-full object-contain" />
-                        ) : (
-                          <div className="text-[10px] text-gold-deep font-black">M</div>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-display font-black text-xs text-white uppercase truncate">{localVisualConfig.companyName || 'Michelin'}</p>
-                        <div className="h-1 w-full bg-gold-deep rounded-full mt-1" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-white rounded-2xl border border-slate-200 space-y-2 shadow-sm">
-                    <p className="text-[7px] font-black uppercase text-slate-400 mb-1">Modo Light</p>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center p-1 border border-slate-100 bg-slate-50">
-                        {localVisualConfig.logoLight || localVisualConfig.logoDark ? (
-                          <img src={localVisualConfig.logoLight || localVisualConfig.logoDark} alt="Logo" className="w-full h-full object-contain" />
-                        ) : (
-                          <div className="text-[10px] text-gold-deep font-black">M</div>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-display font-black text-xs text-slate-900 uppercase truncate">{localVisualConfig.companyName || 'Michelin'}</p>
-                        <div className="h-1 w-full bg-slate-200 rounded-full mt-1" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-auto pt-4 hidden">
-                  <button 
-                    onClick={() => handleSaveVisual(localVisualConfig)}
-                    disabled={autoSaveStatus === 'saving'}
-                    className="w-full px-6 py-4 bg-gold-deep text-brand-black rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-gold-light transition-all flex items-center justify-center gap-3 shadow-2xl shadow-gold-deep/20 disabled:opacity-50"
-                  >
-                    {autoSaveStatus === 'saving' ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
-                    Atualizar Identidade Global
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -930,20 +879,6 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
             </div>
           </section>
 
-          <section className="bg-brand-dark p-6 rounded-[2rem] border border-white/5 shadow-xl space-y-6">
-            <div className="flex items-center gap-3 border-l-4 border-gold-deep pl-4 mb-2">
-              <Zap className="w-5 h-5 text-gold-deep" />
-              <h3 className="text-sm font-bold text-gold-light uppercase tracking-widest">Extrator Determinístico</h3>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="p-5 bg-brand-black/40 rounded-3xl border border-white/5 space-y-4">
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
-                  Sistema operando em modo estrutural michelin. Todas as extrações são validadas por parsers regionais.
-                </p>
-              </div>
-            </div>
-          </section>
         </div>
 
         {/* Column 2: Meta Omnichannel */}

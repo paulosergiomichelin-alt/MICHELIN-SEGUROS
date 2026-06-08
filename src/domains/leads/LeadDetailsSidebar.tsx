@@ -1,19 +1,21 @@
 import React from 'react';
-import { 
-  FileText, 
-  TrendingUp, 
-  CheckCircle2, 
-  X, 
-  ChevronRight, 
+import {
+  FileText,
+  TrendingUp,
+  CheckCircle2,
+  X,
+  ChevronRight,
   Lock,
   Sparkles,
-  Bot
+  Bot,
+  ExternalLink
 } from 'lucide-react';
 import { Lead, Permissions, VisualIdentityConfig } from '../../types';
 import { cn, maskCPF, maskPhone } from '../../lib/utils';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SensitiveContent } from '../../components/SensitiveContent';
 import { FollowUpManagement } from './FollowUpManagement';
+import { buildAggerQuoteUrl } from '../../lib/agger-quote';
 
 interface LeadDetailsSidebarProps {
   selectedLeadForChat: Lead;
@@ -88,10 +90,27 @@ export const LeadDetailsSidebar = React.memo(({
 
 
           <div className="mb-6">
-             <FollowUpManagement 
-               leadId={selectedLeadForChat.id} 
-               leadName={selectedLeadForChat.name} 
+             <FollowUpManagement
+               leadId={selectedLeadForChat.id}
+               leadName={selectedLeadForChat.name}
              />
+          </div>
+
+          <div className="mb-6">
+             <button
+               type="button"
+               onClick={() => {
+                 const url = buildAggerQuoteUrl(selectedLeadForChat);
+                 window.open(url, '_blank', 'noopener,noreferrer');
+               }}
+               className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gold-deep text-brand-dark font-black text-[11px] uppercase tracking-[0.18em] hover:bg-gold-light transition-colors shadow-lg shadow-gold-deep/20"
+             >
+               <ExternalLink className="w-4 h-4" />
+               Cotar no Agger
+             </button>
+             <p className="mt-2 text-[9px] font-medium text-white/30 uppercase tracking-widest text-center">
+               Abre o Aggilizador e preenche os dados deste lead
+             </p>
           </div>
 
           <div className="flex flex-col chat-dynamic-spacing">
