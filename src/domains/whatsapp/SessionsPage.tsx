@@ -52,6 +52,7 @@ export const SessionsPage: React.FC = () => {
         userProfile.organizationId ?? 'default',
       );
       if (!result) { setError('Falha ao criar sessão. Verifique a configuração da Evolution API.'); return; }
+      if ('error' in result) { setError(result.error); return; }
       setQrSession(result.instanceName);
     } finally {
       setCreating(false);

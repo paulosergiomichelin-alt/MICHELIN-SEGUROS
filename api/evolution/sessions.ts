@@ -23,6 +23,12 @@ export default async function handler(req: any, res: any) {
   // ── POST: create new session ────────────────────────────────────────────────
   if (req.method === 'POST') {
     try {
+      if (!process.env.EVOLUTION_API_URL || !process.env.EVOLUTION_API_KEY) {
+        return res.status(503).json({
+          error: 'Evolution API não configurada. Defina EVOLUTION_API_URL e EVOLUTION_API_KEY no .env',
+        });
+      }
+
       const { userId, sessionName, organizationId } = req.body ?? {};
       if (!userId || !organizationId) {
         return res.status(400).json({ error: 'userId e organizationId são obrigatórios' });
@@ -39,7 +45,7 @@ export default async function handler(req: any, res: any) {
 
       const result = await EvolutionAPI.createInstance(instanceName, webhookUrl);
       if (!result) {
-        return res.status(502).json({ error: 'Falha ao criar instância na Evolution API' });
+        return res.status(502).json({ error: 'Falha ao criar instância na Evolution API. Verifique se a URL e a chave estão corretas e se o serviço está acessível.' });
       }
 
       const now = new Date().toISOString();

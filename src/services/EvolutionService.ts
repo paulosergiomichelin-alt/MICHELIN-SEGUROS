@@ -10,14 +10,17 @@ export const EvolutionService = {
     } catch { return []; }
   },
 
-  async createSession(userId: string, organizationId: string): Promise<{ instanceName: string; status: string } | null> {
+  async createSession(userId: string, organizationId: string): Promise<{ instanceName: string; status: string } | null | { error: string }> {
     try {
       const res = await fetch('/api/evolution/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, organizationId }),
       });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        return { error: body?.error ?? 'Falha ao criar sessão' };
+      }
       return res.json();
     } catch { return null; }
   },
