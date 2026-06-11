@@ -431,6 +431,10 @@ export interface Apolice {
   corretoraOrigem?: string;
   observacoes?: string;
   status: ApoliceStatus;
+  documentoUrl?: string;
+  documentoPath?: string;
+  documentoFileName?: string;
+  documentoUploadedAt?: string;
   organizationId?: string;
   createdAt: string;
   updatedAt: string;
