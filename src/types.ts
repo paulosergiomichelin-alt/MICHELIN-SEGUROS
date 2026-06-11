@@ -416,6 +416,16 @@ export interface Cliente {
 
 export type ApoliceStatus = 'ativo' | 'cancelado' | 'expirado' | 'em_renovacao';
 
+export type ApoliceAnexoTipo = 'carta_verde' | 'carteirinha' | 'boleto' | 'outros';
+
+export interface ApoliceAnexo {
+  url: string;
+  path: string;
+  nome: string;
+  tipo: ApoliceAnexoTipo;
+  uploadedAt: string;
+}
+
 export interface Apolice {
   id: string;
   clienteId: string;
@@ -428,6 +438,7 @@ export interface Apolice {
   premioLiquido: number;
   valorTotal: number;
   comissao: number;
+  comissaoPct?: number;
   corretoraOrigem?: string;
   observacoes?: string;
   status: ApoliceStatus;
@@ -435,6 +446,7 @@ export interface Apolice {
   documentoPath?: string;
   documentoFileName?: string;
   documentoUploadedAt?: string;
+  anexos?: ApoliceAnexo[];
   organizationId?: string;
   createdAt: string;
   updatedAt: string;
