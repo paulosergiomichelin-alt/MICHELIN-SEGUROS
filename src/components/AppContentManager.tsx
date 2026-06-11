@@ -5,19 +5,22 @@ import { useLeads } from '../contexts/LeadRealtimeContext';
 import { Permissions, VisualIdentityConfig, AgentConfig, UserProfile } from '../types';
 import { DataService } from '../services/DataService';
 
-const DashboardView    = lazy(() => import('../domains/dashboard/DashboardPage').then(m => ({ default: m.DashboardView })));
-const LeadsView        = lazy(() => import('../domains/leads/LeadsPage').then(m => ({ default: m.LeadsPage })));
-const ChatView         = lazy(() => import('../domains/leads/ChatView').then(m => ({ default: m.ChatView })));
-const SalesPipeline    = lazy(() => import('../domains/leads/SalesPipeline').then(m => ({ default: m.SalesPipeline })));
-const TeamPage         = lazy(() => import('../domains/admin/TeamPage').then(m => ({ default: m.TeamPage })));
-const Settings         = lazy(() => import('../domains/settings/SettingsPage').then(m => ({ default: m.Settings })));
-const TechDocs         = lazy(() => import('../domains/settings/TechDocs').then(m => ({ default: m.TechDocs })));
-const AgentSettings    = lazy(() => import('../domains/settings/AgentSettings').then(m => ({ default: m.AgentSettings })));
-const UserLogsView     = lazy(() => import('../domains/admin/UserLogsView').then(m => ({ default: m.UserLogsView })));
-const MensagensAtivas  = lazy(() => import('../domains/leads/MensagensAtivas').then(m => ({ default: m.MensagensAtivas })));
+const DashboardView      = lazy(() => import('../domains/dashboard/DashboardPage').then(m => ({ default: m.DashboardView })));
+const LeadsView          = lazy(() => import('../domains/leads/LeadsPage').then(m => ({ default: m.LeadsPage })));
+const ChatView           = lazy(() => import('../domains/leads/ChatView').then(m => ({ default: m.ChatView })));
+const SalesPipeline      = lazy(() => import('../domains/leads/SalesPipeline').then(m => ({ default: m.SalesPipeline })));
+const TeamPage           = lazy(() => import('../domains/admin/TeamPage').then(m => ({ default: m.TeamPage })));
+const Settings           = lazy(() => import('../domains/settings/SettingsPage').then(m => ({ default: m.Settings })));
+const TechDocs           = lazy(() => import('../domains/settings/TechDocs').then(m => ({ default: m.TechDocs })));
+const AgentSettings      = lazy(() => import('../domains/settings/AgentSettings').then(m => ({ default: m.AgentSettings })));
+const UserLogsView       = lazy(() => import('../domains/admin/UserLogsView').then(m => ({ default: m.UserLogsView })));
+const MensagensAtivas    = lazy(() => import('../domains/leads/MensagensAtivas').then(m => ({ default: m.MensagensAtivas })));
 const EmpresasManagement = lazy(() => import('../domains/admin/EmpresasManagement').then(m => ({ default: m.EmpresasManagement })));
 const UserProfilePage    = lazy(() => import('../domains/admin/UserProfilePage').then(m => ({ default: m.UserProfilePage })));
 const LeadPage           = lazy(() => import('../domains/leads/LeadPage').then(m => ({ default: m.LeadPage })));
+const ClientesPage       = lazy(() => import('../domains/clientes/ClientesPage').then(m => ({ default: m.ClientesPage })));
+const ClienteDetailPage  = lazy(() => import('../domains/clientes/ClienteDetailPage').then(m => ({ default: m.ClienteDetailPage })));
+const RenovacoesPage     = lazy(() => import('../domains/clientes/RenovacoesPage').then(m => ({ default: m.RenovacoesPage })));
 
 interface AppContentManagerProps {
   permissions: Permissions;
@@ -90,6 +93,10 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
 
           <Route path="/leads/new" element={<LeadPage />} />
           <Route path="/leads/:id" element={<LeadPage />} />
+
+          <Route path="/clientes" element={<ClientesPage />} />
+          <Route path="/clientes/:id" element={<ClienteDetailPage />} />
+          <Route path="/renovacoes" element={<RenovacoesPage />} />
 
           <Route
             path="/chat"

@@ -48,6 +48,7 @@ export class DataService {
     'leads', 'lead', 'users', 'user', 'messages', 'message',
     'notifications', 'notification', 'flows', 'flow',
     'follow_ups', 'follow_up', 'empresas', 'empresa',
+    'clientes', 'cliente',
     'settings', 'config',
   ]);
 
@@ -82,6 +83,10 @@ export class DataService {
     'processing_locks': 'processing_locks',
     'empresas': 'empresas',
     'empresa': 'empresas',
+    'clientes': 'clientes',
+    'cliente': 'clientes',
+    'seguradoras': 'seguradoras',
+    'seguradora': 'seguradoras',
   };
 
   private static _lastOrgId: string | null = null;

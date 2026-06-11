@@ -238,6 +238,9 @@ export interface Lead {
     uploadedBy: string;
     uploadedAt: string;
   };
+
+  // Vínculo com módulo Clientes
+  clienteId?: string;
 }
 
 export type NotificationType = 
@@ -360,6 +363,88 @@ export interface AuditLog {
   context?: string; // rota/página onde a ação ocorreu
   metadata?: any;
   organizationId?: string;
+}
+
+// ─── Módulo Clientes ──────────────────────────────────────────────────────────
+
+export type ClienteStatus = 'ativo' | 'renovacao_proxima' | 'renovacao_vencida' | 'inativo';
+
+export type ProdutoSeguro =
+  | 'Automóvel' | 'Moto' | 'Caminhão' | 'Frota'
+  | 'Residencial' | 'Empresarial' | 'Condomínio' | 'Equipamentos'
+  | 'Vida Individual' | 'Vida Empresarial' | 'Saúde' | 'Odontológico'
+  | 'RC Profissional' | 'Transporte' | 'Garantia Estendida'
+  | 'Fiança Locatícia' | 'Consórcio' | 'Previdência Privada';
+
+export const PRODUTOS_SEGURO: ProdutoSeguro[] = [
+  'Automóvel','Moto','Caminhão','Frota',
+  'Residencial','Empresarial','Condomínio','Equipamentos',
+  'Vida Individual','Vida Empresarial','Saúde','Odontológico',
+  'RC Profissional','Transporte','Garantia Estendida',
+  'Fiança Locatícia','Consórcio','Previdência Privada',
+];
+
+export interface Cliente {
+  id: string;
+  nome: string;
+  cpf: string;
+  rg?: string;
+  dataNascimento?: string;
+  estadoCivil?: string;
+  profissao?: string;
+  telefone: string;
+  whatsapp?: string;
+  email?: string;
+  cep?: string;
+  rua?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
+  responsavelId?: string;
+  observacoes?: string;
+  leadOrigemId?: string;
+  status: ClienteStatus;
+  seguradoraAtualId?: string;
+  produtoAtual?: ProdutoSeguro;
+  dataRenovacao?: string;
+  organizationId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ApoliceStatus = 'ativo' | 'cancelado' | 'expirado' | 'em_renovacao';
+
+export interface Apolice {
+  id: string;
+  clienteId: string;
+  produto: ProdutoSeguro;
+  seguradoraId: string;
+  numeroApolice: string;
+  inicioVigencia: string;
+  fimVigencia: string;
+  dataRenovacao: string;
+  premioLiquido: number;
+  valorTotal: number;
+  comissao: number;
+  corretoraOrigem?: string;
+  observacoes?: string;
+  status: ApoliceStatus;
+  organizationId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClienteHistoricoItem {
+  id: string;
+  clienteId: string;
+  tipo: 'criado' | 'convertido' | 'apolice_criada' | 'apolice_renovada' | 'observacao' | 'status_alterado' | 'editado';
+  descricao: string;
+  usuarioId?: string;
+  usuarioNome?: string;
+  dadosExtras?: any;
+  createdAt: string;
 }
 
 export interface IntegrationConfig {

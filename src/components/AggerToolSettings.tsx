@@ -1,12 +1,9 @@
 import React, { useState } from 'react';
-import { Zap, CheckCircle2, AlertTriangle, RefreshCw, Download, ExternalLink, FileText, ShieldCheck, Eye, EyeOff, Save, Key } from 'lucide-react';
+import { Zap, CheckCircle2, AlertTriangle, RefreshCw, FileText, ShieldCheck, Eye, EyeOff, Save, Key } from 'lucide-react';
 import { cn } from '../lib/utils';
 import {
-  AGGER_USERSCRIPT_URL,
-  TAMPERMONKEY_CHROME,
-  TAMPERMONKEY_FIREFOX,
   useAggerUserscriptInstalled,
-  readInstalledVersion,
+  pingExtension,
   setManualOverride,
 } from '../lib/agger-userscript';
 import { getAggerCredentials, setAggerCredentials } from '../lib/agger-quote';
@@ -21,9 +18,9 @@ export const AggerToolSettings: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [credsSaved, setCredsSaved] = useState(false);
 
-  const runVerify = () => {
-    const v = readInstalledVersion();
-    setVerifyState({ ok: !!v, detected: v, nonce: Date.now() });
+  const runVerify = async () => {
+    const result = await pingExtension();
+    setVerifyState({ ok: result.ok, detected: result.ok ? (result.version ?? '?') : null, nonce: Date.now() });
   };
 
   const saveCreds = () => {
@@ -58,25 +55,23 @@ export const AggerToolSettings: React.FC = () => {
       </div>
 
       <p className="text-xs text-white/50 leading-relaxed font-medium">
-        Userscript Tampermonkey que automatiza login no Aggilizador, navega até <span className="font-bold text-gold-light">Nova Cotação → Automóvel → Carro</span> e preenche o formulário com os dados do lead aberto. Funciona com qualquer lead que tenha nome, CPF e placa.
+        Extensão Chrome própria da Michelin que automatiza login no Aggilizador e preenche o formulário de cotação com os dados do lead. Funciona com qualquer lead que tenha nome, CPF e placa.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <a
-          href={AGGER_USERSCRIPT_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 px-4 py-3 bg-gold-deep text-brand-dark rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gold-light transition-all shadow-lg shadow-gold-deep/10"
-        >
-          <Download className="w-3.5 h-3.5" />
-          {installed ? 'Reinstalar / Atualizar' : 'Instalar agora'}
-        </a>
         <button
           type="button"
           onClick={runVerify}
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-gold-deep text-brand-dark rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gold-light transition-all shadow-lg shadow-gold-deep/10"
+        >
+          <RefreshCw className="w-3.5 h-3.5" /> Verificar extensão
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowHelp(v => !v)}
           className="flex items-center justify-center gap-2 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all"
         >
-          <RefreshCw className="w-3.5 h-3.5" /> Verificar instalação
+          <FileText className="w-3.5 h-3.5" /> {showHelp ? 'Ocultar instruções' : 'Como instalar'}
         </button>
       </div>
 
@@ -180,64 +175,36 @@ export const AggerToolSettings: React.FC = () => {
       </div>
 
       {/* Help expander */}
-      <button
-        type="button"
-        onClick={() => setShowHelp(v => !v)}
-        className="text-[10px] font-black text-gold-light/70 hover:text-gold-light uppercase tracking-widest flex items-center gap-1.5 transition-colors"
-      >
-        <FileText className="w-3 h-3" />
-        {showHelp ? 'Ocultar instruções' : 'Como instalar / atualizar'}
-      </button>
-
       {showHelp && (
         <div className="space-y-4 p-4 bg-black/30 border border-white/5 rounded-xl">
-          <Step n={1} title="Instalar a extensão Tampermonkey (uma vez)">
-            <div className="flex flex-wrap gap-2">
-              <a
-                href={TAMPERMONKEY_CHROME}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-md text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all"
-              >
-                <ExternalLink className="w-3 h-3" /> Chrome / Edge
-              </a>
-              <a
-                href={TAMPERMONKEY_FIREFOX}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-md text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all"
-              >
-                <ExternalLink className="w-3 h-3" /> Firefox
-              </a>
-            </div>
-          </Step>
-
-          <Step n={2} title="Instalar/atualizar o script">
+          <Step n={1} title="Abrir o gerenciador de extensões">
             <p className="text-[10px] text-white/60 leading-relaxed">
-              Clique em <span className="font-bold text-gold-light">"Reinstalar / Atualizar"</span> acima. O Tampermonkey pede confirmação — clique <span className="font-bold text-gold-light">Instalar</span> (ou <span className="font-bold text-gold-light">Reinstalar</span> se já existe).
+              No Chrome, navegue para <span className="font-mono text-gold-light">chrome://extensions</span> ou clique no ícone 🧩 e depois em <span className="font-bold text-gold-light">Gerenciar extensões</span>.
             </p>
           </Step>
 
-          <Step n={3} title="Liberar acesso a localhost e aggilizador.com.br">
-            <ol className="list-decimal list-inside space-y-1 pl-1 text-[10px] text-white/60 leading-relaxed">
-              <li>Clique no ícone 🧩 <span className="font-bold">quebra-cabeça</span> (canto superior direito do Chrome).</li>
-              <li>Procure <span className="font-bold text-gold-light">Tampermonkey</span> → três pontinhos.</li>
-              <li>Em <span className="font-bold text-gold-light">"Pode acessar este site"</span> escolha <span className="font-bold text-gold-light">"Em todos os sites"</span>.</li>
-              <li>Repita estando no domínio <span className="font-mono text-gold-light">aggilizador.com.br</span>.</li>
-              <li>Recarregue esta página.</li>
-            </ol>
+          <Step n={2} title="Ativar o modo desenvolvedor">
+            <p className="text-[10px] text-white/60 leading-relaxed">
+              Ative o toggle <span className="font-bold text-gold-light">Modo do desenvolvedor</span> (canto superior direito).
+            </p>
+          </Step>
+
+          <Step n={3} title="Carregar a extensão sem compactação">
+            <p className="text-[10px] text-white/60 leading-relaxed">
+              Clique em <span className="font-bold text-gold-light">Carregar sem compactação</span> e selecione a pasta <span className="font-mono text-gold-light">Extenção GoogleChrome</span> do repositório. Após qualquer atualização nos arquivos, clique no ícone de recarga (🔄) da extensão nessa mesma tela.
+            </p>
           </Step>
 
           <Step n={4} title="Confirmar funcionamento">
             <p className="text-[10px] text-white/60 leading-relaxed">
-              Clique em <span className="font-bold text-gold-light">"Verificar instalação"</span>. Deve mostrar a versão ativa. No console (F12), procure por <span className="font-mono text-gold-light">[Michelin Agger] userscript v...</span>.
+              Recarregue esta página e clique em <span className="font-bold text-gold-light">"Verificar extensão"</span>. O status acima deve ficar verde. No console (F12) do Aggilizador, procure por <span className="font-mono text-gold-light">[Michelin Seguros] extensão ativa</span>.
             </p>
           </Step>
 
           <div className="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-lg flex items-start gap-2.5">
             <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
             <p className="text-[10px] text-emerald-300/80 font-medium leading-relaxed">
-              As credenciais do Agger ficam apenas no userscript local (sua máquina). Os dados do lead trafegam só pelo hash da URL, que nunca é enviado ao servidor.
+              Os dados do lead são enviados diretamente da extensão ao Aggilizador — nunca passam pelo servidor. As credenciais ficam apenas no seu navegador.
             </p>
           </div>
         </div>

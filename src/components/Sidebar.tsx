@@ -13,7 +13,9 @@ import {
   LayoutGrid,
   PieChart,
   UserCircle,
-  Building2
+  Building2,
+  Briefcase,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Permissions, VisualIdentityConfig } from '../types';
@@ -110,20 +112,24 @@ export const Sidebar = React.memo(({
 
       <nav className="flex-1 mt-4 px-2 space-y-0.5 overflow-y-auto overflow-x-hidden custom-scrollbar">
         {[
-          { id: 'pipeline',  label: 'Pipeline',      icon: LayoutGrid,  permission: permissions.canReadAllLeads },
-          { id: 'dashboard', label: 'Início',         icon: PieChart,    permission: permissions.canReadAllLeads },
-          { id: 'leads',     label: 'LEADS',          icon: Users,       permission: permissions.canReadAllLeads },
-          { id: 'ativos',    label: 'Ativos',         icon: Send,        permission: permissions.canReadAllLeads },
-          { id: 'chat',      label: 'WhatsApp',       icon: MessageSquare, permission: permissions.canReadAllLeads, badge: '12' },
-          { id: 'agent',     label: 'Agente de IA',   icon: Bot,         permission: permissions.canAccessSettings },
-          { id: 'users',     label: 'Equipe',         icon: ShieldAlert, permission: permissions.canManageUsers },
-          { id: 'empresas',  label: 'Empresas',       icon: Building2,   permission: userProfile?.superadmin === true },
-          { id: 'settings',  label: 'Configurações',  icon: Cog,         permission: permissions.canAccessSettings },
+          { id: 'pipeline',    label: 'Pipeline',      icon: LayoutGrid,    permission: permissions.canReadAllLeads },
+          { id: 'dashboard',   label: 'Início',        icon: PieChart,      permission: permissions.canReadAllLeads },
+          { id: 'leads',       label: 'LEADS',         icon: Users,         permission: permissions.canReadAllLeads },
+          { id: 'clientes',    label: 'Clientes',      icon: Briefcase,     permission: permissions.canReadAllLeads },
+          { id: 'renovacoes',  label: 'Renovações',    icon: RefreshCw,     permission: permissions.canReadAllLeads },
+          { id: 'ativos',      label: 'Ativos',        icon: Send,          permission: permissions.canReadAllLeads },
+          { id: 'chat',        label: 'WhatsApp',      icon: MessageSquare, permission: permissions.canReadAllLeads, badge: '12' },
+          { id: 'agent',       label: 'Agente de IA',  icon: Bot,           permission: permissions.canAccessSettings },
+          { id: 'users',       label: 'Equipe',        icon: ShieldAlert,   permission: permissions.canManageUsers },
+          { id: 'empresas',    label: 'Empresas',      icon: Building2,     permission: userProfile?.superadmin === true },
+          { id: 'settings',    label: 'Configurações', icon: Cog,           permission: permissions.canAccessSettings },
         ].map((item) => {
           if (!item.permission) return null;
 
           const Icon = item.icon;
-          const isActive = currentTab === item.id || currentTab.startsWith(item.id + '/');
+          const isActive = currentTab === item.id ||
+            (item.id !== 'clientes' && currentTab.startsWith(item.id + '/')) ||
+            (item.id === 'clientes' && (currentTab === 'clientes' || currentTab.startsWith('clientes/')));
 
           return (
             <button
