@@ -21,6 +21,8 @@ const LeadPage           = lazy(() => import('../domains/leads/LeadPage').then(m
 const ClientesPage       = lazy(() => import('../domains/clientes/ClientesPage').then(m => ({ default: m.ClientesPage })));
 const ClienteDetailPage  = lazy(() => import('../domains/clientes/ClienteDetailPage').then(m => ({ default: m.ClienteDetailPage })));
 const RenovacoesPage     = lazy(() => import('../domains/clientes/RenovacoesPage').then(m => ({ default: m.RenovacoesPage })));
+const WhatsAppInboxPage  = lazy(() => import('../domains/whatsapp/WhatsAppInboxPage').then(m => ({ default: m.WhatsAppInboxPage })));
+const SessionsPage       = lazy(() => import('../domains/whatsapp/SessionsPage').then(m => ({ default: m.SessionsPage })));
 
 interface AppContentManagerProps {
   permissions: Permissions;
@@ -97,6 +99,9 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
           <Route path="/clientes" element={<ClientesPage />} />
           <Route path="/clientes/:id" element={<ClienteDetailPage />} />
           <Route path="/renovacoes" element={<RenovacoesPage />} />
+
+          <Route path="/whatsapp" element={<WhatsAppInboxPage />} />
+          <Route path="/whatsapp/sessoes" element={<SessionsPage />} />
 
           <Route
             path="/chat"

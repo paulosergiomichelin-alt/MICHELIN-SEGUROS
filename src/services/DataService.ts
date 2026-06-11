@@ -50,6 +50,9 @@ export class DataService {
     'follow_ups', 'follow_up', 'empresas', 'empresa',
     'clientes', 'cliente',
     'settings', 'config',
+    'whatsapp_sessions', 'whatsapp_session',
+    'whatsapp_conversations', 'whatsapp_conversation',
+    'whatsapp_messages', 'whatsapp_message',
   ]);
 
   // Collections whose document IDs are scoped per-org: {orgId}::{docId}
@@ -87,6 +90,12 @@ export class DataService {
     'cliente': 'clientes',
     'seguradoras': 'seguradoras',
     'seguradora': 'seguradoras',
+    'whatsapp_sessions': 'whatsapp_sessions',
+    'whatsapp_session': 'whatsapp_sessions',
+    'whatsapp_conversations': 'whatsapp_conversations',
+    'whatsapp_conversation': 'whatsapp_conversations',
+    'whatsapp_messages': 'whatsapp_messages',
+    'whatsapp_message': 'whatsapp_messages',
   };
 
   private static _lastOrgId: string | null = null;

@@ -16,6 +16,8 @@ import {
   Building2,
   Briefcase,
   RefreshCw,
+  Smartphone,
+  QrCode,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Permissions, VisualIdentityConfig } from '../types';
@@ -116,9 +118,11 @@ export const Sidebar = React.memo(({
           { id: 'dashboard',   label: 'Início',        icon: PieChart,      permission: permissions.canReadAllLeads },
           { id: 'leads',       label: 'LEADS',         icon: Users,         permission: permissions.canReadAllLeads },
           { id: 'clientes',    label: 'Clientes',      icon: Briefcase,     permission: permissions.canReadAllLeads },
-          { id: 'renovacoes',  label: 'Renovações',    icon: RefreshCw,     permission: permissions.canReadAllLeads },
-          { id: 'ativos',      label: 'Ativos',        icon: Send,          permission: permissions.canReadAllLeads },
-          { id: 'chat',        label: 'WhatsApp',      icon: MessageSquare, permission: permissions.canReadAllLeads, badge: '12' },
+          { id: 'renovacoes',       label: 'Renovações',    icon: RefreshCw,     permission: permissions.canReadAllLeads },
+          { id: 'ativos',           label: 'Ativos',        icon: Send,          permission: permissions.canReadAllLeads },
+          { id: 'chat',             label: 'WhatsApp IA',   icon: MessageSquare, permission: permissions.canReadAllLeads, badge: '12' },
+          { id: 'whatsapp',         label: 'WA Pessoal',    icon: Smartphone,    permission: permissions.canReadAllLeads },
+          { id: 'whatsapp/sessoes', label: 'Sessões WA',    icon: QrCode,        permission: permissions.canReadAllLeads },
           { id: 'agent',       label: 'Agente de IA',  icon: Bot,           permission: permissions.canAccessSettings },
           { id: 'users',       label: 'Equipe',        icon: ShieldAlert,   permission: permissions.canManageUsers },
           { id: 'empresas',    label: 'Empresas',      icon: Building2,     permission: userProfile?.superadmin === true },
@@ -128,7 +132,7 @@ export const Sidebar = React.memo(({
 
           const Icon = item.icon;
           const isActive = currentTab === item.id ||
-            (item.id !== 'clientes' && currentTab.startsWith(item.id + '/')) ||
+            (item.id !== 'clientes' && item.id !== 'whatsapp' && currentTab.startsWith(item.id + '/')) ||
             (item.id === 'clientes' && (currentTab === 'clientes' || currentTab.startsWith('clientes/')));
 
           return (

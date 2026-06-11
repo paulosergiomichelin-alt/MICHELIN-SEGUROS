@@ -463,6 +463,60 @@ export interface ClienteHistoricoItem {
   createdAt: string;
 }
 
+// ─── WhatsApp QR Code Integration (Evolution API) ────────────────────────────
+
+export type WhatsAppSessionStatus = 'open' | 'connecting' | 'close' | 'qr';
+
+export interface WhatsAppSession {
+  id: string;
+  userId: string;
+  sessionName: string;
+  phoneNumber?: string;
+  profileName?: string;
+  profilePicture?: string;
+  status: WhatsAppSessionStatus;
+  qrBase64?: string;
+  qrCode?: string;
+  organizationId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WhatsAppConversation {
+  id: string;
+  sessionId: string;
+  sessionName: string;
+  phone: string;
+  contactName: string;
+  contactPicture?: string;
+  leadId?: string;
+  clienteId?: string;
+  lastMessage?: string;
+  lastMessageAt?: string;
+  lastMessageDirection?: 'inbound' | 'outbound';
+  unreadCount: number;
+  organizationId?: string;
+  updatedAt: string;
+}
+
+export interface WhatsAppMessage {
+  id: string;
+  conversationId: string;
+  sessionId: string;
+  direction: 'inbound' | 'outbound';
+  messageType: 'text' | 'image' | 'video' | 'audio' | 'document' | 'sticker';
+  body?: string;
+  mediaUrl?: string;
+  mediaPath?: string;
+  transcription?: string;
+  timestamp: string;
+  status?: 'sent' | 'delivered' | 'read' | 'failed';
+  evolutionId?: string;
+  organizationId?: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export interface IntegrationConfig {
   webhookUrl: string;
   apiKey: string;

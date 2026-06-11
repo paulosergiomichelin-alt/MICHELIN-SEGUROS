@@ -201,6 +201,21 @@ async function startServer() {
     }
   });
 
+  // ── Evolution API routes ────────────────────────────────────────────────────
+  // Handlers are imported dynamically (ESM) to share the same module instances
+  // as the Vercel serverless functions in the api/ directory.
+  const { default: evolutionSessionsHandler } = await import('./api/evolution/sessions.js');
+  const { default: evolutionQrHandler }       = await import('./api/evolution/qr.js');
+  const { default: evolutionSendHandler }     = await import('./api/evolution/send.js');
+  const { default: evolutionWebhookHandler }  = await import('./api/webhook/evolution.js');
+
+  app.all('/api/evolution/sessions', evolutionSessionsHandler);
+  app.all('/api/evolution/qr',       evolutionQrHandler);
+  app.all('/api/evolution/send',     evolutionSendHandler);
+  app.all('/api/webhook/evolution',  evolutionWebhookHandler);
+
+  console.log('[SERVER] Evolution API routes registradas');
+
   // Middleware do Vite para desenvolvimento
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
