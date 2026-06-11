@@ -75,6 +75,8 @@ const DOCUMENT_SCHEMAS: Record<string, FieldDef[]> = {
     { key: 'cep', label: 'CEP' },
     { key: 'startDate', label: 'Início Vigência', type: 'date', aliases: ['inicio_vigencia'] },
     { key: 'insuranceExpiry', label: 'Fim da Vigência', type: 'date', aliases: ['fim_vigencia'] },
+    { key: 'premioLiquido', label: 'Prêmio Líquido', aliases: ['premio_liquido'] },
+    { key: 'premio', label: 'Valor Total', aliases: ['valor_total'] },
     { key: 'commercialUse', label: 'Uso Comercial', type: 'boolean', aliases: ['uso_comercial'] },
     { key: 'fiduciaryAlienation', label: 'Alienação Fiduciária', type: 'boolean', aliases: ['alienacao_fiduciaria'] },
     { key: 'isOwnerDriver', label: 'Proprietário é Condutor', type: 'boolean', aliases: ['proprietario_e_condutor'] },

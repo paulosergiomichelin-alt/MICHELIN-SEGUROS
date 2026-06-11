@@ -219,9 +219,12 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
     }
     if (data.brokerName && !form.corretoraOrigem) updates.corretoraOrigem = data.brokerName;
 
-    // Map premium total from OCR (field is "premio")
-    const premioStr = parseBRMoneyStr(data.premio ?? data.valorTotal ?? '');
-    if (premioStr) updates.valorTotal = premioStr;
+    // Map premium values from OCR
+    const premioLiquidoStr = parseBRMoneyStr(data.premioLiquido ?? data.premio_liquido ?? '');
+    if (premioLiquidoStr) updates.premioLiquido = premioLiquidoStr;
+
+    const premioTotalStr = parseBRMoneyStr(data.premio ?? data.valor_total ?? data.valorTotal ?? '');
+    if (premioTotalStr) updates.valorTotal = premioTotalStr;
 
     setForm(f => ({ ...f, ...updates }));
 

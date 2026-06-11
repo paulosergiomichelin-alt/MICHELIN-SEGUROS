@@ -42,9 +42,10 @@ export class PolicySemanticParser {
     data.insuredCpf = FieldSanitizer.getInstance().sanitizeCPF(ContextualFieldExtractor.extractCPF(text));
     data.nascimento = ContextualFieldExtractor.extractDate(text, ['NASCIMENTO', 'DT NASC', 'NASC']);
 
-    // 7. Financial (Franquia e Prêmio)
+    // 7. Financial (Franquia, Prêmio Líquido e Valor Total)
     data.franquia = ContextualFieldExtractor.extract(text, ['VALOR DA FRANQUIA', 'FRANQUIA'], { takeFirstWord: true });
-    data.premio = ContextualFieldExtractor.extract(text, ['PREMIO TOTAL', 'PREMIO'], { takeFirstWord: true });
+    data.premioLiquido = ContextualFieldExtractor.extract(text, ['PRÊMIO LÍQUIDO', 'PREMIO LIQUIDO', 'PRÊMIO COMERCIAL', 'PREMIO COMERCIAL', 'PRÊMIO DE RISCO', 'PREMIO DE RISCO'], { takeFirstWord: true });
+    data.premio = ContextualFieldExtractor.extract(text, ['PRÊMIO TOTAL', 'PREMIO TOTAL', 'TOTAL DO PRÊMIO', 'TOTAL DO PREMIO', 'VALOR TOTAL', 'TOTAL A PAGAR', 'PREMIO'], { takeFirstWord: true });
 
     // 8. Flatten Broker for UI compatibility
     if (data.broker) {

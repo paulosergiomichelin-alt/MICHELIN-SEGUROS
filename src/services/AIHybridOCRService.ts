@@ -331,6 +331,10 @@ export class AIHybridOCRService {
             '- inicio_vigencia: data início DD/MM/YYYY',
             '- fim_vigencia: data fim DD/MM/YYYY',
             '',
+            'VALORES (procure "Prêmio", "Valor do Prêmio", "Demonstrativo de Prêmio", "Total a Pagar"):',
+            '- premio_liquido: prêmio líquido / net premium — valor SEM IOF, SEM adicionais (procure "Prêmio Líquido", "Prêmio Comercial", "Prêmio de Risco") — formato numérico com vírgula decimal ex: 1.234,56',
+            '- valor_total: valor total / prêmio total — valor FINAL com IOF e todos os encargos (procure "Prêmio Total", "Total", "Total do Prêmio", "Valor Total", "Total a Pagar") — formato numérico com vírgula decimal ex: 1.456,78',
+            '',
             'QUESTIONÁRIO DE PERFIL (procure seções "Perfil", "Questionário", "Uso do Veículo"). Para CADA campo abaixo retorne EXATAMENTE "sim" ou "não":',
             '- uso_comercial: o veículo é usado para fins comerciais/profissionais? (sim/não)',
             '- alienacao_fiduciaria: há alienação fiduciária/financiamento/leasing/gravame mencionado? (sim/não)',
@@ -339,7 +343,7 @@ export class AIHybridOCRService {
             '- estado_civil: SOLTEIRO, CASADO, DIVORCIADO, VIUVO ou UNIAO ESTAVEL',
             '',
             'Retorne APENAS este JSON sem comentários:',
-            '{"numero_apolice":"","seguradora":"","corretora":"","seguradora_cnpj":"","corretora_cnpj":"","corretora_susep":"","segurado_nome":"","segurado_cpf":"","segurado_data_nascimento":"","proprietario_veiculo_nome":"","proprietario_veiculo_cpf":"","placa":"","chassi":"","cep":"","fim_vigencia":"","inicio_vigencia":"","uso_comercial":"","alienacao_fiduciaria":"","proprietario_e_condutor":"","condutor_jovem":"","estado_civil":""}'
+            '{"numero_apolice":"","seguradora":"","corretora":"","seguradora_cnpj":"","corretora_cnpj":"","corretora_susep":"","segurado_nome":"","segurado_cpf":"","segurado_data_nascimento":"","proprietario_veiculo_nome":"","proprietario_veiculo_cpf":"","placa":"","chassi":"","cep":"","fim_vigencia":"","inicio_vigencia":"","premio_liquido":"","valor_total":"","uso_comercial":"","alienacao_fiduciaria":"","proprietario_e_condutor":"","condutor_jovem":"","estado_civil":""}'
           ].join('\n')
         };
       default:
@@ -445,6 +449,8 @@ export class AIHybridOCRService {
       out.brokerSusep = parsed.corretora_susep || '';
       out.insuranceExpiry = out.fim_vigencia;
       out.startDate = out.inicio_vigencia;
+      out.premioLiquido = parsed.premio_liquido || '';
+      out.premio = parsed.valor_total || '';
     }
 
     const semanticScore = scores.length > 0 ? DocumentValidator.aggregate(scores) : 0.5;
