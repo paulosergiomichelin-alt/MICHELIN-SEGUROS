@@ -3,10 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Edit2, Plus, Trash2, CheckCircle2, AlertTriangle, Clock,
   User, Phone, Mail, MapPin, FileText, History, RefreshCw, ExternalLink,
-  Calendar, DollarSign, Building2,
+  Calendar, DollarSign, Building2, ClipboardList, Car, Shield, Tag,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { Cliente, Apolice, ClienteHistoricoItem, ClienteStatus } from '../../types';
+import { Cliente, Lead, Apolice, ClienteHistoricoItem, ClienteStatus } from '../../types';
 import { DataService } from '../../services/DataService';
 import { ClienteService } from '../../services/ClienteService';
 import { SeguradoraBadge } from '../../components/SeguradoraBadge';
@@ -16,7 +16,7 @@ import { usePermissions } from '../../contexts/PermissionsContext';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-type Tab = 'resumo' | 'apolices' | 'renovacoes' | 'historico';
+type Tab = 'resumo' | 'cadastro' | 'apolices' | 'renovacoes' | 'historico';
 
 const STATUS_CONFIG: Record<ClienteStatus, { label: string; cls: string; icon: React.ElementType }> = {
   ativo:             { label: 'Ativo',             cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', icon: CheckCircle2 },
@@ -70,6 +70,7 @@ export const ClienteDetailPage: React.FC = () => {
   const { userProfile } = usePermissions();
 
   const [cliente, setCliente] = useState<Cliente | null>(null);
+  const [leadOrigem, setLeadOrigem] = useState<Lead | null>(null);
   const [apolices, setApolices] = useState<Apolice[]>([]);
   const [historico, setHistorico] = useState<ClienteHistoricoItem[]>([]);
   const [loadingCliente, setLoadingCliente] = useState(true);
@@ -99,6 +100,14 @@ export const ClienteDetailPage: React.FC = () => {
     if (!id) return;
     return ClienteService.subscribeHistorico(id, setHistorico);
   }, [id]);
+
+  // Load original lead when available
+  useEffect(() => {
+    if (!cliente?.leadOrigemId) { setLeadOrigem(null); return; }
+    DataService.get('lead', cliente.leadOrigemId)
+      .then(d => setLeadOrigem(d as Lead ?? null))
+      .catch(() => setLeadOrigem(null));
+  }, [cliente?.leadOrigemId]);
 
   const handleSaveCliente = async (data: Omit<Cliente, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!id) return;
@@ -158,6 +167,7 @@ export const ClienteDetailPage: React.FC = () => {
 
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: 'resumo',    label: 'Resumo',    icon: User },
+    { id: 'cadastro',  label: 'Cadastro',  icon: ClipboardList },
     { id: 'apolices',  label: `Apólices (${apolices.length})`,  icon: FileText },
     { id: 'renovacoes',label: `Renovações (${upcomingRenov.length})`,icon: RefreshCw },
     { id: 'historico', label: 'Histórico', icon: History },
@@ -298,6 +308,200 @@ export const ClienteDetailPage: React.FC = () => {
                 <p className="text-[9px] text-white/30 uppercase font-black mb-2">Observações</p>
                 <p className="text-[11px] text-white/70 leading-relaxed">{cliente.observacoes}</p>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* CADASTRO */}
+        {tab === 'cadastro' && (
+          <div className="max-w-4xl space-y-4">
+            {!cliente.leadOrigemId ? (
+              <div className="bg-brand-black/50 border border-white/5 rounded-2xl p-10 flex flex-col items-center gap-3 text-center">
+                <ClipboardList className="w-10 h-10 text-white/10" />
+                <p className="text-white/30 text-sm">Cliente cadastrado manualmente — sem ficha de lead</p>
+              </div>
+            ) : !leadOrigem ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-5 h-5 border-2 border-gold-deep/30 border-t-gold-deep rounded-full animate-spin" />
+              </div>
+            ) : (
+              <>
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-white/30 uppercase tracking-widest font-black">Ficha do lead original</p>
+                  <button
+                    onClick={() => navigate('/leads/' + leadOrigem.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest text-white/50 hover:text-white hover:bg-white/10 transition-all"
+                  >
+                    <ExternalLink className="w-3 h-3" /> Abrir Lead
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Identificação */}
+                  <div className="bg-brand-black/50 border border-white/5 rounded-2xl p-5 space-y-2.5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <User className="w-4 h-4 text-gold-deep" />
+                      <h3 className="text-[10px] font-black text-gold-light uppercase tracking-widest">Identificação</h3>
+                    </div>
+                    {[
+                      ['Nome', leadOrigem.name],
+                      ['CPF', fmtCPF(leadOrigem.cpf)],
+                      ['RG', leadOrigem.rg],
+                      ['Nascimento', leadOrigem.birthDate ? fmtDate(leadOrigem.birthDate) : undefined],
+                      ['Estado Civil', leadOrigem.civilStatus || leadOrigem.maritalStatus],
+                    ].map(([k, v]) => v ? (
+                      <div key={k} className="flex justify-between gap-2 border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                        <span className="text-[9px] text-white/30 uppercase tracking-widest font-black shrink-0">{k}</span>
+                        <span className="text-[10px] text-white/80 font-medium text-right">{v}</span>
+                      </div>
+                    ) : null)}
+                  </div>
+
+                  {/* Contato */}
+                  <div className="bg-brand-black/50 border border-white/5 rounded-2xl p-5 space-y-2.5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Phone className="w-4 h-4 text-gold-deep" />
+                      <h3 className="text-[10px] font-black text-gold-light uppercase tracking-widest">Contato</h3>
+                    </div>
+                    {[
+                      ['Telefone', leadOrigem.phone ? fmtPhone(leadOrigem.phone) : undefined],
+                      ['Telefone 2', leadOrigem.phone2 ? fmtPhone(leadOrigem.phone2) : undefined],
+                      ['E-mail', leadOrigem.email],
+                    ].map(([k, v]) => v ? (
+                      <div key={k} className="flex justify-between gap-2 border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                        <span className="text-[9px] text-white/30 uppercase tracking-widest font-black shrink-0">{k}</span>
+                        <span className="text-[10px] text-white/80 font-medium text-right">{v}</span>
+                      </div>
+                    ) : null)}
+                  </div>
+
+                  {/* Veículo */}
+                  {(leadOrigem.plate || leadOrigem.chassis || leadOrigem.chassi) && (
+                    <div className="bg-brand-black/50 border border-white/5 rounded-2xl p-5 space-y-2.5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Car className="w-4 h-4 text-gold-deep" />
+                        <h3 className="text-[10px] font-black text-gold-light uppercase tracking-widest">Veículo</h3>
+                      </div>
+                      {[
+                        ['Placa', leadOrigem.plate],
+                        ['Chassi', leadOrigem.chassis || leadOrigem.chassi],
+                        ['RENAVAM', leadOrigem.renavam],
+                        ['Marca / Modelo', leadOrigem.brandModel],
+                      ].map(([k, v]) => v ? (
+                        <div key={k} className="flex justify-between gap-2 border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                          <span className="text-[9px] text-white/30 uppercase tracking-widest font-black shrink-0">{k}</span>
+                          <span className="text-[10px] text-white/80 font-medium text-right font-mono">{v}</span>
+                        </div>
+                      ) : null)}
+                    </div>
+                  )}
+
+                  {/* Perfil / Seguro */}
+                  <div className="bg-brand-black/50 border border-white/5 rounded-2xl p-5 space-y-2.5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Shield className="w-4 h-4 text-gold-deep" />
+                      <h3 className="text-[10px] font-black text-gold-light uppercase tracking-widest">Perfil e Seguro</h3>
+                    </div>
+                    {[
+                      ['Possui seguro', (leadOrigem.hasInsurance || leadOrigem.possuiSeguro) ? 'Sim' : 'Não'],
+                      ['Seguradora atual', leadOrigem.insurer],
+                      ['Início vigência', leadOrigem.startDate ? fmtDate(leadOrigem.startDate) : undefined],
+                      ['Fim vigência', leadOrigem.insuranceExpiry ? fmtDate(leadOrigem.insuranceExpiry) : undefined],
+                      ['Uso comercial', leadOrigem.serviceUsage ? 'Sim' : 'Não'],
+                      ['Condutor jovem (18-24)', leadOrigem.youngDriverHousehold ? 'Sim' : 'Não'],
+                      ['Proprietário é condutor', (leadOrigem.isOwnerDriver || leadOrigem.proprietarioEhCondutor) ? 'Sim' : 'Não'],
+                      ['Alienação fiduciária', (leadOrigem.fiduciaryAlienation || leadOrigem.alienacaoFiduciaria) ? 'Sim' : 'Não'],
+                    ].map(([k, v]) => v != null ? (
+                      <div key={k} className="flex justify-between gap-2 border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                        <span className="text-[9px] text-white/30 uppercase tracking-widest font-black shrink-0 max-w-[55%]">{k}</span>
+                        <span className="text-[10px] text-white/80 font-medium text-right">{v}</span>
+                      </div>
+                    ) : null)}
+                  </div>
+
+                  {/* Endereço Pernoite */}
+                  <div className="bg-brand-black/50 border border-white/5 rounded-2xl p-5 space-y-2.5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <MapPin className="w-4 h-4 text-gold-deep" />
+                      <h3 className="text-[10px] font-black text-gold-light uppercase tracking-widest">End. Pernoite</h3>
+                    </div>
+                    {[
+                      ['CEP', leadOrigem.zipCodeOvernight || leadOrigem.cepPernoite],
+                      ['Logradouro', leadOrigem.addressOvernight || leadOrigem.logradouroPernoite],
+                      ['Número', leadOrigem.numberOvernight || leadOrigem.numeroPernoite],
+                      ['Bairro', leadOrigem.bairroPernoite],
+                      ['Cidade', leadOrigem.cidadePernoite || leadOrigem.city],
+                      ['Estado', leadOrigem.estadoPernoite],
+                    ].map(([k, v]) => v ? (
+                      <div key={k} className="flex justify-between gap-2 border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                        <span className="text-[9px] text-white/30 uppercase tracking-widest font-black shrink-0">{k}</span>
+                        <span className="text-[10px] text-white/80 font-medium text-right">{v}</span>
+                      </div>
+                    ) : null)}
+                  </div>
+
+                  {/* Endereço Residência (se diferente) */}
+                  {leadOrigem.isDifferentResidenceZip && (leadOrigem.zipCodeResidence || leadOrigem.addressResidence) && (
+                    <div className="bg-brand-black/50 border border-white/5 rounded-2xl p-5 space-y-2.5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <MapPin className="w-4 h-4 text-gold-deep" />
+                        <h3 className="text-[10px] font-black text-gold-light uppercase tracking-widest">End. Residencial</h3>
+                      </div>
+                      {[
+                        ['CEP', leadOrigem.zipCodeResidence],
+                        ['Logradouro', leadOrigem.addressResidence],
+                        ['Número', leadOrigem.numberResidence],
+                      ].map(([k, v]) => v ? (
+                        <div key={k} className="flex justify-between gap-2 border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                          <span className="text-[9px] text-white/30 uppercase tracking-widest font-black shrink-0">{k}</span>
+                          <span className="text-[10px] text-white/80 font-medium text-right">{v}</span>
+                        </div>
+                      ) : null)}
+                    </div>
+                  )}
+
+                  {/* Proprietário (se diferente do condutor) */}
+                  {(leadOrigem.ownerName || leadOrigem.nomeProprietario || leadOrigem.ownerCpfCnpj) && (
+                    <div className="bg-brand-black/50 border border-white/5 rounded-2xl p-5 space-y-2.5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <User className="w-4 h-4 text-gold-deep" />
+                        <h3 className="text-[10px] font-black text-gold-light uppercase tracking-widest">Proprietário do Veículo</h3>
+                      </div>
+                      {[
+                        ['Nome', leadOrigem.ownerName || leadOrigem.nomeProprietario],
+                        ['CPF / CNPJ', leadOrigem.ownerCpfCnpj || leadOrigem.cpfProprietario],
+                        ['Instituição financeira', leadOrigem.financialInstitution],
+                      ].map(([k, v]) => v ? (
+                        <div key={k} className="flex justify-between gap-2 border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                          <span className="text-[9px] text-white/30 uppercase tracking-widest font-black shrink-0">{k}</span>
+                          <span className="text-[10px] text-white/80 font-medium text-right">{v}</span>
+                        </div>
+                      ) : null)}
+                    </div>
+                  )}
+
+                  {/* Origem */}
+                  <div className="bg-brand-black/50 border border-white/5 rounded-2xl p-5 space-y-2.5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Tag className="w-4 h-4 text-gold-deep" />
+                      <h3 className="text-[10px] font-black text-gold-light uppercase tracking-widest">Origem</h3>
+                    </div>
+                    {[
+                      ['Canal', leadOrigem.origin],
+                      ['Detalhes', leadOrigem.originDetails],
+                      ['Status no CRM', leadOrigem.status],
+                      ['Temperatura', leadOrigem.temperature],
+                      ['Criado em', fmtDate(leadOrigem.createdAt)],
+                    ].map(([k, v]) => v ? (
+                      <div key={k} className="flex justify-between gap-2 border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                        <span className="text-[9px] text-white/30 uppercase tracking-widest font-black shrink-0">{k}</span>
+                        <span className="text-[10px] text-white/80 font-medium text-right capitalize">{v}</span>
+                      </div>
+                    ) : null)}
+                  </div>
+                </div>
+              </>
             )}
           </div>
         )}

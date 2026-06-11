@@ -190,7 +190,8 @@ export const LeadsPage = React.memo(({
   });
 
   const filteredLeads = React.useMemo(() => {
-    let result = leads;
+    // Exclude leads already converted to clients
+    let result = leads.filter(l => !l.clienteId);
 
     // Search filter
     if (searchLeads) {
