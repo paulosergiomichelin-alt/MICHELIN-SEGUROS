@@ -161,7 +161,10 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
     return () => { if (docObjectUrl) URL.revokeObjectURL(docObjectUrl); };
   }, [docObjectUrl]);
 
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k: string, v: string) => {
+    if (saveError) setSaveError('');
+    setForm(f => ({ ...f, [k]: v }));
+  };
 
   const handleFimVigencia = (v: string) => {
     set('fimVigencia', v);
@@ -257,7 +260,16 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.produto || !form.seguradoraId || !form.fimVigencia) return;
+
+    // Validate required fields and show specific message instead of silently blocking
+    const missing: string[] = [];
+    if (!form.produto) missing.push('Produto');
+    if (!form.seguradoraId) missing.push('Seguradora');
+    if (!form.fimVigencia) missing.push('Fim de Vigência');
+    if (missing.length > 0) {
+      setSaveError(`Preencha os campos obrigatórios: ${missing.join(', ')}`);
+      return;
+    }
 
     // Auto-compute dataRenovacao if not set
     let dataRenovacao = form.dataRenovacao;
@@ -297,7 +309,7 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
     }
   };
 
-  const canSubmit = !saving && !!form.produto && !!form.seguradoraId && !!form.fimVigencia;
+  const canSubmit = !saving;
 
   return (
     <>
