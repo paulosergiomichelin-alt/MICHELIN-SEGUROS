@@ -88,6 +88,7 @@ const ANEXO_TIPO_LABEL: Record<ApoliceAnexoTipo, string> = {
 export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSave, apolice }) => {
   const isEditing = !!apolice;
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [form, setForm] = useState({
     produto: '' as ProdutoSeguro | '',
     seguradoraId: '',
@@ -153,6 +154,7 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
     setOcrData(null);
     setDocError('');
     setAnexoError('');
+    setSaveError('');
   }, [apolice, isOpen]);
 
   useEffect(() => {
@@ -264,6 +266,7 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
     }
 
     setSaving(true);
+    setSaveError('');
     try {
       await onSave({
         produto: form.produto as ProdutoSeguro,
@@ -286,6 +289,9 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
         anexos: anexos.length > 0 ? anexos : undefined,
       });
       onClose();
+    } catch (err: any) {
+      console.error('[ApoliceForm] Erro ao salvar:', err);
+      setSaveError(err?.message || 'Erro ao salvar apólice. Tente novamente.');
     } finally {
       setSaving(false);
     }
@@ -499,6 +505,12 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
             <textarea className={cn(inputCls, 'resize-none h-16')} value={form.observacoes}
               onChange={e => set('observacoes', e.target.value)} placeholder="Observações sobre esta apólice..." />
           </Field>
+
+          {saveError && (
+            <div className="px-4 py-2.5 bg-red-500/10 border border-red-500/20 rounded-xl">
+              <p className="text-[10px] text-red-400 font-medium">{saveError}</p>
+            </div>
+          )}
 
           <div className="flex items-center justify-end gap-3 pt-2 border-t border-white/5">
             <button type="button" onClick={onClose} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
