@@ -118,16 +118,23 @@ export async function syncSession(
     const phone = extractPhoneFromJid(remoteJid, remoteJidAlt);
     if (!phone) continue;
 
+    const groupChat = remoteJid.endsWith('@g.us');
+    // findChats tem profilePicUrl diretamente; findContacts tem mais (446 vs 64)
+    const chatPic: string = chat.profilePicUrl ?? '';
+    const contactPic: string = contactPictureMap.get(phone) ?? '';
+    const resolvedPicture: string = chatPic || contactPic;
+
+    // Nome: contacts table > chat.pushName (grupos: é o nome do grupo) > lastMsg.pushName (inbound)
     const isInbound = lastMsg?.key?.fromMe === false;
+    const inboundPushName: string = isInbound ? (lastMsg?.pushName ?? '') : '';
     const contactName: string =
       contactNameMap.get(phone) ||
       chat.pushName ||
-      (isInbound ? lastMsg?.pushName : undefined) ||
+      inboundPushName ||
       chat.name ||
       phone;
 
-    const groupChat = remoteJid.endsWith('@g.us');
-    const groupName: string = chat.name || chat.pushName || '';
+    const groupName: string = chat.pushName || chat.name || '';
     const resolvedName = groupChat
       ? (groupName || `Grupo ${phone}`)
       : contactName;
@@ -145,7 +152,7 @@ export async function syncSession(
       sessionName,
       phone,
       contactName: resolvedName,
-      contactPicture: contactPictureMap.get(phone) || undefined,
+      contactPicture: resolvedPicture || undefined,
       isGroup: groupChat || undefined,
       lastMessage: lastMsgBody,
       lastMessageAt: lastMsgTs,
