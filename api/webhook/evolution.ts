@@ -2,9 +2,11 @@ import { fsUpdate, fsQuery, fsGet, fsSet } from '../lib/adminFirebase.js';
 import { extractPhone, stripDDI, isGroup, isIgnoredJid, extractMessageContent, extractPhoneFromJid } from '../lib/whatsappUtils.js';
 import { getSentEntry, clearSentById } from '../lib/sentMessageIds.js';
 import { syncSession } from '../lib/syncService.js';
+import { emitToSession } from '../lib/socketRegistry.js';
 import {
-  setConversation, setMessage, updateConversation, updateMessage,
-  getConversation, CachedConversation, CachedMessage,
+  setConversation, updateConversation, updateMessage, deleteMessage,
+  getConversation, findConversationsByPhone,
+  CachedConversation, CachedMessage, setMessage,
 } from '../lib/conversationCache.js';
 
 // ── Monitoramento ─────────────────────────────────────────────────────────────
@@ -17,6 +19,15 @@ let duplicatesIgnored = 0;
 
 export function getWebhookStats() {
   return { lastWebhookAt, webhookCount, messagesProcessed, messagesFailed, duplicatesIgnored };
+}
+
+// ── Sessões ativas (sem Firestore) ────────────────────────────────────────────
+
+// Map<sessionName, orgId> — populado via CONNECTION_UPDATE
+const activeSessions = new Map<string, string>();
+
+export function getActiveSessions(): Map<string, string> {
+  return activeSessions;
 }
 
 // ── Cache de orgId por sessão ─────────────────────────────────────────────────
@@ -54,7 +65,6 @@ async function findOrCreateLead(
   if (existing.length > 0) {
     const leadId = existing[0].id;
     await fsUpdate('leads', leadId, { lastInteraction: timestamp, updatedAt: timestamp }).catch(() => {});
-    console.log(`[EVOLUTION/webhook] Lead existente: ${leadId}`);
     return leadId;
   }
 
@@ -92,32 +102,26 @@ async function handleMessagesUpsert(event: any) {
   const key: any = data.key ?? {};
   const remoteJid: string = key.remoteJid ?? '';
 
-  if (!remoteJid || isIgnoredJid(remoteJid)) {
-    if (remoteJid) console.log(`[EVOLUTION/webhook] JID ignorado: ${remoteJid}`);
-    return;
-  }
+  if (!remoteJid || isIgnoredJid(remoteJid)) return;
 
-  // @lid JIDs usam remoteJidAlt para o número de telefone real
   const remoteJidAlt: string | undefined = key.remoteJidAlt;
   const phone = extractPhoneFromJid(remoteJid, remoteJidAlt) ?? extractPhone(remoteJid);
-  if (!phone || phone.endsWith('@lid')) {
-    console.log(`[EVOLUTION/webhook] Sem phone para JID: ${remoteJid}`);
-    return;
-  }
+  if (!phone || phone.endsWith('@lid')) return;
+
   const fromMe: boolean = Boolean(key.fromMe);
   const msgId: string = key.id ?? `auto_${Date.now()}`;
 
-  // ── Deduplicação: mensagem enviada pelo CRM ──────────────────────────────
+  // Dedup: echo de mensagem enviada pelo CRM
   if (fromMe && msgId) {
     const sentEntry = getSentEntry(msgId);
     if (sentEntry) {
       clearSentById(msgId);
-      updateMessage(sentEntry.optimisticDocId, {
-        evolutionId: msgId,
-        status: 'sent',
+      updateMessage(sentEntry.optimisticDocId, { evolutionId: msgId, status: 'sent' });
+      emitToSession(sessionId, 'wa:message_update', {
+        id: sentEntry.optimisticDocId,
+        patch: { evolutionId: msgId, status: 'sent' },
       });
       duplicatesIgnored++;
-      console.log(`[EVOLUTION/webhook] Echo CRM ignorado: ${msgId} (doc: ${sentEntry.optimisticDocId})`);
       return;
     }
   }
@@ -156,6 +160,7 @@ async function handleMessagesUpsert(event: any) {
   if (fileName) msgDoc.fileName = fileName;
 
   setMessage(msgDoc);
+  emitToSession(sessionId, 'wa:message_upsert', msgDoc);
 
   const existing = getConversation(conversationId);
   const convDoc: CachedConversation = {
@@ -163,7 +168,8 @@ async function handleMessagesUpsert(event: any) {
     sessionId,
     sessionName: sessionId,
     phone,
-    contactName,
+    contactName: existing?.contactName || contactName,
+    contactPicture: existing?.contactPicture,
     lastMessage: body || `[${messageType}]`,
     lastMessageAt: timestamp,
     lastMessageDirection: direction,
@@ -174,14 +180,13 @@ async function handleMessagesUpsert(event: any) {
     clienteId: existing?.clienteId,
   };
   setConversation(convDoc);
+  emitToSession(sessionId, 'wa:chat_upsert', convDoc);
 
   if (!fromMe) {
-    const leadId = await findOrCreateLead(phone, contactName, timestamp, sessionId, organizationId).catch((err: any) => {
-      console.error('[EVOLUTION/webhook] findOrCreateLead error:', err?.message);
-      return null;
-    });
+    const leadId = await findOrCreateLead(phone, contactName, timestamp, sessionId, organizationId).catch(() => null);
     if (leadId) {
       updateConversation(conversationId, { leadId });
+      emitToSession(sessionId, 'wa:chat_update', { id: conversationId, patch: { leadId } });
     }
   }
 
@@ -190,6 +195,7 @@ async function handleMessagesUpsert(event: any) {
 
 async function handleMessagesUpdate(event: any) {
   const updates: any[] = Array.isArray(event.data) ? event.data : [event.data];
+  const sessionId: string = event.instance ?? '';
 
   for (const update of updates) {
     const key = update?.key ?? {};
@@ -205,8 +211,49 @@ async function handleMessagesUpdate(event: any) {
     const status = statusMap[rawStatus] ?? rawStatus.toLowerCase();
     if (!status) continue;
 
-    updateMessage(`wamsg_${msgId}`, { status });
-    console.log(`[EVOLUTION/webhook] MESSAGES_UPDATE msgId=${msgId} status=${status}`);
+    const storedId = `wamsg_${msgId}`;
+    updateMessage(storedId, { status });
+    emitToSession(sessionId, 'wa:message_update', { id: storedId, patch: { status } });
+  }
+}
+
+async function handleMessagesDelete(event: any) {
+  const sessionId: string = event.instance ?? '';
+  const messages: any[] = Array.isArray(event.data) ? event.data : [event.data];
+
+  for (const msg of messages) {
+    const key = msg?.key ?? msg ?? {};
+    const msgId: string = key.id ?? '';
+    if (!msgId) continue;
+
+    const storedId = `wamsg_${msgId}`;
+    deleteMessage(storedId);
+    emitToSession(sessionId, 'wa:message_delete', { id: storedId });
+    console.log(`[EVOLUTION/webhook] MESSAGES_DELETE msgId=${msgId}`);
+  }
+}
+
+async function handlePresenceUpdate(event: any) {
+  const sessionId: string = event.instance ?? '';
+  const presences: any[] = Array.isArray(event.data) ? event.data : [event.data];
+
+  for (const p of presences) {
+    const jid: string = p.id ?? p.remoteJid ?? '';
+    if (!jid || isGroup(jid)) continue;
+
+    const phone = extractPhone(jid);
+    if (!phone) continue;
+
+    const convId = `${sessionId}_${phone}`;
+
+    // presences[jid].lastKnownPresence: "available" | "unavailable" | "composing" | "recording" | "paused"
+    const presenceStatus: string =
+      p.presences?.[jid]?.lastKnownPresence ??
+      p.lastKnownPresence ??
+      'available';
+
+    updateConversation(convId, { presence: presenceStatus as any });
+    emitToSession(sessionId, 'wa:presence_update', { id: convId, presence: presenceStatus });
   }
 }
 
@@ -232,6 +279,9 @@ async function handleConnectionUpdate(event: any) {
       update.phoneNumber = instanceData.wuid ?? instanceData.phone;
     }
     update.connectedAt = new Date().toISOString();
+
+    const orgId = await resolveOrgId(instanceName);
+    activeSessions.set(instanceName, orgId);
   }
 
   if (rawState === 'close' || rawState === 'closed') {
@@ -240,22 +290,30 @@ async function handleConnectionUpdate(event: any) {
     update.profilePicture = null;
     update.qrBase64 = null;
     update.qrCode = null;
+    activeSessions.delete(instanceName);
   }
 
   await fsUpdate('whatsapp_sessions', instanceName, update).catch((err: any) =>
     console.error('[EVOLUTION/webhook] fsUpdate sessions (CONNECTION_UPDATE) error:', err?.message),
   );
 
-  // Auto-sync histórico quando a sessão conecta
+  // Emite para o frontend atualizar o status da sessão
+  emitToSession(instanceName, 'wa:connection_update', { instanceName, status: rawState });
+
+  // Auto-sync quando sessão conecta
   if (rawState === 'open') {
     console.log(`[EVOLUTION/webhook] Sessão conectada — iniciando sync automático: ${instanceName}`);
     const orgId = await resolveOrgId(instanceName);
 
-    // Fire-and-forget: não bloqueia resposta do webhook
-    syncSession(instanceName, orgId, true).then(result => {
+    syncSession(instanceName, orgId, false).then(result => {
       console.log(
-        `[EVOLUTION/webhook] Auto-sync concluído: ${instanceName} — ${result.conversationsImported} conversas, ${result.messagesImported} mensagens`,
+        `[EVOLUTION/webhook] Auto-sync concluído: ${instanceName} — ${result.conversationsImported} conversas`,
       );
+      // Emite lista de conversas após sync
+      emitToSession(instanceName, 'wa:sync_complete', {
+        instanceName,
+        conversationsImported: result.conversationsImported,
+      });
     }).catch(err => {
       console.error(`[EVOLUTION/webhook] Auto-sync falhou: ${instanceName}`, err?.message);
     });
@@ -267,7 +325,7 @@ async function handleQrcodeUpdated(event: any) {
   if (!instanceName) return;
 
   const qrcode = event.data?.qrcode ?? {};
-  console.log(`[EVOLUTION/webhook] QRCODE_UPDATED instance=${instanceName} base64 len=${qrcode.base64?.length ?? 0}`);
+  console.log(`[EVOLUTION/webhook] QRCODE_UPDATED instance=${instanceName}`);
 
   await fsUpdate('whatsapp_sessions', instanceName, {
     status: 'qr',
@@ -280,34 +338,53 @@ async function handleQrcodeUpdated(event: any) {
 }
 
 async function handleContactsUpdate(event: any) {
+  const sessionId: string = event.instance ?? '';
   const contacts: any[] = Array.isArray(event.data) ? event.data : [];
+
   for (const contact of contacts) {
     const jid: string = contact.id ?? '';
     if (!jid || isGroup(jid)) continue;
 
     const phone = extractPhone(jid);
-    const name: string = contact.pushName || contact.notify || '';
-    if (!phone || !name) continue;
+    const name: string = contact.pushName || contact.notify || contact.name || '';
+    const picture: string | undefined = contact.profilePictureUrl;
 
-    const existing = await fsQuery('leads', [{ field: 'phone', value: phone }]).catch(() => [] as any[]);
-    if (existing.length === 0) continue;
+    if (!phone) continue;
 
-    const leadId: string = existing[0].id;
-    const upd: Record<string, any> = { updatedAt: new Date().toISOString() };
-    if (name) upd.name = name;
-    if (contact.profilePictureUrl) upd.profilePicture = contact.profilePictureUrl;
+    // Atualiza o cache de conversas para este contato
+    const convs = findConversationsByPhone(phone);
+    for (const conv of convs) {
+      const patch: Partial<import('../lib/conversationCache.js').CachedConversation> = {};
+      if (name) patch.contactName = name;
+      if (picture) patch.contactPicture = picture;
+      if (Object.keys(patch).length > 0) {
+        updateConversation(conv.id, patch);
+        emitToSession(conv.sessionId, 'wa:chat_update', { id: conv.id, patch });
+      }
+    }
 
-    await fsUpdate('leads', leadId, upd).catch((err: any) =>
-      console.error(`[EVOLUTION/webhook] CONTACTS_UPDATE lead ${leadId}:`, err?.message),
-    );
+    // Atualiza lead no Firestore se existir
+    if (name || picture) {
+      const existingLeads = await fsQuery('leads', [{ field: 'phone', value: phone }]).catch(() => [] as any[]);
+      if (existingLeads.length > 0) {
+        const leadId: string = existingLeads[0].id;
+        const upd: Record<string, any> = { updatedAt: new Date().toISOString() };
+        if (name) upd.name = name;
+        if (picture) upd.profilePicture = picture;
+        await fsUpdate('leads', leadId, upd).catch(() => {});
+      }
+    }
   }
+
+  console.log(`[EVOLUTION/webhook] CONTACTS_UPDATE session=${sessionId} contacts=${contacts.length}`);
 }
 
-async function handleChatsUpdate(event: any) {
+async function handleChatsUpdate(event: any, isUpsert = false) {
   const sessionId: string = event.instance ?? '';
   if (!sessionId) return;
 
   const chats: any[] = Array.isArray(event.data) ? event.data : [event.data];
+  const organizationId = await resolveOrgId(sessionId);
 
   for (const chat of chats) {
     const remoteJid: string = chat.remoteJid ?? chat.id ?? '';
@@ -318,15 +395,47 @@ async function handleChatsUpdate(event: any) {
     if (!phone || phone.endsWith('@lid')) continue;
 
     const conversationId = `${sessionId}_${phone}`;
-    const patch: Partial<CachedConversation> = { updatedAt: new Date().toISOString() };
-    const unreadCount = typeof chat.unreadCount === 'number' ? chat.unreadCount : (chat.unreadMessages ?? undefined);
-    if (unreadCount !== undefined) patch.unreadCount = unreadCount;
-    if (chat.name || chat.pushName) patch.contactName = chat.name || chat.pushName;
+    const existing = getConversation(conversationId);
 
-    updateConversation(conversationId, patch);
+    if (existing) {
+      // Atualiza campos presentes no evento
+      const patch: Partial<CachedConversation> = { updatedAt: new Date().toISOString() };
+      const unreadCount = typeof chat.unreadCount === 'number' ? chat.unreadCount
+                        : (chat.unreadMessages !== undefined ? chat.unreadMessages : undefined);
+      if (unreadCount !== undefined) patch.unreadCount = unreadCount;
+      if (chat.name || chat.pushName) patch.contactName = chat.name || chat.pushName;
+
+      updateConversation(conversationId, patch);
+      emitToSession(sessionId, 'wa:chat_update', { id: conversationId, patch });
+    } else if (isUpsert) {
+      // CHATS_UPSERT: novo chat que ainda não está no cache
+      const lastMsg = chat.lastMessage ?? null;
+      const lastMsgBody = lastMsg?.message?.conversation
+        ?? lastMsg?.message?.extendedTextMessage?.text
+        ?? (lastMsg ? '[mídia]' : '');
+      const lastMsgTs = lastMsg?.messageTimestamp
+        ? new Date((lastMsg.messageTimestamp as number) * 1000).toISOString()
+        : new Date().toISOString();
+
+      const newConv: CachedConversation = {
+        id: conversationId,
+        sessionId,
+        sessionName: sessionId,
+        phone,
+        contactName: chat.name || chat.pushName || phone,
+        lastMessage: lastMsgBody,
+        lastMessageAt: lastMsgTs,
+        lastMessageDirection: lastMsg?.key?.fromMe ? 'outbound' : 'inbound',
+        unreadCount: chat.unreadMessages ?? 0,
+        organizationId,
+        updatedAt: lastMsgTs,
+      };
+      setConversation(newConv);
+      emitToSession(sessionId, 'wa:chat_upsert', newConv);
+    }
   }
 
-  console.log(`[EVOLUTION/webhook] CHATS_UPDATE session=${sessionId} chats=${chats.length}`);
+  console.log(`[EVOLUTION/webhook] CHATS_${isUpsert ? 'UPSERT' : 'UPDATE'} session=${sessionId} chats=${chats.length}`);
 }
 
 // ── Main processor ────────────────────────────────────────────────────────────
@@ -344,6 +453,12 @@ async function processEvent(event: any) {
     case 'MESSAGES_UPDATE':
       await handleMessagesUpdate(event);
       break;
+    case 'MESSAGES_DELETE':
+      await handleMessagesDelete(event);
+      break;
+    case 'PRESENCE_UPDATE':
+      await handlePresenceUpdate(event);
+      break;
     case 'CONNECTION_UPDATE':
       await handleConnectionUpdate(event);
       break;
@@ -351,14 +466,17 @@ async function processEvent(event: any) {
       await handleQrcodeUpdated(event);
       break;
     case 'CONTACTS_UPDATE':
+    case 'CONTACTS_UPSERT':
       await handleContactsUpdate(event);
       break;
     case 'CHATS_UPDATE':
+      await handleChatsUpdate(event, false);
+      break;
     case 'CHATS_UPSERT':
-      await handleChatsUpdate(event);
+      await handleChatsUpdate(event, true);
       break;
     default:
-      console.log(`[EVOLUTION/webhook] Evento não tratado: ${eventType}`);
+      process.stdout.write(`[EVOLUTION/webhook] Evento não tratado: ${eventType}\n`);
   }
 }
 

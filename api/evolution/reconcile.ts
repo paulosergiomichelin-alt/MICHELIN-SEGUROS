@@ -1,5 +1,7 @@
-import { fsGet, fsQueryFull } from '../lib/adminFirebase.js';
+import { fsGet } from '../lib/adminFirebase.js';
+import { EvolutionAPI } from '../lib/evolutionApi.js';
 import { reconcileSession } from '../lib/syncService.js';
+import { getActiveSessions } from '../webhook/evolution.js';
 
 let lastReconcileAt: string | null = null;
 let totalImported = 0;
@@ -9,7 +11,8 @@ export function getReconcileStats() {
   return { lastReconcileAt, totalImported, reconcileRunning };
 }
 
-// Executa reconciliação de todas as sessões ativas
+// Executa reconciliação de todas as sessões ativas.
+// Usa Evolution API fetchInstances para detectar sessões abertas — sem Firestore.
 export async function runReconcile(): Promise<void> {
   if (reconcileRunning) {
     console.log('[EVOLUTION/reconcile] Já em execução, ignorando...');
@@ -19,14 +22,26 @@ export async function runReconcile(): Promise<void> {
   const startedAt = Date.now();
 
   try {
-    const sessions = await fsQueryFull('whatsapp_sessions', [{ field: 'status', value: 'open' }], 20);
-    process.stdout.write(`[EVOLUTION/reconcile] ${sessions.length} sessões ativas\n`);
+    // 1ª fonte: sessões que emitiram CONNECTION_UPDATE open nesta sessão do servidor
+    const inMemory = getActiveSessions();
 
-    for (const session of sessions) {
-      const sessionName: string = session.id ?? session.sessionName ?? '';
-      const orgId: string = session.organizationId ?? 'default';
-      if (!sessionName) continue;
+    // 2ª fonte: consulta direta à Evolution API (não usa Firestore)
+    const instances = await EvolutionAPI.fetchInstances().catch(() => [] as any[]);
+    const openInstances = instances.filter(i => {
+      const state = (i.instance?.state ?? i.connectionStatus ?? i.state ?? '').toLowerCase();
+      return state === 'open';
+    });
 
+    // Merge das duas fontes
+    const sessions = new Map<string, string>(inMemory);
+    for (const inst of openInstances) {
+      const name: string = inst.instance?.instanceName ?? inst.instanceName ?? '';
+      if (name && !sessions.has(name)) sessions.set(name, 'default');
+    }
+
+    process.stdout.write(`[EVOLUTION/reconcile] ${sessions.size} sessões ativas\n`);
+
+    for (const [sessionName, orgId] of sessions) {
       const { imported } = await reconcileSession(sessionName, orgId, 60).catch(err => {
         console.error(`[EVOLUTION/reconcile] Erro em ${sessionName}:`, err?.message);
         return { checked: 0, imported: 0 };
@@ -43,9 +58,7 @@ export async function runReconcile(): Promise<void> {
   }
 }
 
-// Agenda reconciliação periódica (chamado pelo server.ts na inicialização)
 export function scheduleReconcile(intervalMs = 5 * 60 * 1000): void {
-  // Primeira execução após 2 minutos (para não sobrecarregar na inicialização)
   setTimeout(() => {
     runReconcile().catch(err => console.error('[EVOLUTION/reconcile] Erro:', err));
     setInterval(() => {
@@ -56,7 +69,6 @@ export function scheduleReconcile(intervalMs = 5 * 60 * 1000): void {
   process.stdout.write(`[EVOLUTION/reconcile] Agendado a cada ${intervalMs / 60000} minutos\n`);
 }
 
-// Handler HTTP
 export default async function handler(req: any, res: any) {
   if (req.method === 'GET') {
     return res.status(200).json(getReconcileStats());
@@ -70,13 +82,11 @@ export default async function handler(req: any, res: any) {
 
   try {
     if (sessionName) {
-      // Reconcile de sessão específica
       const session = await fsGet('whatsapp_sessions', sessionName).catch(() => null);
       const orgId = session?.organizationId ?? 'default';
       const result = await reconcileSession(sessionName, orgId, 120);
       return res.status(200).json({ ok: true, ...result });
     } else {
-      // Reconcile de todas as sessões (async)
       res.status(202).json({ ok: true, message: 'Reconciliação iniciada' });
       runReconcile().catch(err => console.error('[EVOLUTION/reconcile] Erro:', err));
     }

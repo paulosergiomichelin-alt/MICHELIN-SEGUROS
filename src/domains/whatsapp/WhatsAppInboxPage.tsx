@@ -3,13 +3,14 @@ import {
   Search, Send, ChevronLeft, MessageSquare, Loader2,
   WifiOff, Smartphone, FileText, RefreshCw, Plus, Smile, Mic,
   Check, CheckCheck, Image, Mic as MicIcon, Lock,
+  Video, Download, ExternalLink,
 } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { WhatsAppConversation, WhatsAppMessage, WhatsAppSession } from '../../types';
-import { DataService } from '../../services/DataService';
 import { useWhatsApp } from '../../contexts/WhatsAppContext';
 import { EvolutionService } from '../../services/EvolutionService';
 import { ContactSidePanel } from './ContactSidePanel';
@@ -22,7 +23,7 @@ function patchConversation(conversationId: string, patch: Record<string, unknown
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ conversationId, ...patch }),
-  }).catch(err => console.error('[WA] patchConversation failed:', err));
+  }).catch(() => {});
 }
 
 function fmtTime(iso?: string) {
@@ -40,6 +41,34 @@ function fmtFull(iso?: string) {
   try { return format(parseISO(iso), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }); } catch { return ''; }
 }
 
+function sortByLastMsg(a: WhatsAppConversation, b: WhatsAppConversation) {
+  return new Date(b.lastMessageAt ?? 0).getTime() - new Date(a.lastMessageAt ?? 0).getTime();
+}
+
+// ─── Avatar ───────────────────────────────────────────────────────────────────
+
+const Avatar: React.FC<{ name: string; picture?: string; size?: 'sm' | 'md' | 'lg' }> = ({
+  name, picture, size = 'md',
+}) => {
+  const [imgError, setImgError] = useState(false);
+  const dim = size === 'sm' ? 'w-7 h-7 text-xs' : size === 'lg' ? 'w-12 h-12 text-lg' : 'w-9 h-9 text-sm';
+
+  return (
+    <div className={cn(dim, 'rounded-full shrink-0 overflow-hidden bg-gold-deep/10 flex items-center justify-center font-bold text-gold-deep')}>
+      {picture && !imgError ? (
+        <img
+          src={picture}
+          alt=""
+          className="w-full h-full object-cover"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        (name || '?').charAt(0).toUpperCase()
+      )}
+    </div>
+  );
+};
+
 // ─── Conversation item ────────────────────────────────────────────────────────
 
 const ConvItem: React.FC<{
@@ -54,9 +83,7 @@ const ConvItem: React.FC<{
       active && 'bg-[#2a3942]'
     )}
   >
-    <div className="w-9 h-9 rounded-full bg-gold-deep/10 flex items-center justify-center font-bold text-sm text-gold-deep shrink-0">
-      {(conv.contactName || conv.phone).charAt(0).toUpperCase()}
-    </div>
+    <Avatar name={conv.contactName || conv.phone} picture={conv.contactPicture} />
     <div className="flex-1 min-w-0">
       <div className="flex justify-between items-start">
         <p className="text-[12px] font-bold text-[#e9edef] truncate pr-2 leading-none">
@@ -71,7 +98,13 @@ const ConvItem: React.FC<{
           'text-[11px] truncate pr-3 leading-tight',
           (conv.unreadCount ?? 0) > 0 ? 'text-[#e9edef] font-bold' : 'text-[#8696a0]'
         )}>
-          {conv.lastMessage || 'Nova conversa'}
+          {conv.presence === 'composing' ? (
+            <span className="text-emerald-400 italic">digitando...</span>
+          ) : conv.presence === 'recording' ? (
+            <span className="text-emerald-400 italic">gravando áudio...</span>
+          ) : (
+            conv.lastMessage || 'Nova conversa'
+          )}
         </p>
         <div className="flex items-center gap-1 shrink-0">
           {conv.clienteId && (
@@ -100,25 +133,113 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage }> = ({ msg }) => {
   return (
     <div className={cn('flex', isOut ? 'justify-end' : 'justify-start', 'mt-0.5')}>
       <div className={cn(
-        'max-w-[85%] md:max-w-[70%] lg:max-w-[60%] px-2 py-1 rounded-xl shadow-sm relative group',
+        'max-w-[85%] md:max-w-[70%] lg:max-w-[60%] rounded-xl shadow-sm relative group overflow-hidden',
         isOut
           ? 'bg-[#005c4b] text-[#e9edef] rounded-tr-none'
           : 'bg-[#202c33] text-[#e9edef] rounded-tl-none',
       )}>
-        {hasMedia && (
-          <div className="flex items-center gap-1.5 mb-1 text-white/50">
-            {msg.messageType === 'image' && <Image className="w-3.5 h-3.5" />}
-            {msg.messageType === 'audio' && <MicIcon className="w-3.5 h-3.5" />}
-            {msg.messageType === 'document' && <FileText className="w-3.5 h-3.5" />}
-            <span className="text-[9px] uppercase font-bold">{msg.messageType}</span>
+        {/* Imagem */}
+        {msg.messageType === 'image' && (
+          msg.mediaUrl ? (
+            <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer">
+              <img
+                src={msg.mediaUrl}
+                alt="Imagem"
+                className="max-w-full max-h-64 object-cover block"
+                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+            </a>
+          ) : (
+            <div className="flex items-center gap-2 px-3 pt-2 pb-0 text-white/50">
+              <Image className="w-4 h-4" />
+              <span className="text-[11px]">Imagem</span>
+            </div>
+          )
+        )}
+
+        {/* Áudio */}
+        {msg.messageType === 'audio' && (
+          <div className="px-3 pt-2 pb-0">
+            {msg.mediaUrl ? (
+              <audio controls className="w-full max-w-[220px] h-8" style={{ accentColor: '#25d366' }}>
+                <source src={msg.mediaUrl} type={msg.mimeType ?? 'audio/ogg'} />
+              </audio>
+            ) : (
+              <div className="flex items-center gap-2 text-white/50">
+                <MicIcon className="w-4 h-4" />
+                <span className="text-[11px]">Áudio</span>
+              </div>
+            )}
           </div>
         )}
-        {msg.body && (
-          <p className="text-[12px] md:text-[13px] leading-relaxed whitespace-pre-wrap pb-3">
-            {msg.body}
+
+        {/* Vídeo */}
+        {msg.messageType === 'video' && (
+          <div className="flex items-center gap-2.5 px-3 pt-2 pb-0">
+            <Video className="w-5 h-5 text-white/60 shrink-0" />
+            <span className="text-[11px] text-white/70 truncate flex-1">
+              {msg.fileName || 'Vídeo'}
+            </span>
+            {msg.mediaUrl && (
+              <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                <ExternalLink className="w-3.5 h-3.5 text-white/40 hover:text-white/80" />
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* Documento */}
+        {msg.messageType === 'document' && (
+          <div className="flex items-center gap-2.5 px-3 pt-2 pb-0">
+            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+              <FileText className="w-4 h-4 text-white/70" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-medium truncate text-[#e9edef]">
+                {msg.fileName || msg.body || 'Documento'}
+              </p>
+              {msg.mimeType && (
+                <p className="text-[9px] text-white/40 uppercase">
+                  {msg.mimeType.split('/').pop()}
+                </p>
+              )}
+            </div>
+            {msg.mediaUrl && (
+              <a
+                href={msg.mediaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                download={msg.fileName}
+                className="shrink-0 p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <Download className="w-4 h-4 text-white/60" />
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* Sticker */}
+        {msg.messageType === 'sticker' && (
+          msg.mediaUrl ? (
+            <img src={msg.mediaUrl} alt="Sticker" className="w-28 h-28 object-contain p-2 block" />
+          ) : (
+            <div className="flex items-center gap-2 px-3 pt-2 pb-0 text-white/50">
+              <span className="text-[11px]">Sticker</span>
+            </div>
+          )
+        )}
+
+        {/* Texto */}
+        {(msg.body || msg.messageType === 'text') && msg.messageType !== 'document' && (
+          <p className={cn(
+            'text-[12px] md:text-[13px] leading-relaxed whitespace-pre-wrap pb-5',
+            hasMedia && msg.body ? 'px-3 pt-1.5' : 'px-2 pt-1.5',
+          )}>
+            {msg.body || (!hasMedia && <span className="opacity-30 italic">mensagem</span>)}
           </p>
         )}
-        {!msg.body && !hasMedia && <p className="text-[11px] text-white/30 pb-3 italic">mensagem</p>}
+
+        {/* Rodapé: hora + status */}
         <div className="absolute bottom-0.5 right-1.5 flex items-center gap-1 select-none">
           <span className="text-[8px] text-white/30 font-medium">{fmtTime(msg.timestamp)}</span>
           {isOut && (
@@ -165,11 +286,17 @@ export const WhatsAppInboxPage: React.FC = () => {
   const [showChat, setShowChat] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [socketConnected, setSocketConnected] = useState(false);
 
+  const socketRef = useRef<Socket | null>(null);
   const autoSyncedRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const selectedConvRef = useRef<WhatsAppConversation | null>(null);
 
-  // Detect mobile
+  // Mantém ref sincronizada para uso dentro de closures de socket
+  useEffect(() => { selectedConvRef.current = selectedConv; }, [selectedConv]);
+
+  // ── Detect mobile ──────────────────────────────────────────────────────────
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
@@ -177,56 +304,137 @@ export const WhatsAppInboxPage: React.FC = () => {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Scroll to bottom on new messages
+  // ── Scroll to bottom on new messages ──────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Poll conversations from cache API every 4s
+  // ── Socket.IO connection (once, persistent) ────────────────────────────────
   useEffect(() => {
-    if (!selectedSessionName) { setConversations([]); return; }
-    let cancelled = false;
-    const load = async () => {
-      if (cancelled) return;
-      try {
-        const r = await fetch(`/api/evolution/conversations?session=${encodeURIComponent(selectedSessionName)}`);
-        if (!cancelled && r.ok) {
-          const data = await r.json();
-          setConversations(Array.isArray(data) ? data as WhatsAppConversation[] : []);
+    const socket = io({ path: '/socket.io', transports: ['websocket', 'polling'] });
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      setSocketConnected(true);
+      // Re-entrar na sala quando reconectar
+      if (selectedSessionName) {
+        socket.emit('join_session', selectedSessionName);
+      }
+    });
+
+    socket.on('disconnect', () => setSocketConnected(false));
+
+    // Nova conversa ou conversa existente atualizada com nova mensagem
+    socket.on('wa:chat_upsert', (conv: WhatsAppConversation) => {
+      setConversations(prev => {
+        const idx = prev.findIndex(c => c.id === conv.id);
+        let next: WhatsAppConversation[];
+        if (idx >= 0) {
+          next = prev.map((c, i) => i === idx ? { ...c, ...conv } : c);
+        } else {
+          next = [conv, ...prev];
         }
-      } catch {}
-      if (!cancelled) setConvLoading(false);
+        return next.sort(sortByLastMsg);
+      });
+    });
+
+    // Patch em campos específicos de uma conversa (unreadCount, contactName, etc.)
+    socket.on('wa:chat_update', ({ id, patch }: { id: string; patch: Partial<WhatsAppConversation> }) => {
+      setConversations(prev =>
+        prev.map(c => c.id === id ? { ...c, ...patch } : c).sort(sortByLastMsg)
+      );
+      // Atualiza selectedConv se for a mesma
+      setSelectedConv(prev => prev?.id === id ? { ...prev, ...patch } : prev);
+    });
+
+    // Nova mensagem chegou
+    socket.on('wa:message_upsert', (msg: WhatsAppMessage) => {
+      if (msg.conversationId !== selectedConvRef.current?.id) return;
+      setMessages(prev => {
+        if (prev.some(m => m.id === msg.id)) return prev; // dedup
+        return [...prev, msg];
+      });
+    });
+
+    // Status de mensagem atualizado (entregue, lido, etc.)
+    socket.on('wa:message_update', ({ id, patch }: { id: string; patch: Partial<WhatsAppMessage> }) => {
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, ...patch } : m));
+    });
+
+    // Mensagem deletada
+    socket.on('wa:message_delete', ({ id }: { id: string }) => {
+      setMessages(prev => prev.filter(m => m.id !== id));
+    });
+
+    // Presença (digitando...)
+    socket.on('wa:presence_update', ({ id, presence }: { id: string; presence: string }) => {
+      setConversations(prev =>
+        prev.map(c => c.id === id ? { ...c, presence: presence as any } : c)
+      );
+    });
+
+    // Sync automático concluído pelo servidor — recarrega lista
+    socket.on('wa:sync_complete', ({ instanceName }: { instanceName: string }) => {
+      if (instanceName !== selectedSessionName) return;
+      loadConversations(instanceName);
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
     };
-    setConvLoading(true);
-    load();
-    const timer = setInterval(load, 4000);
-    return () => { cancelled = true; clearInterval(timer); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Entrar/sair da sala de sessão quando session muda ─────────────────────
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket || !selectedSessionName) return;
+
+    socket.emit('join_session', selectedSessionName);
+
+    return () => {
+      socket.emit('leave_session', selectedSessionName);
+    };
   }, [selectedSessionName]);
 
-  // Poll messages from cache API every 2s for selected conversation
+  // ── Carregar conversas (1 fetch inicial + socket mantém atualizado) ────────
+  const loadConversations = useCallback(async (sessionName: string) => {
+    setConvLoading(true);
+    try {
+      const r = await fetch(`/api/evolution/conversations?session=${encodeURIComponent(sessionName)}`);
+      if (r.ok) {
+        const data = await r.json();
+        if (Array.isArray(data)) {
+          setConversations(data.sort(sortByLastMsg));
+        }
+      }
+    } catch {}
+    setConvLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedSessionName) { setConversations([]); return; }
+    autoSyncedRef.current = false;
+    loadConversations(selectedSessionName);
+  }, [selectedSessionName, loadConversations]);
+
+  // ── Carregar mensagens quando abre uma conversa ────────────────────────────
   useEffect(() => {
     if (!selectedConv || !selectedSessionName) { setMessages([]); return; }
-    let cancelled = false;
-    const load = async () => {
-      if (cancelled) return;
-      try {
-        const r = await fetch(
-          `/api/evolution/messages?session=${encodeURIComponent(selectedSessionName)}&phone=${encodeURIComponent(selectedConv.phone)}`,
-        );
-        if (!cancelled && r.ok) {
-          const data = await r.json();
-          if (Array.isArray(data.messages)) setMessages(data.messages as WhatsAppMessage[]);
-        }
-      } catch {}
-      if (!cancelled) setMsgLoading(false);
-    };
     setMsgLoading(true);
-    load();
-    const timer = setInterval(load, 2000);
-    if ((selectedConv.unreadCount ?? 0) > 0) patchConversation(selectedConv.id, { unreadCount: 0 });
-    return () => { cancelled = true; clearInterval(timer); };
-  }, [selectedConv?.id, selectedSessionName]);
+    fetch(`/api/evolution/messages?session=${encodeURIComponent(selectedSessionName)}&phone=${encodeURIComponent(selectedConv.phone)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data.messages)) setMessages(data.messages as WhatsAppMessage[]);
+      })
+      .catch(() => {})
+      .finally(() => setMsgLoading(false));
 
+    if ((selectedConv.unreadCount ?? 0) > 0) {
+      patchConversation(selectedConv.id, { unreadCount: 0 });
+      setConversations(prev => prev.map(c => c.id === selectedConv.id ? { ...c, unreadCount: 0 } : c));
+    }
+  }, [selectedConv?.id, selectedSessionName]);
 
   const handleSelectConv = (conv: WhatsAppConversation) => {
     setSelectedConv(conv);
@@ -255,29 +463,24 @@ export const WhatsAppInboxPage: React.FC = () => {
     setSyncResult(null);
     const orgId = sessions.find(s => s.sessionName === selectedSessionName)?.organizationId;
     const result = await EvolutionService.syncConversations(selectedSessionName, orgId);
-    setSyncing(false);
     if (result) {
+      await loadConversations(selectedSessionName);
       setSyncResult(`${result.conversationsImported} conversa(s) sincronizada(s)`);
       setTimeout(() => setSyncResult(null), 4000);
     }
-  }, [selectedSessionName, syncing, sessions]);
+    setSyncing(false);
+  }, [selectedSessionName, syncing, sessions, loadConversations]);
 
-  // Auto-sync when session active and conversations are empty or have bad data
+  // Auto-sync quando lista vazia
   useEffect(() => {
     if (!selectedSessionName || autoSyncedRef.current || convLoading) return;
-    const hasBadData = conversations.some(c => {
-      const p = c.phone ?? '';
-      return p.includes('@') || (p.length > 15 && /[a-z]/i.test(p));
-    });
-    if (conversations.length === 0 || hasBadData) {
+    if (conversations.length === 0) {
       autoSyncedRef.current = true;
       handleSync();
     }
-  }, [selectedSessionName, conversations.length, convLoading]);
+  }, [selectedSessionName, conversations.length, convLoading, handleSync]);
 
-  useEffect(() => { autoSyncedRef.current = false; }, [selectedSessionName]);
-
-  // Filtered conversations
+  // ── Filtered conversations ─────────────────────────────────────────────────
   const filteredConvs = conversations.filter(c => {
     if (searchText) {
       const q = searchText.toLowerCase();
@@ -289,7 +492,7 @@ export const WhatsAppInboxPage: React.FC = () => {
     return true;
   });
 
-  // Group messages by date
+  // ── Group messages by date ─────────────────────────────────────────────────
   const groupedMessages = messages.reduce<{ date: string; msgs: WhatsAppMessage[] }[]>((acc, msg) => {
     let label = '';
     try {
@@ -324,6 +527,11 @@ export const WhatsAppInboxPage: React.FC = () => {
     );
   }
 
+  // Presence label para o header
+  const convPresence = selectedConv
+    ? conversations.find(c => c.id === selectedConv.id)?.presence
+    : undefined;
+
   return (
     <div className="flex h-full w-full bg-[#0b141a] text-[#e9edef] overflow-hidden">
 
@@ -336,7 +544,13 @@ export const WhatsAppInboxPage: React.FC = () => {
         {/* Header */}
         <div className="p-2.5 bg-[#202c33] flex flex-col gap-2.5 shrink-0">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-white tracking-tight">Conversas</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-white tracking-tight">Conversas</h2>
+              <span className={cn(
+                'w-1.5 h-1.5 rounded-full',
+                socketConnected ? 'bg-emerald-400' : 'bg-red-400'
+              )} title={socketConnected ? 'Conectado' : 'Desconectado'} />
+            </div>
             <button
               onClick={handleSync}
               disabled={syncing || !selectedSessionName}
@@ -449,23 +663,31 @@ export const WhatsAppInboxPage: React.FC = () => {
               className="flex flex-col h-full w-full overflow-hidden"
             >
               {/* Chat header */}
-              <header className="h-[48px] bg-[#202c33] flex items-center px-3 md:px-4 shrink-0 border-b border-white/5 relative z-10">
+              <header className="h-[52px] bg-[#202c33] flex items-center px-3 md:px-4 shrink-0 border-b border-white/5 relative z-10">
                 {isMobile && (
                   <button onClick={() => setShowChat(false)} className="p-1 -ml-1 text-[#aebac1] mr-1.5">
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                 )}
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className="w-7 h-7 rounded-full bg-gold-deep/10 flex items-center justify-center text-xs font-bold text-gold-deep shrink-0">
-                    {(selectedConv.contactName || selectedConv.phone).charAt(0).toUpperCase()}
-                  </div>
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <Avatar
+                    name={selectedConv.contactName || selectedConv.phone}
+                    picture={conversations.find(c => c.id === selectedConv.id)?.contactPicture}
+                    size="sm"
+                  />
                   <div className="flex flex-col min-w-0">
                     <h3 className="text-[13px] font-bold text-[#e9edef] truncate leading-tight">
                       {selectedConv.contactName || selectedConv.phone}
                     </h3>
-                    <p className="text-[9px] text-[#8696a0] font-mono leading-none mt-0.5">
-                      {selectedConv.phone}
-                    </p>
+                    {convPresence === 'composing' ? (
+                      <p className="text-[9px] text-emerald-400 leading-none mt-0.5 animate-pulse">digitando...</p>
+                    ) : convPresence === 'recording' ? (
+                      <p className="text-[9px] text-emerald-400 leading-none mt-0.5 animate-pulse">gravando áudio...</p>
+                    ) : (
+                      <p className="text-[9px] text-[#8696a0] font-mono leading-none mt-0.5">
+                        {selectedConv.phone}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <button
@@ -495,11 +717,17 @@ export const WhatsAppInboxPage: React.FC = () => {
                 {msgLoading ? (
                   <div className="flex flex-col items-center justify-center py-10 gap-2">
                     <Loader2 className="w-5 h-5 text-white/20 animate-spin" />
+                    <p className="text-[10px] text-[#8696a0]">Carregando mensagens...</p>
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="flex flex-col items-center gap-3 py-10 text-center">
                     <MessageSquare className="w-8 h-8 text-white/10" />
-                    <p className="text-[10px] text-[#8696a0]">Nenhuma mensagem ainda</p>
+                    <p className="text-[10px] text-[#8696a0]">
+                      Nenhuma mensagem nesta sessão
+                    </p>
+                    <p className="text-[9px] text-[#8696a0]/60 max-w-[200px]">
+                      Novas mensagens aparecerão em tempo real
+                    </p>
                   </div>
                 ) : (
                   groupedMessages.map(group => (

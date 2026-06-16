@@ -7,10 +7,12 @@ export interface CachedConversation {
   sessionName: string;
   phone: string;
   contactName: string;
+  contactPicture?: string;
   lastMessage: string;
   lastMessageAt: string;
   lastMessageDirection: 'inbound' | 'outbound';
   unreadCount: number;
+  presence?: 'available' | 'composing' | 'recording' | 'paused' | 'unavailable';
   organizationId: string;
   updatedAt: string;
   leadId?: string;
@@ -62,6 +64,15 @@ export function getConversations(sessionId: string): CachedConversation[] {
   );
 }
 
+// Find all conversations matching a phone number (across all sessions)
+export function findConversationsByPhone(phone: string): CachedConversation[] {
+  const result: CachedConversation[] = [];
+  for (const conv of convStore.values()) {
+    if (conv.phone === phone) result.push(conv);
+  }
+  return result;
+}
+
 export function setMessage(msg: CachedMessage): void {
   msgStore.set(msg.id, msg);
   if (!msgByConv.has(msg.conversationId)) msgByConv.set(msg.conversationId, new Set());
@@ -71,6 +82,13 @@ export function setMessage(msg: CachedMessage): void {
 export function updateMessage(id: string, patch: Partial<CachedMessage>): void {
   const existing = msgStore.get(id);
   if (existing) msgStore.set(id, { ...existing, ...patch });
+}
+
+export function deleteMessage(id: string): void {
+  const msg = msgStore.get(id);
+  if (!msg) return;
+  msgStore.delete(id);
+  msgByConv.get(msg.conversationId)?.delete(id);
 }
 
 export function getMessages(conversationId: string): CachedMessage[] {

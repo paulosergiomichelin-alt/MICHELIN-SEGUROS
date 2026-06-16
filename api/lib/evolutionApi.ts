@@ -41,6 +41,7 @@ export const EvolutionAPI = {
               events: [
                 'MESSAGES_UPSERT',
                 'MESSAGES_UPDATE',
+                'MESSAGES_DELETE',
                 'CONNECTION_UPDATE',
                 'QRCODE_UPDATED',
                 'CONTACTS_UPDATE',
@@ -54,7 +55,6 @@ export const EvolutionAPI = {
       });
       if (!res.ok) {
         const text = await res.text();
-        // Instance already exists — reuse it
         if (res.status === 403 && text.includes('already in use')) {
           console.warn(`[EvolutionAPI] createInstance: instância ${instanceName} já existe, reutilizando`);
           return await EvolutionAPI.getInstanceInfo(instanceName) ?? { instanceName };
@@ -85,7 +85,6 @@ export const EvolutionAPI = {
       return null;
     };
 
-    // Poll up to 3x with 1.5s delay — primary QR delivery is via QRCODE_UPDATED webhook
     for (let i = 0; i < 3; i++) {
       try {
         const qr = await connectAndRead();
@@ -98,15 +97,13 @@ export const EvolutionAPI = {
       }
     }
 
-    // Instance stuck in 'connecting' (Baileys trying to restore an expired session).
-    // Force logout to wipe the cached session and trigger fresh QR generation.
     const stateRes = await EvolutionAPI.getConnectionState(instanceName);
     const currentState = (
       (stateRes as any)?.instance?.state ?? (stateRes as any)?.state ?? ''
     ).toLowerCase();
     console.log(`[EvolutionAPI] getQRCode ${instanceName}: sem QR, state=${currentState} — forçando logout`);
 
-    if (currentState === 'open') return null; // Já conectado, não precisa de QR
+    if (currentState === 'open') return null;
 
     try {
       await fetchWithTimeout(`${EVOLUTION_API_URL()}/instance/logout/${instanceName}`, {
@@ -213,14 +210,13 @@ export const EvolutionAPI = {
   async findChats(instanceName: string): Promise<any[]> {
     try {
       const url = `${EVOLUTION_API_URL()}/chat/findChats/${instanceName}`;
-      process.stdout.write(`[EvolutionAPI] findChats POST ${url}\n`);
       const res = await fetchWithTimeout(url, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({ where: {} }),
       }, 20000);
       const text = await res.text();
-      process.stdout.write(`[EvolutionAPI] findChats ${instanceName} status=${res.status} body=${text.slice(0, 800)}\n`);
+      process.stdout.write(`[EvolutionAPI] findChats ${instanceName} status=${res.status} chats=${text.length > 100 ? '(truncated)' : text}\n`);
       if (!res.ok) return [];
       try {
         const data: any = JSON.parse(text);
@@ -232,27 +228,44 @@ export const EvolutionAPI = {
     }
   },
 
+  // Tenta múltiplos paths/métodos porque a Evolution API v1.x e v2.x diferem
   async findMessages(instanceName: string, remoteJid: string, msgLimit = 30): Promise<any[]> {
-    try {
-      const url = `${EVOLUTION_API_URL()}/message/findMessages/${instanceName}`;
-      const res = await fetchWithTimeout(url, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ where: { key: { remoteJid } }, limit: msgLimit }),
-      }, 20000);
-      const text = await res.text();
-      if (!res.ok) {
-        process.stdout.write(`[EvolutionAPI] findMessages ${remoteJid} status=${res.status} body=${text.slice(0, 300)}\n`);
-        return [];
+    const candidates = [
+      { path: `/chat/findMessages/${instanceName}`,    method: 'POST' },
+      { path: `/message/findMessages/${instanceName}`, method: 'POST' },
+    ];
+
+    for (const { path, method } of candidates) {
+      try {
+        const url = `${EVOLUTION_API_URL()}${path}`;
+        const res = await fetchWithTimeout(url, {
+          method,
+          headers: authHeaders(),
+          body: JSON.stringify({ where: { key: { remoteJid } }, limit: msgLimit }),
+        }, 15000);
+
+        if (res.status === 404) continue; // Endpoint não existe nesta versão
+
+        const text = await res.text();
+        if (!res.ok) {
+          process.stdout.write(`[EvolutionAPI] findMessages ${path} status=${res.status}\n`);
+          continue;
+        }
+
+        try {
+          const data: any = JSON.parse(text);
+          const msgs = Array.isArray(data) ? data : (Array.isArray(data?.messages) ? data.messages : []);
+          process.stdout.write(`[EvolutionAPI] findMessages via ${path}: ${msgs.length} msgs\n`);
+          return msgs;
+        } catch { continue; }
+      } catch (err: any) {
+        if (err?.name === 'AbortError') continue;
+        process.stdout.write(`[EvolutionAPI] findMessages ${path} error: ${err}\n`);
+        continue;
       }
-      const data: any = JSON.parse(text);
-      const msgs = Array.isArray(data) ? data : (Array.isArray(data?.messages) ? data.messages : []);
-      process.stdout.write(`[EvolutionAPI] findMessages ${remoteJid}: ${msgs.length} msgs. Amostra: ${JSON.stringify(msgs[0])?.slice(0, 200) ?? 'none'}\n`);
-      return msgs;
-    } catch (err) {
-      process.stdout.write(`[EvolutionAPI] findMessages error: ${err}\n`);
-      return [];
     }
+
+    return []; // Histórico não disponível nesta versão da Evolution API
   },
 
   async findContacts(instanceName: string): Promise<any[]> {
@@ -275,6 +288,38 @@ export const EvolutionAPI = {
     }
   },
 
+  async fetchProfilePicture(instanceName: string, phone: string): Promise<string | null> {
+    const number = phone.replace(/@.*$/, ''); // strip JID suffix
+    try {
+      // Try GET with query param (Evolution API v1 style)
+      const res = await fetchWithTimeout(
+        `${EVOLUTION_API_URL()}/chat/fetchProfilePicture/${instanceName}?number=${number}`,
+        { headers: authHeaders() },
+        8000,
+      );
+      if (res.ok) {
+        const data: any = await res.json();
+        const pic = data?.profilePictureUrl ?? data?.url ?? data?.picture ?? null;
+        if (pic) return pic;
+      }
+      // Try POST (Evolution API v2 style)
+      const res2 = await fetchWithTimeout(
+        `${EVOLUTION_API_URL()}/chat/fetchProfilePicture/${instanceName}`,
+        {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ number }),
+        },
+        8000,
+      );
+      if (res2.ok) {
+        const data: any = await res2.json();
+        return data?.profilePictureUrl ?? data?.url ?? data?.picture ?? null;
+      }
+      return null;
+    } catch { return null; }
+  },
+
   async getInstanceInfo(instanceName: string): Promise<any> {
     try {
       const res = await fetchWithTimeout(
@@ -287,7 +332,6 @@ export const EvolutionAPI = {
         return null;
       }
       const data: any = await res.json();
-      // Returns array — pick first match
       if (Array.isArray(data)) return data[0] ?? null;
       return data ?? null;
     } catch (err) {

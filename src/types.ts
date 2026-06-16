@@ -510,6 +510,7 @@ export interface WhatsAppConversation {
   lastMessageAt?: string;
   lastMessageDirection?: 'inbound' | 'outbound';
   unreadCount: number;
+  presence?: 'available' | 'composing' | 'recording' | 'paused' | 'unavailable';
   organizationId?: string;
   updatedAt: string;
 }
@@ -519,13 +520,17 @@ export interface WhatsAppMessage {
   conversationId: string;
   sessionId: string;
   direction: 'inbound' | 'outbound';
-  messageType: 'text' | 'image' | 'video' | 'audio' | 'document' | 'sticker';
+  messageType: 'text' | 'image' | 'video' | 'audio' | 'document' | 'sticker' | string;
   body?: string;
+  phone?: string;
+  contactName?: string;
   mediaUrl?: string;
   mediaPath?: string;
+  mimeType?: string;
+  fileName?: string;
   transcription?: string;
   timestamp: string;
-  status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
+  status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed' | string;
   evolutionId?: string;
   organizationId?: string;
 }
