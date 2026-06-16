@@ -76,17 +76,16 @@ export const RenovacoesPage: React.FC = () => {
 
   // Totais globais de apólices
   const totalApolices = apolices.length;
-  const totalPremio = useMemo(() => apolices.reduce((sum, a) => sum + (a.premioLiquido ?? 0), 0), [apolices]);
   const totalValor = useMemo(() => apolices.reduce((sum, a) => sum + (a.valorTotal ?? 0), 0), [apolices]);
 
-  // Distribuição por seguradora com contagem + prêmio
+  // Distribuição por seguradora com contagem + valor total
   const bySeguradora = useMemo(() => {
-    const map: Record<string, { count: number; premio: number }> = {};
+    const map: Record<string, { count: number; valor: number }> = {};
     apolices.forEach(a => {
       if (!a.seguradoraId) return;
-      if (!map[a.seguradoraId]) map[a.seguradoraId] = { count: 0, premio: 0 };
+      if (!map[a.seguradoraId]) map[a.seguradoraId] = { count: 0, valor: 0 };
       map[a.seguradoraId].count++;
-      map[a.seguradoraId].premio += a.premioLiquido ?? 0;
+      map[a.seguradoraId].valor += a.valorTotal ?? 0;
     });
     return Object.entries(map).sort((a, b) => b[1].count - a[1].count).slice(0, 8);
   }, [apolices]);
@@ -96,12 +95,12 @@ export const RenovacoesPage: React.FC = () => {
     const filtered = selectedSeguradora
       ? apolices.filter(a => a.seguradoraId === selectedSeguradora)
       : apolices;
-    const map: Record<string, { count: number; premio: number }> = {};
+    const map: Record<string, { count: number; valor: number }> = {};
     filtered.forEach(a => {
       if (!a.produto) return;
-      if (!map[a.produto]) map[a.produto] = { count: 0, premio: 0 };
+      if (!map[a.produto]) map[a.produto] = { count: 0, valor: 0 };
       map[a.produto].count++;
-      map[a.produto].premio += a.premioLiquido ?? 0;
+      map[a.produto].valor += a.valorTotal ?? 0;
     });
     return Object.entries(map).sort((a, b) => b[1].count - a[1].count).slice(0, 8);
   }, [apolices, selectedSeguradora]);
@@ -120,10 +119,19 @@ export const RenovacoesPage: React.FC = () => {
           <div className="w-8 h-8 rounded-xl bg-gold-deep/15 border border-gold-deep/20 flex items-center justify-center">
             <RefreshCw className="w-4 h-4 text-gold-deep" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-sm font-black text-white uppercase tracking-widest">Renovações</h1>
             <p className="text-[10px] text-white/40 font-medium">Controle de vencimentos da carteira</p>
           </div>
+          {selectedSeguradora && (
+            <button
+              onClick={() => setSelectedSeguradora(null)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-[9px] font-black text-white/40 uppercase tracking-widest"
+            >
+              <X className="w-3 h-3" />
+              Limpar filtros
+            </button>
+          )}
         </div>
       </div>
 
@@ -149,9 +157,9 @@ export const RenovacoesPage: React.FC = () => {
               <p className="text-[11px] text-white/20">Sem dados</p>
             ) : (
               <div className="space-y-3">
-                {bySeguradora.map(([id, { count, premio }]) => {
+                {bySeguradora.map(([id, { count, valor }]) => {
                   const pctCount = totalApolices > 0 ? Math.round((count / totalApolices) * 100) : 0;
-                  const pctPremio = totalPremio > 0 ? Math.round((premio / totalPremio) * 100) : 0;
+                  const pctValor = totalValor > 0 ? Math.round((valor / totalValor) * 100) : 0;
                   const isSelected = selectedSeguradora === id;
                   return (
                     <button
@@ -172,11 +180,11 @@ export const RenovacoesPage: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[9px] text-white/30">{fmtCurrency(premio)}</span>
-                        <span className="text-[9px] text-white/25">{pctPremio}% do prêmio</span>
+                        <span className="text-[9px] text-white/30">{fmtCurrency(valor)}</span>
+                        <span className="text-[9px] text-white/25">{pctValor}% do total</span>
                       </div>
                       <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                        <div className="h-full bg-gold-deep/60 rounded-full" style={{ width: `${pctPremio}%` }} />
+                        <div className="h-full bg-gold-deep/60 rounded-full" style={{ width: `${pctValor}%` }} />
                       </div>
                     </button>
                   );
@@ -186,7 +194,7 @@ export const RenovacoesPage: React.FC = () => {
                   <span className="text-[9px] text-white/30 uppercase font-black">Total</span>
                   <div className="text-right">
                     <span className="text-[10px] text-white/50 font-mono">{totalApolices} apólices</span>
-                    <span className="text-[9px] text-white/30 ml-2">{fmtCurrency(totalPremio)}</span>
+                    <span className="text-[9px] text-white/30 ml-2">{fmtCurrency(totalValor)}</span>
                   </div>
                 </div>
               </div>
@@ -214,15 +222,15 @@ export const RenovacoesPage: React.FC = () => {
               <p className="text-[11px] text-white/20">Sem dados</p>
             ) : (
               <div className="space-y-2.5">
-                {byProduto.map(([produto, { count, premio }]) => {
+                {byProduto.map(([produto, { count, valor }]) => {
                   const base = selectedSeguradora
                     ? apolices.filter(a => a.seguradoraId === selectedSeguradora).length
                     : totalApolices;
                   const pctCount = base > 0 ? Math.round((count / base) * 100) : 0;
-                  const basePremio = selectedSeguradora
-                    ? apolices.filter(a => a.seguradoraId === selectedSeguradora).reduce((s, a) => s + (a.premioLiquido ?? 0), 0)
-                    : totalPremio;
-                  const pctPremio = basePremio > 0 ? Math.round((premio / basePremio) * 100) : 0;
+                  const baseValor = selectedSeguradora
+                    ? apolices.filter(a => a.seguradoraId === selectedSeguradora).reduce((s, a) => s + (a.valorTotal ?? 0), 0)
+                    : totalValor;
+                  const pctValor = baseValor > 0 ? Math.round((valor / baseValor) * 100) : 0;
                   return (
                     <div key={produto}>
                       <div className="flex items-center justify-between mb-0.5">
@@ -233,11 +241,11 @@ export const RenovacoesPage: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[9px] text-white/30">{fmtCurrency(premio)}</span>
-                        <span className="text-[9px] text-white/25">{pctPremio}% do prêmio</span>
+                        <span className="text-[9px] text-white/30">{fmtCurrency(valor)}</span>
+                        <span className="text-[9px] text-white/25">{pctValor}% do total</span>
                       </div>
                       <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                        <div className="h-full bg-gold-deep/40 rounded-full" style={{ width: `${pctPremio}%` }} />
+                        <div className="h-full bg-gold-deep/40 rounded-full" style={{ width: `${pctValor}%` }} />
                       </div>
                     </div>
                   );
@@ -266,8 +274,8 @@ export const RenovacoesPage: React.FC = () => {
           <div className="bg-brand-black/50 border border-white/5 rounded-2xl p-4 flex items-center gap-3">
             <CheckCircle2 className="w-8 h-8 text-emerald-500/50 shrink-0" />
             <div>
-              <p className="text-[9px] text-white/30 uppercase font-black">Prêmio líquido total</p>
-              <p className="text-xl font-black text-white leading-tight">{fmtCurrency(totalPremio)}</p>
+              <p className="text-[9px] text-white/30 uppercase font-black">Valor total</p>
+              <p className="text-xl font-black text-white leading-tight">{fmtCurrency(totalValor)}</p>
             </div>
           </div>
           <div className="bg-brand-black/50 border border-amber-500/10 rounded-2xl p-4 flex items-center gap-3">
