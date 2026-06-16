@@ -1,6 +1,6 @@
 import {
-  collection, doc, addDoc, updateDoc, deleteDoc,
-  getDocs, onSnapshot, orderBy, query, serverTimestamp, Timestamp,
+  collection, collectionGroup, doc, addDoc, updateDoc, deleteDoc,
+  getDocs, onSnapshot, orderBy, query, where, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { DataService } from './DataService';
@@ -119,6 +119,27 @@ export class ClienteService {
   ): () => void {
     return onSnapshot(
       query(this.apolicesRef(clienteId), orderBy('createdAt', 'desc')),
+      snap => {
+        callback(snap.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+          createdAt: tsToISO(d.data().createdAt),
+          updatedAt: tsToISO(d.data().updatedAt),
+        } as Apolice)));
+      },
+    );
+  }
+
+  static subscribeAllApolices(
+    organizationId: string,
+    callback: (apolices: Apolice[]) => void,
+  ): () => void {
+    return onSnapshot(
+      query(
+        collectionGroup(db, 'apolices'),
+        where('organizationId', '==', organizationId),
+        where('status', '==', 'ativo'),
+      ),
       snap => {
         callback(snap.docs.map(d => ({
           id: d.id,
