@@ -21,7 +21,7 @@ function fmtDate(iso?: string) {
 }
 
 function fmtCurrency(value: number) {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 interface RenovalItem { cliente: Cliente; days: number }
@@ -123,15 +123,6 @@ export const RenovacoesPage: React.FC = () => {
             <h1 className="text-sm font-black text-white uppercase tracking-widest">Renovações</h1>
             <p className="text-[10px] text-white/40 font-medium">Controle de vencimentos da carteira</p>
           </div>
-          {selectedSeguradora && (
-            <button
-              onClick={() => setSelectedSeguradora(null)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-[9px] font-black text-white/40 uppercase tracking-widest"
-            >
-              <X className="w-3 h-3" />
-              Limpar filtros
-            </button>
-          )}
         </div>
       </div>
 
@@ -151,7 +142,19 @@ export const RenovacoesPage: React.FC = () => {
             <div className="flex items-center gap-2 mb-4">
               <PieChart className="w-4 h-4 text-gold-deep" />
               <h3 className="text-[10px] font-black text-white/60 uppercase tracking-widest">Carteira por Seguradora</h3>
-              <span className="ml-auto text-[9px] text-white/25 font-medium">clique para filtrar</span>
+              <div className="ml-auto">
+                {selectedSeguradora ? (
+                  <button
+                    onClick={() => setSelectedSeguradora(null)}
+                    className="flex items-center gap-1 text-[9px] font-black text-gold-deep/70 hover:text-gold-deep uppercase tracking-widest transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                    Limpar filtro
+                  </button>
+                ) : (
+                  <span className="text-[9px] text-white/25 font-medium">clique para filtrar</span>
+                )}
+              </div>
             </div>
             {bySeguradora.length === 0 ? (
               <p className="text-[11px] text-white/20">Sem dados</p>
