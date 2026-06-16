@@ -138,15 +138,21 @@ export class ClienteService {
       query(
         collectionGroup(db, 'apolices'),
         where('organizationId', '==', organizationId),
-        where('status', '==', 'ativo'),
+        where('status', 'in', ['ativo', 'em_renovacao']),
       ),
       snap => {
-        callback(snap.docs.map(d => ({
-          id: d.id,
-          ...d.data(),
-          createdAt: tsToISO(d.data().createdAt),
-          updatedAt: tsToISO(d.data().updatedAt),
-        } as Apolice)));
+        callback(snap.docs.map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            ...data,
+            premioLiquido: Number(data.premioLiquido) || 0,
+            valorTotal: Number(data.valorTotal) || 0,
+            comissao: Number(data.comissao) || 0,
+            createdAt: tsToISO(data.createdAt),
+            updatedAt: tsToISO(data.updatedAt),
+          } as Apolice;
+        }));
       },
     );
   }
