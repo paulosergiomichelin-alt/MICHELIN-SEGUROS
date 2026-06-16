@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { orderBy, limit } from 'firebase/firestore';
-import { WhatsAppSession, WhatsAppConversation, UserProfile } from '../types';
+import { limit } from 'firebase/firestore';
+import { WhatsAppSession, UserProfile } from '../types';
 import { DataService } from '../services/DataService';
 
 interface WhatsAppContextType {
@@ -28,7 +28,9 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode; userProfile
   useEffect(() => {
     if (!orgId) { setLoading(false); return; }
 
-    const constraints = [orderBy('updatedAt', 'desc'), limit(50)];
+    // No orderBy — avoids composite index requirement on whatsapp_sessions(organizationId, updatedAt).
+    // Sorted client-side after filtering.
+    const constraints = [limit(50)];
 
     const unsub = DataService.subscribeCollection(
       'whatsapp_sessions',
@@ -37,6 +39,10 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode; userProfile
         const mapped = data as WhatsAppSession[];
         // Non-admins only see their own sessions
         const filtered = isAdmin ? mapped : mapped.filter(s => s.userId === userId);
+        // Sort by updatedAt desc client-side
+        filtered.sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
+        const dbg = filtered.map(s => `id=${s.id} status=${s.status} hasQr=${!!s.qrBase64} qrLen=${s.qrBase64?.length ?? 0}`).join(' | ');
+        console.log('[WHATSAPP_CTX] sessions snapshot:', dbg || '(vazio)');
         setSessions(filtered);
         setLoading(false);
 

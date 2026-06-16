@@ -110,7 +110,7 @@ class RealtimeService {
     // The actual polling logic will be triggered via events that components listen to
     this.pollingInterval = setInterval(() => {
       window.dispatchEvent(new CustomEvent('rt:poll-request'));
-    }, 5000);
+    }, 30000);
   }
 
   private stopPolling() {

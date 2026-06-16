@@ -1,5 +1,5 @@
 import { EvolutionAPI } from '../lib/evolutionApi.js';
-import { fsSet, fsUpdate, fsQuery } from '../lib/adminFirebase.js';
+import { fsSet, fsUpdate, fsDelete, fsQuery } from '../lib/adminFirebase.js';
 
 export default async function handler(req: any, res: any) {
   // ── GET: list sessions ───────────────────────────────────────────────────────
@@ -37,17 +37,17 @@ export default async function handler(req: any, res: any) {
       const instanceName: string =
         sessionName || `michelin_${organizationId}_${userId}`;
 
-      const webhookUrl: string =
-        process.env.EVOLUTION_WEBHOOK_URL ||
-        `https://${req.headers.host}/api/webhook/evolution`;
+      const webhookUrl: string = process.env.EVOLUTION_WEBHOOK_URL || '';
 
-      console.log(`[EVOLUTION/sessions] Criando instância: ${instanceName} webhook=${webhookUrl}`);
+      console.log(`[EVOLUTION/sessions] Criando instância: ${instanceName} webhook=${webhookUrl || '(none)'}`);
 
       const result = await EvolutionAPI.createInstance(instanceName, webhookUrl);
+      console.log('[EVOLUTION/sessions] createInstance result:', JSON.stringify(result)?.slice(0, 500));
       if (!result) {
         return res.status(502).json({ error: 'Falha ao criar instância na Evolution API. Verifique se a URL e a chave estão corretas e se o serviço está acessível.' });
       }
 
+      const qrInCreate = result?.qrcode ?? result?.hash?.qrcode;
       const now = new Date().toISOString();
       await fsSet('whatsapp_sessions', instanceName, {
         id: instanceName,
@@ -58,6 +58,7 @@ export default async function handler(req: any, res: any) {
         profilePicture: null,
         status: 'qr',
         organizationId,
+        ...(qrInCreate?.base64 ? { qrBase64: qrInCreate.base64, qrCode: qrInCreate.code ?? null } : {}),
         createdAt: now,
         updatedAt: now,
       });
@@ -81,11 +82,7 @@ export default async function handler(req: any, res: any) {
       console.log(`[EVOLUTION/sessions] Encerrando instância: ${name}`);
       await EvolutionAPI.logoutInstance(name);
       await EvolutionAPI.deleteInstance(name);
-
-      await fsUpdate('whatsapp_sessions', name, {
-        status: 'close',
-        updatedAt: new Date().toISOString(),
-      });
+      await fsDelete('whatsapp_sessions', name);
 
       return res.status(200).json({ success: true, instanceName: name });
     } catch (err: any) {
@@ -94,23 +91,41 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // ── PUT: refresh/restart — return current connection state ──────────────────
+  // ── PUT: hard reset — delete + recreate instance so a fresh QR is generated ──
   if (req.method === 'PUT') {
     try {
-      const { name } = req.body ?? {};
+      const { name, userId, organizationId } = req.body ?? {};
       if (!name) {
         return res.status(400).json({ error: 'Campo "name" é obrigatório no body' });
       }
 
-      const state = await EvolutionAPI.getConnectionState(String(name));
-      if (!state) {
-        return res.status(502).json({ error: 'Não foi possível obter estado da instância' });
+      console.log(`[EVOLUTION/sessions] Reiniciando instância: ${name}`);
+      await EvolutionAPI.logoutInstance(String(name));
+      await EvolutionAPI.deleteInstance(String(name));
+      await new Promise(r => setTimeout(r, 2000));
+
+      const webhookUrl: string = process.env.EVOLUTION_WEBHOOK_URL || '';
+
+      const result = await EvolutionAPI.createInstance(String(name), webhookUrl);
+      console.log('[EVOLUTION/sessions] createInstance result:', JSON.stringify(result)?.slice(0, 500));
+      if (!result) {
+        return res.status(502).json({ error: 'Falha ao recriar instância na Evolution API' });
       }
 
-      return res.status(200).json(state);
+      // Evolution API v2 may return QR code in the create response
+      const qrInCreate = result?.qrcode ?? result?.hash?.qrcode;
+      const now = new Date().toISOString();
+      await fsUpdate('whatsapp_sessions', String(name), {
+        status: 'qr',
+        ...(qrInCreate?.base64 ? { qrBase64: qrInCreate.base64, qrCode: qrInCreate.code ?? null } : {}),
+        updatedAt: now,
+      });
+
+      console.log(`[EVOLUTION/sessions] Instância reiniciada: ${name}`);
+      return res.status(200).json({ instanceName: name, status: 'qr' });
     } catch (err: any) {
       console.error('[EVOLUTION/sessions] PUT error:', err);
-      return res.status(500).json({ error: 'Erro ao atualizar sessão', detail: err?.message });
+      return res.status(500).json({ error: 'Erro ao reiniciar sessão', detail: err?.message });
     }
   }
 

@@ -17,32 +17,48 @@ function authHeaders(): Record<string, string> {
   };
 }
 
+function fetchWithTimeout(url: string, opts: RequestInit = {}, ms = 10000): Promise<Response> {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
 export const EvolutionAPI = {
   async createInstance(instanceName: string, webhookUrl: string): Promise<any> {
     try {
-      const res = await fetch(`${EVOLUTION_API_URL()}/instance/create`, {
+      const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/instance/create`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({
           instanceName,
-          token: '',
+          integration: 'WHATSAPP-BAILEYS',
           qrcode: true,
-          webhook: {
-            url: webhookUrl,
-            webhook_by_events: true,
-            webhook_base64: false,
-            events: [
-              'MESSAGES_UPSERT',
-              'MESSAGES_UPDATE',
-              'CONNECTION_UPDATE',
-              'QRCODE_UPDATED',
-              'CONTACTS_UPDATE',
-            ],
-          },
+          ...(webhookUrl ? {
+            webhook: {
+              url: webhookUrl,
+              byEvents: true,
+              base64: false,
+              events: [
+                'MESSAGES_UPSERT',
+                'MESSAGES_UPDATE',
+                'CONNECTION_UPDATE',
+                'QRCODE_UPDATED',
+                'CONTACTS_UPDATE',
+                'CHATS_UPDATE',
+                'CHATS_UPSERT',
+                'PRESENCE_UPDATE',
+              ],
+            },
+          } : {}),
         }),
       });
       if (!res.ok) {
         const text = await res.text();
+        // Instance already exists — reuse it
+        if (res.status === 403 && text.includes('already in use')) {
+          console.warn(`[EvolutionAPI] createInstance: instância ${instanceName} já existe, reutilizando`);
+          return await EvolutionAPI.getInstanceInfo(instanceName) ?? { instanceName };
+        }
         console.error(`[EvolutionAPI] createInstance ${instanceName} falhou (${res.status}): ${text}`);
         return null;
       }
@@ -54,8 +70,8 @@ export const EvolutionAPI = {
   },
 
   async getQRCode(instanceName: string): Promise<{ base64?: string; code?: string } | null> {
-    try {
-      const res = await fetch(`${EVOLUTION_API_URL()}/instance/connect/${instanceName}`, {
+    const connectAndRead = async (): Promise<{ base64?: string; code?: string } | null> => {
+      const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/instance/connect/${instanceName}`, {
         headers: authHeaders(),
       });
       if (!res.ok) {
@@ -64,23 +80,50 @@ export const EvolutionAPI = {
         return null;
       }
       const data: any = await res.json();
-      // Evolution API returns { base64, code } or { qrcode: { base64, code } }
-      if (data?.base64 || data?.code) {
-        return { base64: data.base64, code: data.code };
+      if (data?.base64 || data?.code) return { base64: data.base64, code: data.code };
+      if (data?.qrcode?.base64) return { base64: data.qrcode.base64, code: data.qrcode.code };
+      return null;
+    };
+
+    // Poll up to 3x with 1.5s delay — primary QR delivery is via QRCODE_UPDATED webhook
+    for (let i = 0; i < 3; i++) {
+      try {
+        const qr = await connectAndRead();
+        if (qr) return qr;
+        console.log(`[EvolutionAPI] getQRCode ${instanceName}: tentativa ${i + 1}/3 sem QR`);
+        await new Promise(r => setTimeout(r, 1500));
+      } catch (err) {
+        console.error('[EvolutionAPI] getQRCode error:', err);
+        return null;
       }
-      if (data?.qrcode) {
-        return { base64: data.qrcode.base64, code: data.qrcode.code };
-      }
-      return data ?? null;
+    }
+
+    // Instance stuck in 'connecting' (Baileys trying to restore an expired session).
+    // Force logout to wipe the cached session and trigger fresh QR generation.
+    const stateRes = await EvolutionAPI.getConnectionState(instanceName);
+    const currentState = (
+      (stateRes as any)?.instance?.state ?? (stateRes as any)?.state ?? ''
+    ).toLowerCase();
+    console.log(`[EvolutionAPI] getQRCode ${instanceName}: sem QR, state=${currentState} — forçando logout`);
+
+    if (currentState === 'open') return null; // Já conectado, não precisa de QR
+
+    try {
+      await fetchWithTimeout(`${EVOLUTION_API_URL()}/instance/logout/${instanceName}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      await new Promise(r => setTimeout(r, 2000));
+      return await connectAndRead();
     } catch (err) {
-      console.error('[EvolutionAPI] getQRCode error:', err);
+      console.error('[EvolutionAPI] getQRCode post-logout error:', err);
       return null;
     }
   },
 
   async getConnectionState(instanceName: string): Promise<{ state: string; instance?: any } | null> {
     try {
-      const res = await fetch(`${EVOLUTION_API_URL()}/instance/connectionState/${instanceName}`, {
+      const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/instance/connectionState/${instanceName}`, {
         headers: authHeaders(),
       });
       if (!res.ok) {
@@ -98,7 +141,7 @@ export const EvolutionAPI = {
 
   async logoutInstance(instanceName: string): Promise<void> {
     try {
-      const res = await fetch(`${EVOLUTION_API_URL()}/instance/logout/${instanceName}`, {
+      const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/instance/logout/${instanceName}`, {
         method: 'DELETE',
         headers: authHeaders(),
       });
@@ -113,7 +156,7 @@ export const EvolutionAPI = {
 
   async deleteInstance(instanceName: string): Promise<void> {
     try {
-      const res = await fetch(`${EVOLUTION_API_URL()}/instance/delete/${instanceName}`, {
+      const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/instance/delete/${instanceName}`, {
         method: 'DELETE',
         headers: authHeaders(),
       });
@@ -128,7 +171,7 @@ export const EvolutionAPI = {
 
   async sendText(instanceName: string, phone: string, text: string): Promise<any> {
     try {
-      const res = await fetch(`${EVOLUTION_API_URL()}/message/sendText/${instanceName}`, {
+      const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/message/sendText/${instanceName}`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({
@@ -151,7 +194,7 @@ export const EvolutionAPI = {
 
   async fetchInstances(): Promise<any[]> {
     try {
-      const res = await fetch(`${EVOLUTION_API_URL()}/instance/fetchInstances`, {
+      const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/instance/fetchInstances`, {
         headers: authHeaders(),
       });
       if (!res.ok) {
@@ -167,9 +210,74 @@ export const EvolutionAPI = {
     }
   },
 
+  async findChats(instanceName: string): Promise<any[]> {
+    try {
+      const url = `${EVOLUTION_API_URL()}/chat/findChats/${instanceName}`;
+      process.stdout.write(`[EvolutionAPI] findChats POST ${url}\n`);
+      const res = await fetchWithTimeout(url, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ where: {} }),
+      }, 20000);
+      const text = await res.text();
+      process.stdout.write(`[EvolutionAPI] findChats ${instanceName} status=${res.status} body=${text.slice(0, 800)}\n`);
+      if (!res.ok) return [];
+      try {
+        const data: any = JSON.parse(text);
+        return Array.isArray(data) ? data : [];
+      } catch { return []; }
+    } catch (err) {
+      process.stdout.write(`[EvolutionAPI] findChats error: ${err}\n`);
+      return [];
+    }
+  },
+
+  async findMessages(instanceName: string, remoteJid: string, msgLimit = 30): Promise<any[]> {
+    try {
+      const url = `${EVOLUTION_API_URL()}/message/findMessages/${instanceName}`;
+      const res = await fetchWithTimeout(url, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ where: { key: { remoteJid } }, limit: msgLimit }),
+      }, 20000);
+      const text = await res.text();
+      if (!res.ok) {
+        process.stdout.write(`[EvolutionAPI] findMessages ${remoteJid} status=${res.status} body=${text.slice(0, 300)}\n`);
+        return [];
+      }
+      const data: any = JSON.parse(text);
+      const msgs = Array.isArray(data) ? data : (Array.isArray(data?.messages) ? data.messages : []);
+      process.stdout.write(`[EvolutionAPI] findMessages ${remoteJid}: ${msgs.length} msgs. Amostra: ${JSON.stringify(msgs[0])?.slice(0, 200) ?? 'none'}\n`);
+      return msgs;
+    } catch (err) {
+      process.stdout.write(`[EvolutionAPI] findMessages error: ${err}\n`);
+      return [];
+    }
+  },
+
+  async findContacts(instanceName: string): Promise<any[]> {
+    try {
+      const url = `${EVOLUTION_API_URL()}/chat/findContacts/${instanceName}`;
+      const res = await fetchWithTimeout(url, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ where: {} }),
+      }, 20000);
+      if (!res.ok) return [];
+      const text = await res.text();
+      try {
+        const data: any = JSON.parse(text);
+        return Array.isArray(data) ? data : [];
+      } catch { return []; }
+    } catch (err) {
+      process.stdout.write(`[EvolutionAPI] findContacts error: ${err}\n`);
+      return [];
+    }
+  },
+
   async getInstanceInfo(instanceName: string): Promise<any> {
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `${EVOLUTION_API_URL()}/instance/fetchInstances?instanceName=${encodeURIComponent(instanceName)}`,
         { headers: authHeaders() },
       );

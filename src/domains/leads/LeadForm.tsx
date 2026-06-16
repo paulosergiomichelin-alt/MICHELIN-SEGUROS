@@ -953,11 +953,10 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
     const clean = rawValue.replace(/\D/g, '');
     if (field === 'phone' && clean.length < 10) { setDuplicateAlert(null); return; }
     if (field === 'cpf' && clean.length !== 11) { setDuplicateAlert(null); return; }
-    const allLeads = await DataService.list('leads') as Lead[];
-    const duplicate = allLeads.find(l => {
-      if (l.id === formData.id) return false;
-      return (l[field] || '').replace(/\D/g, '') === clean;
-    });
+    // Query only leads matching the exact formatted value — avoids full-collection scan
+    const { where } = await import('firebase/firestore');
+    const matches = await DataService.list('leads', [where(field, '==', rawValue)]) as Lead[];
+    const duplicate = matches.find(l => l.id !== formData.id);
     setDuplicateAlert(duplicate ? { lead: duplicate, field } : null);
   }, [formData.id]);
 
@@ -1343,6 +1342,33 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                   icon={Clock}
                   tone="mint"
                   emptyLabel="—"
+                />
+              </div>
+
+              {/* Linha 2b: RG + Data Expedição + Órgão Emissor */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <PremiumInput
+                  label="RG"
+                  name="rg"
+                  value={formData.rg || ''}
+                  onChange={handleChange}
+                  placeholder="RG"
+                  icon={FileCheck}
+                />
+                <PremiumInput
+                  label="Data de Expedição (RG)"
+                  name="rgDataExpedicao"
+                  type="date"
+                  value={formData.rgDataExpedicao || ''}
+                  onChange={handleChange}
+                  className="[color-scheme:dark]"
+                />
+                <PremiumInput
+                  label="Órgão Emissor (RG)"
+                  name="rgOrgaoEmissor"
+                  value={formData.rgOrgaoEmissor || ''}
+                  onChange={handleChange}
+                  placeholder="Ex: SSP/SP"
                 />
               </div>
 

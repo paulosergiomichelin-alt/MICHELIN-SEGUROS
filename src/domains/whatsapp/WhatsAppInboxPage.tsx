@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Search, Send, Paperclip, MoreVertical, Phone, MessageSquare,
-  Loader2, WifiOff, Smartphone, ChevronLeft, PanelRight, PanelRightClose, X,
-  CheckCheck, Check, Clock, Image, FileText, Mic,
+  Search, Send, ChevronLeft, MessageSquare, Loader2,
+  WifiOff, Smartphone, FileText, RefreshCw, Plus, Smile, Mic,
+  Check, CheckCheck, Image, Mic as MicIcon, Lock,
 } from 'lucide-react';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { orderBy, limit, where } from 'firebase/firestore';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { WhatsAppConversation, WhatsAppMessage, WhatsAppSession } from '../../types';
 import { DataService } from '../../services/DataService';
@@ -15,7 +15,17 @@ import { EvolutionService } from '../../services/EvolutionService';
 import { ContactSidePanel } from './ContactSidePanel';
 import { useNavigate } from 'react-router-dom';
 
-function fmtMsgTime(iso?: string) {
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
+function patchConversation(conversationId: string, patch: Record<string, unknown>) {
+  fetch('/api/evolution/conversation', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ conversationId, ...patch }),
+  }).catch(err => console.error('[WA] patchConversation failed:', err));
+}
+
+function fmtTime(iso?: string) {
   if (!iso) return '';
   try {
     const d = parseISO(iso);
@@ -25,16 +35,12 @@ function fmtMsgTime(iso?: string) {
   } catch { return ''; }
 }
 
-function fmtMsgFull(iso?: string) {
+function fmtFull(iso?: string) {
   if (!iso) return '';
   try { return format(parseISO(iso), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }); } catch { return ''; }
 }
 
-const TYPE_ICON: Record<string, React.ElementType> = {
-  image: Image, document: FileText, audio: Mic, video: Image,
-};
-
-// ─── Conversation list item ───────────────────────────────────────────────────
+// ─── Conversation item ────────────────────────────────────────────────────────
 
 const ConvItem: React.FC<{
   conv: WhatsAppConversation;
@@ -44,35 +50,44 @@ const ConvItem: React.FC<{
   <button
     onClick={onClick}
     className={cn(
-      'w-full flex items-start gap-3 px-4 py-3 transition-all text-left border-b border-white/5',
-      active ? 'bg-brand-dark/60' : 'hover:bg-white/5'
+      'w-full flex gap-2.5 p-2.5 hover:bg-[#202c33] transition-colors relative border-b border-[#202c33]/40 text-left',
+      active && 'bg-[#2a3942]'
     )}
   >
-    <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-[12px] font-bold text-white/40">
+    <div className="w-9 h-9 rounded-full bg-gold-deep/10 flex items-center justify-center font-bold text-sm text-gold-deep shrink-0">
       {(conv.contactName || conv.phone).charAt(0).toUpperCase()}
     </div>
     <div className="flex-1 min-w-0">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-bold text-white truncate">{conv.contactName || conv.phone}</span>
-        <span className="text-[9px] text-white/30 shrink-0">{fmtMsgTime(conv.lastMessageAt)}</span>
-      </div>
-      <div className="flex items-center gap-1 mt-0.5">
-        {conv.lastMessageDirection === 'outbound' && <CheckCheck className="w-3 h-3 text-white/20 shrink-0" />}
-        <p className="text-[10px] text-white/40 truncate">{conv.lastMessage || '...'}</p>
-      </div>
-      {(conv.clienteId || conv.leadId) && (
-        <span className={cn('text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded mt-1 inline-block',
-          conv.clienteId ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-300'
-        )}>
-          {conv.clienteId ? 'Cliente' : 'Lead'}
+      <div className="flex justify-between items-start">
+        <p className="text-[12px] font-bold text-[#e9edef] truncate pr-2 leading-none">
+          {conv.contactName || conv.phone}
+        </p>
+        <span className="text-[8.5px] text-[#8696a0] shrink-0 font-medium whitespace-nowrap">
+          {fmtTime(conv.lastMessageAt)}
         </span>
-      )}
+      </div>
+      <div className="flex items-center justify-between mt-1">
+        <p className={cn(
+          'text-[11px] truncate pr-3 leading-tight',
+          (conv.unreadCount ?? 0) > 0 ? 'text-[#e9edef] font-bold' : 'text-[#8696a0]'
+        )}>
+          {conv.lastMessage || 'Nova conversa'}
+        </p>
+        <div className="flex items-center gap-1 shrink-0">
+          {conv.clienteId && (
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Cliente" />
+          )}
+          {conv.leadId && !conv.clienteId && (
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Lead" />
+          )}
+          {(conv.unreadCount ?? 0) > 0 && (
+            <span className="bg-emerald-500 text-[#111b21] w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8.5px] font-black">
+              {(conv.unreadCount ?? 0) > 9 ? '9+' : conv.unreadCount}
+            </span>
+          )}
+        </div>
+      </div>
     </div>
-    {(conv.unreadCount ?? 0) > 0 && (
-      <span className="shrink-0 bg-emerald-500 text-white text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center">
-        {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
-      </span>
-    )}
   </button>
 );
 
@@ -80,31 +95,36 @@ const ConvItem: React.FC<{
 
 const MsgBubble: React.FC<{ msg: WhatsAppMessage }> = ({ msg }) => {
   const isOut = msg.direction === 'outbound';
-  const TypeIcon = msg.messageType !== 'text' ? (TYPE_ICON[msg.messageType] ?? FileText) : null;
+  const hasMedia = msg.messageType !== 'text';
 
   return (
-    <div className={cn('flex', isOut ? 'justify-end' : 'justify-start')}>
+    <div className={cn('flex', isOut ? 'justify-end' : 'justify-start', 'mt-0.5')}>
       <div className={cn(
-        'max-w-[70%] px-3.5 py-2.5 rounded-2xl space-y-1',
-        isOut ? 'bg-emerald-600/80 rounded-br-sm' : 'bg-white/10 rounded-bl-sm'
+        'max-w-[85%] md:max-w-[70%] lg:max-w-[60%] px-2 py-1 rounded-xl shadow-sm relative group',
+        isOut
+          ? 'bg-[#005c4b] text-[#e9edef] rounded-tr-none'
+          : 'bg-[#202c33] text-[#e9edef] rounded-tl-none',
       )}>
-        {TypeIcon && (
-          <div className="flex items-center gap-1.5 text-white/60">
-            <TypeIcon className="w-3.5 h-3.5" />
+        {hasMedia && (
+          <div className="flex items-center gap-1.5 mb-1 text-white/50">
+            {msg.messageType === 'image' && <Image className="w-3.5 h-3.5" />}
+            {msg.messageType === 'audio' && <MicIcon className="w-3.5 h-3.5" />}
+            {msg.messageType === 'document' && <FileText className="w-3.5 h-3.5" />}
             <span className="text-[9px] uppercase font-bold">{msg.messageType}</span>
           </div>
         )}
-        {msg.body && <p className="text-[12px] text-white leading-relaxed whitespace-pre-wrap">{msg.body}</p>}
-        {msg.transcription && (
-          <p className="text-[10px] text-white/60 italic border-t border-white/10 pt-1">
-            🎤 {msg.transcription}
+        {msg.body && (
+          <p className="text-[12px] md:text-[13px] leading-relaxed whitespace-pre-wrap pb-3">
+            {msg.body}
           </p>
         )}
-        <div className={cn('flex items-center gap-1', isOut ? 'justify-end' : 'justify-start')}>
-          <span className="text-[9px] text-white/40">{fmtMsgTime(msg.timestamp)}</span>
+        {!msg.body && !hasMedia && <p className="text-[11px] text-white/30 pb-3 italic">mensagem</p>}
+        <div className="absolute bottom-0.5 right-1.5 flex items-center gap-1 select-none">
+          <span className="text-[8px] text-white/30 font-medium">{fmtTime(msg.timestamp)}</span>
           {isOut && (
-            msg.status === 'read' ? <CheckCheck className="w-3 h-3 text-blue-400" /> :
+            msg.status === 'read' ? <CheckCheck className="w-3 h-3 text-[#53bdeb]" /> :
             msg.status === 'delivered' ? <CheckCheck className="w-3 h-3 text-white/40" /> :
+            msg.status === 'sending' ? <Check className="w-3 h-3 text-white/20" /> :
             <Check className="w-3 h-3 text-white/30" />
           )}
         </div>
@@ -116,14 +136,16 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage }> = ({ msg }) => {
 // ─── Date separator ───────────────────────────────────────────────────────────
 
 const DateSep: React.FC<{ date: string }> = ({ date }) => (
-  <div className="flex items-center gap-3 my-4">
-    <div className="flex-1 h-px bg-white/5" />
-    <span className="text-[9px] text-white/30 font-bold uppercase tracking-widest px-3">{date}</span>
-    <div className="flex-1 h-px bg-white/5" />
+  <div className="flex items-center justify-center my-3">
+    <span className="bg-[#202c33]/80 text-[#8696a0] text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">
+      {date}
+    </span>
   </div>
 );
 
 // ─── Main page ────────────────────────────────────────────────────────────────
+
+type FilterType = 'all' | 'unread' | 'leads' | 'clientes';
 
 export const WhatsAppInboxPage: React.FC = () => {
   const navigate = useNavigate();
@@ -135,13 +157,16 @@ export const WhatsAppInboxPage: React.FC = () => {
   const [msgLoading, setMsgLoading] = useState(false);
   const [selectedConv, setSelectedConv] = useState<WhatsAppConversation | null>(null);
   const [searchText, setSearchText] = useState('');
+  const [filter, setFilter] = useState<FilterType>('all');
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [showPanel, setShowPanel] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [convLeadUpdates, setConvLeadUpdates] = useState<Record<string, string>>({});
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
 
+  const autoSyncedRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Detect mobile
@@ -157,43 +182,51 @@ export const WhatsAppInboxPage: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Subscribe to conversations for selected session
+  // Poll conversations from cache API every 4s
   useEffect(() => {
     if (!selectedSessionName) { setConversations([]); return; }
+    let cancelled = false;
+    const load = async () => {
+      if (cancelled) return;
+      try {
+        const r = await fetch(`/api/evolution/conversations?session=${encodeURIComponent(selectedSessionName)}`);
+        if (!cancelled && r.ok) {
+          const data = await r.json();
+          setConversations(Array.isArray(data) ? data as WhatsAppConversation[] : []);
+        }
+      } catch {}
+      if (!cancelled) setConvLoading(false);
+    };
     setConvLoading(true);
-    const unsub = DataService.subscribeCollection(
-      'whatsapp_conversations',
-      [where('sessionId', '==', selectedSessionName), orderBy('updatedAt', 'desc'), limit(100)],
-      (data: any[]) => {
-        setConversations(data as WhatsAppConversation[]);
-        setConvLoading(false);
-      },
-      false,
-      () => setConvLoading(false),
-    );
-    return unsub;
+    load();
+    const timer = setInterval(load, 4000);
+    return () => { cancelled = true; clearInterval(timer); };
   }, [selectedSessionName]);
 
-  // Subscribe to messages for selected conversation
+  // Poll messages from cache API every 2s for selected conversation
   useEffect(() => {
-    if (!selectedConv) { setMessages([]); return; }
+    if (!selectedConv || !selectedSessionName) { setMessages([]); return; }
+    let cancelled = false;
+    const load = async () => {
+      if (cancelled) return;
+      try {
+        const r = await fetch(
+          `/api/evolution/messages?session=${encodeURIComponent(selectedSessionName)}&phone=${encodeURIComponent(selectedConv.phone)}`,
+        );
+        if (!cancelled && r.ok) {
+          const data = await r.json();
+          if (Array.isArray(data.messages)) setMessages(data.messages as WhatsAppMessage[]);
+        }
+      } catch {}
+      if (!cancelled) setMsgLoading(false);
+    };
     setMsgLoading(true);
-    const unsub = DataService.subscribeCollection(
-      'whatsapp_messages',
-      [where('conversationId', '==', selectedConv.id), orderBy('timestamp', 'asc'), limit(200)],
-      (data: any[]) => {
-        setMessages(data as WhatsAppMessage[]);
-        setMsgLoading(false);
-      },
-      false,
-      () => setMsgLoading(false),
-    );
-    // Mark as read (reset unread count)
-    if ((selectedConv.unreadCount ?? 0) > 0) {
-      DataService.update('whatsapp_conversation', selectedConv.id, { unreadCount: 0 }).catch(() => {});
-    }
-    return unsub;
-  }, [selectedConv?.id]);
+    load();
+    const timer = setInterval(load, 2000);
+    if ((selectedConv.unreadCount ?? 0) > 0) patchConversation(selectedConv.id, { unreadCount: 0 });
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [selectedConv?.id, selectedSessionName]);
+
 
   const handleSelectConv = (conv: WhatsAppConversation) => {
     setSelectedConv(conv);
@@ -216,39 +249,70 @@ export const WhatsAppInboxPage: React.FC = () => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
+  const handleSync = useCallback(async () => {
+    if (!selectedSessionName || syncing) return;
+    setSyncing(true);
+    setSyncResult(null);
+    const orgId = sessions.find(s => s.sessionName === selectedSessionName)?.organizationId;
+    const result = await EvolutionService.syncConversations(selectedSessionName, orgId);
+    setSyncing(false);
+    if (result) {
+      setSyncResult(`${result.conversationsImported} conversa(s) sincronizada(s)`);
+      setTimeout(() => setSyncResult(null), 4000);
+    }
+  }, [selectedSessionName, syncing, sessions]);
+
+  // Auto-sync when session active and conversations are empty or have bad data
+  useEffect(() => {
+    if (!selectedSessionName || autoSyncedRef.current || convLoading) return;
+    const hasBadData = conversations.some(c => {
+      const p = c.phone ?? '';
+      return p.includes('@') || (p.length > 15 && /[a-z]/i.test(p));
+    });
+    if (conversations.length === 0 || hasBadData) {
+      autoSyncedRef.current = true;
+      handleSync();
+    }
+  }, [selectedSessionName, conversations.length, convLoading]);
+
+  useEffect(() => { autoSyncedRef.current = false; }, [selectedSessionName]);
+
   // Filtered conversations
   const filteredConvs = conversations.filter(c => {
-    if (!searchText) return true;
-    const q = searchText.toLowerCase();
-    return (c.contactName || '').toLowerCase().includes(q) || c.phone.includes(q);
+    if (searchText) {
+      const q = searchText.toLowerCase();
+      if (!(c.contactName || '').toLowerCase().includes(q) && !c.phone.includes(q)) return false;
+    }
+    if (filter === 'unread') return (c.unreadCount ?? 0) > 0;
+    if (filter === 'leads') return !!c.leadId;
+    if (filter === 'clientes') return !!c.clienteId;
+    return true;
   });
 
-  // Group messages by date for date separators
+  // Group messages by date
   const groupedMessages = messages.reduce<{ date: string; msgs: WhatsAppMessage[] }[]>((acc, msg) => {
-    let dateLabel = '';
+    let label = '';
     try {
       const d = parseISO(msg.timestamp);
-      dateLabel = isToday(d) ? 'Hoje' : isYesterday(d) ? 'Ontem' : format(d, "dd 'de' MMMM", { locale: ptBR });
-    } catch { dateLabel = '—'; }
+      label = isToday(d) ? 'Hoje' : isYesterday(d) ? 'Ontem' : format(d, "dd 'de' MMMM", { locale: ptBR });
+    } catch { label = '—'; }
     const last = acc[acc.length - 1];
-    if (last && last.date === dateLabel) { last.msgs.push(msg); }
-    else acc.push({ date: dateLabel, msgs: [msg] });
+    if (last && last.date === label) { last.msgs.push(msg); }
+    else acc.push({ date: label, msgs: [msg] });
     return acc;
   }, []);
 
-  const activeSession = sessions.find(s => s.sessionName === selectedSessionName);
   const hasActiveSession = activeSessions.length > 0;
 
-  // No active sessions — show empty state
   if (!sessionsLoading && !hasActiveSession) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-5 bg-brand-dark">
-        <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+      <div className="flex flex-col items-center justify-center h-full gap-5 bg-[#0b141a]">
+        <div className="w-20 h-20 rounded-2xl bg-[#202c33] border border-white/10 flex items-center justify-center">
           <WifiOff className="w-10 h-10 text-white/20" />
         </div>
         <div className="text-center">
-          <p className="text-white/40 font-bold text-sm">Nenhum WhatsApp conectado</p>
-          <p className="text-white/20 text-xs mt-1">Conecte seu WhatsApp para começar a receber mensagens</p>
+          <p className="text-[#e9edef] font-bold text-sm">Nenhum WhatsApp conectado</p>
+          <p className="text-[#8696a0] text-xs mt-1">Conecte seu WhatsApp para começar a receber mensagens</p>
         </div>
         <button
           onClick={() => navigate('/whatsapp/sessoes')}
@@ -261,50 +325,89 @@ export const WhatsAppInboxPage: React.FC = () => {
   }
 
   return (
-    <div className="flex h-full bg-brand-dark overflow-hidden">
+    <div className="flex h-full w-full bg-[#0b141a] text-[#e9edef] overflow-hidden">
 
-      {/* ── Left: Conversation list ──────────────────────────────────────── */}
+      {/* ── Column 1: Conversation list ──────────────────────────────────── */}
       <div className={cn(
-        'flex flex-col bg-brand-black/60 border-r border-white/5 shrink-0',
-        'w-72 md:w-80',
+        'flex flex-col border-r border-[#202c33] shrink-0',
+        'w-full md:w-[260px] lg:w-[300px]',
         isMobile && showChat ? 'hidden' : 'flex',
       )}>
-        {/* Session selector */}
-        {sessions.length > 1 && (
-          <div className="shrink-0 px-3 py-2 border-b border-white/5 overflow-x-auto flex gap-2">
-            {activeSessions.map(s => (
+        {/* Header */}
+        <div className="p-2.5 bg-[#202c33] flex flex-col gap-2.5 shrink-0">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-white tracking-tight">Conversas</h2>
+            <button
+              onClick={handleSync}
+              disabled={syncing || !selectedSessionName}
+              title="Sincronizar"
+              className="p-1 text-[#aebac1] hover:bg-[#374248] rounded-full transition-colors disabled:opacity-30"
+            >
+              <RefreshCw className={cn('w-3.5 h-3.5', syncing && 'animate-spin')} />
+            </button>
+          </div>
+
+          {/* Session selector */}
+          {sessions.length > 1 && (
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+              {activeSessions.map(s => (
+                <button
+                  key={s.sessionName}
+                  onClick={() => setSelectedSessionName(s.sessionName)}
+                  className={cn(
+                    'flex items-center gap-1 px-2 py-1 rounded-full text-[8.5px] font-black uppercase tracking-tight shrink-0 transition-all border',
+                    selectedSessionName === s.sessionName
+                      ? 'bg-gold-deep text-brand-dark border-gold-deep'
+                      : 'bg-[#111b21] text-[#8696a0] border-transparent hover:bg-[#2a3942]'
+                  )}
+                >
+                  <Smartphone className="w-2.5 h-2.5" />
+                  {s.profileName || s.phoneNumber || s.sessionName}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Search */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Buscar..."
+              value={searchText}
+              onChange={e => setSearchText(e.target.value)}
+              className="w-full bg-[#111b21] border-none rounded-lg px-8 py-1.5 text-[11px] text-[#d1d7db] focus:ring-1 focus:ring-gold-deep/50 outline-none placeholder:text-[#8696a0]"
+            />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#8696a0]" />
+          </div>
+
+          {/* Filters */}
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5">
+            {([
+              { id: 'all', label: 'Todas' },
+              { id: 'unread', label: 'Não lidas' },
+              { id: 'leads', label: 'Leads' },
+              { id: 'clientes', label: 'Clientes' },
+            ] as { id: FilterType; label: string }[]).map(item => (
               <button
-                key={s.sessionName}
-                onClick={() => setSelectedSessionName(s.sessionName)}
+                key={item.id}
+                onClick={() => setFilter(item.id)}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shrink-0 transition-all',
-                  selectedSessionName === s.sessionName
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : 'bg-white/5 text-white/40 border border-white/10 hover:text-white'
+                  'px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-tight transition-all shrink-0 border',
+                  filter === item.id
+                    ? 'bg-gold-deep text-brand-dark border-gold-deep shadow-sm'
+                    : 'bg-[#111b21] text-[#8696a0] border-transparent hover:bg-[#202c33]'
                 )}
               >
-                <Smartphone className="w-2.5 h-2.5" />
-                {s.profileName || s.phoneNumber || s.sessionName}
+                {item.label}
               </button>
             ))}
           </div>
-        )}
 
-        {/* Search */}
-        <div className="shrink-0 px-3 py-2 border-b border-white/5">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
-            <input
-              className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/5 rounded-lg text-[11px] text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
-              placeholder="Buscar conversa..."
-              value={searchText}
-              onChange={e => setSearchText(e.target.value)}
-            />
-          </div>
+          {syncResult && <p className="text-[9px] text-emerald-400 px-0.5">{syncResult}</p>}
         </div>
 
         {/* List */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#111b21]">
           {convLoading ? (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="w-5 h-5 text-white/20 animate-spin" />
@@ -312,9 +415,9 @@ export const WhatsAppInboxPage: React.FC = () => {
           ) : filteredConvs.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-10 px-4 text-center">
               <MessageSquare className="w-8 h-8 text-white/10" />
-              <p className="text-[10px] text-white/20">
+              <p className="text-[10px] text-[#8696a0]">
                 {conversations.length === 0
-                  ? 'Aguardando mensagens...'
+                  ? syncing ? 'Sincronizando...' : 'Nenhuma conversa ainda'
                   : 'Nenhuma conversa encontrada'}
               </p>
             </div>
@@ -331,94 +434,159 @@ export const WhatsAppInboxPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Center: Chat area ────────────────────────────────────────────── */}
+      {/* ── Column 2: Chat area ──────────────────────────────────────────── */}
       <div className={cn(
-        'flex flex-col flex-1 min-w-0',
+        'flex-1 flex flex-col relative bg-[#0b141a] h-full min-w-0',
         isMobile && !showChat ? 'hidden' : 'flex',
       )}>
-        {!selectedConv ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-              <MessageSquare className="w-8 h-8 text-white/20" />
-            </div>
-            <p className="text-[11px] text-white/30">Selecione uma conversa</p>
-          </div>
-        ) : (
-          <>
-            {/* Chat header */}
-            <div className="shrink-0 bg-brand-black/60 border-b border-white/5 px-4 py-3 flex items-center gap-3">
-              {isMobile && (
-                <button onClick={() => setShowChat(false)} className="p-1.5 text-white/40 hover:text-white transition-colors">
-                  <ChevronLeft className="w-4 h-4" />
+        <AnimatePresence mode="wait">
+          {selectedConv ? (
+            <motion.div
+              key={selectedConv.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col h-full w-full overflow-hidden"
+            >
+              {/* Chat header */}
+              <header className="h-[48px] bg-[#202c33] flex items-center px-3 md:px-4 shrink-0 border-b border-white/5 relative z-10">
+                {isMobile && (
+                  <button onClick={() => setShowChat(false)} className="p-1 -ml-1 text-[#aebac1] mr-1.5">
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                )}
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="w-7 h-7 rounded-full bg-gold-deep/10 flex items-center justify-center text-xs font-bold text-gold-deep shrink-0">
+                    {(selectedConv.contactName || selectedConv.phone).charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <h3 className="text-[13px] font-bold text-[#e9edef] truncate leading-tight">
+                      {selectedConv.contactName || selectedConv.phone}
+                    </h3>
+                    <p className="text-[9px] text-[#8696a0] font-mono leading-none mt-0.5">
+                      {selectedConv.phone}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowPanel(p => !p)}
+                  className={cn(
+                    'p-1.5 rounded-lg transition-colors flex items-center gap-1.5',
+                    showPanel ? 'bg-gold-deep/10 text-gold-deep' : 'text-[#aebac1] hover:bg-[#374248]'
+                  )}
+                  title="Painel de contato"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span className="hidden lg:inline text-[8.5px] font-black uppercase tracking-widest">CRM</span>
                 </button>
-              )}
-              <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[11px] font-bold text-white/40 shrink-0">
-                {(selectedConv.contactName || selectedConv.phone).charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-bold text-white truncate">{selectedConv.contactName || selectedConv.phone}</p>
-                <p className="text-[9px] text-white/30 font-mono">{selectedConv.phone}</p>
-              </div>
-              <button onClick={() => setShowPanel(p => !p)} className="p-1.5 text-white/30 hover:text-white transition-colors" title="Painel de contato">
-                {showPanel ? <PanelRightClose className="w-4 h-4" /> : <PanelRight className="w-4 h-4" />}
-              </button>
-            </div>
+              </header>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-2 bg-brand-dark/50">
-              {msgLoading ? (
-                <div className="flex items-center justify-center py-10">
-                  <Loader2 className="w-5 h-5 text-white/20 animate-spin" />
-                </div>
-              ) : messages.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 py-10 text-center">
-                  <MessageSquare className="w-8 h-8 text-white/10" />
-                  <p className="text-[10px] text-white/20">Nenhuma mensagem ainda</p>
-                </div>
-              ) : (
-                groupedMessages.map(group => (
-                  <React.Fragment key={group.date}>
-                    <DateSep date={group.date} />
-                    {group.msgs.map(msg => <MsgBubble key={msg.id} msg={msg} />)}
-                  </React.Fragment>
-                ))
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input */}
-            <div className="shrink-0 bg-brand-black/60 border-t border-white/5 px-4 py-3 flex items-end gap-3">
-              <textarea
-                value={inputText}
-                onChange={e => setInputText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Digite uma mensagem... (Enter para enviar)"
-                rows={1}
-                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[12px] text-white placeholder:text-white/20 resize-none focus:outline-none focus:border-white/20 transition-colors max-h-32 custom-scrollbar"
-                style={{ minHeight: '42px' }}
-              />
-              <button
-                onClick={handleSend}
-                disabled={!inputText.trim() || sending || !selectedSessionName}
-                className="flex items-center justify-center w-10 h-10 bg-emerald-500 rounded-xl text-white hover:bg-emerald-400 transition-all disabled:opacity-40 shrink-0"
+              {/* Messages */}
+              <div
+                className="flex-1 overflow-y-auto custom-scrollbar p-3 md:p-5 flex flex-col gap-0.5"
+                style={{
+                  backgroundImage: `url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')`,
+                  backgroundRepeat: 'repeat',
+                  backgroundColor: '#0b141a',
+                  backgroundBlendMode: 'overlay',
+                  opacity: 0.95,
+                }}
               >
-                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              </button>
-            </div>
-          </>
-        )}
+                {msgLoading ? (
+                  <div className="flex flex-col items-center justify-center py-10 gap-2">
+                    <Loader2 className="w-5 h-5 text-white/20 animate-spin" />
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="flex flex-col items-center gap-3 py-10 text-center">
+                    <MessageSquare className="w-8 h-8 text-white/10" />
+                    <p className="text-[10px] text-[#8696a0]">Nenhuma mensagem ainda</p>
+                  </div>
+                ) : (
+                  groupedMessages.map(group => (
+                    <React.Fragment key={group.date}>
+                      <DateSep date={group.date} />
+                      {group.msgs.map(msg => <MsgBubble key={msg.id} msg={msg} />)}
+                    </React.Fragment>
+                  ))
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Input */}
+              <footer className="bg-[#202c33] flex flex-col shrink-0 border-t border-white/5 relative z-20 p-1.5 md:p-2">
+                <div className="flex items-center gap-2 md:gap-3 relative">
+                  <button className="p-2 text-[#aebac1] hover:bg-[#374248] rounded-full transition-all">
+                    <Plus className="w-5 h-5" />
+                  </button>
+
+                  <div className="flex-1 flex items-center bg-[#2a3942] rounded-[15px] px-2.5 min-h-[36px] border border-white/5 shadow-inner">
+                    <button className="p-1 text-[#8696a0] hover:text-[#d1d7db] transition-colors">
+                      <Smile className="w-4 h-4" />
+                    </button>
+                    <input
+                      type="text"
+                      placeholder="Mensagem..."
+                      value={inputText}
+                      onChange={e => setInputText(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      className="flex-1 bg-transparent border-none outline-none text-[13px] px-2.5 text-[#d1d7db] placeholder:text-[#8696a0] py-1"
+                    />
+                    {inputText.trim() === '' && (
+                      <button className="p-1 text-[#8696a0] hover:text-[#d1d7db] transition-colors">
+                        <Mic className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={handleSend}
+                    disabled={!inputText.trim() || sending || !selectedSessionName}
+                    className={cn(
+                      'w-9 h-9 rounded-full flex items-center justify-center shadow-lg transition-all shrink-0 active:scale-95',
+                      inputText.trim() ? 'bg-emerald-500 text-[#111b21]' : 'bg-white/5 text-white/20'
+                    )}
+                  >
+                    {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  </button>
+                </div>
+              </footer>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-[#111b21]"
+            >
+              <div className="w-32 h-32 bg-[#202c33] rounded-full flex items-center justify-center mb-8 border border-white/5">
+                <MessageSquare className="w-12 h-12 text-gold-deep/20" />
+              </div>
+              <h2 className="text-3xl font-bold text-[#e9edef] tracking-tight mb-4">Michelin Seguros CRM</h2>
+              <p className="text-[#8696a0] max-w-sm mx-auto leading-relaxed text-sm">
+                Gerencie suas conversas do WhatsApp pessoal integradas ao CRM. Selecione uma conversa para começar.
+              </p>
+              <div className="mt-12 flex items-center gap-2 text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">
+                <Lock className="w-3 h-3" />
+                Criptografia de ponta a ponta
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* ── Right: Contact side panel ─────────────────────────────────────── */}
+      {/* ── Column 3: Contact panel ──────────────────────────────────────── */}
       {showPanel && selectedConv && !isMobile && (
-        <div className="w-72 shrink-0 border-l border-white/5 bg-brand-black/40 overflow-hidden">
+        <div className={cn(
+          'transition-all duration-300 border-l border-[#202c33] shrink-0',
+          showPanel && selectedConv ? 'w-[300px]' : 'w-0 overflow-hidden'
+        )}>
           <ContactSidePanel
             phone={selectedConv.phone}
             leadId={selectedConv.leadId}
             clienteId={selectedConv.clienteId}
             contactName={selectedConv.contactName}
             onLeadCreated={(leadId) => {
-              DataService.update('whatsapp_conversation', selectedConv.id, { leadId, updatedAt: new Date().toISOString() }).catch(() => {});
+              patchConversation(selectedConv.id, { leadId });
               setSelectedConv(prev => prev ? { ...prev, leadId } : prev);
             }}
           />

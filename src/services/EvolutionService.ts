@@ -1,4 +1,4 @@
-import { WhatsAppSession, WhatsAppConversation, WhatsAppMessage } from '../types';
+import { WhatsAppSession } from '../types';
 
 export const EvolutionService = {
   async getSessions(): Promise<WhatsAppSession[]> {
@@ -48,6 +48,18 @@ export const EvolutionService = {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: sessionName }),
+      });
+      if (!res.ok) return null;
+      return res.json();
+    } catch { return null; }
+  },
+
+  async syncConversations(sessionName: string, organizationId?: string): Promise<{ conversationsImported: number; messagesImported: number } | null> {
+    try {
+      const res = await fetch('/api/evolution/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionName, organizationId }),
       });
       if (!res.ok) return null;
       return res.json();

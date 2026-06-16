@@ -1,4 +1,4 @@
-import { where, QueryConstraint } from 'firebase/firestore';
+import { where, orderBy, limit, QueryConstraint } from 'firebase/firestore';
 import { Lead, Message, AgentConfig, TenantConfig } from '../types';
 import { DataService } from './DataService';
 import { agentService } from './agentService';
@@ -133,9 +133,11 @@ export class OrchestratorService {
       ['image', 'application/pdf'].includes(a.type || '') || a.mimeType?.startsWith('image/')
     );
 
-    const messages = await DataService.list('messages', [
-      where('leadId', '==', lead.id) as QueryConstraint
-    ]) as Message[];
+    const messages = (await DataService.list('messages', [
+      where('leadId', '==', lead.id) as QueryConstraint,
+      orderBy('timestamp', 'desc') as QueryConstraint,
+      limit(50) as QueryConstraint,
+    ]) as Message[]).reverse();
 
     return {
       lead, messages, lastMessage,

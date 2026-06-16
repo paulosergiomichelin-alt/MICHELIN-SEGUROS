@@ -1,5 +1,9 @@
+// Allow self-signed TLS certs (Evolution API VPS uses one). Safe in dev; production should use a valid cert.
+if (process.env.NODE_ENV !== 'production') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 import express from 'express';
-import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import axios from 'axios';
@@ -9,7 +13,7 @@ const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.NODE_ENV === 'production' ? 3000 : 3001;
 
   // Image OCR payloads carry JPEG base64 (~150-300KB). Default 100KB limit caused HTTP 413.
   // Bumped to 25MB to comfortably fit any document image; refuses larger payloads outright.
@@ -18,21 +22,52 @@ async function startServer() {
   app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
   console.log(`[SERVER] Body parser limit set to ${BODY_LIMIT} (was 100KB default)`);
 
-  // Logging middleware
+  // Log only slow (>300ms) or error (4xx/5xx) requests to reduce noise
   app.use((req, res, next) => {
     const start = Date.now();
     res.on('finish', () => {
       const duration = Date.now() - start;
-      console.log(`${new Date().toISOString()} [SERVER] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms)`);
+      if (duration > 300 || res.statusCode >= 400) {
+        console.log(`${new Date().toISOString()} [SERVER] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms)`);
+      }
     });
     next();
   });
 
-  app.get('/api/health', (req, res) => {
-    res.json({ 
-      status: 'ok', 
+  app.get('/api/health', async (req, res) => {
+    const evolutionUrl = process.env.EVOLUTION_API_URL;
+    const evolutionKey = process.env.EVOLUTION_API_KEY;
+
+    let evolution = 'not_configured';
+    let postgres = 'not_configured';
+    let redis = 'not_configured';
+
+    if (evolutionUrl && evolutionKey) {
+      try {
+        const ctrl = new AbortController();
+        const id = setTimeout(() => ctrl.abort(), 4000);
+        const r = await fetch(`${evolutionUrl.replace(/\/$/, '')}/instance/fetchInstances`, {
+          headers: { apikey: evolutionKey },
+          signal: ctrl.signal,
+        }).finally(() => clearTimeout(id));
+        if (r.ok || r.status === 401) {
+          evolution = 'online';
+          // If Evolution API is responding, its dependencies are up
+          postgres = 'online';
+          redis = 'online';
+        } else {
+          evolution = `error_${r.status}`;
+        }
+      } catch {
+        evolution = 'offline';
+      }
+    }
+
+    res.json({
+      status: 'ok',
       time: new Date().toISOString(),
-      nodeEnv: process.env.NODE_ENV || 'development'
+      nodeEnv: process.env.NODE_ENV || 'development',
+      services: { evolution, postgres, redis },
     });
   });
 
@@ -204,26 +239,34 @@ async function startServer() {
   // ── Evolution API routes ────────────────────────────────────────────────────
   // Handlers are imported dynamically (ESM) to share the same module instances
   // as the Vercel serverless functions in the api/ directory.
-  const { default: evolutionSessionsHandler } = await import('./api/evolution/sessions.js');
-  const { default: evolutionQrHandler }       = await import('./api/evolution/qr.js');
-  const { default: evolutionSendHandler }     = await import('./api/evolution/send.js');
-  const { default: evolutionWebhookHandler }  = await import('./api/webhook/evolution.js');
+  const { default: evolutionSessionsHandler }        = await import('./api/evolution/sessions.js');
+  const { default: evolutionQrHandler }              = await import('./api/evolution/qr.js');
+  const { default: evolutionSendHandler }            = await import('./api/evolution/send.js');
+  const { default: evolutionSyncHandler }            = await import('./api/evolution/sync.js');
+  const { default: evolutionConversationHandler }    = await import('./api/evolution/conversation.js');
+  const { default: evolutionConversationsHandler }   = await import('./api/evolution/conversations.js');
+  const { default: evolutionMessagesHandler }        = await import('./api/evolution/messages.js');
+  const { default: evolutionReconcileHandler, scheduleReconcile } = await import('./api/evolution/reconcile.js');
+  const { default: evolutionStatsHandler }           = await import('./api/evolution/stats.js');
+  const { default: evolutionWebhookHandler }         = await import('./api/webhook/evolution.js');
 
-  app.all('/api/evolution/sessions', evolutionSessionsHandler);
-  app.all('/api/evolution/qr',       evolutionQrHandler);
-  app.all('/api/evolution/send',     evolutionSendHandler);
-  app.all('/api/webhook/evolution',  evolutionWebhookHandler);
+  app.all('/api/evolution/sessions',      evolutionSessionsHandler);
+  app.all('/api/evolution/qr',            evolutionQrHandler);
+  app.all('/api/evolution/send',          evolutionSendHandler);
+  app.all('/api/evolution/sync',          evolutionSyncHandler);
+  app.all('/api/evolution/conversation',  evolutionConversationHandler);
+  app.all('/api/evolution/conversations', evolutionConversationsHandler);
+  app.all('/api/evolution/messages',      evolutionMessagesHandler);
+  app.all('/api/evolution/reconcile',     evolutionReconcileHandler);
+  app.all('/api/evolution/stats',         evolutionStatsHandler);
+  app.all('/api/webhook/evolution',       evolutionWebhookHandler);
+
+  // Reconciliação automática a cada 5 minutos (começa após 2 min para não sobrecarregar o boot)
+  scheduleReconcile(5 * 60 * 1000);
 
   console.log('[SERVER] Evolution API routes registradas');
 
-  // Middleware do Vite para desenvolvimento
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
+  if (process.env.NODE_ENV === 'production') {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {

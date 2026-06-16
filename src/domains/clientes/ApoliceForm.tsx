@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Loader2, FileText, Upload, CheckCircle2, X, ExternalLink, Paperclip, Trash2 } from 'lucide-react';
+import { Save, Loader2, FileText, Upload, CheckCircle2, X, ExternalLink, Paperclip, Trash2, ArrowLeft } from 'lucide-react';
 import { Apolice, ApoliceAnexo, ApoliceAnexoTipo, ApoliceStatus, ProdutoSeguro, PRODUTOS_SEGURO } from '../../types';
 import { SEGURADORAS } from '../../lib/seguradoras';
 import { Modal } from '../../components/Modal';
@@ -7,13 +7,14 @@ import { UniversalDocumentViewer } from '../../components/UniversalDocumentViewe
 import { OCRService } from '../../services/OCRService';
 import { StorageService } from '../../services/StorageService';
 import { cn } from '../../lib/utils';
-import { format, addDays, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 
 interface ApoliceFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: Omit<Apolice, 'id' | 'clienteId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   apolice?: Apolice | null;
+  inline?: boolean;
 }
 
 const inputCls = "w-full px-3 py-2 bg-brand-black border border-white/10 rounded-lg text-white text-[11px] font-medium focus:border-gold-deep/40 focus:ring-2 focus:ring-gold-deep/10 transition-all placeholder:text-white/20";
@@ -85,7 +86,7 @@ const ANEXO_TIPO_LABEL: Record<ApoliceAnexoTipo, string> = {
   outros: 'Outros',
 };
 
-export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSave, apolice }) => {
+export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSave, apolice, inline = false }) => {
   const isEditing = !!apolice;
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -168,11 +169,6 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
 
   const handleFimVigencia = (v: string) => {
     set('fimVigencia', v);
-    if (v && !form.dataRenovacao) {
-      try {
-        set('dataRenovacao', format(addDays(parseISO(v), -30), 'yyyy-MM-dd'));
-      } catch {}
-    }
   };
 
   // Computed comissão value in reais
@@ -213,9 +209,7 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
     const fim = parseBRDate(data.insuranceExpiry ?? '');
     if (fim) {
       updates.fimVigencia = fim;
-      if (!form.dataRenovacao) {
-        try { updates.dataRenovacao = format(addDays(parseISO(fim), -30), 'yyyy-MM-dd'); } catch {}
-      }
+      updates.dataRenovacao = fim;
     }
     if (data.brokerName && !form.corretoraOrigem) updates.corretoraOrigem = data.brokerName;
 
@@ -274,11 +268,7 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
       return;
     }
 
-    // Auto-compute dataRenovacao if not set
-    let dataRenovacao = form.dataRenovacao;
-    if (!dataRenovacao && form.fimVigencia) {
-      try { dataRenovacao = format(addDays(parseISO(form.fimVigencia), -30), 'yyyy-MM-dd'); } catch {}
-    }
+    const dataRenovacao = form.fimVigencia;
 
     setSaving(true);
     setSaveError('');
@@ -314,10 +304,8 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
 
   const canSubmit = !saving;
 
-  return (
-    <>
-      <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Editar Apólice' : 'Nova Apólice'} maxWidth="max-w-2xl">
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+  const formBody = (
+    <form onSubmit={handleSubmit} className="p-6 space-y-5">
 
           {/* ── Importar PDF ────────────────────────────────────────────── */}
           <div className="space-y-2">
@@ -401,9 +389,6 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
             </Field>
             <Field label="Fim de vigência" required>
               <input type="date" className={inputCls} value={form.fimVigencia} onChange={e => handleFimVigencia(e.target.value)} required />
-            </Field>
-            <Field label="Data de renovação">
-              <input type="date" className={inputCls} value={form.dataRenovacao} onChange={e => set('dataRenovacao', e.target.value)} />
             </Field>
             <Field label="Corretora origem">
               <input className={inputCls} value={form.corretoraOrigem} onChange={e => set('corretoraOrigem', e.target.value)} placeholder="Nome da corretora" />
@@ -539,7 +524,32 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
             </button>
           </div>
         </form>
-      </Modal>
+  );
+
+  return (
+    <>
+      {inline ? (
+        <div className="max-w-2xl">
+          <div className="flex items-center gap-3 mb-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Voltar
+            </button>
+            <span className="text-white/10">|</span>
+            <h2 className="text-[11px] font-black text-white uppercase tracking-widest">
+              {isEditing ? 'Editar Apólice' : 'Nova Apólice'}
+            </h2>
+          </div>
+          {formBody}
+        </div>
+      ) : (
+        <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Editar Apólice' : 'Nova Apólice'} maxWidth="max-w-2xl">
+          {formBody}
+        </Modal>
+      )}
 
       {viewerOpen && docObjectUrl && (
         <UniversalDocumentViewer

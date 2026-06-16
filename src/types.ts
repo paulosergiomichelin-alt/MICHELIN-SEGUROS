@@ -123,7 +123,9 @@ export interface Lead {
   birthDate: string;
   civilStatus: string;
   rg?: string;
-  
+  rgDataExpedicao?: string;
+  rgOrgaoEmissor?: string;
+
   // Vehicle info
   plate: string;
   chassis: string;
@@ -384,11 +386,23 @@ export const PRODUTOS_SEGURO: ProdutoSeguro[] = [
   'Fiança Locatícia','Consórcio','Previdência Privada',
 ];
 
+export type ClienteDocumentoTipo = 'rg' | 'cpf' | 'cnh' | 'rc' | 'outros';
+
+export interface ClienteDocumento {
+  tipo: ClienteDocumentoTipo;
+  url: string;
+  path: string;
+  nome: string;
+  uploadedAt: string;
+}
+
 export interface Cliente {
   id: string;
   nome: string;
   cpf: string;
   rg?: string;
+  rgDataExpedicao?: string;
+  rgOrgaoEmissor?: string;
   dataNascimento?: string;
   estadoCivil?: string;
   profissao?: string;
@@ -409,6 +423,7 @@ export interface Cliente {
   seguradoraAtualId?: string;
   produtoAtual?: ProdutoSeguro;
   dataRenovacao?: string;
+  documentos?: ClienteDocumento[];
   organizationId?: string;
   createdAt: string;
   updatedAt: string;
@@ -510,7 +525,7 @@ export interface WhatsAppMessage {
   mediaPath?: string;
   transcription?: string;
   timestamp: string;
-  status?: 'sent' | 'delivered' | 'read' | 'failed';
+  status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
   evolutionId?: string;
   organizationId?: string;
 }

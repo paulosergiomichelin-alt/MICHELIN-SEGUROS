@@ -208,7 +208,7 @@ export const ClienteDetailPage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="shrink-0 border-b border-white/5 px-4 md:px-6 flex gap-0 overflow-x-auto">
+      {!showEditCliente && <div className="shrink-0 border-b border-white/5 px-4 md:px-6 flex gap-0 overflow-x-auto">
         {tabs.map(t => {
           const Icon = t.icon;
           return (
@@ -224,10 +224,20 @@ export const ClienteDetailPage: React.FC = () => {
             </button>
           );
         })}
-      </div>
+      </div>}
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6">
+        {showEditCliente && (
+          <ClienteForm
+            isOpen={true}
+            inline={true}
+            onClose={() => setShowEditCliente(false)}
+            onSave={handleSaveCliente}
+            cliente={cliente}
+          />
+        )}
+        {!showEditCliente && <>
 
         {/* RESUMO */}
         {tab === 'resumo' && (
@@ -509,68 +519,80 @@ export const ClienteDetailPage: React.FC = () => {
         {/* APÓLICES */}
         {tab === 'apolices' && (
           <div className="max-w-5xl space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-[11px] font-black text-white/60 uppercase tracking-widest">Histórico de Apólices</h2>
-              <button
-                onClick={() => { setEditingApolice(null); setShowApoliceForm(true); }}
-                className="flex items-center gap-1.5 px-3 py-2 bg-gold-deep text-brand-dark rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gold-light transition-all"
-              >
-                <Plus className="w-3.5 h-3.5" /> Nova Apólice
-              </button>
-            </div>
-
-            {apolices.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 py-12 text-center">
-                <FileText className="w-10 h-10 text-white/10" />
-                <p className="text-white/30 text-sm">Nenhuma apólice cadastrada</p>
-                <button onClick={() => setShowApoliceForm(true)} className="text-gold-deep text-[10px] font-black uppercase">
-                  + Adicionar primeira apólice
-                </button>
-              </div>
+            {showApoliceForm ? (
+              <ApoliceForm
+                isOpen={true}
+                inline={true}
+                onClose={() => { setShowApoliceForm(false); setEditingApolice(null); }}
+                onSave={handleSaveApolice}
+                apolice={editingApolice}
+              />
             ) : (
-              <div className="space-y-2">
-                {apolices.map(a => (
-                  <div key={a.id} className="bg-brand-black/50 border border-white/5 rounded-xl p-4 hover:border-gold-deep/20 transition-colors">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <div>
-                          <p className="text-[9px] text-white/30 uppercase font-black mb-1">Produto</p>
-                          <p className="text-[11px] text-white font-bold">{a.produto}</p>
-                          {a.numeroApolice && <p className="text-[9px] text-white/30 font-mono mt-0.5">#{a.numeroApolice}</p>}
-                        </div>
-                        <div>
-                          <p className="text-[9px] text-white/30 uppercase font-black mb-1">Seguradora</p>
-                          <SeguradoraBadge seguradoraId={a.seguradoraId} size="xs" />
-                        </div>
-                        <div>
-                          <p className="text-[9px] text-white/30 uppercase font-black mb-1">Vigência</p>
-                          <p className="text-[10px] text-white/70">{fmtDate(a.inicioVigencia)} → {fmtDate(a.fimVigencia)}</p>
-                          <p className="text-[9px] text-amber-300 mt-0.5">Renov: {fmtDate(a.dataRenovacao)}</p>
-                        </div>
-                        <div>
-                          <p className="text-[9px] text-white/30 uppercase font-black mb-1">Valor total</p>
-                          <p className="text-[11px] text-white font-bold">{fmtMoney(a.valorTotal)}</p>
-                          <p className={cn('text-[9px] font-black uppercase mt-0.5', APOLICE_STATUS_COLOR[a.status])}>{a.status.replace('_',' ')}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          onClick={() => { setEditingApolice(a); setShowApoliceForm(true); }}
-                          className="p-1.5 text-white/20 hover:text-gold-deep transition-colors"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteApolice(a.id)}
-                          className="p-1.5 text-white/20 hover:text-red-400 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
+              <>
+                <div className="flex justify-between items-center">
+                  <h2 className="text-[11px] font-black text-white/60 uppercase tracking-widest">Histórico de Apólices</h2>
+                  <button
+                    onClick={() => { setEditingApolice(null); setShowApoliceForm(true); }}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-gold-deep text-brand-dark rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gold-light transition-all"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Nova Apólice
+                  </button>
+                </div>
+
+                {apolices.length === 0 ? (
+                  <div className="flex flex-col items-center gap-3 py-12 text-center">
+                    <FileText className="w-10 h-10 text-white/10" />
+                    <p className="text-white/30 text-sm">Nenhuma apólice cadastrada</p>
+                    <button onClick={() => setShowApoliceForm(true)} className="text-gold-deep text-[10px] font-black uppercase">
+                      + Adicionar primeira apólice
+                    </button>
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <div className="space-y-2">
+                    {apolices.map(a => (
+                      <div key={a.id} className="bg-brand-black/50 border border-white/5 rounded-xl p-4 hover:border-gold-deep/20 transition-colors">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div>
+                              <p className="text-[9px] text-white/30 uppercase font-black mb-1">Produto</p>
+                              <p className="text-[11px] text-white font-bold">{a.produto}</p>
+                              {a.numeroApolice && <p className="text-[9px] text-white/30 font-mono mt-0.5">#{a.numeroApolice}</p>}
+                            </div>
+                            <div>
+                              <p className="text-[9px] text-white/30 uppercase font-black mb-1">Seguradora</p>
+                              <SeguradoraBadge seguradoraId={a.seguradoraId} size="xs" />
+                            </div>
+                            <div>
+                              <p className="text-[9px] text-white/30 uppercase font-black mb-1">Vigência</p>
+                              <p className="text-[10px] text-white/70">{fmtDate(a.inicioVigencia)} → {fmtDate(a.fimVigencia)}</p>
+                              <p className="text-[9px] text-amber-300 mt-0.5">Renov: {fmtDate(a.dataRenovacao)}</p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] text-white/30 uppercase font-black mb-1">Valor total</p>
+                              <p className="text-[11px] text-white font-bold">{fmtMoney(a.valorTotal)}</p>
+                              <p className={cn('text-[9px] font-black uppercase mt-0.5', APOLICE_STATUS_COLOR[a.status])}>{a.status.replace('_',' ')}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => { setEditingApolice(a); setShowApoliceForm(true); }}
+                              className="p-1.5 text-white/20 hover:text-gold-deep transition-colors"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteApolice(a.id)}
+                              className="p-1.5 text-white/20 hover:text-red-400 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -634,21 +656,8 @@ export const ClienteDetailPage: React.FC = () => {
           </div>
         )}
 
+      </>}
       </div>
-
-      {/* Modals */}
-      <ClienteForm
-        isOpen={showEditCliente}
-        onClose={() => setShowEditCliente(false)}
-        onSave={handleSaveCliente}
-        cliente={cliente}
-      />
-      <ApoliceForm
-        isOpen={showApoliceForm}
-        onClose={() => { setShowApoliceForm(false); setEditingApolice(null); }}
-        onSave={handleSaveApolice}
-        apolice={editingApolice}
-      />
     </div>
   );
 };

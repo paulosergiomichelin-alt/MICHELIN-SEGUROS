@@ -65,23 +65,29 @@ export const ClientesPage: React.FC = () => {
     }
   };
 
+  if (showForm) {
+    return (
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6">
+        <ClienteForm
+          isOpen={true}
+          inline={true}
+          onClose={() => { setShowForm(false); setEditingCliente(null); }}
+          onSave={handleSave}
+          cliente={editingCliente}
+        />
+      </div>
+    );
+  }
+
   return (
-    <>
-      <ClientesView
-        clientes={clientes}
-        loading={loading}
-        hasMore={hasMore}
-        onLoadMore={loadMoreClientes}
-        onNew={handleNew}
-        onSelect={handleSelect}
-        onEdit={handleEdit}
-      />
-      <ClienteForm
-        isOpen={showForm}
-        onClose={() => setShowForm(false)}
-        onSave={handleSave}
-        cliente={editingCliente}
-      />
-    </>
+    <ClientesView
+      clientes={clientes}
+      loading={loading}
+      hasMore={hasMore}
+      onLoadMore={loadMoreClientes}
+      onNew={handleNew}
+      onSelect={handleSelect}
+      onEdit={handleEdit}
+    />
   );
 };
