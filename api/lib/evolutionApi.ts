@@ -352,11 +352,11 @@ export const EvolutionAPI = {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({ message: { key: msg.key, message: msg.message } }),
-      }, 20000);
+      }, 60000);
       if (!res.ok) return null;
       const data: any = await res.json();
       if (!data?.base64) return null;
-      return { base64: data.base64, mimetype: data.mimetype ?? data.mediaType ?? 'application/octet-stream' };
+      return { base64: data.base64, mimetype: data.mimetype ?? 'application/octet-stream' };
     } catch { return null; }
   },
 
