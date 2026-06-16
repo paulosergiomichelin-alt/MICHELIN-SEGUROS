@@ -108,6 +108,7 @@ async function handleMessagesUpsert(event: any) {
   const phone = extractPhoneFromJid(remoteJid, remoteJidAlt) ?? extractPhone(remoteJid);
   if (!phone || phone.endsWith('@lid')) return;
 
+  const groupChat = remoteJid.endsWith('@g.us');
   const fromMe: boolean = Boolean(key.fromMe);
   const msgId: string = key.id ?? `auto_${Date.now()}`;
 
@@ -132,14 +133,15 @@ async function handleMessagesUpsert(event: any) {
 
   const timestampSec = Number(data.messageTimestamp ?? Math.floor(Date.now() / 1000));
   const timestamp = new Date(timestampSec * 1000).toISOString();
-  const contactName: string = data.pushName || phone;
+  // Em grupos: pushName = nome do remetente dentro do grupo
+  const senderName: string = data.pushName || extractPhone(key.participant ?? '') || phone;
   const direction: 'inbound' | 'outbound' = fromMe ? 'outbound' : 'inbound';
   const conversationId = `${sessionId}_${phone}`;
   const storedMsgId = `wamsg_${msgId}`;
   const organizationId = await resolveOrgId(sessionId);
 
   console.log(
-    `[EVOLUTION/webhook] MESSAGES_UPSERT session=${sessionId} phone=${phone} fromMe=${fromMe} type=${messageType} body="${body.slice(0, 60)}"`,
+    `[EVOLUTION/webhook] MESSAGES_UPSERT session=${sessionId} phone=${phone} group=${groupChat} fromMe=${fromMe} type=${messageType} body="${body.slice(0, 60)}"`,
   );
 
   const msgDoc: CachedMessage = {
@@ -149,7 +151,7 @@ async function handleMessagesUpsert(event: any) {
     direction,
     messageType,
     body,
-    contactName,
+    contactName: senderName,
     phone,
     timestamp,
     status: fromMe ? 'sent' : 'received',
@@ -168,8 +170,9 @@ async function handleMessagesUpsert(event: any) {
     sessionId,
     sessionName: sessionId,
     phone,
-    contactName: existing?.contactName || contactName,
+    contactName: existing?.contactName || (groupChat ? `Grupo ${phone}` : senderName),
     contactPicture: existing?.contactPicture,
+    isGroup: groupChat || undefined,
     lastMessage: body || `[${messageType}]`,
     lastMessageAt: timestamp,
     lastMessageDirection: direction,
@@ -182,8 +185,9 @@ async function handleMessagesUpsert(event: any) {
   setConversation(convDoc);
   emitToSession(sessionId, 'wa:chat_upsert', convDoc);
 
-  if (!fromMe) {
-    const leadId = await findOrCreateLead(phone, contactName, timestamp, sessionId, organizationId).catch(() => null);
+  // Não criar lead para grupos
+  if (!fromMe && !groupChat) {
+    const leadId = await findOrCreateLead(phone, senderName, timestamp, sessionId, organizationId).catch(() => null);
     if (leadId) {
       updateConversation(conversationId, { leadId });
       emitToSession(sessionId, 'wa:chat_update', { id: conversationId, patch: { leadId } });
@@ -347,7 +351,7 @@ async function handleContactsUpdate(event: any) {
 
     const phone = extractPhone(jid);
     const name: string = contact.pushName || contact.notify || contact.name || '';
-    const picture: string | undefined = contact.profilePictureUrl;
+    const picture: string | undefined = contact.profilePicUrl ?? contact.profilePictureUrl;
 
     if (!phone) continue;
 
@@ -417,12 +421,14 @@ async function handleChatsUpdate(event: any, isUpsert = false) {
         ? new Date((lastMsg.messageTimestamp as number) * 1000).toISOString()
         : new Date().toISOString();
 
+      const groupChat = remoteJid.endsWith('@g.us');
       const newConv: CachedConversation = {
         id: conversationId,
         sessionId,
         sessionName: sessionId,
         phone,
         contactName: chat.name || chat.pushName || phone,
+        isGroup: groupChat || undefined,
         lastMessage: lastMsgBody,
         lastMessageAt: lastMsgTs,
         lastMessageDirection: lastMsg?.key?.fromMe ? 'outbound' : 'inbound',
@@ -492,7 +498,18 @@ export default function handler(req: any, res: any) {
   const body = req.body;
   if (!body) return;
 
+  // byEvents:true envia para /api/webhook/evolution/{event-slug}
+  // Extrair event type do path como fallback quando body.event não existe
+  const pathSlug = req.path?.split('/').pop() ?? '';
+  const pathEvent = pathSlug
+    ? pathSlug.replace(/-([a-z])/g, (_: string, c: string) => `_${c}`).toUpperCase()
+    : '';
+
   const events: any[] = Array.isArray(body) ? body : [body];
+  // Injetar event type do path em cada evento se não vier no body
+  if (pathEvent) {
+    events.forEach(e => { if (!e.event) e.event = pathEvent; });
+  }
 
   Promise.all(
     events.map(event =>

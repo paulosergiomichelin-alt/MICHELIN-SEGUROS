@@ -4,6 +4,7 @@ import {
   setConversation, setMessage, updateConversation, getConversations,
   getMessages, hasMessage, CachedConversation, CachedMessage,
 } from './conversationCache.js';
+import { emitToSession } from './socketRegistry.js';
 
 export interface SyncResult {
   conversationsImported: number;
@@ -30,9 +31,10 @@ export async function importConversationMessages(
   phone: string,
   organizationId: string,
   msgLimit = 100,
+  isGroup = false,
 ): Promise<{ imported: number; contactName: string }> {
   const conversationId = `${sessionName}_${phone}`;
-  const remoteJid = `${phone}@s.whatsapp.net`;
+  const remoteJid = isGroup ? `${phone}@g.us` : `${phone}@s.whatsapp.net`;
 
   const msgs = await EvolutionAPI.findMessages(sessionName, remoteJid, msgLimit);
   if (msgs.length === 0) return { imported: 0, contactName: phone };
@@ -90,15 +92,19 @@ export async function syncSession(
 
   const contacts = await EvolutionAPI.findContacts(sessionName).catch(() => [] as any[]);
   const contactNameMap = new Map<string, string>();
+  const contactPictureMap = new Map<string, string>();
   for (const c of contacts) {
-    const jid: string = c.id ?? c.remoteJid ?? '';
+    // Evolution API v2: campo é remoteJid (não id) e profilePicUrl (não profilePictureUrl)
+    const jid: string = c.remoteJid ?? c.id ?? '';
     const name: string = c.pushName || c.notify || c.name || '';
-    if (jid && name) {
-      const phone = jid.replace(/@s\.whatsapp\.net$|@c\.us$/, '').replace(/:\d+$/, '');
-      contactNameMap.set(phone, name);
+    const picture: string = c.profilePicUrl ?? c.profilePictureUrl ?? '';
+    if (jid && !jid.startsWith('cm')) { // ignorar IDs internos do banco (começam com cm...)
+      const phone = jid.replace(/@s\.whatsapp\.net$|@c\.us$|@g\.us$/, '').replace(/:\d+$/, '');
+      if (name) contactNameMap.set(phone, name);
+      if (picture) contactPictureMap.set(phone, picture);
     }
   }
-  process.stdout.write(`[SyncService] ${sessionName}: ${contacts.length} contatos carregados\n`);
+  process.stdout.write(`[SyncService] ${sessionName}: ${contacts.length} contatos carregados (${contactPictureMap.size} com foto)\n`);
 
   const chats = await EvolutionAPI.findChats(sessionName);
   process.stdout.write(`[SyncService] ${sessionName}: ${chats.length} chats encontrados\n`);
@@ -120,6 +126,12 @@ export async function syncSession(
       chat.name ||
       phone;
 
+    const groupChat = remoteJid.endsWith('@g.us');
+    const groupName: string = chat.name || chat.pushName || '';
+    const resolvedName = groupChat
+      ? (groupName || `Grupo ${phone}`)
+      : contactName;
+
     const convId = `${sessionName}_${phone}`;
     const lastMsgBody = lastMsg ? extractBody(lastMsg.message) : '';
     const lastMsgTs = lastMsg?.messageTimestamp
@@ -132,7 +144,9 @@ export async function syncSession(
       sessionId: sessionName,
       sessionName,
       phone,
-      contactName,
+      contactName: resolvedName,
+      contactPicture: contactPictureMap.get(phone) || undefined,
+      isGroup: groupChat || undefined,
       lastMessage: lastMsgBody,
       lastMessageAt: lastMsgTs,
       lastMessageDirection: lastMsgDir,
@@ -143,9 +157,46 @@ export async function syncSession(
     setConversation(conv);
     result.conversationsImported++;
 
+    // Store lastMessage from findChats as a CachedMessage — only source of history
+    // since findMessages returns 0 results (messages not persisted in this Evolution deployment)
+    if (lastMsg) {
+      const key = lastMsg.key ?? {};
+      const msgId: string = key.id ?? '';
+      if (msgId) {
+        const storedId = `wamsg_${msgId}`;
+        if (!hasMessage(storedId)) {
+          const fromMe: boolean = Boolean(key.fromMe);
+          const timestampSec = Number(lastMsg.messageTimestamp ?? Math.floor(Date.now() / 1000));
+          const timestamp = new Date(timestampSec * 1000).toISOString();
+          const { body, messageType, mediaUrl, mimeType, fileName } = extractMessageContent(lastMsg);
+          const pushName: string = lastMsg.pushName || '';
+
+          const doc: CachedMessage = {
+            id: storedId,
+            conversationId: convId,
+            sessionId: sessionName,
+            direction: fromMe ? 'outbound' : 'inbound',
+            messageType,
+            body,
+            phone,
+            contactName: pushName || contactName,
+            timestamp,
+            status: fromMe ? 'sent' : 'received',
+            organizationId,
+          };
+          if (mediaUrl) doc.mediaUrl = mediaUrl;
+          if (mimeType) doc.mimeType = mimeType;
+          if (fileName) doc.fileName = fileName;
+
+          setMessage(doc);
+          result.messagesImported++;
+        }
+      }
+    }
+
     if (importMessages) {
       try {
-        const { imported } = await importConversationMessages(sessionName, phone, organizationId, 50);
+        const { imported } = await importConversationMessages(sessionName, phone, organizationId, 50, groupChat);
         result.messagesImported += imported;
       } catch (err: any) {
         result.errors.push(`msgs ${convId}: ${err.message}`);
@@ -156,6 +207,7 @@ export async function syncSession(
   process.stdout.write(
     `[SyncService] ${sessionName}: ${result.conversationsImported} conversas, ${result.messagesImported} mensagens, ${result.cleaned} removidos\n`,
   );
+
   return result;
 }
 

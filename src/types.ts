@@ -504,6 +504,7 @@ export interface WhatsAppConversation {
   phone: string;
   contactName: string;
   contactPicture?: string;
+  isGroup?: boolean;
   leadId?: string;
   clienteId?: string;
   lastMessage?: string;

@@ -8,6 +8,7 @@ export interface CachedConversation {
   phone: string;
   contactName: string;
   contactPicture?: string;
+  isGroup?: boolean;
   lastMessage: string;
   lastMessageAt: string;
   lastMessageDirection: 'inbound' | 'outbound';

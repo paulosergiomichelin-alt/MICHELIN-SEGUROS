@@ -213,6 +213,7 @@ async function startServer() {
   const { default: evolutionConversationsHandler }   = await import('./api/evolution/conversations.js');
   const { default: evolutionMessagesHandler }        = await import('./api/evolution/messages.js');
   const { default: evolutionReconcileHandler, scheduleReconcile } = await import('./api/evolution/reconcile.js');
+  const { default: evolutionMediaHandler }            = await import('./api/evolution/media.js');
   const { default: evolutionStatsHandler }           = await import('./api/evolution/stats.js');
   const { default: evolutionWebhookHandler }         = await import('./api/webhook/evolution.js');
 
@@ -224,8 +225,11 @@ async function startServer() {
   app.all('/api/evolution/conversations', evolutionConversationsHandler);
   app.all('/api/evolution/messages',      evolutionMessagesHandler);
   app.all('/api/evolution/reconcile',     evolutionReconcileHandler);
+  app.all('/api/evolution/media',         evolutionMediaHandler);
   app.all('/api/evolution/stats',         evolutionStatsHandler);
-  app.all('/api/webhook/evolution',       evolutionWebhookHandler);
+  // byEvents:true faz a Evolution API enviar para sub-caminhos (ex: /messages-upsert)
+  app.all('/api/webhook/evolution', evolutionWebhookHandler);
+  app.all('/api/webhook/evolution/:event', evolutionWebhookHandler);
 
   scheduleReconcile(5 * 60 * 1000);
   console.log('[SERVER] Evolution API routes registradas');

@@ -47,8 +47,8 @@ function sortByLastMsg(a: WhatsAppConversation, b: WhatsAppConversation) {
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
-const Avatar: React.FC<{ name: string; picture?: string; size?: 'sm' | 'md' | 'lg' }> = ({
-  name, picture, size = 'md',
+const Avatar: React.FC<{ name: string; picture?: string; size?: 'sm' | 'md' | 'lg'; isGroup?: boolean }> = ({
+  name, picture, size = 'md', isGroup,
 }) => {
   const [imgError, setImgError] = useState(false);
   const dim = size === 'sm' ? 'w-7 h-7 text-xs' : size === 'lg' ? 'w-12 h-12 text-lg' : 'w-9 h-9 text-sm';
@@ -62,6 +62,10 @@ const Avatar: React.FC<{ name: string; picture?: string; size?: 'sm' | 'md' | 'l
           className="w-full h-full object-cover"
           onError={() => setImgError(true)}
         />
+      ) : isGroup ? (
+        <svg viewBox="0 0 24 24" className="w-[55%] h-[55%] fill-current opacity-70">
+          <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+        </svg>
       ) : (
         (name || '?').charAt(0).toUpperCase()
       )}
@@ -83,7 +87,7 @@ const ConvItem: React.FC<{
       active && 'bg-[#2a3942]'
     )}
   >
-    <Avatar name={conv.contactName || conv.phone} picture={conv.contactPicture} />
+    <Avatar name={conv.contactName || conv.phone} picture={conv.contactPicture} isGroup={conv.isGroup} />
     <div className="flex-1 min-w-0">
       <div className="flex justify-between items-start">
         <p className="text-[12px] font-bold text-[#e9edef] truncate pr-2 leading-none">
@@ -126,7 +130,12 @@ const ConvItem: React.FC<{
 
 // ─── Message bubble ───────────────────────────────────────────────────────────
 
-const MsgBubble: React.FC<{ msg: WhatsAppMessage }> = ({ msg }) => {
+function mediaProxyUrl(session: string, msgId: string) {
+  const waId = msgId.replace(/^wamsg_/, '');
+  return `/api/evolution/media?session=${encodeURIComponent(session)}&msgId=${encodeURIComponent(waId)}`;
+}
+
+const MsgBubble: React.FC<{ msg: WhatsAppMessage; session: string; isGroup?: boolean }> = ({ msg, session, isGroup }) => {
   const isOut = msg.direction === 'outbound';
   const hasMedia = msg.messageType !== 'text';
 
@@ -138,12 +147,18 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage }> = ({ msg }) => {
           ? 'bg-[#005c4b] text-[#e9edef] rounded-tr-none'
           : 'bg-[#202c33] text-[#e9edef] rounded-tl-none',
       )}>
+        {/* Nome do remetente em grupos */}
+        {isGroup && !isOut && msg.contactName && (
+          <p className="text-[10px] font-semibold text-emerald-400 px-3 pt-2 pb-0 leading-none truncate">
+            {msg.contactName}
+          </p>
+        )}
         {/* Imagem */}
         {msg.messageType === 'image' && (
-          msg.mediaUrl ? (
-            <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer">
+          msg.id ? (
+            <a href={mediaProxyUrl(session, msg.id)} target="_blank" rel="noopener noreferrer">
               <img
-                src={msg.mediaUrl}
+                src={mediaProxyUrl(session, msg.id)}
                 alt="Imagem"
                 className="max-w-full max-h-64 object-cover block"
                 onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
@@ -160,9 +175,9 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage }> = ({ msg }) => {
         {/* Áudio */}
         {msg.messageType === 'audio' && (
           <div className="px-3 pt-2 pb-0">
-            {msg.mediaUrl ? (
+            {msg.id ? (
               <audio controls className="w-full max-w-[220px] h-8" style={{ accentColor: '#25d366' }}>
-                <source src={msg.mediaUrl} type={msg.mimeType ?? 'audio/ogg'} />
+                <source src={mediaProxyUrl(session, msg.id)} type={msg.mimeType ?? 'audio/ogg'} />
               </audio>
             ) : (
               <div className="flex items-center gap-2 text-white/50">
@@ -180,8 +195,8 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage }> = ({ msg }) => {
             <span className="text-[11px] text-white/70 truncate flex-1">
               {msg.fileName || 'Vídeo'}
             </span>
-            {msg.mediaUrl && (
-              <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="shrink-0">
+            {msg.id && (
+              <a href={mediaProxyUrl(session, msg.id)} target="_blank" rel="noopener noreferrer" className="shrink-0">
                 <ExternalLink className="w-3.5 h-3.5 text-white/40 hover:text-white/80" />
               </a>
             )}
@@ -204,9 +219,9 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage }> = ({ msg }) => {
                 </p>
               )}
             </div>
-            {msg.mediaUrl && (
+            {msg.id && (
               <a
-                href={msg.mediaUrl}
+                href={mediaProxyUrl(session, msg.id)}
                 target="_blank"
                 rel="noopener noreferrer"
                 download={msg.fileName}
@@ -220,8 +235,8 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage }> = ({ msg }) => {
 
         {/* Sticker */}
         {msg.messageType === 'sticker' && (
-          msg.mediaUrl ? (
-            <img src={msg.mediaUrl} alt="Sticker" className="w-28 h-28 object-contain p-2 block" />
+          msg.id ? (
+            <img src={mediaProxyUrl(session, msg.id)} alt="Sticker" className="w-28 h-28 object-contain p-2 block" />
           ) : (
             <div className="flex items-center gap-2 px-3 pt-2 pb-0 text-white/50">
               <span className="text-[11px]">Sticker</span>
@@ -674,6 +689,7 @@ export const WhatsAppInboxPage: React.FC = () => {
                     name={selectedConv.contactName || selectedConv.phone}
                     picture={conversations.find(c => c.id === selectedConv.id)?.contactPicture}
                     size="sm"
+                    isGroup={selectedConv.isGroup}
                   />
                   <div className="flex flex-col min-w-0">
                     <h3 className="text-[13px] font-bold text-[#e9edef] truncate leading-tight">
@@ -733,7 +749,7 @@ export const WhatsAppInboxPage: React.FC = () => {
                   groupedMessages.map(group => (
                     <React.Fragment key={group.date}>
                       <DateSep date={group.date} />
-                      {group.msgs.map(msg => <MsgBubble key={msg.id} msg={msg} />)}
+                      {group.msgs.map(msg => <MsgBubble key={msg.id} msg={msg} session={selectedSessionName ?? ''} isGroup={selectedConv.isGroup} />)}
                     </React.Fragment>
                   ))
                 )}

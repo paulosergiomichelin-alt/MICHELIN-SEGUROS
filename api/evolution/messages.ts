@@ -1,6 +1,5 @@
-import { fsGet } from '../lib/adminFirebase.js';
 import { importConversationMessages } from '../lib/syncService.js';
-import { updateConversation, getMessages } from '../lib/conversationCache.js';
+import { updateConversation, getMessages, getConversation } from '../lib/conversationCache.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') {
@@ -17,16 +16,11 @@ export default async function handler(req: any, res: any) {
   const conversationId = `${sessionName}_${phoneStr}`;
 
   try {
-    const organizationId =
-      (await fsGet('whatsapp_sessions', sessionName).catch(() => null))?.organizationId ?? 'default';
-
-    const { imported, contactName } = await importConversationMessages(sessionName, phoneStr, organizationId, 100);
+    const convCached = getConversation(conversationId);
+    const { imported, contactName } = await importConversationMessages(sessionName, phoneStr, 'default', 50, convCached?.isGroup);
 
     if (contactName !== phoneStr) {
-      updateConversation(conversationId, {
-        contactName,
-        updatedAt: new Date().toISOString(),
-      });
+      updateConversation(conversationId, { contactName, updatedAt: new Date().toISOString() });
     }
 
     const messages = getMessages(conversationId);

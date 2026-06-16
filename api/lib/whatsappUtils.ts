@@ -29,11 +29,11 @@ export function isGroup(jid: string): boolean {
 
 export function isIgnoredJid(jid: string): boolean {
   return (
-    jid.endsWith('@g.us') ||
     jid.endsWith('@broadcast') ||
     jid === 'status@broadcast' ||
     jid.endsWith('@newsletter')
     // @lid = "Linked ID" — contatos reais com remoteJidAlt; tratados em extractPhoneFromJid
+    // @g.us = grupos — permitidos
   );
 }
 

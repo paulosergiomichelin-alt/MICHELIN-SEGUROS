@@ -173,7 +173,7 @@ export const EvolutionAPI = {
         headers: authHeaders(),
         body: JSON.stringify({
           number: phone,
-          textMessage: { text },
+          text,
           options: { delay: 1200, presence: 'composing' },
         }),
       });
@@ -228,8 +228,9 @@ export const EvolutionAPI = {
     }
   },
 
-  // Tenta múltiplos paths/métodos porque a Evolution API v1.x e v2.x diferem
-  async findMessages(instanceName: string, remoteJid: string, msgLimit = 30): Promise<any[]> {
+  // POST /chat/findMessages/{instance} com { where: { key: { remoteJid } }, limit }
+  // Resposta v2.x: { messages: { total, pages, currentPage, records: [...] } }
+  async findMessages(instanceName: string, remoteJid: string, msgLimit = 50): Promise<any[]> {
     const candidates = [
       { path: `/chat/findMessages/${instanceName}`,    method: 'POST' },
       { path: `/message/findMessages/${instanceName}`, method: 'POST' },
@@ -254,8 +255,16 @@ export const EvolutionAPI = {
 
         try {
           const data: any = JSON.parse(text);
-          const msgs = Array.isArray(data) ? data : (Array.isArray(data?.messages) ? data.messages : []);
-          process.stdout.write(`[EvolutionAPI] findMessages via ${path}: ${msgs.length} msgs\n`);
+          // v2.x: { messages: { total, pages, currentPage, records: [...] } }
+          // v1.x: array direto
+          const msgs = Array.isArray(data)
+            ? data
+            : Array.isArray(data?.messages?.records)
+              ? data.messages.records
+              : Array.isArray(data?.messages)
+                ? data.messages
+                : [];
+          process.stdout.write(`[EvolutionAPI] findMessages via ${path}: ${msgs.length} msgs (total no banco: ${data?.messages?.total ?? '?'})\n`);
           return msgs;
         } catch { continue; }
       } catch (err: any) {
@@ -317,6 +326,37 @@ export const EvolutionAPI = {
         return data?.profilePictureUrl ?? data?.url ?? data?.picture ?? null;
       }
       return null;
+    } catch { return null; }
+  },
+
+  // Busca uma mensagem pelo key.id (WhatsApp ID) para obter key+message completos
+  async findMessageById(instanceName: string, waId: string): Promise<any | null> {
+    try {
+      const url = `${EVOLUTION_API_URL()}/chat/findMessages/${instanceName}`;
+      const res = await fetchWithTimeout(url, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ where: { key: { id: waId } }, limit: 1 }),
+      }, 10000);
+      if (!res.ok) return null;
+      const data: any = await res.json();
+      return data?.messages?.records?.[0] ?? null;
+    } catch { return null; }
+  },
+
+  // Descriptografa mídia via Evolution API e retorna base64
+  async getMediaBase64(instanceName: string, msg: any): Promise<{ base64: string; mimetype: string } | null> {
+    try {
+      const url = `${EVOLUTION_API_URL()}/chat/getBase64FromMediaMessage/${instanceName}`;
+      const res = await fetchWithTimeout(url, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ message: { key: msg.key, message: msg.message } }),
+      }, 20000);
+      if (!res.ok) return null;
+      const data: any = await res.json();
+      if (!data?.base64) return null;
+      return { base64: data.base64, mimetype: data.mimetype ?? data.mediaType ?? 'application/octet-stream' };
     } catch { return null; }
   },
 
