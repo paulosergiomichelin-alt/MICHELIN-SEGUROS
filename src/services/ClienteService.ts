@@ -146,9 +146,9 @@ export class ClienteService {
           return {
             id: d.id,
             ...data,
-            premioLiquido: Number(data.premioLiquido) || 0,
-            valorTotal: Number(data.valorTotal) || 0,
-            comissao: Number(data.comissao) || 0,
+            premioLiquido: (Number(data.premioLiquido) || 0) / 100,
+            valorTotal: (Number(data.valorTotal) || 0) / 100,
+            comissao: (Number(data.comissao) || 0) / 100,
             createdAt: tsToISO(data.createdAt),
             updatedAt: tsToISO(data.updatedAt),
           } as Apolice;
