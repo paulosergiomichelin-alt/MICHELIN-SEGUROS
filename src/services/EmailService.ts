@@ -114,7 +114,7 @@ export interface SearchResponse {
 export const EmailService = {
   // ── Contas ──────────────────────────────────────────────────────────────────
   getAccounts: (userId: string): Promise<EmailAccount[]> =>
-    fetch(`/api/email/accounts?userId=${encodeURIComponent(userId)}`).then(r => r.json()),
+    fetch(`/api/email/accounts?userId=${encodeURIComponent(userId)}`).then(r => r.json()).then(d => d.accounts ?? d),
 
   deleteAccount: (accountId: string): Promise<{ success: boolean }> =>
     fetch(`/api/email/accounts?accountId=${encodeURIComponent(accountId)}`, { method: 'DELETE' }).then(r => r.json()),

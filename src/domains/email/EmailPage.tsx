@@ -731,7 +731,9 @@ const EmailViewer: React.FC = () => {
 const NoAccountsOnboarding: React.FC = () => {
   const { userProfile } = usePermissions();
   const uid = userProfile?.uid ?? '';
-  const returnUrl = encodeURIComponent(window.location.href);
+  // Use clean URL without OAuth params to avoid duplicating params on re-connect
+  const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+  const returnUrl = encodeURIComponent(cleanUrl);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center bg-[#0f0f0f] gap-6 p-8">

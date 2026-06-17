@@ -263,6 +263,22 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile?.uid]);
 
+  // ── Reload accounts after OAuth callback ───────────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('emailConnected') || !userProfile?.uid) return;
+    // Small delay to ensure Firestore write is visible
+    const t = setTimeout(() => {
+      loadAccounts().then(() => {
+        // Clean URL params to prevent duplication on next OAuth
+        const clean = `${window.location.pathname}`;
+        window.history.replaceState({}, '', clean);
+      });
+    }, 600);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.uid]);
+
   // ── Actions ────────────────────────────────────────────────────────────────
 
   const loadAccounts = useCallback(async () => {
