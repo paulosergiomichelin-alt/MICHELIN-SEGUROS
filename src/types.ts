@@ -372,14 +372,14 @@ export interface AuditLog {
 export type ClienteStatus = 'ativo' | 'renovacao_proxima' | 'renovacao_vencida' | 'inativo';
 
 export type ProdutoSeguro =
-  | 'Automóvel' | 'Moto' | 'Caminhão' | 'Frota'
+  | 'Automóvel' | 'Moto' | 'Caminhão' | 'Frota' | 'Bicicleta Elétrica'
   | 'Residencial' | 'Empresarial' | 'Condomínio' | 'Equipamentos'
   | 'Vida Individual' | 'Vida Empresarial' | 'Saúde' | 'Odontológico'
   | 'RC Profissional' | 'Transporte' | 'Garantia Estendida'
   | 'Fiança Locatícia' | 'Consórcio' | 'Previdência Privada';
 
 export const PRODUTOS_SEGURO: ProdutoSeguro[] = [
-  'Automóvel','Moto','Caminhão','Frota',
+  'Automóvel','Moto','Caminhão','Frota','Bicicleta Elétrica',
   'Residencial','Empresarial','Condomínio','Equipamentos',
   'Vida Individual','Vida Empresarial','Saúde','Odontológico',
   'RC Profissional','Transporte','Garantia Estendida',
