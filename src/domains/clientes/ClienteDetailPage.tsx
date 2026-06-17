@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Edit2, Plus, Trash2, CheckCircle2, AlertTriangle, Clock,
   User, Phone, Mail, MapPin, FileText, History, RefreshCw, ExternalLink,
-  Calendar, DollarSign, Building2, ClipboardList, Car, Shield, Tag,
+  Calendar, DollarSign, Building2, ClipboardList, Car, Shield, Tag, Users,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Cliente, Lead, Apolice, ClienteHistoricoItem, ClienteStatus } from '../../types';
@@ -12,11 +12,13 @@ import { ClienteService } from '../../services/ClienteService';
 import { SeguradoraBadge } from '../../components/SeguradoraBadge';
 import { ClienteForm } from './ClienteForm';
 import { ApoliceForm } from './ApoliceForm';
+import { RelacionamentosTab } from './RelacionamentosTab';
 import { usePermissions } from '../../contexts/PermissionsContext';
+import { useClientes } from '../../contexts/ClienteRealtimeContext';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-type Tab = 'resumo' | 'cadastro' | 'apolices' | 'renovacoes' | 'historico';
+type Tab = 'resumo' | 'cadastro' | 'apolices' | 'renovacoes' | 'historico' | 'relacionamentos';
 
 const STATUS_CONFIG: Record<ClienteStatus, { label: string; cls: string; icon: React.ElementType }> = {
   ativo:             { label: 'Ativo',             cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', icon: CheckCircle2 },
@@ -68,6 +70,7 @@ export const ClienteDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { userProfile } = usePermissions();
+  const { clientes: allClientes } = useClientes();
 
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [leadOrigem, setLeadOrigem] = useState<Lead | null>(null);
@@ -166,11 +169,12 @@ export const ClienteDetailPage: React.FC = () => {
   }).sort((a,b) => new Date(a.dataRenovacao).getTime() - new Date(b.dataRenovacao).getTime());
 
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: 'resumo',    label: 'Resumo',    icon: User },
-    { id: 'cadastro',  label: 'Cadastro',  icon: ClipboardList },
-    { id: 'apolices',  label: `Apólices (${apolices.length})`,  icon: FileText },
-    { id: 'renovacoes',label: `Renovações (${upcomingRenov.length})`,icon: RefreshCw },
-    { id: 'historico', label: 'Histórico', icon: History },
+    { id: 'resumo',          label: 'Resumo',          icon: User },
+    { id: 'cadastro',        label: 'Cadastro',        icon: ClipboardList },
+    { id: 'apolices',        label: `Apólices (${apolices.length})`,       icon: FileText },
+    { id: 'renovacoes',      label: `Renovações (${upcomingRenov.length})`, icon: RefreshCw },
+    { id: 'relacionamentos', label: 'Família',          icon: Users },
+    { id: 'historico',       label: 'Histórico',       icon: History },
   ];
 
   return (
@@ -628,6 +632,15 @@ export const ClienteDetailPage: React.FC = () => {
               );
             })}
           </div>
+        )}
+
+        {/* RELACIONAMENTOS */}
+        {tab === 'relacionamentos' && (
+          <RelacionamentosTab
+            cliente={cliente}
+            organizationId={userProfile?.organizationId ?? ''}
+            clientes={allClientes}
+          />
         )}
 
         {/* HISTÓRICO */}

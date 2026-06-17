@@ -53,6 +53,7 @@ export class DataService {
     'whatsapp_sessions', 'whatsapp_session',
     'whatsapp_conversations', 'whatsapp_conversation',
     'whatsapp_messages', 'whatsapp_message',
+    'cliente_relacionamentos', 'cliente_relacionamento',
   ]);
 
   // Collections whose document IDs are scoped per-org: {orgId}::{docId}
@@ -88,6 +89,8 @@ export class DataService {
     'empresa': 'empresas',
     'clientes': 'clientes',
     'cliente': 'clientes',
+    'cliente_relacionamentos': 'cliente_relacionamentos',
+    'cliente_relacionamento': 'cliente_relacionamentos',
     'seguradoras': 'seguradoras',
     'seguradora': 'seguradoras',
     'whatsapp_sessions': 'whatsapp_sessions',

@@ -406,6 +406,7 @@ export interface Cliente {
   dataNascimento?: string;
   estadoCivil?: string;
   profissao?: string;
+  sexo?: 'M' | 'F';
   telefone: string;
   whatsapp?: string;
   email?: string;
@@ -424,6 +425,20 @@ export interface Cliente {
   produtoAtual?: ProdutoSeguro;
   dataRenovacao?: string;
   documentos?: ClienteDocumento[];
+  organizationId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClienteRelacionamento {
+  id: string;
+  clienteId: string;
+  relatedClienteId: string;
+  relatedClienteNome: string;
+  relatedClienteTelefone?: string;
+  relatedClienteWhatsapp?: string;
+  relatedClienteCPF?: string;
+  tipoRelacionamento: string;
   organizationId?: string;
   createdAt: string;
   updatedAt: string;

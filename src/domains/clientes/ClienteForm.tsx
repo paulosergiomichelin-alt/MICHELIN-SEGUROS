@@ -85,6 +85,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
   const [loadingCities, setLoadingCities] = useState(false);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const citiesCache = useRef<Record<string, string[]>>({});
+  const [sexo, setSexo] = useState<'M' | 'F' | ''>('');
   const [form, setForm] = useState({
     nome: '', cpf: '', rg: '', rgDataExpedicao: '', rgOrgaoEmissor: '', dataNascimento: '', estadoCivil: '', profissao: '',
     telefone: '', whatsapp: '', email: '',
@@ -116,6 +117,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
         responsavelId: cliente.responsavelId ?? '',
         observacoes: cliente.observacoes ?? '',
       });
+      setSexo(cliente.sexo ?? '');
       setDocumentos(cliente.documentos ?? []);
     } else {
       setForm({
@@ -124,6 +126,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
         cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '',
         responsavelId: '', observacoes: '',
       });
+      setSexo('');
       setDocumentos([]);
     }
   }, [cliente, isOpen]);
@@ -252,6 +255,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
         dataNascimento: form.dataNascimento || undefined,
         estadoCivil: form.estadoCivil || undefined,
         profissao: form.profissao || undefined,
+        sexo: sexo || undefined,
         telefone: form.telefone.replace(/\D/g, ''),
         whatsapp: form.whatsapp ? form.whatsapp.replace(/\D/g, '') : undefined,
         email: form.email || undefined,
@@ -355,6 +359,13 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
             </Field>
             <Field label="Profissão">
               <input className={inputCls} value={form.profissao} onChange={e => set('profissao', e.target.value)} placeholder="Profissão" />
+            </Field>
+            <Field label="Sexo">
+              <select className={inputCls} value={sexo} onChange={e => setSexo(e.target.value as 'M' | 'F' | '')}>
+                <option value="">Não informado</option>
+                <option value="M">Masculino</option>
+                <option value="F">Feminino</option>
+              </select>
             </Field>
           </div>
         </div>
