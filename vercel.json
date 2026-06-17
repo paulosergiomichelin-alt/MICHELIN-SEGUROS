@@ -13,10 +13,6 @@
     { "source": "/api/(.*)",       "destination": "/server.vercel" },
     { "source": "/((?!api/)(?!socket\\.io/).*)", "destination": "/index.html" }
   ],
-  "crons": [
-    { "path": "/api/cron/reconcile",  "schedule": "*/5 * * * *" },
-    { "path": "/api/cron/email-sync", "schedule": "*/5 * * * *" }
-  ],
   "headers": [
     {
       "source": "/(.*)",
