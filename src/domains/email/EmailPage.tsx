@@ -97,9 +97,9 @@ function getAvatarColor(str: string): string {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-const SenderAvatar: React.FC<{ from: EmailAddress; size?: 'sm' | 'md' }> = ({ from, size = 'md' }) => {
-  const initials = getInitials(from.name, from.email);
-  const color = getAvatarColor(from.email);
+const SenderAvatar: React.FC<{ from?: EmailAddress; size?: 'sm' | 'md' }> = ({ from, size = 'md' }) => {
+  const initials = getInitials(from?.name, from?.email);
+  const color = getAvatarColor(from?.email ?? '');
   const dim = size === 'sm' ? 'w-7 h-7 text-xs' : 'w-9 h-9 text-sm';
   return (
     <div className={cn(dim, color, 'rounded-full shrink-0 flex items-center justify-center font-bold text-white')}>
@@ -594,7 +594,7 @@ const EmailViewer: React.FC = () => {
             <div className="flex items-baseline justify-between gap-2">
               <div>
                 <span className="text-white/80 font-medium text-sm">{addrDisplay(selectedMessage.from)}</span>
-                <span className="text-white/30 text-xs ml-2">{`<${selectedMessage.from.email}>`}</span>
+                <span className="text-white/30 text-xs ml-2">{`<${selectedMessage.from?.email ?? ''}>`}</span>
               </div>
               <span className="text-white/30 text-xs shrink-0">{fmtFull(selectedMessage.date)}</span>
             </div>
@@ -602,7 +602,7 @@ const EmailViewer: React.FC = () => {
               onClick={() => setShowDetails(!showDetails)}
               className="flex items-center gap-1 text-xs text-white/30 hover:text-white/50 transition-colors mt-0.5"
             >
-              Para: {selectedMessage.to.map(addrDisplay).join(', ')}
+              Para: {(selectedMessage.to ?? []).map(addrDisplay).join(', ')}
               <ChevronDown className={cn('w-3 h-3 transition-transform', showDetails && 'rotate-180')} />
             </button>
             <AnimatePresence>
@@ -618,7 +618,7 @@ const EmailViewer: React.FC = () => {
                       <span className="text-white/25">De:</span> {addrFull(selectedMessage.from)}
                     </p>
                     <p className="text-xs text-white/40">
-                      <span className="text-white/25">Para:</span> {selectedMessage.to.map(addrFull).join(', ')}
+                      <span className="text-white/25">Para:</span> {(selectedMessage.to ?? []).map(addrFull).join(', ')}
                     </p>
                     {selectedMessage.cc && selectedMessage.cc.length > 0 && (
                       <p className="text-xs text-white/40">
