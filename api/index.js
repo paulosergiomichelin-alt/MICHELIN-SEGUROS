@@ -841,6 +841,7 @@ async function syncMicrosoftAccount(account) {
 async function syncAccount(accountId) {
   const rawAccount = await fsGet("email_accounts", accountId);
   if (!rawAccount) throw new Error(`Account ${accountId} not found`);
+  rawAccount.id = accountId;
   if (rawAccount.status === "error" || rawAccount.status === "disconnected") {
     return { imported: 0, errors: [`Account ${accountId} has status ${rawAccount.status}, skipping`] };
   }
