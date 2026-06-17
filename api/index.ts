@@ -1,10 +1,35 @@
-// Unico handler Vercel — todas as rotas /api/* passam por aqui via Express
-// Socket.IO nao funciona em serverless; emitToSession falha silenciosamente (optional chain)
+// Single Vercel serverless function — all /api/* routes via Express
+// Socket.IO not supported in serverless; emitToSession fails silently (optional chain)
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 import express from 'express';
 import axios from 'axios';
+
+import evolutionSessionsHandler from '../_api/evolution/sessions.js';
+import evolutionQrHandler from '../_api/evolution/qr.js';
+import evolutionSendHandler from '../_api/evolution/send.js';
+import evolutionSyncHandler from '../_api/evolution/sync.js';
+import evolutionConversationHandler from '../_api/evolution/conversation.js';
+import evolutionConversationsHandler from '../_api/evolution/conversations.js';
+import evolutionMessagesHandler from '../_api/evolution/messages.js';
+import evolutionReconcileHandler, { runReconcile } from '../_api/evolution/reconcile.js';
+import evolutionMediaHandler from '../_api/evolution/media.js';
+import evolutionStatsHandler from '../_api/evolution/stats.js';
+import evolutionWebhookHandler from '../_api/webhook/evolution.js';
+
+import emailAccountsHandler from '../_api/email/accounts.js';
+import emailGmailAuthHandler from '../_api/email/auth/gmail.js';
+import emailMicrosoftAuthHandler from '../_api/email/auth/microsoft.js';
+import emailMessagesHandler from '../_api/email/messages.js';
+import emailSendHandler from '../_api/email/send.js';
+import emailActionHandler from '../_api/email/action.js';
+import emailDraftHandler from '../_api/email/draft.js';
+import emailSyncHandler from '../_api/email/sync.js';
+import emailSearchHandler from '../_api/email/search.js';
+import emailSettingsHandler from '../_api/email/settings.js';
+import emailStatsHandler from '../_api/email/stats.js';
+import { syncAllAccounts } from '../_api/lib/emailSync.js';
 
 const app = express();
 const BODY_LIMIT = '25mb';
@@ -79,18 +104,6 @@ app.post('/api/proxy/openrouter/auth', async (req: any, res: any) => {
 });
 
 // Evolution routes
-const { default: evolutionSessionsHandler }      = await import('../_api/evolution/sessions.js');
-const { default: evolutionQrHandler }            = await import('../_api/evolution/qr.js');
-const { default: evolutionSendHandler }          = await import('../_api/evolution/send.js');
-const { default: evolutionSyncHandler }          = await import('../_api/evolution/sync.js');
-const { default: evolutionConversationHandler }  = await import('../_api/evolution/conversation.js');
-const { default: evolutionConversationsHandler } = await import('../_api/evolution/conversations.js');
-const { default: evolutionMessagesHandler }      = await import('../_api/evolution/messages.js');
-const { default: evolutionReconcileHandler, runReconcile } = await import('../_api/evolution/reconcile.js');
-const { default: evolutionMediaHandler }         = await import('../_api/evolution/media.js');
-const { default: evolutionStatsHandler }         = await import('../_api/evolution/stats.js');
-const { default: evolutionWebhookHandler }       = await import('../_api/webhook/evolution.js');
-
 app.all('/api/evolution/sessions',       evolutionSessionsHandler);
 app.all('/api/evolution/qr',             evolutionQrHandler);
 app.all('/api/evolution/send',           evolutionSendHandler);
@@ -105,25 +118,9 @@ app.all('/api/webhook/evolution',        evolutionWebhookHandler);
 app.all('/api/webhook/evolution/:event', evolutionWebhookHandler);
 
 app.post('/api/cron/reconcile',  async (_req: any, res: any) => { runReconcile().catch(console.error); res.json({ ok: true }); });
-app.post('/api/cron/email-sync', async (_req: any, res: any) => {
-  const { syncAllAccounts } = await import('../_api/lib/emailSync.js');
-  syncAllAccounts().catch(console.error);
-  res.json({ ok: true });
-});
+app.post('/api/cron/email-sync', async (_req: any, res: any) => { syncAllAccounts().catch(console.error); res.json({ ok: true }); });
 
 // Email routes
-const { default: emailAccountsHandler }      = await import('../_api/email/accounts.js');
-const { default: emailGmailAuthHandler }     = await import('../_api/email/auth/gmail.js');
-const { default: emailMicrosoftAuthHandler } = await import('../_api/email/auth/microsoft.js');
-const { default: emailMessagesHandler }      = await import('../_api/email/messages.js');
-const { default: emailSendHandler }          = await import('../_api/email/send.js');
-const { default: emailActionHandler }        = await import('../_api/email/action.js');
-const { default: emailDraftHandler }         = await import('../_api/email/draft.js');
-const { default: emailSyncHandler }          = await import('../_api/email/sync.js');
-const { default: emailSearchHandler }        = await import('../_api/email/search.js');
-const { default: emailSettingsHandler }      = await import('../_api/email/settings.js');
-const { default: emailStatsHandler }         = await import('../_api/email/stats.js');
-
 app.all('/api/email/accounts',                emailAccountsHandler);
 app.all('/api/email/auth/gmail/init',         emailGmailAuthHandler);
 app.all('/api/email/auth/gmail/callback',     emailGmailAuthHandler);
