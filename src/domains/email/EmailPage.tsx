@@ -26,6 +26,10 @@ import {
   MailOpen,
   FileText,
   Download,
+  Cog,
+  Bold,
+  Italic,
+  Underline,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, parseISO, isToday, isYesterday, differenceInDays } from 'date-fns';
@@ -121,7 +125,7 @@ const FOLDERS = [
 
 // ─── EmailFolderSidebar ───────────────────────────────────────────────────────
 
-const EmailFolderSidebar: React.FC = () => {
+const EmailFolderSidebar: React.FC<{ onOpenSettings: () => void }> = ({ onOpenSettings }) => {
   const { state, changeFolder, selectAccount, triggerSync, openComposer } = useEmail();
   const { currentFolder, accounts, selectedAccountId, syncing, unreadByFolder } = state;
   const [accountDropdown, setAccountDropdown] = useState(false);
@@ -212,15 +216,22 @@ const EmailFolderSidebar: React.FC = () => {
         })}
       </nav>
 
-      {/* Sync button */}
-      <div className="p-2 border-t border-white/5">
+      {/* Footer: sync + settings */}
+      <div className="p-2 border-t border-white/5 flex gap-1">
         <button
           onClick={triggerSync}
           disabled={syncing}
-          className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/5 transition-all text-xs disabled:opacity-50"
+          className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/5 transition-all text-xs disabled:opacity-50"
         >
           <RefreshCw className={cn('w-3 h-3', syncing && 'animate-spin')} />
           {syncing ? 'Sincronizando...' : 'Sincronizar'}
+        </button>
+        <button
+          onClick={onOpenSettings}
+          title="Configurações de e-mail"
+          className="flex items-center justify-center p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/5 transition-all"
+        >
+          <Cog className="w-3.5 h-3.5" />
         </button>
       </div>
     </aside>
@@ -776,17 +787,133 @@ const NoAccountsOnboarding: React.FC = () => {
   );
 };
 
+// ─── EmailSignatureSettings ───────────────────────────────────────────────────
+
+const EmailSignatureSettings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const { state, saveSettings } = useEmail();
+  const sigRef = useRef<HTMLDivElement>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (sigRef.current) {
+      sigRef.current.innerHTML = state.settings?.signature ?? '';
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const execCmd = (cmd: string, value?: string) => {
+    document.execCommand(cmd, false, value);
+    sigRef.current?.focus();
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    await saveSettings({ signature: sigRef.current?.innerHTML ?? '' });
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => { setSaved(false); onClose(); }, 700);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 12 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+        className="w-full max-w-2xl bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/8 bg-[#161616]">
+          <div>
+            <h2 className="text-white/85 text-sm font-semibold">Assinatura de E-mail</h2>
+            <p className="text-white/35 text-xs mt-0.5">Adicionada automaticamente ao compor e responder e-mails</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-white/40 hover:text-white/90 hover:bg-white/10 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Toolbar */}
+        <div className="flex items-center gap-0.5 px-3 py-2 border-b border-white/5 bg-[#141414]">
+          {[
+            { cmd: 'bold', icon: <Bold className="w-3.5 h-3.5" />, title: 'Negrito' },
+            { cmd: 'italic', icon: <Italic className="w-3.5 h-3.5" />, title: 'Itálico' },
+            { cmd: 'underline', icon: <Underline className="w-3.5 h-3.5" />, title: 'Sublinhado' },
+          ].map(btn => (
+            <button
+              key={btn.cmd}
+              type="button"
+              title={btn.title}
+              onMouseDown={e => { e.preventDefault(); execCmd(btn.cmd); }}
+              className="p-1.5 rounded text-white/50 hover:text-white/90 hover:bg-white/10 transition-colors"
+            >
+              {btn.icon}
+            </button>
+          ))}
+          <div className="w-px h-4 bg-white/10 mx-1" />
+          <span className="text-white/25 text-xs ml-1">Use Enter para quebra de linha</span>
+        </div>
+
+        {/* Signature editor */}
+        <div
+          ref={sigRef}
+          contentEditable
+          suppressContentEditableWarning
+          data-placeholder="Digite sua assinatura aqui..."
+          className="min-h-[180px] max-h-[320px] overflow-y-auto px-5 py-4 text-white/75 text-sm leading-relaxed outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-white/20"
+          style={{ wordBreak: 'break-word' }}
+        />
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-5 py-3 border-t border-white/8 bg-[#161616]">
+          <p className="text-white/25 text-xs">A assinatura aparece abaixo do seu texto ao compor</p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="px-3 py-2 rounded-lg text-sm text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || saved}
+              className={cn(
+                'px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                saved
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-60',
+              )}
+            >
+              {saved ? 'Salvo!' : saving ? 'Salvando...' : 'Salvar Assinatura'}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 // ─── EmailPage ────────────────────────────────────────────────────────────────
 
 export const EmailPage: React.FC = () => {
   const { state } = useEmail();
-  const { accounts, loading, selectedMessage } = state;
+  const { accounts, loading, selectedMessage, composerOpen } = state;
   const [mobileView, setMobileView] = useState<'list' | 'viewer'>('list');
+  const [showSettings, setShowSettings] = useState(false);
 
-  // On mobile, switch to viewer when message is selected
+  // On mobile, switch to viewer when message selected or composer opens
   useEffect(() => {
-    if (selectedMessage) setMobileView('viewer');
-  }, [selectedMessage]);
+    if (selectedMessage || composerOpen) setMobileView('viewer');
+  }, [selectedMessage, composerOpen]);
 
   if (loading) {
     return (
@@ -805,12 +932,12 @@ export const EmailPage: React.FC = () => {
     <div className="flex h-full w-full bg-[#0f0f0f] overflow-hidden">
       {/* Desktop: always show sidebar */}
       <div className="hidden md:flex h-full">
-        <EmailFolderSidebar />
+        <EmailFolderSidebar onOpenSettings={() => setShowSettings(true)} />
       </div>
 
       {/* Mobile: folder sidebar only when on list view */}
       <div className={cn('md:hidden h-full', mobileView === 'list' ? 'flex' : 'hidden')}>
-        <EmailFolderSidebar />
+        <EmailFolderSidebar onOpenSettings={() => setShowSettings(true)} />
       </div>
 
       {noAccounts ? (
@@ -825,7 +952,7 @@ export const EmailPage: React.FC = () => {
             <EmailList />
           </div>
 
-          {/* Email viewer */}
+          {/* Right panel: composer (inline) or viewer */}
           <div className={cn(
             'flex-1 md:flex h-full',
             mobileView === 'viewer' ? 'flex' : 'hidden md:flex',
@@ -841,13 +968,20 @@ export const EmailPage: React.FC = () => {
                 </button>
               </div>
             )}
-            <EmailViewer />
+            <AnimatePresence mode="wait">
+              {composerOpen
+                ? <EmailComposer key="composer" />
+                : <EmailViewer key="viewer" />
+              }
+            </AnimatePresence>
           </div>
         </>
       )}
 
-      {/* Composer overlay */}
-      <EmailComposer />
+      {/* Signature settings modal */}
+      <AnimatePresence>
+        {showSettings && <EmailSignatureSettings onClose={() => setShowSettings(false)} />}
+      </AnimatePresence>
     </div>
   );
 };

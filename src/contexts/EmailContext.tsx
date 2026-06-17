@@ -489,13 +489,14 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [userProfile?.uid]);
 
   const saveSettings = useCallback(async (settings: Partial<EmailSettings>) => {
+    if (!userProfile?.uid) return;
     try {
-      await EmailService.saveSettings(settings);
+      await EmailService.saveSettings({ ...settings, userId: userProfile.uid });
       await loadSettings();
     } catch {
       dispatch({ type: 'SET_ERROR', payload: 'Falha ao salvar configurações.' });
     }
-  }, [loadSettings]);
+  }, [loadSettings, userProfile?.uid]);
 
   const deleteAccount = useCallback(async (accountId: string) => {
     try {

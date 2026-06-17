@@ -209,7 +209,7 @@ export const EmailService = {
 
   // ── Configurações ────────────────────────────────────────────────────────────
   getSettings: (userId: string): Promise<EmailSettings> =>
-    fetch(`/api/email/settings?userId=${encodeURIComponent(userId)}`).then(r => r.json()),
+    fetch(`/api/email/settings?userId=${encodeURIComponent(userId)}`).then(r => r.json()).then(d => d.settings ?? d),
 
   saveSettings: (data: Partial<EmailSettings>): Promise<{ success: boolean }> =>
     fetch('/api/email/settings', {

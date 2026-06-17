@@ -129,7 +129,7 @@ const ToolbarBtn: React.FC<{
 
 export const EmailComposer: React.FC = () => {
   const { state, closeComposer } = useEmail();
-  const { composerOpen, composerMode, composerReplyTo, selectedAccountId, accounts } = state;
+  const { composerOpen, composerMode, composerReplyTo, selectedAccountId, accounts, settings } = state;
 
   const [to, setTo] = useState<EmailAddress[]>([]);
   const [cc, setCc] = useState<EmailAddress[]>([]);
@@ -154,6 +154,11 @@ export const EmailComposer: React.FC = () => {
   useEffect(() => {
     if (!composerOpen) return;
 
+    const sig = settings?.signature?.trim() ?? '';
+    const sigHtml = sig
+      ? `<div style="border-top:1px solid rgba(255,255,255,0.08);margin-top:12px;padding-top:10px;color:rgba(255,255,255,0.45);font-size:13px;">${sig}</div>`
+      : '';
+
     if (composerMode === 'new') {
       setTo([]);
       setCc([]);
@@ -163,7 +168,16 @@ export const EmailComposer: React.FC = () => {
       setShowBcc(false);
       setAttachments([]);
       setDraftId(null);
-      if (editorRef.current) editorRef.current.innerHTML = '';
+      if (editorRef.current) {
+        editorRef.current.innerHTML = sigHtml ? `<p><br></p>${sigHtml}` : '';
+        // Move cursor to the top
+        const range = document.createRange();
+        const sel = window.getSelection();
+        range.setStart(editorRef.current, 0);
+        range.collapse(true);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      }
       return;
     }
 
@@ -171,26 +185,27 @@ export const EmailComposer: React.FC = () => {
     if (!msg) return;
 
     if (composerMode === 'reply') {
-      setTo([msg.from]);
+      setTo([msg.from ?? { email: '' }]);
       setSubject(msg.subject.startsWith('Re:') ? msg.subject : `Re: ${msg.subject}`);
     } else if (composerMode === 'replyAll') {
-      setTo([msg.from, ...(msg.cc ?? []).filter(a => a.email !== accounts.find(ac => ac.id === selectedAccountId)?.email)]);
+      setTo([msg.from ?? { email: '' }, ...(msg.cc ?? []).filter(a => a.email !== accounts.find(ac => ac.id === selectedAccountId)?.email)]);
       setSubject(msg.subject.startsWith('Re:') ? msg.subject : `Re: ${msg.subject}`);
     } else if (composerMode === 'forward') {
       setTo([]);
       setSubject(msg.subject.startsWith('Fwd:') ? msg.subject : `Fwd: ${msg.subject}`);
     }
 
-    // Insert quoted content
+    // Insert quoted content with signature above
     if (editorRef.current && (composerMode === 'reply' || composerMode === 'replyAll' || composerMode === 'forward')) {
-      const originalFrom = msg.from.name
+      const originalFrom = msg.from?.name
         ? `${msg.from.name} &lt;${msg.from.email}&gt;`
-        : msg.from.email;
+        : (msg.from?.email ?? '');
       const originalDate = new Date(msg.date).toLocaleString('pt-BR');
       const quote = msg.bodyHtml || `<p>${msg.snippet}</p>`;
       editorRef.current.innerHTML = `
         <p><br></p>
-        <div style="border-left: 2px solid #3b82f6; padding-left: 12px; margin-left: 4px; color: rgba(255,255,255,0.5);">
+        ${sigHtml}
+        <div style="border-left: 2px solid #3b82f6; padding-left: 12px; margin-left: 4px; color: rgba(255,255,255,0.5); margin-top: 12px;">
           <p style="font-size: 12px; margin-bottom: 4px;">
             ─── Original ─── Em ${originalDate}, ${originalFrom} escreveu:
           </p>
@@ -198,7 +213,7 @@ export const EmailComposer: React.FC = () => {
         </div>
       `;
     }
-  }, [composerOpen, composerMode, composerReplyTo, selectedAccountId, accounts]);
+  }, [composerOpen, composerMode, composerReplyTo, selectedAccountId, accounts, settings?.signature]);
 
   // ── Autosave ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -313,24 +328,15 @@ export const EmailComposer: React.FC = () => {
   if (!composerOpen) return null;
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-        onClick={e => { if (e.target === e.currentTarget) closeComposer(); }}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="w-[80vw] h-[85vh] max-w-4xl bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-          onClick={e => e.stopPropagation()}
-        >
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      className="flex flex-col h-full w-full bg-[#111] border-l border-white/5 overflow-hidden"
+    >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-3 border-b border-white/8 bg-[#161616] shrink-0">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-white/8 bg-[#0d0d0d] shrink-0">
             <h2 className="text-white/80 text-sm font-semibold">
               {composerMode === 'new'
                 ? 'Nova Mensagem'
@@ -582,11 +588,9 @@ export const EmailComposer: React.FC = () => {
               onClick={closeComposer}
               className="px-3 py-2 rounded-lg text-sm text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors"
             >
-              Cancelar
+              Descartar
             </button>
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+    </motion.div>
   );
 };
