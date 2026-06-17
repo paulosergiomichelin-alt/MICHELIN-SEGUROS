@@ -112,15 +112,21 @@ function emailReducer(state: EmailState, action: EmailAction): EmailState {
       return { ...state, selectedAccountId: action.payload };
     case 'SET_FOLDER':
       return { ...state, currentFolder: action.payload, messages: [], page: 1, hasMore: false, selectedMessage: null, searchQuery: '', searchResults: [] };
-    case 'SET_MESSAGES':
-      return { ...state, messages: action.payload.messages, page: action.payload.page, hasMore: action.payload.hasMore };
-    case 'APPEND_MESSAGES':
+    case 'SET_MESSAGES': {
+      const seen = new Set<string>();
+      const deduped = action.payload.messages.filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true; });
+      return { ...state, messages: deduped, page: action.payload.page, hasMore: action.payload.hasMore };
+    }
+    case 'APPEND_MESSAGES': {
+      const existingIds = new Set(state.messages.map(m => m.id));
+      const newUnique = action.payload.messages.filter(m => !existingIds.has(m.id));
       return {
         ...state,
-        messages: [...state.messages, ...action.payload.messages],
+        messages: [...state.messages, ...newUnique],
         page: action.payload.page,
         hasMore: action.payload.hasMore,
       };
+    }
     case 'SET_SELECTED_MESSAGE': {
       const msg = action.payload;
       if (msg && !msg.isRead) {
@@ -140,8 +146,11 @@ function emailReducer(state: EmailState, action: EmailAction): EmailState {
           ? { ...state.selectedMessage, ...action.payload }
           : state.selectedMessage,
       };
-    case 'PREPEND_MESSAGE':
+    case 'PREPEND_MESSAGE': {
+      const alreadyExists = state.messages.some(m => m.id === action.payload.id);
+      if (alreadyExists) return { ...state, messages: state.messages.map(m => m.id === action.payload.id ? action.payload : m) };
       return { ...state, messages: [action.payload, ...state.messages] };
+    }
     case 'REMOVE_MESSAGE':
       return {
         ...state,
