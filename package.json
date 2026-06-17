@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "concurrently -n server,vite -c blue,green \"tsx watch --env-file=.env server.ts\" \"vite\"",
     "dev:server": "tsx watch --env-file=.env server.ts",
-    "build": "vite build && node build-server.mjs",
+    "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:server": "node build-server.mjs"
   },
   "dependencies": {
     "@datadog/browser-logs": "^7.1.0",
