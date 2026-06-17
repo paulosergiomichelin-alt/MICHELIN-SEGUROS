@@ -1,4 +1,4 @@
-// Entry point para Vercel (não chama listen — exporta o handler)
+﻿// Entry point para Vercel (nÃ£o chama listen â€” exporta o handler)
 // O Vercel usa @vercel/node para executar este arquivo como serverless function.
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; // Evolution API usa cert auto-assinado
@@ -7,7 +7,7 @@ import express from 'express';
 import { createServer } from 'http';
 import axios from 'axios';
 import { Server as SocketIOServer } from 'socket.io';
-import { setIo } from './api/lib/socketRegistry.js';
+import { setIo } from './_api/lib/socketRegistry.js';
 
 const app = express();
 
@@ -116,18 +116,18 @@ app.post('/api/proxy/openrouter/auth', async (req: any, res: any) => {
   }
 });
 
-// ── Evolution API routes ────────────────────────────────────────────────────────
-const { default: evolutionSessionsHandler }      = await import('./api/evolution/sessions.js');
-const { default: evolutionQrHandler }            = await import('./api/evolution/qr.js');
-const { default: evolutionSendHandler }          = await import('./api/evolution/send.js');
-const { default: evolutionSyncHandler }          = await import('./api/evolution/sync.js');
-const { default: evolutionConversationHandler }  = await import('./api/evolution/conversation.js');
-const { default: evolutionConversationsHandler } = await import('./api/evolution/conversations.js');
-const { default: evolutionMessagesHandler }      = await import('./api/evolution/messages.js');
-const { default: evolutionReconcileHandler, scheduleReconcile } = await import('./api/evolution/reconcile.js');
-const { default: evolutionMediaHandler }         = await import('./api/evolution/media.js');
-const { default: evolutionStatsHandler }         = await import('./api/evolution/stats.js');
-const { default: evolutionWebhookHandler }       = await import('./api/webhook/evolution.js');
+// â”€â”€ Evolution API routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const { default: evolutionSessionsHandler }      = await import('./_api/evolution/sessions.js');
+const { default: evolutionQrHandler }            = await import('./_api/evolution/qr.js');
+const { default: evolutionSendHandler }          = await import('./_api/evolution/send.js');
+const { default: evolutionSyncHandler }          = await import('./_api/evolution/sync.js');
+const { default: evolutionConversationHandler }  = await import('./_api/evolution/conversation.js');
+const { default: evolutionConversationsHandler } = await import('./_api/evolution/conversations.js');
+const { default: evolutionMessagesHandler }      = await import('./_api/evolution/messages.js');
+const { default: evolutionReconcileHandler, scheduleReconcile } = await import('./_api/evolution/reconcile.js');
+const { default: evolutionMediaHandler }         = await import('./_api/evolution/media.js');
+const { default: evolutionStatsHandler }         = await import('./_api/evolution/stats.js');
+const { default: evolutionWebhookHandler }       = await import('./_api/webhook/evolution.js');
 
 app.all('/api/evolution/sessions',      evolutionSessionsHandler);
 app.all('/api/evolution/qr',            evolutionQrHandler);
@@ -144,28 +144,28 @@ app.all('/api/webhook/evolution/:event', evolutionWebhookHandler);
 
 // Vercel Cron endpoints (substitui os setInterval do server.ts)
 app.post('/api/cron/reconcile', async (_req: any, res: any) => {
-  const { runReconcile } = await import('./api/evolution/reconcile.js');
+  const { runReconcile } = await import('./_api/evolution/reconcile.js');
   runReconcile().catch(console.error);
   res.json({ ok: true });
 });
 app.post('/api/cron/email-sync', async (_req: any, res: any) => {
-  const { syncAllAccounts } = await import('./api/lib/emailSync.js');
+  const { syncAllAccounts } = await import('./_api/lib/emailSync.js');
   syncAllAccounts().catch(console.error);
   res.json({ ok: true });
 });
 
-// ── Email Module routes ─────────────────────────────────────────────────────────
-const { default: emailAccountsHandler }     = await import('./api/email/accounts.js');
-const { default: emailGmailAuthHandler }    = await import('./api/email/auth/gmail.js');
-const { default: emailMicrosoftAuthHandler }= await import('./api/email/auth/microsoft.js');
-const { default: emailMessagesHandler }     = await import('./api/email/messages.js');
-const { default: emailSendHandler }         = await import('./api/email/send.js');
-const { default: emailActionHandler }       = await import('./api/email/action.js');
-const { default: emailDraftHandler }        = await import('./api/email/draft.js');
-const { default: emailSyncHandler }         = await import('./api/email/sync.js');
-const { default: emailSearchHandler }       = await import('./api/email/search.js');
-const { default: emailSettingsHandler }     = await import('./api/email/settings.js');
-const { default: emailStatsHandler }        = await import('./api/email/stats.js');
+// â”€â”€ Email Module routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const { default: emailAccountsHandler }     = await import('./_api/email/accounts.js');
+const { default: emailGmailAuthHandler }    = await import('./_api/email/auth/gmail.js');
+const { default: emailMicrosoftAuthHandler }= await import('./_api/email/auth/microsoft.js');
+const { default: emailMessagesHandler }     = await import('./_api/email/messages.js');
+const { default: emailSendHandler }         = await import('./_api/email/send.js');
+const { default: emailActionHandler }       = await import('./_api/email/action.js');
+const { default: emailDraftHandler }        = await import('./_api/email/draft.js');
+const { default: emailSyncHandler }         = await import('./_api/email/sync.js');
+const { default: emailSearchHandler }       = await import('./_api/email/search.js');
+const { default: emailSettingsHandler }     = await import('./_api/email/settings.js');
+const { default: emailStatsHandler }        = await import('./_api/email/stats.js');
 
 app.all('/api/email/accounts',                emailAccountsHandler);
 app.all('/api/email/auth/gmail/init',         emailGmailAuthHandler);
@@ -184,7 +184,7 @@ app.all('/api/email/search',                  emailSearchHandler);
 app.all('/api/email/settings',                emailSettingsHandler);
 app.all('/api/email/stats',                   emailStatsHandler);
 
-// ── Socket.IO ──────────────────────────────────────────────────────────────────
+// â”€â”€ Socket.IO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const httpServer = createServer(app);
 
 const io = new SocketIOServer(httpServer, {
@@ -204,3 +204,4 @@ io.on('connection', socket => {
 });
 
 export default httpServer;
+

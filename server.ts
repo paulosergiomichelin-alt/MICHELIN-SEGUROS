@@ -1,4 +1,4 @@
-// Allow self-signed TLS certs (Evolution API VPS uses one). Safe in dev; production should use a valid cert.
+﻿// Allow self-signed TLS certs (Evolution API VPS uses one). Safe in dev; production should use a valid cert.
 if (process.env.NODE_ENV !== 'production') {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
@@ -9,7 +9,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import axios from 'axios';
 import { Server as SocketIOServer } from 'socket.io';
-import { setIo } from './api/lib/socketRegistry.js';
+import { setIo } from './_api/lib/socketRegistry.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -73,7 +73,7 @@ async function startServer() {
 
   app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-  // ── Datadog LLM Observability proxy ────────────────────────────────────────
+  // â”€â”€ Datadog LLM Observability proxy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   app.post('/api/datadog/llm-obs', async (req, res) => {
     const apiKey = process.env.DD_API_KEY;
     const site   = process.env.DD_SITE || 'us5.datadoghq.com';
@@ -96,7 +96,7 @@ async function startServer() {
     }
   });
 
-  // ── WhatsApp Webhook (Meta) ────────────────────────────────────────────────
+  // â”€â”€ WhatsApp Webhook (Meta) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   app.get('/api/webhook/whatsapp', (req, res) => {
     const mode      = req.query['hub.mode'];
     const token     = req.query['hub.verify_token'];
@@ -104,10 +104,10 @@ async function startServer() {
     const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
 
     if (mode === 'subscribe' && token === verifyToken) {
-      console.log('[WHATSAPP_WEBHOOK] Verificação concluída com sucesso');
+      console.log('[WHATSAPP_WEBHOOK] VerificaÃ§Ã£o concluÃ­da com sucesso');
       res.status(200).send(challenge);
     } else {
-      console.warn('[WHATSAPP_WEBHOOK] Falha na verificação — token inválido');
+      console.warn('[WHATSAPP_WEBHOOK] Falha na verificaÃ§Ã£o â€” token invÃ¡lido');
       res.sendStatus(403);
     }
   });
@@ -137,13 +137,13 @@ async function startServer() {
   // Body-parser error handler (catches 413 before routes see it)
   app.use((err: any, _req: any, res: any, next: any) => {
     if (err && (err.type === 'entity.too.large' || err.status === 413)) {
-      console.error(`[SERVER] 413 PayloadTooLarge — bumping body limit failed? Current=${BODY_LIMIT}`);
+      console.error(`[SERVER] 413 PayloadTooLarge â€” bumping body limit failed? Current=${BODY_LIMIT}`);
       return res.status(413).json({ error: 'PAYLOAD_TOO_LARGE', limit: BODY_LIMIT });
     }
     next(err);
   });
 
-  // ── OpenRouter Proxy ───────────────────────────────────────────────────────
+  // â”€â”€ OpenRouter Proxy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   app.post('/api/proxy/openrouter/request', async (req, res) => {
     const { apiKey, method, endpoint, data } = req.body;
     const bodySize = JSON.stringify(req.body || {}).length;
@@ -204,18 +204,18 @@ async function startServer() {
     }
   });
 
-  // ── Evolution API routes ────────────────────────────────────────────────────
-  const { default: evolutionSessionsHandler }        = await import('./api/evolution/sessions.js');
-  const { default: evolutionQrHandler }              = await import('./api/evolution/qr.js');
-  const { default: evolutionSendHandler }            = await import('./api/evolution/send.js');
-  const { default: evolutionSyncHandler }            = await import('./api/evolution/sync.js');
-  const { default: evolutionConversationHandler }    = await import('./api/evolution/conversation.js');
-  const { default: evolutionConversationsHandler }   = await import('./api/evolution/conversations.js');
-  const { default: evolutionMessagesHandler }        = await import('./api/evolution/messages.js');
-  const { default: evolutionReconcileHandler, scheduleReconcile } = await import('./api/evolution/reconcile.js');
-  const { default: evolutionMediaHandler }            = await import('./api/evolution/media.js');
-  const { default: evolutionStatsHandler }           = await import('./api/evolution/stats.js');
-  const { default: evolutionWebhookHandler }         = await import('./api/webhook/evolution.js');
+  // â”€â”€ Evolution API routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const { default: evolutionSessionsHandler }        = await import('./_api/evolution/sessions.js');
+  const { default: evolutionQrHandler }              = await import('./_api/evolution/qr.js');
+  const { default: evolutionSendHandler }            = await import('./_api/evolution/send.js');
+  const { default: evolutionSyncHandler }            = await import('./_api/evolution/sync.js');
+  const { default: evolutionConversationHandler }    = await import('./_api/evolution/conversation.js');
+  const { default: evolutionConversationsHandler }   = await import('./_api/evolution/conversations.js');
+  const { default: evolutionMessagesHandler }        = await import('./_api/evolution/messages.js');
+  const { default: evolutionReconcileHandler, scheduleReconcile } = await import('./_api/evolution/reconcile.js');
+  const { default: evolutionMediaHandler }            = await import('./_api/evolution/media.js');
+  const { default: evolutionStatsHandler }           = await import('./_api/evolution/stats.js');
+  const { default: evolutionWebhookHandler }         = await import('./_api/webhook/evolution.js');
 
   app.all('/api/evolution/sessions',      evolutionSessionsHandler);
   app.all('/api/evolution/qr',            evolutionQrHandler);
@@ -234,19 +234,19 @@ async function startServer() {
   scheduleReconcile(5 * 60 * 1000);
   console.log('[SERVER] Evolution API routes registradas');
 
-  // ── Email Module routes ─────────────────────────────────────────────────────
-  const { default: emailAccountsHandler }        = await import('./api/email/accounts.js');
-  const { default: emailGmailAuthHandler }        = await import('./api/email/auth/gmail.js');
-  const { default: emailMicrosoftAuthHandler }    = await import('./api/email/auth/microsoft.js');
-  const { default: emailMessagesHandler }         = await import('./api/email/messages.js');
-  const { default: emailSendHandler }             = await import('./api/email/send.js');
-  const { default: emailActionHandler }           = await import('./api/email/action.js');
-  const { default: emailDraftHandler }            = await import('./api/email/draft.js');
-  const { default: emailSyncHandler }             = await import('./api/email/sync.js');
-  const { default: emailSearchHandler }           = await import('./api/email/search.js');
-  const { default: emailSettingsHandler }         = await import('./api/email/settings.js');
-  const { default: emailStatsHandler }            = await import('./api/email/stats.js');
-  const { scheduleEmailSync }                     = await import('./api/lib/emailSync.js');
+  // â”€â”€ Email Module routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const { default: emailAccountsHandler }        = await import('./_api/email/accounts.js');
+  const { default: emailGmailAuthHandler }        = await import('./_api/email/auth/gmail.js');
+  const { default: emailMicrosoftAuthHandler }    = await import('./_api/email/auth/microsoft.js');
+  const { default: emailMessagesHandler }         = await import('./_api/email/messages.js');
+  const { default: emailSendHandler }             = await import('./_api/email/send.js');
+  const { default: emailActionHandler }           = await import('./_api/email/action.js');
+  const { default: emailDraftHandler }            = await import('./_api/email/draft.js');
+  const { default: emailSyncHandler }             = await import('./_api/email/sync.js');
+  const { default: emailSearchHandler }           = await import('./_api/email/search.js');
+  const { default: emailSettingsHandler }         = await import('./_api/email/settings.js');
+  const { default: emailStatsHandler }            = await import('./_api/email/stats.js');
+  const { scheduleEmailSync }                     = await import('./_api/lib/emailSync.js');
 
   app.all('/api/email/accounts',            emailAccountsHandler);
   app.all('/api/email/auth/gmail/init',     emailGmailAuthHandler);
@@ -276,7 +276,7 @@ async function startServer() {
     });
   }
 
-  // ── HTTP server + Socket.IO ────────────────────────────────────────────────
+  // â”€â”€ HTTP server + Socket.IO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const httpServer = createServer(app);
 
   const io = new SocketIOServer(httpServer, {
@@ -304,3 +304,4 @@ async function startServer() {
 }
 
 startServer();
+
