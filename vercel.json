@@ -2,15 +2,7 @@
   "framework": null,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "functions": {
-    "server.vercel.ts": {
-      "maxDuration": 60,
-      "memory": 1024
-    }
-  },
   "rewrites": [
-    { "source": "/socket.io/(.*)", "destination": "/server.vercel" },
-    { "source": "/api/(.*)",       "destination": "/server.vercel" },
     { "source": "/((?!api/)(?!socket\\.io/).*)", "destination": "/index.html" }
   ],
   "headers": [
