@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Smartphone,
   QrCode,
+  Mail,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Permissions, VisualIdentityConfig } from '../types';
@@ -123,6 +124,7 @@ export const Sidebar = React.memo(({
           { id: 'chat',             label: 'WhatsApp IA',   icon: MessageSquare, permission: permissions.canReadAllLeads, badge: '12' },
           { id: 'whatsapp',         label: 'WA Pessoal',    icon: Smartphone,    permission: permissions.canReadAllLeads },
           { id: 'whatsapp/sessoes', label: 'Sessões WA',    icon: QrCode,        permission: permissions.canReadAllLeads },
+          { id: 'email',            label: 'E-mails',       icon: Mail,          permission: permissions.canReadAllLeads },
           { id: 'agent',       label: 'Agente de IA',  icon: Bot,           permission: permissions.canAccessSettings },
           { id: 'users',       label: 'Equipe',        icon: ShieldAlert,   permission: permissions.canManageUsers },
           { id: 'empresas',    label: 'Empresas',      icon: Building2,     permission: userProfile?.superadmin === true },

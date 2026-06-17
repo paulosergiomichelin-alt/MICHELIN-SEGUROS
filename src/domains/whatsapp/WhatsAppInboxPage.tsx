@@ -15,6 +15,7 @@ import { useWhatsApp } from '../../contexts/WhatsAppContext';
 import { EvolutionService } from '../../services/EvolutionService';
 import { ContactSidePanel } from './ContactSidePanel';
 import { useNavigate } from 'react-router-dom';
+import { useBrowserNotifications } from '../../hooks/useBrowserNotifications';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -174,10 +175,11 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage; session: string; isGroup?: boo
 
         {/* Áudio */}
         {msg.messageType === 'audio' && (
-          <div className="px-3 pt-2 pb-0">
+          <div className="px-3 pt-2 pb-6">
             {msg.id ? (
-              <audio controls className="w-full max-w-[220px] h-8" style={{ accentColor: '#25d366' }}>
+              <audio controls className="w-full max-w-[260px]" style={{ accentColor: '#25d366', height: '36px' }}>
                 <source src={mediaProxyUrl(session, msg.id)} type={msg.mimeType ?? 'audio/ogg'} />
+                <source src={mediaProxyUrl(session, msg.id)} />
               </audio>
             ) : (
               <div className="flex items-center gap-2 text-white/50">
@@ -286,6 +288,7 @@ type FilterType = 'all' | 'unread' | 'leads' | 'clientes';
 export const WhatsAppInboxPage: React.FC = () => {
   const navigate = useNavigate();
   const { sessions, activeSessions, loading: sessionsLoading, selectedSessionName, setSelectedSessionName } = useWhatsApp();
+  const { notify } = useBrowserNotifications();
 
   const [conversations, setConversations] = useState<WhatsAppConversation[]>([]);
   const [convLoading, setConvLoading] = useState(false);
@@ -364,6 +367,13 @@ export const WhatsAppInboxPage: React.FC = () => {
 
     // Nova mensagem chegou
     socket.on('wa:message_upsert', (msg: WhatsAppMessage) => {
+      if (msg.direction === 'inbound' && msg.conversationId !== selectedConvRef.current?.id) {
+        notify(
+          msg.conversationId,
+          msg.contactName || msg.phone || 'WhatsApp',
+          msg.body || '',
+        );
+      }
       if (msg.conversationId !== selectedConvRef.current?.id) return;
       setMessages(prev => {
         if (prev.some(m => m.id === msg.id)) return prev; // dedup

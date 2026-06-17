@@ -234,6 +234,40 @@ async function startServer() {
   scheduleReconcile(5 * 60 * 1000);
   console.log('[SERVER] Evolution API routes registradas');
 
+  // ── Email Module routes ─────────────────────────────────────────────────────
+  const { default: emailAccountsHandler }        = await import('./api/email/accounts.js');
+  const { default: emailGmailAuthHandler }        = await import('./api/email/auth/gmail.js');
+  const { default: emailMicrosoftAuthHandler }    = await import('./api/email/auth/microsoft.js');
+  const { default: emailMessagesHandler }         = await import('./api/email/messages.js');
+  const { default: emailSendHandler }             = await import('./api/email/send.js');
+  const { default: emailActionHandler }           = await import('./api/email/action.js');
+  const { default: emailDraftHandler }            = await import('./api/email/draft.js');
+  const { default: emailSyncHandler }             = await import('./api/email/sync.js');
+  const { default: emailSearchHandler }           = await import('./api/email/search.js');
+  const { default: emailSettingsHandler }         = await import('./api/email/settings.js');
+  const { default: emailStatsHandler }            = await import('./api/email/stats.js');
+  const { scheduleEmailSync }                     = await import('./api/lib/emailSync.js');
+
+  app.all('/api/email/accounts',            emailAccountsHandler);
+  app.all('/api/email/auth/gmail/init',     emailGmailAuthHandler);
+  app.all('/api/email/auth/gmail/callback', emailGmailAuthHandler);
+  app.all('/api/email/auth/microsoft/init',     emailMicrosoftAuthHandler);
+  app.all('/api/email/auth/microsoft/callback', emailMicrosoftAuthHandler);
+  app.all('/api/email/messages',            emailMessagesHandler);
+  app.all('/api/email/messages/:id',        emailMessagesHandler);
+  app.all('/api/email/send',                emailSendHandler);
+  app.all('/api/email/action',              emailActionHandler);
+  app.all('/api/email/drafts',              emailDraftHandler);
+  app.all('/api/email/draft',               emailDraftHandler);
+  app.all('/api/email/draft/:id',           emailDraftHandler);
+  app.all('/api/email/sync',                emailSyncHandler);
+  app.all('/api/email/search',              emailSearchHandler);
+  app.all('/api/email/settings',            emailSettingsHandler);
+  app.all('/api/email/stats',               emailStatsHandler);
+
+  scheduleEmailSync(5 * 60 * 1000);
+  console.log('[SERVER] Email Module routes registradas');
+
   if (process.env.NODE_ENV === 'production') {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));

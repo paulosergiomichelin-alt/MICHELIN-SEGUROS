@@ -937,3 +937,105 @@ export interface EmpresaMetricas {
   trialExpiraEm?: string;
   diasRestantesTrial?: number;
 }
+
+// ─── Email Module ─────────────────────────────────────────────────────────────
+
+export type EmailProvider = 'gmail' | 'microsoft';
+export type EmailFolder = 'inbox' | 'sent' | 'drafts' | 'trash' | 'spam' | 'archive';
+
+export interface EmailAddress {
+  name?: string;
+  email: string;
+}
+
+export interface EmailAttachment {
+  id?: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  contentId?: string;
+}
+
+export interface EmailAccount {
+  id: string;
+  userId: string;
+  provider: EmailProvider;
+  email: string;
+  displayName?: string;
+  isDefault: boolean;
+  status: 'connected' | 'disconnected' | 'error' | 'reconnecting';
+  lastSync?: string;
+  syncError?: string;
+  organizationId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Email {
+  id: string;
+  accountId: string;
+  provider: EmailProvider;
+  folder: EmailFolder;
+  subject: string;
+  from: EmailAddress;
+  to: EmailAddress[];
+  cc?: EmailAddress[];
+  bcc?: EmailAddress[];
+  replyTo?: EmailAddress;
+  date: string;
+  snippet: string;
+  isRead: boolean;
+  isStarred: boolean;
+  hasAttachments: boolean;
+  threadId?: string;
+  bodyHtml?: string;
+  bodyText?: string;
+  attachments?: EmailAttachment[];
+  fetchedAt?: number;
+}
+
+export interface EmailThread {
+  threadId: string;
+  subject: string;
+  participants: EmailAddress[];
+  messageCount: number;
+  lastMessageDate: string;
+  isRead: boolean;
+  hasAttachments: boolean;
+  snippet: string;
+  messages?: Email[];
+}
+
+export interface EmailSettings {
+  userId: string;
+  signature?: string;
+  displayName?: string;
+  defaultAccountId?: string;
+  autoReply?: {
+    enabled: boolean;
+    subject?: string;
+    body?: string;
+  };
+  notifications: {
+    newEmail: boolean;
+    desktop: boolean;
+  };
+  updatedAt: string;
+}
+
+export interface EmailSyncStatus {
+  accountId: string;
+  status: 'idle' | 'syncing' | 'error';
+  lastSync?: string;
+  error?: string;
+  messagesCount?: number;
+}
+
+export interface EmailStats {
+  inbox: number;
+  unread: number;
+  sent: number;
+  drafts: number;
+  archived: number;
+  spam: number;
+}

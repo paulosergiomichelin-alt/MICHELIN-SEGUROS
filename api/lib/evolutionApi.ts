@@ -69,6 +69,35 @@ export const EvolutionAPI = {
     }
   },
 
+  async setWebhook(instanceName: string, webhookUrl: string): Promise<boolean> {
+    try {
+      const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/webhook/set/${instanceName}`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          url: webhookUrl,
+          byEvents: true,
+          base64: false,
+          events: [
+            'MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'MESSAGES_DELETE',
+            'CONNECTION_UPDATE', 'QRCODE_UPDATED',
+            'CONTACTS_UPDATE', 'CHATS_UPDATE', 'CHATS_UPSERT', 'PRESENCE_UPDATE',
+          ],
+        }),
+      }, 8000);
+      if (!res.ok) {
+        const text = await res.text();
+        console.error(`[EvolutionAPI] setWebhook ${instanceName} falhou (${res.status}): ${text}`);
+        return false;
+      }
+      console.log(`[EvolutionAPI] setWebhook ${instanceName} → ${webhookUrl}`);
+      return true;
+    } catch (err) {
+      console.error('[EvolutionAPI] setWebhook error:', err);
+      return false;
+    }
+  },
+
   async getQRCode(instanceName: string): Promise<{ base64?: string; code?: string } | null> {
     const connectAndRead = async (): Promise<{ base64?: string; code?: string } | null> => {
       const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/instance/connect/${instanceName}`, {

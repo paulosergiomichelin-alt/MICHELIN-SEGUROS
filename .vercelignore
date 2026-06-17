@@ -1,0 +1,4 @@
+dist/
+evolution/
+tsconfig.node.tsbuildinfo
+.env

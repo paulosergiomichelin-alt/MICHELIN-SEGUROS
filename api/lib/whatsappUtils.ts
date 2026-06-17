@@ -37,8 +37,25 @@ export function isIgnoredJid(jid: string): boolean {
   );
 }
 
+// Unwrapa formatos aninhados que o Evolution API / Baileys às vezes envia
+function unwrapMessage(m: any): any {
+  if (!m) return {};
+  // viewOnceMessage / viewOnceMessageV2 / ephemeralMessage contêm outro .message
+  const inner =
+    m.viewOnceMessage?.message ??
+    m.viewOnceMessageV2?.message ??
+    m.viewOnceMessageV2Extension?.message ??
+    m.ephemeralMessage?.message ??
+    m.documentWithCaptionMessage?.message ??
+    m.templateMessage?.hydratedFourRowTemplate?.hydratedContentText;
+  return inner ? unwrapMessage(inner) : m;
+}
+
 export function extractMessageContent(msg: any): ExtractedMessage {
-  const m = msg?.message ?? {};
+  const raw = msg?.message ?? {};
+  const m = unwrapMessage(raw);
+  // Evolution API v2 coloca o tipo também em data.messageType (top-level)
+  const topType: string = (msg?.messageType ?? '').toLowerCase();
 
   if (m.conversation) return { body: m.conversation, messageType: 'text' };
   if (m.extendedTextMessage?.text) return { body: m.extendedTextMessage.text, messageType: 'text' };
@@ -63,7 +80,7 @@ export function extractMessageContent(msg: any): ExtractedMessage {
       body: '',
       messageType: 'audio',
       mediaUrl: audio.url ?? audio.directPath ?? '',
-      mimeType: audio.mimetype,
+      mimeType: audio.mimetype ?? 'audio/ogg; codecs=opus',
     };
   }
 
@@ -81,6 +98,15 @@ export function extractMessageContent(msg: any): ExtractedMessage {
     mediaUrl: m.stickerMessage.url ?? '',
     mimeType: m.stickerMessage.mimetype,
   };
+
+  // Fallback: usar data.messageType do Evolution API v2 quando message object não resolve
+  if (topType.includes('audio') || topType.includes('ptt')) {
+    return { body: '', messageType: 'audio', mimeType: 'audio/ogg; codecs=opus' };
+  }
+  if (topType.includes('image')) return { body: '', messageType: 'image' };
+  if (topType.includes('video')) return { body: '', messageType: 'video' };
+  if (topType.includes('document')) return { body: '', messageType: 'document' };
+  if (topType.includes('sticker')) return { body: '', messageType: 'sticker' };
 
   return { body: '', messageType: 'text' };
 }

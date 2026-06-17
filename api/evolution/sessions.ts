@@ -129,5 +129,24 @@ export default async function handler(req: any, res: any) {
     }
   }
 
+  // ── PATCH: set/update webhook for an existing instance ──────────────────────
+  if (req.method === 'PATCH') {
+    try {
+      const { name } = req.body ?? {};
+      if (!name) return res.status(400).json({ error: 'Campo "name" é obrigatório no body' });
+
+      const webhookUrl: string = process.env.EVOLUTION_WEBHOOK_URL || '';
+      if (!webhookUrl) return res.status(400).json({ error: 'EVOLUTION_WEBHOOK_URL não definida no .env' });
+
+      const ok = await EvolutionAPI.setWebhook(String(name), webhookUrl);
+      if (!ok) return res.status(502).json({ error: 'Falha ao definir webhook na Evolution API' });
+
+      return res.status(200).json({ success: true, instanceName: name, webhookUrl });
+    } catch (err: any) {
+      console.error('[EVOLUTION/sessions] PATCH error:', err);
+      return res.status(500).json({ error: 'Erro ao definir webhook', detail: err?.message });
+    }
+  }
+
   return res.status(405).json({ error: 'Method not allowed' });
 }

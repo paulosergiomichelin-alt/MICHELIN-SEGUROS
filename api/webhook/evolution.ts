@@ -48,13 +48,8 @@ async function resolveOrgId(sessionId: string): Promise<string> {
 
 // ── Lead helpers ──────────────────────────────────────────────────────────────
 
-async function findOrCreateLead(
-  phone: string,
-  name: string,
-  timestamp: string,
-  sessionId: string,
-  organizationId: string,
-): Promise<string | null> {
+// Apenas vincula conversa a lead existente — criação é sempre manual
+async function findExistingLead(phone: string, timestamp: string): Promise<string | null> {
   const phoneLocal = stripDDI(phone);
 
   let existing = await fsQuery('leads', [{ field: 'phone', value: phoneLocal }]);
@@ -68,30 +63,7 @@ async function findOrCreateLead(
     return leadId;
   }
 
-  const id = `wa_${phoneLocal}_${Date.now()}`;
-  await fsSet('leads', id, {
-    id,
-    phone: phoneLocal,
-    name: name || `WhatsApp ${phoneLocal}`,
-    status: 'Novo Lead',
-    origin: 'whatsapp_qr',
-    organizationId,
-    iaActive: true,
-    responsibleAgentType: 'ia',
-    source: 'whatsapp_qr',
-    cpf: '', birthDate: '', civilStatus: '', plate: '', chassis: '',
-    zipCodeOvernight: '', isDifferentResidenceZip: false,
-    fiduciaryAlienation: false, serviceUsage: false,
-    youngDriverHousehold: false, isOwnerDriver: true,
-    hasInsurance: false, documents: {},
-    lastInteraction: timestamp,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    ownerId: 'system',
-  });
-
-  console.log(`[EVOLUTION/webhook] Novo lead: ${id} (${phone}) via ${sessionId}`);
-  return id;
+  return null;
 }
 
 // ── Event handlers ────────────────────────────────────────────────────────────
@@ -129,7 +101,13 @@ async function handleMessagesUpsert(event: any) {
 
   const { body, messageType, mediaUrl, mimeType, fileName } = extractMessageContent(data);
 
-  if (fromMe && !body && !mediaUrl) return; // protocolo/reação sem conteúdo
+  // Diagnóstico temporário: logar payload de qualquer mídia para depurar
+  if (messageType !== 'text' || data.messageType) {
+    console.log('[EVOLUTION/webhook] MEDIA_MSG topType=%s resolved=%s msgKeys=%s',
+      data.messageType ?? '—', messageType, Object.keys(data.message ?? {}).join(','));
+  }
+
+  if (fromMe && messageType === 'text' && !body) return; // protocolo/reação sem conteúdo
 
   const timestampSec = Number(data.messageTimestamp ?? Math.floor(Date.now() / 1000));
   const timestamp = new Date(timestampSec * 1000).toISOString();
@@ -185,9 +163,9 @@ async function handleMessagesUpsert(event: any) {
   setConversation(convDoc);
   emitToSession(sessionId, 'wa:chat_upsert', convDoc);
 
-  // Não criar lead para grupos
-  if (!fromMe && !groupChat) {
-    const leadId = await findOrCreateLead(phone, senderName, timestamp, sessionId, organizationId).catch(() => null);
+  // Vincular a lead existente se houver — nunca criar automaticamente
+  if (!fromMe && !groupChat && !existing?.leadId) {
+    const leadId = await findExistingLead(phone, timestamp).catch(() => null);
     if (leadId) {
       updateConversation(conversationId, { leadId });
       emitToSession(sessionId, 'wa:chat_update', { id: conversationId, patch: { leadId } });

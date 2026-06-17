@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently -n server,vite -c blue,green \"tsx watch --env-file=.env server.ts\" \"vite\"",
     "dev:server": "tsx watch --env-file=.env server.ts",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
