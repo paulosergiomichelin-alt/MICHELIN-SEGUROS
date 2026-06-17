@@ -220,5 +220,5 @@ export const EmailService = {
 
   // ── Stats ───────────────────────────────────────────────────────────────────
   getStats: (userId: string): Promise<EmailStats> =>
-    fetch(`/api/email/stats?userId=${encodeURIComponent(userId)}`).then(r => r.json()),
+    fetch(`/api/email/stats?userId=${encodeURIComponent(userId)}`).then(r => r.json()).then(d => d.stats ?? d),
 };

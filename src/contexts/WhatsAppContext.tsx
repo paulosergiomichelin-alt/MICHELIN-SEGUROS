@@ -9,6 +9,7 @@ interface WhatsAppContextType {
   loading: boolean;
   selectedSessionName: string | null;
   setSelectedSessionName: (name: string | null) => void;
+  totalUnreadWA: number;
 }
 
 const WhatsAppContext = createContext<WhatsAppContextType | undefined>(undefined);
@@ -20,6 +21,7 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode; userProfile
   const [sessions, setSessions] = useState<WhatsAppSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSessionName, setSelectedSessionName] = useState<string | null>(null);
+  const [totalUnreadWA, setTotalUnreadWA] = useState(0);
 
   const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'gestor';
   const userId = userProfile?.uid;
@@ -61,8 +63,28 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode; userProfile
 
   const activeSessions = sessions.filter(s => s.status === 'open');
 
+  // ── Contagem de conversas não lidas ──────────────────────────────────────────
+  useEffect(() => {
+    if (!orgId || sessions.length === 0) { setTotalUnreadWA(0); return; }
+    const sessionNames = new Set(sessions.map(s => s.sessionName).filter(Boolean));
+    const unsub = DataService.subscribeCollection(
+      'whatsapp_conversations',
+      [limit(300)],
+      (data: any[]) => {
+        const total = data
+          .filter(c => sessionNames.has(c.sessionName))
+          .reduce((sum, c) => sum + Math.max(0, c.unreadCount ?? 0), 0);
+        setTotalUnreadWA(total);
+      },
+      true,
+      () => setTotalUnreadWA(0),
+    );
+    return unsub;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId, sessions.map(s => s.sessionName).join(',')]);
+
   return (
-    <WhatsAppContext.Provider value={{ sessions, activeSessions, loading, selectedSessionName, setSelectedSessionName }}>
+    <WhatsAppContext.Provider value={{ sessions, activeSessions, loading, selectedSessionName, setSelectedSessionName, totalUnreadWA }}>
       {children}
     </WhatsAppContext.Provider>
   );

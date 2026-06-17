@@ -25,6 +25,8 @@ import { Permissions, VisualIdentityConfig } from '../types';
 import { useTheme, useViewport } from '../hooks/useAppContexts';
 import { auth, signOut } from '../lib/firebase';
 import { AggerInstallBanner } from './AggerInstallBanner';
+import { useEmail } from '../contexts/EmailContext';
+import { useWhatsApp } from '../contexts/WhatsAppContext';
 
 interface SidebarProps {
   permissions: Permissions;
@@ -49,6 +51,16 @@ export const Sidebar = React.memo(({
   const viewport = useViewport();
   const location = useLocation();
   const navigate = useNavigate();
+  const { state: emailState } = useEmail();
+  const { totalUnreadWA } = useWhatsApp();
+
+  const emailUnreadCount = emailState.stats.unread || emailState.unreadByFolder['inbox'] || 0;
+  const emailUnreadBadge = emailUnreadCount > 0
+    ? (emailUnreadCount > 99 ? '99+' : String(emailUnreadCount))
+    : undefined;
+  const waBadge = totalUnreadWA > 0
+    ? (totalUnreadWA > 99 ? '99+' : String(totalUnreadWA))
+    : undefined;
 
   // Derive active tab from current URL path — supports nested routes like /users/:uid
   const currentTab = location.pathname.replace(/^\//, '') || 'pipeline';
@@ -121,10 +133,10 @@ export const Sidebar = React.memo(({
           { id: 'clientes',    label: 'Clientes',      icon: Briefcase,     permission: permissions.canReadAllLeads },
           { id: 'renovacoes',       label: 'Renovações',    icon: RefreshCw,     permission: permissions.canReadAllLeads },
           { id: 'ativos',           label: 'Ativos',        icon: Send,          permission: permissions.canReadAllLeads },
-          { id: 'chat',             label: 'WhatsApp IA',   icon: MessageSquare, permission: permissions.canReadAllLeads, badge: '12' },
-          { id: 'whatsapp',         label: 'WA Pessoal',    icon: Smartphone,    permission: permissions.canReadAllLeads },
+          { id: 'chat',             label: 'WhatsApp IA',   icon: MessageSquare, permission: permissions.canReadAllLeads },
+          { id: 'whatsapp',         label: 'WA Pessoal',    icon: Smartphone,    permission: permissions.canReadAllLeads, badge: waBadge },
           { id: 'whatsapp/sessoes', label: 'Sessões WA',    icon: QrCode,        permission: permissions.canReadAllLeads },
-          { id: 'email',            label: 'E-mails',       icon: Mail,          permission: permissions.canReadAllLeads },
+          { id: 'email',            label: 'E-mails',       icon: Mail,          permission: permissions.canReadAllLeads, badge: emailUnreadBadge },
           { id: 'agent',       label: 'Agente de IA',  icon: Bot,           permission: permissions.canAccessSettings },
           { id: 'users',       label: 'Equipe',        icon: ShieldAlert,   permission: permissions.canManageUsers },
           { id: 'empresas',    label: 'Empresas',      icon: Building2,     permission: userProfile?.superadmin === true },
@@ -151,7 +163,12 @@ export const Sidebar = React.memo(({
               {isActive && (
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-gold-deep rounded-r-full" />
               )}
-              <Icon className={cn("w-5 h-5 shrink-0", isActive ? "text-gold-deep" : "group-hover:text-gold-light")} />
+              <div className="relative shrink-0">
+                <Icon className={cn("w-5 h-5", isActive ? "text-gold-deep" : "group-hover:text-gold-light")} />
+                {item.badge && !isSidebarOpen && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-gold-deep rounded-full hidden md:block" />
+                )}
+              </div>
               <span className={cn(
                 "font-bold uppercase text-[10.5px] tracking-widest ml-2 whitespace-nowrap transition-all duration-300 opacity-100 flex-1 text-left",
                 !isSidebarOpen && "md:opacity-0 md:pointer-events-none"
