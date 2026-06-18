@@ -5,7 +5,6 @@ import { ClienteRealtimeProvider } from '../contexts/ClienteRealtimeContext';
 import { ChatProvider } from '../contexts/ChatContext';
 import { NotificationProvider } from '../contexts/NotificationContext';
 import { WhatsAppProvider } from '../contexts/WhatsAppContext';
-import { EmailProvider } from '../contexts/EmailContext';
 import { UserProfile } from '../types';
 
 interface ShellProvidersProps {
@@ -21,9 +20,7 @@ export const ShellProviders: React.FC<ShellProvidersProps> = ({ children, user, 
         <NotificationProvider userId={user.uid}>
           <ChatProvider>
             <WhatsAppProvider userProfile={userProfile}>
-              <EmailProvider>
-                {children}
-              </EmailProvider>
+              {children}
             </WhatsAppProvider>
           </ChatProvider>
         </NotificationProvider>

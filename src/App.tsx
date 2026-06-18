@@ -10,6 +10,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { LayoutProvider } from './contexts/LayoutContext';
 import { ShieldAlert } from 'lucide-react';
 
+import { EmailProvider } from './contexts/EmailContext';
 import { logger } from './services/LoggerService';
 import { agentService } from './services/agentService';
 import { DataService } from './services/DataService';
@@ -196,15 +197,17 @@ function AppInternal() {
     <ThemeProvider userProfile={userProfile}>
       <LayoutProvider>
         <ChatPreferencesProvider userProfile={userProfile}>
-          <MainAppContent 
-            user={user}
-            userProfile={userProfile}
-            isAuthReady={isAuthReady}
-            permissions={permissions}
-            permsLoading={permsLoading}
-            visualConfig={visualConfig}
-            setVisualConfig={setVisualConfig}
-          />
+          <EmailProvider>
+            <MainAppContent
+              user={user}
+              userProfile={userProfile}
+              isAuthReady={isAuthReady}
+              permissions={permissions}
+              permsLoading={permsLoading}
+              visualConfig={visualConfig}
+              setVisualConfig={setVisualConfig}
+            />
+          </EmailProvider>
         </ChatPreferencesProvider>
       </LayoutProvider>
     </ThemeProvider>
