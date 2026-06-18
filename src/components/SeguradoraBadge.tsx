@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { cn } from '../lib/utils';
 import { getSeguradora } from '../lib/seguradoras';
 
@@ -18,19 +18,32 @@ export const SeguradoraBadge: React.FC<SeguradoraBadgeProps> = ({
   const seg = getSeguradora(seguradoraId);
   const nome = seg?.nome ?? seguradoraId;
   const cor = seg?.cor ?? '#555';
+  const logo = seg?.logo;
   const inicial = nome.charAt(0).toUpperCase();
+  const [imgError, setImgError] = useState(false);
 
   const avatarSize = size === 'xs' ? 'w-5 h-5 text-[9px]' : size === 'sm' ? 'w-6 h-6 text-[10px]' : 'w-8 h-8 text-xs';
-  const textSize = size === 'xs' ? 'text-[9px]' : size === 'sm' ? 'text-[10px]' : 'text-xs';
+  const textSize  = size === 'xs' ? 'text-[9px]' : size === 'sm' ? 'text-[10px]' : 'text-xs';
 
   return (
     <div className={cn('flex items-center gap-1.5', className)}>
-      <div
-        className={cn('rounded-md flex items-center justify-center font-black text-white shrink-0', avatarSize)}
-        style={{ backgroundColor: cor }}
-      >
-        {inicial}
-      </div>
+      {logo && !imgError ? (
+        <div className={cn('rounded-md overflow-hidden shrink-0 bg-white flex items-center justify-center', avatarSize)}>
+          <img
+            src={logo}
+            alt={nome}
+            className="w-full h-full object-contain p-[2px]"
+            onError={() => setImgError(true)}
+          />
+        </div>
+      ) : (
+        <div
+          className={cn('rounded-md flex items-center justify-center font-black text-white shrink-0', avatarSize)}
+          style={{ backgroundColor: cor }}
+        >
+          {inicial}
+        </div>
+      )}
       {showName && (
         <span className={cn('font-semibold text-white/80 truncate', textSize)}>{nome}</span>
       )}

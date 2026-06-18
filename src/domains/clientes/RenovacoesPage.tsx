@@ -178,13 +178,13 @@ export const RenovacoesPage: React.FC = () => {
                       <div className="flex items-center justify-between mb-1">
                         <SeguradoraBadge seguradoraId={id} size="xs" />
                         <div className="text-right">
-                          <span className="text-[10px] text-white/50 font-mono">{count}</span>
-                          <span className="text-[9px] text-white/25 ml-1">({pctCount}%)</span>
+                          <span className="text-[10px] text-white/70 font-mono">{count}</span>
+                          <span className="text-[9px] text-white/40 ml-1">({pctCount}%)</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[9px] text-white/30">{fmtCurrency(valor)}</span>
-                        <span className="text-[9px] text-white/25">{pctValor}% do total</span>
+                        <span className="text-[9px] text-white/55">{fmtCurrency(valor)}</span>
+                        <span className="text-[9px] text-white/40">{pctValor}% do total</span>
                       </div>
                       <div className="h-1 bg-white/5 rounded-full overflow-hidden">
                         <div className="h-full bg-gold-deep/60 rounded-full" style={{ width: `${pctValor}%` }} />
@@ -194,10 +194,10 @@ export const RenovacoesPage: React.FC = () => {
                 })}
                 {/* Totais */}
                 <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between">
-                  <span className="text-[9px] text-white/30 uppercase font-black">Total</span>
+                  <span className="text-[9px] text-white/50 uppercase font-black">Total</span>
                   <div className="text-right">
-                    <span className="text-[10px] text-white/50 font-mono">{totalApolices} apólices</span>
-                    <span className="text-[9px] text-white/30 ml-2">{fmtCurrency(totalValor)}</span>
+                    <span className="text-[10px] text-white/70 font-mono">{totalApolices} apólices</span>
+                    <span className="text-[9px] text-white/50 ml-2">{fmtCurrency(totalValor)}</span>
                   </div>
                 </div>
               </div>
@@ -239,13 +239,13 @@ export const RenovacoesPage: React.FC = () => {
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="text-[10px] text-white/60 font-medium">{produto}</span>
                         <div className="text-right">
-                          <span className="text-[10px] text-white/50 font-mono">{count}</span>
-                          <span className="text-[9px] text-white/25 ml-1">({pctCount}%)</span>
+                          <span className="text-[10px] text-white/70 font-mono">{count}</span>
+                          <span className="text-[9px] text-white/40 ml-1">({pctCount}%)</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[9px] text-white/30">{fmtCurrency(valor)}</span>
-                        <span className="text-[9px] text-white/25">{pctValor}% do total</span>
+                        <span className="text-[9px] text-white/55">{fmtCurrency(valor)}</span>
+                        <span className="text-[9px] text-white/40">{pctValor}% do total</span>
                       </div>
                       <div className="h-1 bg-white/5 rounded-full overflow-hidden">
                         <div className="h-full bg-gold-deep/40 rounded-full" style={{ width: `${pctValor}%` }} />
@@ -308,7 +308,7 @@ export const RenovacoesPage: React.FC = () => {
                 <thead>
                   <tr className="border-b border-white/5">
                     {['Cliente', 'Produto', 'Seguradora', 'Data Renovação', 'Dias', ''].map(h => (
-                      <th key={h} className="px-4 py-2.5 text-left text-[9px] font-black text-white/30 uppercase tracking-widest">{h}</th>
+                      <th key={h} className="px-4 py-2.5 text-left text-[9px] font-black text-white/50 uppercase tracking-widest">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -325,10 +325,10 @@ export const RenovacoesPage: React.FC = () => {
                       >
                         <td className="px-4 py-3">
                           <p className="text-[11px] font-bold text-white">{c.nome}</p>
-                          <p className="text-[9px] text-white/30 font-mono">{c.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</p>
+                          <p className="text-[9px] text-white/50 font-mono">{c.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</p>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="text-[10px] text-white/60">{c.produtoAtual ?? '—'}</span>
+                          <span className="text-[10px] text-white/80">{c.produtoAtual ?? '—'}</span>
                         </td>
                         <td className="px-4 py-3">
                           {c.seguradoraAtualId
@@ -345,7 +345,7 @@ export const RenovacoesPage: React.FC = () => {
                             'px-2 py-0.5 rounded-full text-[9px] font-black border',
                             isVencido ? 'bg-red-500/10 border-red-500/20 text-red-400' :
                             isUrgent  ? 'bg-amber-500/10 border-amber-500/20 text-amber-300' :
-                            'bg-white/5 border-white/10 text-white/40',
+                            'bg-white/5 border-white/15 text-white/65',
                           )}>
                             {isVencido ? `Há ${Math.abs(days)}d` : days === 0 ? 'Hoje' : `${days}d`}
                           </span>
