@@ -1,5 +1,11 @@
 import { MetaAPI } from '../lib/metaApi.js';
-import { fsSet, fsQuery, fsGet, fsUpdate } from '../lib/adminFirebase.js';
+import { fsSet, fsQuery, fsUpdate } from '../lib/adminFirebase.js';
+import {
+  setConversation, setMessage, getConversation,
+  CachedConversation, CachedMessage,
+} from '../lib/conversationCache.js';
+import { emitToSession } from '../lib/socketRegistry.js';
+import { META_SESSION_ID } from '../webhook/whatsapp.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -39,13 +45,14 @@ export default async function handler(req: any, res: any) {
     }
 
     const wamid = result?.messages?.[0]?.id;
+    const phone = to.replace(/\D/g, '');
+    const conversationId = `${META_SESSION_ID}_${phone}`;
+    const msgId = `meta_out_${wamid ?? Date.now()}`;
+    const bodyText = message ?? caption ?? `[${type}]`;
 
-    // Persist outbound message
+    // Persist to Firestore
     try {
-      const phone = to.replace(/\D/g, '');
       const lead = await findOrCreateLead(phone, organizationId, now);
-      const msgId = `meta_out_${wamid ?? Date.now()}`;
-      const conversationId = `meta_${phone}`;
 
       await fsSet('messages', msgId, {
         id: msgId,
@@ -54,7 +61,7 @@ export default async function handler(req: any, res: any) {
         sender: 'agent',
         channel: 'whatsapp_meta',
         messageType: type,
-        text: message ?? caption ?? `[${type}]`,
+        text: bodyText,
         wamid: wamid ?? null,
         status: 'sent',
         timestamp: now,
@@ -64,11 +71,48 @@ export default async function handler(req: any, res: any) {
       });
 
       await fsUpdate('leads', lead.id, {
-        lastMessage: message ?? caption ?? `[${type}]`,
+        lastMessage: bodyText,
         lastMessageAt: now,
         lastMessageDirection: 'outbound',
         updatedAt: now,
       });
+
+      // ── Atualiza cache → painel WhatsApp ────────────────────────────────
+      const existingConv = getConversation(conversationId);
+      const cachedConv: CachedConversation = {
+        id: conversationId,
+        sessionId: META_SESSION_ID,
+        sessionName: META_SESSION_ID,
+        phone,
+        contactName: existingConv?.contactName ?? `+${phone}`,
+        contactPicture: existingConv?.contactPicture,
+        lastMessage: bodyText,
+        lastMessageAt: now,
+        lastMessageDirection: 'outbound',
+        updatedAt: now,
+        unreadCount: existingConv?.unreadCount ?? 0,
+        organizationId,
+        leadId: lead.id,
+      };
+      setConversation(cachedConv);
+
+      const cachedMsg: CachedMessage = {
+        id: msgId,
+        conversationId,
+        sessionId: META_SESSION_ID,
+        direction: 'outbound',
+        messageType: type,
+        body: bodyText,
+        phone,
+        contactName: cachedConv.contactName,
+        timestamp: now,
+        status: 'sent',
+        organizationId,
+      };
+      setMessage(cachedMsg);
+
+      emitToSession(META_SESSION_ID, 'wa:chat_upsert', cachedConv);
+      emitToSession(META_SESSION_ID, 'wa:message_upsert', cachedMsg);
     } catch (dbErr) {
       console.error('[META/send] Erro ao persistir mensagem:', dbErr);
     }

@@ -2874,6 +2874,8 @@ function normalizePhone(phone) {
 }
 
 // _api/webhook/whatsapp.ts
+init_socketRegistry();
+var META_SESSION_ID = "meta";
 function handleVerify(req, res) {
   const mode = req.query?.["hub.mode"];
   const token2 = req.query?.["hub.verify_token"];
@@ -2973,6 +2975,42 @@ async function handleIncomingMessage(msg, profileName) {
     unreadCount: (lead.unreadCount ?? 0) + 1,
     updatedAt: ts
   });
+  const existingConv = getConversation(conversationId);
+  const cachedConv = {
+    id: conversationId,
+    sessionId: META_SESSION_ID,
+    sessionName: META_SESSION_ID,
+    phone: from,
+    contactName: existingConv?.contactName || profileName || `+${from}`,
+    contactPicture: existingConv?.contactPicture,
+    lastMessage: text.slice(0, 200),
+    lastMessageAt: ts,
+    lastMessageDirection: "inbound",
+    updatedAt: ts,
+    unreadCount: (existingConv?.unreadCount ?? 0) + 1,
+    organizationId,
+    leadId: lead.id
+  };
+  setConversation(cachedConv);
+  const cachedMsg = {
+    id: msgId,
+    conversationId,
+    sessionId: META_SESSION_ID,
+    direction: "inbound",
+    messageType: msgType,
+    body: text,
+    phone: from,
+    contactName: cachedConv.contactName,
+    timestamp: ts,
+    status: "received",
+    organizationId,
+    ...mediaUrl ? { mediaUrl } : {},
+    ...mimeType ? { mimeType } : {},
+    ...fileName ? { fileName } : {}
+  };
+  setMessage(cachedMsg);
+  emitToSession(META_SESSION_ID, "wa:chat_upsert", cachedConv);
+  emitToSession(META_SESSION_ID, "wa:message_upsert", cachedMsg);
   MetaAPI.markAsRead(wamid).catch(() => {
   });
 }
@@ -3102,6 +3140,7 @@ async function findOrCreateLead(phone, organizationId, now, profileName) {
 
 // _api/meta/send.ts
 init_adminFirebase();
+init_socketRegistry();
 async function handler12(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const { to, type = "text", message, imageUrl, documentUrl, filename, audioUrl, templateName, languageCode, components, caption } = req.body ?? {};
@@ -3135,11 +3174,12 @@ async function handler12(req, res) {
         return res.status(400).json({ error: `Tipo '${type}' n\xE3o suportado` });
     }
     const wamid = result?.messages?.[0]?.id;
+    const phone = to.replace(/\D/g, "");
+    const conversationId = `${META_SESSION_ID}_${phone}`;
+    const msgId = `meta_out_${wamid ?? Date.now()}`;
+    const bodyText = message ?? caption ?? `[${type}]`;
     try {
-      const phone = to.replace(/\D/g, "");
       const lead = await findOrCreateLead2(phone, organizationId, now);
-      const msgId = `meta_out_${wamid ?? Date.now()}`;
-      const conversationId = `meta_${phone}`;
       await fsSet("messages", msgId, {
         id: msgId,
         leadId: lead.id,
@@ -3147,7 +3187,7 @@ async function handler12(req, res) {
         sender: "agent",
         channel: "whatsapp_meta",
         messageType: type,
-        text: message ?? caption ?? `[${type}]`,
+        text: bodyText,
         wamid: wamid ?? null,
         status: "sent",
         timestamp: now,
@@ -3156,11 +3196,44 @@ async function handler12(req, res) {
         createdAt: now
       });
       await fsUpdate("leads", lead.id, {
-        lastMessage: message ?? caption ?? `[${type}]`,
+        lastMessage: bodyText,
         lastMessageAt: now,
         lastMessageDirection: "outbound",
         updatedAt: now
       });
+      const existingConv = getConversation(conversationId);
+      const cachedConv = {
+        id: conversationId,
+        sessionId: META_SESSION_ID,
+        sessionName: META_SESSION_ID,
+        phone,
+        contactName: existingConv?.contactName ?? `+${phone}`,
+        contactPicture: existingConv?.contactPicture,
+        lastMessage: bodyText,
+        lastMessageAt: now,
+        lastMessageDirection: "outbound",
+        updatedAt: now,
+        unreadCount: existingConv?.unreadCount ?? 0,
+        organizationId,
+        leadId: lead.id
+      };
+      setConversation(cachedConv);
+      const cachedMsg = {
+        id: msgId,
+        conversationId,
+        sessionId: META_SESSION_ID,
+        direction: "outbound",
+        messageType: type,
+        body: bodyText,
+        phone,
+        contactName: cachedConv.contactName,
+        timestamp: now,
+        status: "sent",
+        organizationId
+      };
+      setMessage(cachedMsg);
+      emitToSession(META_SESSION_ID, "wa:chat_upsert", cachedConv);
+      emitToSession(META_SESSION_ID, "wa:message_upsert", cachedMsg);
     } catch (dbErr) {
       console.error("[META/send] Erro ao persistir mensagem:", dbErr);
     }
@@ -3252,6 +3325,54 @@ async function handler13(req, res) {
   return res.status(200).json({ ok: allOk, ...report });
 }
 
+// _api/meta/messages.ts
+init_adminFirebase();
+async function handler14(req, res) {
+  if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
+  const { phone } = req.query ?? {};
+  if (!phone) return res.status(400).json({ error: "phone \xE9 obrigat\xF3rio" });
+  const phoneStr = String(phone).replace(/\D/g, "");
+  const conversationId = `${META_SESSION_ID}_${phoneStr}`;
+  const cached = getMessages(conversationId);
+  let firestoreMsgs = [];
+  try {
+    firestoreMsgs = await fsQuery("messages", [{ field: "conversationId", value: conversationId }]);
+  } catch (err) {
+    console.error("[META/messages] Erro ao buscar Firestore:", err);
+  }
+  const seen = /* @__PURE__ */ new Set();
+  const merged = [];
+  for (const m of [...firestoreMsgs, ...cached]) {
+    const id = m.id ?? m.wamid;
+    if (id && seen.has(id)) continue;
+    if (id) seen.add(id);
+    merged.push({
+      id: m.id,
+      conversationId,
+      sessionId: META_SESSION_ID,
+      direction: m.direction ?? (m.sender === "lead" ? "inbound" : "outbound"),
+      messageType: m.messageType ?? "text",
+      body: m.text ?? m.body ?? "",
+      phone: phoneStr,
+      contactName: m.contactName ?? `+${phoneStr}`,
+      timestamp: m.timestamp ?? m.createdAt,
+      status: m.status ?? "received",
+      organizationId: m.organizationId ?? "default",
+      ...m.mediaUrl ? { mediaUrl: m.mediaUrl } : {},
+      ...m.mimeType ? { mimeType: m.mimeType } : {},
+      ...m.fileName ? { fileName: m.fileName } : {}
+    });
+  }
+  merged.sort((a, b) => (a.timestamp ?? "").localeCompare(b.timestamp ?? ""));
+  res.setHeader("Cache-Control", "no-store");
+  return res.status(200).json({
+    success: true,
+    imported: merged.length,
+    contactName: getConversation(conversationId)?.contactName ?? `+${phoneStr}`,
+    messages: merged
+  });
+}
+
 // _api/email/accounts.ts
 init_adminFirebase();
 init_emailCache();
@@ -3259,7 +3380,7 @@ function stripTokens(account) {
   const { accessToken, refreshToken, ...safe } = account;
   return safe;
 }
-async function handler14(req, res) {
+async function handler15(req, res) {
   try {
     if (req.method === "GET") {
       const { userId } = req.query ?? {};
@@ -3311,7 +3432,7 @@ var SCOPES = [
 function generateId() {
   return `gmail_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
-async function handler15(req, res) {
+async function handler16(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -3443,7 +3564,7 @@ var SCOPES2 = [
 function generateId2() {
   return `microsoft_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
-async function handler16(req, res) {
+async function handler17(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -3575,7 +3696,7 @@ async function loadAccount(accountId) {
   if (!account) throw new Error(`Account ${accountId} not found`);
   return account;
 }
-async function handler17(req, res) {
+async function handler18(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -3740,7 +3861,7 @@ function buildMicrosoftPayload(params) {
   };
   return { message, saveToSentItems: true };
 }
-async function handler18(req, res) {
+async function handler19(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -3913,7 +4034,7 @@ function applyLocalCacheUpdate(accountId, messageId, action) {
       break;
   }
 }
-async function handler19(req, res) {
+async function handler20(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -3991,7 +4112,7 @@ function buildMsDraftPayload(params) {
     isDraft: true
   };
 }
-async function handler20(req, res) {
+async function handler21(req, res) {
   try {
     const url = req.url ?? "";
     const query = req.query ?? {};
@@ -4080,7 +4201,7 @@ async function handler20(req, res) {
 // _api/email/sync.ts
 init_emailSync();
 init_emailCache();
-async function handler21(req, res) {
+async function handler22(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -4187,7 +4308,7 @@ function searchCache(accountId, q, folder) {
   }
   return results;
 }
-async function handler22(req, res) {
+async function handler23(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -4247,7 +4368,7 @@ var DEFAULT_SETTINGS = {
   previewPane: "right",
   emailsPerPage: 50
 };
-async function handler23(req, res) {
+async function handler24(req, res) {
   try {
     if (req.method === "GET") {
       const { userId } = req.query ?? {};
@@ -4295,7 +4416,7 @@ async function handler23(req, res) {
 // _api/email/stats.ts
 init_adminFirebase();
 init_emailCache();
-async function handler24(req, res) {
+async function handler25(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -4371,6 +4492,7 @@ app.get("/api/webhook/whatsapp", handleVerify);
 app.post("/api/webhook/whatsapp", handleEvent);
 app.get("/api/meta/status", handler13);
 app.post("/api/meta/send", handler12);
+app.get("/api/meta/messages", handler14);
 app.post("/api/proxy/openrouter/request", async (req, res) => {
   const { apiKey, method, endpoint, data } = req.body;
   if (!apiKey) return res.status(400).json({ error: "API Key is required" });
@@ -4431,22 +4553,22 @@ app.post("/api/cron/email-sync", async (_req, res) => {
   syncAllAccounts().catch(console.error);
   res.json({ ok: true });
 });
-app.all("/api/email/accounts", handler14);
-app.all("/api/email/auth/gmail/init", handler15);
-app.all("/api/email/auth/gmail/callback", handler15);
-app.all("/api/email/auth/microsoft/init", handler16);
-app.all("/api/email/auth/microsoft/callback", handler16);
-app.all("/api/email/messages", handler17);
-app.all("/api/email/messages/:id", handler17);
-app.all("/api/email/send", handler18);
-app.all("/api/email/action", handler19);
-app.all("/api/email/drafts", handler20);
-app.all("/api/email/draft", handler20);
-app.all("/api/email/draft/:id", handler20);
-app.all("/api/email/sync", handler21);
-app.all("/api/email/search", handler22);
-app.all("/api/email/settings", handler23);
-app.all("/api/email/stats", handler24);
+app.all("/api/email/accounts", handler15);
+app.all("/api/email/auth/gmail/init", handler16);
+app.all("/api/email/auth/gmail/callback", handler16);
+app.all("/api/email/auth/microsoft/init", handler17);
+app.all("/api/email/auth/microsoft/callback", handler17);
+app.all("/api/email/messages", handler18);
+app.all("/api/email/messages/:id", handler18);
+app.all("/api/email/send", handler19);
+app.all("/api/email/action", handler20);
+app.all("/api/email/drafts", handler21);
+app.all("/api/email/draft", handler21);
+app.all("/api/email/draft/:id", handler21);
+app.all("/api/email/sync", handler22);
+app.all("/api/email/search", handler23);
+app.all("/api/email/settings", handler24);
+app.all("/api/email/stats", handler25);
 var server_default = app;
 export {
   server_default as default

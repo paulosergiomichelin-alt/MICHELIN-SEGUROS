@@ -1,5 +1,12 @@
 import { fsSet, fsUpdate, fsQuery } from '../lib/adminFirebase.js';
 import { MetaAPI } from '../lib/metaApi.js';
+import {
+  setConversation, setMessage, getConversation,
+  CachedConversation, CachedMessage,
+} from '../lib/conversationCache.js';
+import { emitToSession } from '../lib/socketRegistry.js';
+
+export const META_SESSION_ID = 'meta';
 
 // ─── Verify (GET) ─────────────────────────────────────────────────────────────
 export function handleVerify(req: any, res: any) {
@@ -129,6 +136,47 @@ async function handleIncomingMessage(msg: any, profileName?: string) {
     unreadCount: (lead.unreadCount ?? 0) + 1,
     updatedAt: ts,
   });
+
+  // ── Popula cache em memória → painel WhatsApp ─────────────────────────────
+  const existingConv = getConversation(conversationId);
+  const cachedConv: CachedConversation = {
+    id: conversationId,
+    sessionId: META_SESSION_ID,
+    sessionName: META_SESSION_ID,
+    phone: from,
+    contactName: existingConv?.contactName || profileName || `+${from}`,
+    contactPicture: existingConv?.contactPicture,
+    lastMessage: text.slice(0, 200),
+    lastMessageAt: ts,
+    lastMessageDirection: 'inbound',
+    updatedAt: ts,
+    unreadCount: (existingConv?.unreadCount ?? 0) + 1,
+    organizationId,
+    leadId: lead.id,
+  };
+  setConversation(cachedConv);
+
+  const cachedMsg: CachedMessage = {
+    id: msgId,
+    conversationId,
+    sessionId: META_SESSION_ID,
+    direction: 'inbound',
+    messageType: msgType,
+    body: text,
+    phone: from,
+    contactName: cachedConv.contactName,
+    timestamp: ts,
+    status: 'received',
+    organizationId,
+    ...(mediaUrl ? { mediaUrl } : {}),
+    ...(mimeType ? { mimeType } : {}),
+    ...(fileName ? { fileName } : {}),
+  };
+  setMessage(cachedMsg);
+
+  // Notifica o painel em tempo real via socket
+  emitToSession(META_SESSION_ID, 'wa:chat_upsert', cachedConv);
+  emitToSession(META_SESSION_ID, 'wa:message_upsert', cachedMsg);
 
   // Auto mark-as-read
   MetaAPI.markAsRead(wamid).catch(() => {});

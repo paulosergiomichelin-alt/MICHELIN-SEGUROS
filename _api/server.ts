@@ -20,6 +20,7 @@ import evolutionWebhookHandler from './webhook/evolution.js';
 import whatsappWebhookHandler, { handleVerify, handleEvent } from './webhook/whatsapp.js';
 import metaSendHandler from './meta/send.js';
 import metaStatusHandler from './meta/status.js';
+import metaMessagesHandler from './meta/messages.js';
 
 import emailAccountsHandler from './email/accounts.js';
 import emailGmailAuthHandler from './email/auth/gmail.js';
@@ -69,8 +70,9 @@ app.post('/api/datadog/llm-obs', async (req: any, res: any) => {
 // Meta WhatsApp Cloud API
 app.get('/api/webhook/whatsapp',  handleVerify);
 app.post('/api/webhook/whatsapp', handleEvent);
-app.get('/api/meta/status',       metaStatusHandler);
-app.post('/api/meta/send',        metaSendHandler);
+app.get('/api/meta/status',        metaStatusHandler);
+app.post('/api/meta/send',         metaSendHandler);
+app.get('/api/meta/messages',      metaMessagesHandler);
 
 // OpenRouter proxy
 app.post('/api/proxy/openrouter/request', async (req: any, res: any) => {

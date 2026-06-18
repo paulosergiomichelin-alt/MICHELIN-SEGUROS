@@ -48,10 +48,10 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode; userProfile
         setSessions(filtered);
         setLoading(false);
 
-        // Auto-select first open session if none selected
+        // Auto-select first open session if none selected; fallback to Meta
         if (!selectedSessionName) {
           const open = filtered.find(s => s.status === 'open');
-          if (open) setSelectedSessionName(open.sessionName);
+          setSelectedSessionName(open ? open.sessionName : 'meta');
         }
       },
       false,

@@ -17,6 +17,8 @@ import { ContactSidePanel } from './ContactSidePanel';
 import { useNavigate } from 'react-router-dom';
 import { useBrowserNotifications } from '../../hooks/useBrowserNotifications';
 
+const META_SESSION_NAME = 'meta';
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 function patchConversation(conversationId: string, patch: Record<string, unknown>) {
@@ -447,7 +449,13 @@ export const WhatsAppInboxPage: React.FC = () => {
   useEffect(() => {
     if (!selectedConv || !selectedSessionName) { setMessages([]); return; }
     setMsgLoading(true);
-    fetch(`/api/evolution/messages?session=${encodeURIComponent(selectedSessionName)}&phone=${encodeURIComponent(selectedConv.phone)}`)
+
+    const isMeta = selectedSessionName === META_SESSION_NAME;
+    const url = isMeta
+      ? `/api/meta/messages?phone=${encodeURIComponent(selectedConv.phone)}`
+      : `/api/evolution/messages?session=${encodeURIComponent(selectedSessionName)}&phone=${encodeURIComponent(selectedConv.phone)}`;
+
+    fetch(url)
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data.messages)) setMessages(data.messages as WhatsAppMessage[]);
@@ -456,7 +464,7 @@ export const WhatsAppInboxPage: React.FC = () => {
       .finally(() => setMsgLoading(false));
 
     if ((selectedConv.unreadCount ?? 0) > 0) {
-      patchConversation(selectedConv.id, { unreadCount: 0 });
+      if (!isMeta) patchConversation(selectedConv.id, { unreadCount: 0 });
       setConversations(prev => prev.map(c => c.id === selectedConv.id ? { ...c, unreadCount: 0 } : c));
     }
   }, [selectedConv?.id, selectedSessionName]);
@@ -472,7 +480,15 @@ export const WhatsAppInboxPage: React.FC = () => {
     setInputText('');
     setSending(true);
     try {
-      await EvolutionService.sendMessage(selectedSessionName, selectedConv.phone, text);
+      if (selectedSessionName === META_SESSION_NAME) {
+        await fetch('/api/meta/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: selectedConv.phone, type: 'text', message: text }),
+        });
+      } else {
+        await EvolutionService.sendMessage(selectedSessionName, selectedConv.phone, text);
+      }
     } finally {
       setSending(false);
     }
@@ -486,19 +502,27 @@ export const WhatsAppInboxPage: React.FC = () => {
     if (!selectedSessionName || syncing) return;
     setSyncing(true);
     setSyncResult(null);
-    const orgId = sessions.find(s => s.sessionName === selectedSessionName)?.organizationId;
-    const result = await EvolutionService.syncConversations(selectedSessionName, orgId);
-    if (result) {
-      await loadConversations(selectedSessionName);
-      setSyncResult(`${result.conversationsImported} conversa(s) sincronizada(s)`);
-      setTimeout(() => setSyncResult(null), 4000);
+    if (selectedSessionName === META_SESSION_NAME) {
+      // Meta: apenas recarrega do cache/Firestore
+      await loadConversations(META_SESSION_NAME);
+      setSyncResult('Meta: conversas atualizadas');
+      setTimeout(() => setSyncResult(null), 3000);
+    } else {
+      const orgId = sessions.find(s => s.sessionName === selectedSessionName)?.organizationId;
+      const result = await EvolutionService.syncConversations(selectedSessionName, orgId);
+      if (result) {
+        await loadConversations(selectedSessionName);
+        setSyncResult(`${result.conversationsImported} conversa(s) sincronizada(s)`);
+        setTimeout(() => setSyncResult(null), 4000);
+      }
     }
     setSyncing(false);
   }, [selectedSessionName, syncing, sessions, loadConversations]);
 
-  // Auto-sync quando lista vazia
+  // Auto-sync quando lista vazia (apenas Evolution)
   useEffect(() => {
-    if (!selectedSessionName || autoSyncedRef.current || convLoading) return;
+    if (!selectedSessionName || selectedSessionName === META_SESSION_NAME) return;
+    if (autoSyncedRef.current || convLoading) return;
     if (conversations.length === 0) {
       autoSyncedRef.current = true;
       handleSync();
@@ -530,27 +554,9 @@ export const WhatsAppInboxPage: React.FC = () => {
     return acc;
   }, []);
 
-  const hasActiveSession = activeSessions.length > 0;
-
-  if (!sessionsLoading && !hasActiveSession) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-5 bg-[#0b141a]">
-        <div className="w-20 h-20 rounded-2xl bg-[#202c33] border border-white/10 flex items-center justify-center">
-          <WifiOff className="w-10 h-10 text-white/20" />
-        </div>
-        <div className="text-center">
-          <p className="text-[#e9edef] font-bold text-sm">Nenhum WhatsApp conectado</p>
-          <p className="text-[#8696a0] text-xs mt-1">Conecte seu WhatsApp para começar a receber mensagens</p>
-        </div>
-        <button
-          onClick={() => navigate('/whatsapp/sessoes')}
-          className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-400 transition-all"
-        >
-          <Smartphone className="w-4 h-4" /> Conectar WhatsApp
-        </button>
-      </div>
-    );
-  }
+  // Permite exibir o painel se há sessões Evolution ativas OU se o canal Meta
+  // está sempre disponível (aba fixa).
+  const hasActiveSession = activeSessions.length > 0 || selectedSessionName === META_SESSION_NAME;
 
   // Presence label para o header
   const convPresence = selectedConv
@@ -586,9 +592,23 @@ export const WhatsAppInboxPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Session selector */}
-          {sessions.length > 1 && (
+          {/* Session selector — Evolution + Meta Oficial */}
+          {(activeSessions.length > 0 || true) && (
             <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+              {/* Aba Meta Oficial — sempre visível */}
+              <button
+                onClick={() => setSelectedSessionName(META_SESSION_NAME)}
+                className={cn(
+                  'flex items-center gap-1 px-2 py-1 rounded-full text-[8.5px] font-black uppercase tracking-tight shrink-0 transition-all border',
+                  selectedSessionName === META_SESSION_NAME
+                    ? 'bg-[#CFA764] text-[#0a0a0a] border-[#CFA764]'
+                    : 'bg-[#111b21] text-[#8696a0] border-transparent hover:bg-[#2a3942]'
+                )}
+              >
+                <MessageSquare className="w-2.5 h-2.5" />
+                Meta Oficial
+              </button>
+              {/* Abas Evolution */}
               {activeSessions.map(s => (
                 <button
                   key={s.sessionName}
