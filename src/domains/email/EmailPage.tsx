@@ -81,11 +81,16 @@ function getInitials(name?: string, email?: string): string {
   return src.slice(0, 2).toUpperCase();
 }
 
+// 1×1 transparent GIF — substitui cid: inline images que o browser não consegue
+// resolver fora de um cliente de e-mail nativo (evita ERR_UNKNOWN_URL_SCHEME).
+const TRANSPARENT_GIF = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
 function sanitizeHtml(html: string): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, '')
-    .replace(/javascript:/gi, 'void:');
+    .replace(/javascript:/gi, 'void:')
+    .replace(/src\s*=\s*["']cid:[^"']*["']/gi, `src="${TRANSPARENT_GIF}"`);
 }
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
