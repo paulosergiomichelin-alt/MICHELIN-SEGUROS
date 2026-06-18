@@ -22,19 +22,24 @@ interface PermissionsContextType {
 
 const PermissionsContext = createContext<PermissionsContextType | undefined>(undefined);
 
-const isDeepEqual = (a: any, b: any): boolean => {
+// Fields that update frequently (activity tracking, timestamps) are excluded from
+// comparison so writes by updateUserActivity don't cause spurious re-renders.
+const VOLATILE_USER_KEYS = new Set(['activity', 'updatedAt', 'lastActivityAt', 'lastSeenAt']);
+
+const isDeepEqual = (a: any, b: any, topLevel = true): boolean => {
   if (a === b) return true;
   if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
-  
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  
+
+  const filter = (keys: string[]) => topLevel ? keys.filter(k => !VOLATILE_USER_KEYS.has(k)) : keys;
+  const keysA = filter(Object.keys(a));
+  const keysB = filter(Object.keys(b));
+
   if (keysA.length !== keysB.length) return false;
-  
+
   for (const key of keysA) {
     if (!keysB.includes(key)) return false;
     if (typeof a[key] === 'object' && typeof b[key] === 'object') {
-      if (!isDeepEqual(a[key], b[key])) return false;
+      if (!isDeepEqual(a[key], b[key], false)) return false;
     } else if (a[key] !== b[key]) {
       return false;
     }

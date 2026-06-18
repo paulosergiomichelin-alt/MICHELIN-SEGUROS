@@ -75,6 +75,7 @@ function AppInternal() {
     };
   }, []);
 
+  // Sync RUM + DataService when profile data changes (name, role, etc.)
   useEffect(() => {
     if (userProfile) {
       console.log("USER_ROLE_IN_APP", userProfile.role);
@@ -84,27 +85,27 @@ function AppInternal() {
       clearRUMUser();
     }
     DataService.setCurrentUser(userProfile);
-
-    // Activity tracking logic - Optimized with throttle in DataService
-    if (userProfile?.uid) {
-      const handleActivity = () => {
-        DataService.updateUserActivity(userProfile.uid!);
-      };
-
-      window.addEventListener('mousemove', handleActivity);
-      window.addEventListener('keydown', handleActivity);
-      window.addEventListener('click', handleActivity);
-
-      // Initial update
-      DataService.updateUserActivity(userProfile.uid);
-
-      return () => {
-        window.removeEventListener('mousemove', handleActivity);
-        window.removeEventListener('keydown', handleActivity);
-        window.removeEventListener('click', handleActivity);
-      };
-    }
   }, [userProfile]);
+
+  // Activity tracking — depends only on uid so event listeners are not re-registered
+  // every time a volatile field like activity.lastAccess changes in Firestore.
+  useEffect(() => {
+    if (!userProfile?.uid) return;
+    const uid = userProfile.uid;
+    const handleActivity = () => DataService.updateUserActivity(uid);
+
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('click', handleActivity);
+    DataService.updateUserActivity(uid);
+
+    return () => {
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('click', handleActivity);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.uid]);
 
   useEffect(() => {
     // 1. Listen to Visual Identity changes
