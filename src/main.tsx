@@ -1,9 +1,11 @@
 import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import App from './App';
+import PoliticaPrivacidade from './pages/PoliticaPrivacidade';
+import ExclusaoDeDados from './pages/ExclusaoDeDados';
 import './index.css';
 import './lib/pdf-init';
 import { logger } from './services/LoggerService';
@@ -35,7 +37,11 @@ window.addEventListener('unhandledrejection', (event) => {
 
 createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
-    <App />
+    <Routes>
+      <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
+      <Route path="/exclusao-de-dados" element={<ExclusaoDeDados />} />
+      <Route path="*" element={<App />} />
+    </Routes>
     <Analytics />
     <SpeedInsights />
   </BrowserRouter>,
