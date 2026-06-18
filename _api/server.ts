@@ -17,6 +17,9 @@ import evolutionReconcileHandler, { runReconcile } from './evolution/reconcile.j
 import evolutionMediaHandler from './evolution/media.js';
 import evolutionStatsHandler from './evolution/stats.js';
 import evolutionWebhookHandler from './webhook/evolution.js';
+import whatsappWebhookHandler, { handleVerify, handleEvent } from './webhook/whatsapp.js';
+import metaSendHandler from './meta/send.js';
+import metaStatusHandler from './meta/status.js';
 
 import emailAccountsHandler from './email/accounts.js';
 import emailGmailAuthHandler from './email/auth/gmail.js';
@@ -63,16 +66,11 @@ app.post('/api/datadog/llm-obs', async (req: any, res: any) => {
   } catch { res.status(204).end(); }
 });
 
-// WhatsApp Webhook
-app.get('/api/webhook/whatsapp', (req: any, res: any) => {
-  const { 'hub.mode': mode, 'hub.verify_token': token, 'hub.challenge': challenge } = req.query;
-  if (mode === 'subscribe' && token === process.env.WHATSAPP_VERIFY_TOKEN) res.status(200).send(challenge);
-  else res.sendStatus(403);
-});
-app.post('/api/webhook/whatsapp', (req: any, res: any) => {
-  if (req.body?.object === 'whatsapp_business_account') res.sendStatus(200);
-  else res.sendStatus(404);
-});
+// Meta WhatsApp Cloud API
+app.get('/api/webhook/whatsapp',  handleVerify);
+app.post('/api/webhook/whatsapp', handleEvent);
+app.get('/api/meta/status',       metaStatusHandler);
+app.post('/api/meta/send',        metaSendHandler);
 
 // OpenRouter proxy
 app.post('/api/proxy/openrouter/request', async (req: any, res: any) => {

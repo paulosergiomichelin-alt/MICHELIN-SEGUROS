@@ -60,9 +60,9 @@ function toFields(obj) {
   return out;
 }
 async function fsGet(collection, id) {
-  const token = await getToken();
+  const token2 = await getToken();
   const res = await fetch(`${FS_BASE}/documents/${collection}/${id}`, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${token2}` }
   });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`fsGet ${collection}/${id}: ${await res.text()}`);
@@ -71,29 +71,29 @@ async function fsGet(collection, id) {
   return fromFirestoreFields(doc.fields);
 }
 async function fsSet(collection, id, data) {
-  const token = await getToken();
+  const token2 = await getToken();
   const res = await fetch(`${FS_BASE}/documents/${collection}/${id}`, {
     method: "PATCH",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${token2}`, "Content-Type": "application/json" },
     body: JSON.stringify({ fields: toFields(data) })
   });
   if (!res.ok) throw new Error(`fsSet ${collection}/${id}: ${await res.text()}`);
 }
 async function fsUpdate(collection, id, data) {
-  const token = await getToken();
+  const token2 = await getToken();
   const mask = Object.keys(data).map((k) => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");
   const res = await fetch(`${FS_BASE}/documents/${collection}/${id}?${mask}`, {
     method: "PATCH",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${token2}`, "Content-Type": "application/json" },
     body: JSON.stringify({ fields: toFields(data) })
   });
   if (!res.ok) throw new Error(`fsUpdate ${collection}/${id}: ${await res.text()}`);
 }
 async function fsDelete(collection, id) {
-  const token = await getToken();
+  const token2 = await getToken();
   const res = await fetch(`${FS_BASE}/documents/${collection}/${id}`, {
     method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${token2}` }
   });
   if (!res.ok && res.status !== 404) {
     throw new Error(`fsDelete ${collection}/${id}: ${await res.text()}`);
@@ -126,10 +126,10 @@ function buildStructuredQuery(collection, filters, limitN) {
   return { structuredQuery: { from: [{ collectionId: collection }], where, limit: limitN } };
 }
 async function fsQuery(collection, filters) {
-  const token = await getToken();
+  const token2 = await getToken();
   const res = await fetch(`${FS_BASE}/documents:runQuery`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${token2}`, "Content-Type": "application/json" },
     body: JSON.stringify(buildStructuredQuery(collection, filters, 1))
   });
   if (!res.ok) throw new Error(`fsQuery ${collection}: ${await res.text()}`);
@@ -137,10 +137,10 @@ async function fsQuery(collection, filters) {
   return rows.filter((r) => r.document?.name).map((r) => ({ id: r.document.name.split("/").pop() }));
 }
 async function fsQueryFull(collection, filters, limitN = 500) {
-  const token = await getToken();
+  const token2 = await getToken();
   const res = await fetch(`${FS_BASE}/documents:runQuery`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${token2}`, "Content-Type": "application/json" },
     body: JSON.stringify(buildStructuredQuery(collection, filters, limitN))
   });
   if (!res.ok) throw new Error(`fsQueryFull ${collection}: ${await res.text()}`);
@@ -372,12 +372,12 @@ async function ensureValidToken(account) {
   return refreshGmailToken(account);
 }
 async function gmailRequest(account, path, opts = {}) {
-  const token = await ensureValidToken(account);
+  const token2 = await ensureValidToken(account);
   const url = path.startsWith("http") ? path : `${GMAIL_BASE}${path}`;
   const res = await fetch(url, {
     ...opts,
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${token2}`,
       "Content-Type": "application/json",
       ...opts.headers ?? {}
     }
@@ -631,12 +631,12 @@ async function ensureValidToken2(account) {
   return refreshMicrosoftToken(account);
 }
 async function graphRequest(account, path, opts = {}) {
-  const token = await ensureValidToken2(account);
+  const token2 = await ensureValidToken2(account);
   const url = path.startsWith("http") ? path : `${GRAPH_BASE}/${path}`;
   const res = await fetch(url, {
     ...opts,
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${token2}`,
       "Content-Type": "application/json",
       ...opts.headers ?? {}
     }
@@ -944,7 +944,7 @@ var init_emailSync = __esm({
 
 // _api/server.ts
 import express from "express";
-import axios from "axios";
+import axios2 from "axios";
 
 // _api/lib/evolutionApi.ts
 var EVOLUTION_API_URL = () => {
@@ -2705,6 +2705,553 @@ async function handler11(req, res) {
   }
 }
 
+// _api/webhook/whatsapp.ts
+init_adminFirebase();
+
+// _api/lib/metaApi.ts
+import axios from "axios";
+var GRAPH_URL = "https://graph.facebook.com/v23.0";
+var MAX_RETRIES = 3;
+var TIMEOUT_MS = 15e3;
+function token() {
+  const t = process.env.META_ACCESS_TOKEN;
+  if (!t) throw new Error("[MetaAPI] META_ACCESS_TOKEN n\xE3o definida");
+  return t;
+}
+function phoneNumberId() {
+  const id = process.env.META_PHONE_NUMBER_ID ?? process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!id) throw new Error("[MetaAPI] META_PHONE_NUMBER_ID n\xE3o definida");
+  return id;
+}
+function authHeaders2() {
+  return {
+    Authorization: `Bearer ${token()}`,
+    "Content-Type": "application/json"
+  };
+}
+async function post(endpoint, data, retries = MAX_RETRIES) {
+  const url = `${GRAPH_URL}${endpoint}`;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await axios.post(url, data, {
+        headers: authHeaders2(),
+        timeout: TIMEOUT_MS
+      });
+      return res.data;
+    } catch (err) {
+      const axErr = err;
+      const status = axErr.response?.status ?? 0;
+      const errData = axErr.response?.data;
+      const code = errData?.error?.code;
+      if (status === 429 || code === 80007) {
+        const wait = attempt * 3e3;
+        console.warn(`[MetaAPI] Rate limit (tentativa ${attempt}/${retries}), aguardando ${wait}ms`);
+        await new Promise((r) => setTimeout(r, wait));
+        continue;
+      }
+      if (attempt < retries && (status >= 500 || status === 0)) {
+        console.warn(`[MetaAPI] Erro ${status} em ${endpoint}, retry ${attempt}/${retries}`);
+        await new Promise((r) => setTimeout(r, 1500 * attempt));
+        continue;
+      }
+      console.error(`[MetaAPI] POST ${endpoint} falhou (${status}):`, JSON.stringify(errData));
+      throw new Error(`MetaAPI error ${status}: ${errData?.error?.message ?? axErr.message}`);
+    }
+  }
+}
+async function get(endpoint) {
+  const url = `${GRAPH_URL}${endpoint}`;
+  try {
+    const res = await axios.get(url, { headers: authHeaders2(), timeout: TIMEOUT_MS });
+    return res.data;
+  } catch (err) {
+    const axErr = err;
+    const status = axErr.response?.status ?? 0;
+    const errData = axErr.response?.data;
+    console.error(`[MetaAPI] GET ${endpoint} falhou (${status}):`, JSON.stringify(errData));
+    throw new Error(`MetaAPI error ${status}: ${errData?.error?.message ?? axErr.message}`);
+  }
+}
+var MetaAPI = {
+  async sendText(to, body) {
+    const phone = normalizePhone(to);
+    console.log(`[MetaAPI] sendText \u2192 ${phone}`);
+    return post(`/${phoneNumberId()}/messages`, {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: phone,
+      type: "text",
+      text: { preview_url: false, body }
+    });
+  },
+  async sendImage(to, imageUrl, caption) {
+    const phone = normalizePhone(to);
+    console.log(`[MetaAPI] sendImage \u2192 ${phone}`);
+    return post(`/${phoneNumberId()}/messages`, {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: phone,
+      type: "image",
+      image: { link: imageUrl, ...caption ? { caption } : {} }
+    });
+  },
+  async sendDocument(to, documentUrl, filename, caption) {
+    const phone = normalizePhone(to);
+    console.log(`[MetaAPI] sendDocument \u2192 ${phone}`);
+    return post(`/${phoneNumberId()}/messages`, {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: phone,
+      type: "document",
+      document: { link: documentUrl, filename, ...caption ? { caption } : {} }
+    });
+  },
+  async sendAudio(to, audioUrl) {
+    const phone = normalizePhone(to);
+    console.log(`[MetaAPI] sendAudio \u2192 ${phone}`);
+    return post(`/${phoneNumberId()}/messages`, {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: phone,
+      type: "audio",
+      audio: { link: audioUrl }
+    });
+  },
+  async sendTemplate(to, templateName, languageCode, components) {
+    const phone = normalizePhone(to);
+    console.log(`[MetaAPI] sendTemplate '${templateName}' \u2192 ${phone}`);
+    return post(`/${phoneNumberId()}/messages`, {
+      messaging_product: "whatsapp",
+      to: phone,
+      type: "template",
+      template: {
+        name: templateName,
+        language: { code: languageCode },
+        ...components ? { components } : {}
+      }
+    });
+  },
+  async markAsRead(messageId) {
+    try {
+      return await post(`/${phoneNumberId()}/messages`, {
+        messaging_product: "whatsapp",
+        status: "read",
+        message_id: messageId
+      });
+    } catch (err) {
+      console.warn(`[MetaAPI] markAsRead ${messageId} falhou:`, err);
+      return null;
+    }
+  },
+  async downloadMedia(mediaId) {
+    try {
+      const info = await get(`/${mediaId}`);
+      return { url: info.url, mimeType: info.mime_type, fileSize: info.file_size };
+    } catch (err) {
+      console.error(`[MetaAPI] downloadMedia ${mediaId} falhou:`, err);
+      return null;
+    }
+  },
+  async getPhoneNumberInfo() {
+    return get(`/${phoneNumberId()}?fields=id,display_phone_number,verified_name,quality_rating,platform_type,throughput,webhook_configuration`);
+  },
+  async getProfile(wabaId) {
+    const id = wabaId ?? process.env.META_WABA_ID;
+    if (!id) return null;
+    return get(`/${id}?fields=id,name,timezone_id,currency,message_template_namespace`);
+  },
+  async validateToken() {
+    try {
+      const data = await get("/me");
+      return { valid: true, name: data.name, id: data.id };
+    } catch (err) {
+      return { valid: false, error: err.message };
+    }
+  }
+};
+function normalizePhone(phone) {
+  return phone.replace(/\D/g, "");
+}
+
+// _api/webhook/whatsapp.ts
+function handleVerify(req, res) {
+  const mode = req.query?.["hub.mode"];
+  const token2 = req.query?.["hub.verify_token"];
+  const challenge = req.query?.["hub.challenge"];
+  const expected = process.env.META_VERIFY_TOKEN ?? process.env.WHATSAPP_VERIFY_TOKEN;
+  if (!expected) {
+    console.error("[WEBHOOK/META] Verify token n\xE3o definido");
+    return res.status(500).json({ error: "Server misconfigured" });
+  }
+  if (mode === "subscribe" && token2 === expected) {
+    console.log("[WEBHOOK/META] Verifica\xE7\xE3o OK \u2713");
+    return res.status(200).send(challenge);
+  }
+  console.warn(`[WEBHOOK/META] Token inv\xE1lido. Esperado: ${expected}, recebido: ${token2}`);
+  return res.status(403).json({ error: "Forbidden" });
+}
+function handleEvent(req, res) {
+  const body = req.body;
+  if (body?.object === "whatsapp_business_account") {
+    res.status(200).json({ status: "ok" });
+    processWebhook(body).catch(
+      (err) => console.error("[WEBHOOK/META] Erro ao processar evento:", err)
+    );
+  } else {
+    res.status(200).end();
+  }
+}
+async function processWebhook(body) {
+  for (const entry of body.entry ?? []) {
+    for (const change of entry.changes ?? []) {
+      if (change.field !== "messages") continue;
+      const val = change.value ?? {};
+      const contacts = val.contacts ?? [];
+      const messages = val.messages ?? [];
+      const statuses = val.statuses ?? [];
+      const profileMap = {};
+      for (const c of contacts) {
+        if (c.wa_id) profileMap[c.wa_id] = c.profile?.name ?? "";
+      }
+      for (const msg of messages) {
+        await handleIncomingMessage(msg, profileMap[msg.from]).catch(
+          (err) => console.error("[WEBHOOK/META] handleIncomingMessage error:", err)
+        );
+      }
+      for (const status of statuses) {
+        await handleStatus(status).catch(
+          (err) => console.error("[WEBHOOK/META] handleStatus error:", err)
+        );
+      }
+    }
+  }
+}
+async function handleIncomingMessage(msg, profileName) {
+  const from = msg.from;
+  const wamid = msg.id;
+  const ts = new Date(Number(msg.timestamp) * 1e3).toISOString();
+  const msgType = msg.type ?? "unknown";
+  const { text, mediaId, mimeType, fileName } = extractContent(msg);
+  console.log(`[WEBHOOK/META] \u2190 ${msgType} de ${from}: "${text.slice(0, 80)}"`);
+  const existing = await fsQuery("messages", [{ field: "wamid", value: wamid }]);
+  if (existing.length > 0) {
+    console.log(`[WEBHOOK/META] Msg ${wamid} j\xE1 existe, ignorando`);
+    return;
+  }
+  const organizationId = process.env.META_ORG_ID ?? "default";
+  const lead = await findOrCreateLead(from, organizationId, ts, profileName);
+  const conversationId = `meta_${from}`;
+  const msgId = `meta_in_${wamid}`;
+  let mediaUrl = null;
+  if (mediaId) {
+    const media = await MetaAPI.downloadMedia(mediaId).catch(() => null);
+    mediaUrl = media?.url ?? null;
+  }
+  await fsSet("messages", msgId, {
+    id: msgId,
+    leadId: lead.id,
+    organizationId,
+    sender: "lead",
+    channel: "whatsapp_meta",
+    messageType: msgType,
+    text,
+    wamid,
+    status: "received",
+    timestamp: ts,
+    conversationId,
+    direction: "inbound",
+    ...mediaUrl ? { mediaUrl } : {},
+    ...mimeType ? { mimeType } : {},
+    ...fileName ? { fileName } : {},
+    createdAt: ts
+  });
+  await fsUpdate("leads", lead.id, {
+    lastMessage: text.slice(0, 200),
+    lastMessageAt: ts,
+    lastMessageDirection: "inbound",
+    lastInteractionAt: ts,
+    unreadCount: (lead.unreadCount ?? 0) + 1,
+    updatedAt: ts
+  });
+  MetaAPI.markAsRead(wamid).catch(() => {
+  });
+}
+async function handleStatus(status) {
+  const wamid = status.id;
+  const newStatus = status.status;
+  const phone = status.recipient_id;
+  const ts = new Date(Number(status.timestamp) * 1e3).toISOString();
+  console.log(`[WEBHOOK/META] Status ${wamid} \u2192 ${newStatus}`);
+  const docs = await fsQuery("messages", [{ field: "wamid", value: wamid }]);
+  for (const doc of docs) {
+    await fsUpdate("messages", doc.id, { status: newStatus, statusUpdatedAt: ts });
+  }
+  if (newStatus === "failed") {
+    const errors = status.errors ?? [];
+    console.error(`[WEBHOOK/META] Entrega falhou para ${phone}:`, JSON.stringify(errors));
+  }
+}
+function extractContent(msg) {
+  const type = msg.type;
+  if (type === "text") {
+    return { text: msg.text?.body ?? "", mediaId: null, mimeType: null, fileName: null };
+  }
+  if (type === "image") {
+    return {
+      text: msg.image?.caption ?? "[imagem]",
+      mediaId: msg.image?.id ?? null,
+      mimeType: msg.image?.mime_type ?? "image/jpeg",
+      fileName: null
+    };
+  }
+  if (type === "document") {
+    return {
+      text: msg.document?.caption ?? msg.document?.filename ?? "[documento]",
+      mediaId: msg.document?.id ?? null,
+      mimeType: msg.document?.mime_type ?? "application/octet-stream",
+      fileName: msg.document?.filename ?? "arquivo"
+    };
+  }
+  if (type === "audio" || type === "voice") {
+    return {
+      text: "[\xE1udio]",
+      mediaId: msg.audio?.id ?? msg.voice?.id ?? null,
+      mimeType: msg.audio?.mime_type ?? msg.voice?.mime_type ?? "audio/ogg",
+      fileName: null
+    };
+  }
+  if (type === "video") {
+    return {
+      text: msg.video?.caption ?? "[v\xEDdeo]",
+      mediaId: msg.video?.id ?? null,
+      mimeType: msg.video?.mime_type ?? "video/mp4",
+      fileName: null
+    };
+  }
+  if (type === "sticker") {
+    return {
+      text: "[sticker]",
+      mediaId: msg.sticker?.id ?? null,
+      mimeType: msg.sticker?.mime_type ?? "image/webp",
+      fileName: null
+    };
+  }
+  if (type === "location") {
+    const { latitude, longitude, name, address } = msg.location ?? {};
+    return {
+      text: `[localiza\xE7\xE3o] ${name ?? ""} ${address ?? ""} (${latitude}, ${longitude})`.trim(),
+      mediaId: null,
+      mimeType: null,
+      fileName: null
+    };
+  }
+  if (type === "contacts") {
+    const names = (msg.contacts ?? []).map(
+      (c) => `${c.name?.formatted_name ?? ""}`.trim()
+    ).join(", ");
+    return { text: `[contato] ${names}`, mediaId: null, mimeType: null, fileName: null };
+  }
+  if (type === "button") {
+    return { text: msg.button?.text ?? "[bot\xE3o]", mediaId: null, mimeType: null, fileName: null };
+  }
+  if (type === "interactive") {
+    const reply = msg.interactive?.button_reply ?? msg.interactive?.list_reply;
+    return {
+      text: reply?.title ?? msg.interactive?.type ?? "[interativo]",
+      mediaId: null,
+      mimeType: null,
+      fileName: null
+    };
+  }
+  if (type === "order") {
+    return { text: "[pedido]", mediaId: null, mimeType: null, fileName: null };
+  }
+  if (type === "system") {
+    return { text: msg.system?.body ?? "[sistema]", mediaId: null, mimeType: null, fileName: null };
+  }
+  return { text: `[${type}]`, mediaId: null, mimeType: null, fileName: null };
+}
+async function findOrCreateLead(phone, organizationId, now, profileName) {
+  const existing = await fsQuery("leads", [
+    { field: "phone", value: phone },
+    { field: "organizationId", value: organizationId }
+  ]);
+  if (existing.length > 0) {
+    return existing[0];
+  }
+  const id = `wa_${phone}_${Date.now()}`;
+  const name = profileName?.trim() || `WhatsApp ${phone}`;
+  await fsSet("leads", id, {
+    id,
+    phone,
+    name,
+    status: "Novo Lead",
+    organizationId,
+    iaActive: false,
+    responsibleAgentType: "human",
+    source: "whatsapp_meta",
+    channel: "whatsapp_meta",
+    createdAt: now,
+    updatedAt: now,
+    ownerId: "system",
+    unreadCount: 0
+  });
+  console.log(`[WEBHOOK/META] Novo lead criado: ${id} (${phone})`);
+  return { id, organizationId, unreadCount: 0 };
+}
+
+// _api/meta/send.ts
+init_adminFirebase();
+async function handler12(req, res) {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  const { to, type = "text", message, imageUrl, documentUrl, filename, audioUrl, templateName, languageCode, components, caption } = req.body ?? {};
+  if (!to) return res.status(400).json({ error: 'Campo "to" obrigat\xF3rio' });
+  const organizationId = process.env.META_ORG_ID ?? "default";
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  let result;
+  try {
+    switch (type) {
+      case "text":
+        if (!message) return res.status(400).json({ error: 'Campo "message" obrigat\xF3rio para texto' });
+        result = await MetaAPI.sendText(to, message);
+        break;
+      case "image":
+        if (!imageUrl) return res.status(400).json({ error: 'Campo "imageUrl" obrigat\xF3rio' });
+        result = await MetaAPI.sendImage(to, imageUrl, caption);
+        break;
+      case "document":
+        if (!documentUrl) return res.status(400).json({ error: 'Campo "documentUrl" obrigat\xF3rio' });
+        result = await MetaAPI.sendDocument(to, documentUrl, filename ?? "documento", caption);
+        break;
+      case "audio":
+        if (!audioUrl) return res.status(400).json({ error: 'Campo "audioUrl" obrigat\xF3rio' });
+        result = await MetaAPI.sendAudio(to, audioUrl);
+        break;
+      case "template":
+        if (!templateName) return res.status(400).json({ error: 'Campo "templateName" obrigat\xF3rio' });
+        result = await MetaAPI.sendTemplate(to, templateName, languageCode ?? "pt_BR", components);
+        break;
+      default:
+        return res.status(400).json({ error: `Tipo '${type}' n\xE3o suportado` });
+    }
+    const wamid = result?.messages?.[0]?.id;
+    try {
+      const phone = to.replace(/\D/g, "");
+      const lead = await findOrCreateLead2(phone, organizationId, now);
+      const msgId = `meta_out_${wamid ?? Date.now()}`;
+      const conversationId = `meta_${phone}`;
+      await fsSet("messages", msgId, {
+        id: msgId,
+        leadId: lead.id,
+        organizationId,
+        sender: "agent",
+        channel: "whatsapp_meta",
+        messageType: type,
+        text: message ?? caption ?? `[${type}]`,
+        wamid: wamid ?? null,
+        status: "sent",
+        timestamp: now,
+        conversationId,
+        direction: "outbound",
+        createdAt: now
+      });
+      await fsUpdate("leads", lead.id, {
+        lastMessage: message ?? caption ?? `[${type}]`,
+        lastMessageAt: now,
+        lastMessageDirection: "outbound",
+        updatedAt: now
+      });
+    } catch (dbErr) {
+      console.error("[META/send] Erro ao persistir mensagem:", dbErr);
+    }
+    return res.status(200).json({ success: true, wamid, raw: result });
+  } catch (err) {
+    console.error("[META/send] Erro ao enviar:", err.message);
+    return res.status(500).json({ error: err.message });
+  }
+}
+async function findOrCreateLead2(phone, organizationId, now) {
+  const existing = await fsQuery("leads", [
+    { field: "phone", value: phone },
+    { field: "organizationId", value: organizationId }
+  ]);
+  if (existing.length > 0) return existing[0];
+  const id = `wa_${phone}_${Date.now()}`;
+  await fsSet("leads", id, {
+    id,
+    phone,
+    name: `WhatsApp ${phone}`,
+    status: "Novo Lead",
+    organizationId,
+    iaActive: false,
+    source: "whatsapp_meta",
+    createdAt: now,
+    updatedAt: now,
+    ownerId: "system"
+  });
+  return { id, organizationId };
+}
+
+// _api/meta/status.ts
+async function handler13(req, res) {
+  if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
+  const phoneNumberId2 = process.env.META_PHONE_NUMBER_ID ?? process.env.WHATSAPP_PHONE_NUMBER_ID ?? "";
+  const wabaId = process.env.META_WABA_ID ?? "";
+  const verifyToken = process.env.META_VERIFY_TOKEN ?? process.env.WHATSAPP_VERIFY_TOKEN ?? "";
+  const tokenPresent = !!process.env.META_ACCESS_TOKEN;
+  const report = {
+    config: {
+      phoneNumberId: phoneNumberId2 || null,
+      wabaId: wabaId || null,
+      verifyToken: verifyToken ? "***" + verifyToken.slice(-4) : null,
+      tokenPresent
+    },
+    token: { valid: false },
+    phoneNumber: null,
+    waba: null,
+    webhook: {
+      verifyTokenSet: !!verifyToken,
+      url: `${req.protocol}://${req.get("host")}/api/webhook/whatsapp`
+    },
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  try {
+    const tokenCheck = await MetaAPI.validateToken();
+    report.token = tokenCheck;
+  } catch (err) {
+    report.token = { valid: false, error: err.message };
+  }
+  if (phoneNumberId2) {
+    try {
+      const info = await MetaAPI.getPhoneNumberInfo();
+      report.phoneNumber = {
+        id: info.id,
+        displayNumber: info.display_phone_number,
+        verifiedName: info.verified_name,
+        qualityRating: info.quality_rating,
+        throughput: info.throughput
+      };
+    } catch (err) {
+      report.phoneNumber = { error: err.message };
+    }
+  }
+  if (wabaId) {
+    try {
+      const waba = await MetaAPI.getProfile(wabaId);
+      report.waba = {
+        id: waba.id,
+        name: waba.name,
+        currency: waba.currency,
+        messageTemplateNamespace: waba.message_template_namespace
+      };
+    } catch (err) {
+      report.waba = { error: err.message };
+    }
+  }
+  const allOk = report.token.valid && !!report.phoneNumber?.displayNumber;
+  return res.status(200).json({ ok: allOk, ...report });
+}
+
 // _api/email/accounts.ts
 init_adminFirebase();
 init_emailCache();
@@ -2712,7 +3259,7 @@ function stripTokens(account) {
   const { accessToken, refreshToken, ...safe } = account;
   return safe;
 }
-async function handler12(req, res) {
+async function handler14(req, res) {
   try {
     if (req.method === "GET") {
       const { userId } = req.query ?? {};
@@ -2764,7 +3311,7 @@ var SCOPES = [
 function generateId() {
   return `gmail_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
-async function handler13(req, res) {
+async function handler15(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -2896,7 +3443,7 @@ var SCOPES2 = [
 function generateId2() {
   return `microsoft_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
-async function handler14(req, res) {
+async function handler16(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -3028,7 +3575,7 @@ async function loadAccount(accountId) {
   if (!account) throw new Error(`Account ${accountId} not found`);
   return account;
 }
-async function handler15(req, res) {
+async function handler17(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -3193,7 +3740,7 @@ function buildMicrosoftPayload(params) {
   };
   return { message, saveToSentItems: true };
 }
-async function handler16(req, res) {
+async function handler18(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -3366,7 +3913,7 @@ function applyLocalCacheUpdate(accountId, messageId, action) {
       break;
   }
 }
-async function handler17(req, res) {
+async function handler19(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -3444,7 +3991,7 @@ function buildMsDraftPayload(params) {
     isDraft: true
   };
 }
-async function handler18(req, res) {
+async function handler20(req, res) {
   try {
     const url = req.url ?? "";
     const query = req.query ?? {};
@@ -3533,7 +4080,7 @@ async function handler18(req, res) {
 // _api/email/sync.ts
 init_emailSync();
 init_emailCache();
-async function handler19(req, res) {
+async function handler21(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -3640,7 +4187,7 @@ function searchCache(accountId, q, folder) {
   }
   return results;
 }
-async function handler20(req, res) {
+async function handler22(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -3700,7 +4247,7 @@ var DEFAULT_SETTINGS = {
   previewPane: "right",
   emailsPerPage: 50
 };
-async function handler21(req, res) {
+async function handler23(req, res) {
   try {
     if (req.method === "GET") {
       const { userId } = req.query ?? {};
@@ -3748,7 +4295,7 @@ async function handler21(req, res) {
 // _api/email/stats.ts
 init_adminFirebase();
 init_emailCache();
-async function handler22(req, res) {
+async function handler24(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -3810,7 +4357,7 @@ app.post("/api/datadog/llm-obs", async (req, res) => {
   const site = process.env.DD_SITE || "us5.datadoghq.com";
   if (!apiKey) return res.status(204).end();
   try {
-    const r = await axios.post(
+    const r = await axios2.post(
       `https://api.${site}/api/intake/llm-observability/v1/api/traces`,
       req.body,
       { headers: { "DD-API-KEY": apiKey, "Content-Type": "application/json" }, timeout: 5e3 }
@@ -3820,20 +4367,15 @@ app.post("/api/datadog/llm-obs", async (req, res) => {
     res.status(204).end();
   }
 });
-app.get("/api/webhook/whatsapp", (req, res) => {
-  const { "hub.mode": mode, "hub.verify_token": token, "hub.challenge": challenge } = req.query;
-  if (mode === "subscribe" && token === process.env.WHATSAPP_VERIFY_TOKEN) res.status(200).send(challenge);
-  else res.sendStatus(403);
-});
-app.post("/api/webhook/whatsapp", (req, res) => {
-  if (req.body?.object === "whatsapp_business_account") res.sendStatus(200);
-  else res.sendStatus(404);
-});
+app.get("/api/webhook/whatsapp", handleVerify);
+app.post("/api/webhook/whatsapp", handleEvent);
+app.get("/api/meta/status", handler13);
+app.post("/api/meta/send", handler12);
 app.post("/api/proxy/openrouter/request", async (req, res) => {
   const { apiKey, method, endpoint, data } = req.body;
   if (!apiKey) return res.status(400).json({ error: "API Key is required" });
   try {
-    const r = await axios({
+    const r = await axios2({
       method: method || "GET",
       url: `https://openrouter.ai/api/v1${endpoint}`,
       headers: {
@@ -3856,7 +4398,7 @@ app.post("/api/proxy/openrouter/auth", async (req, res) => {
   const { apiKey } = req.body;
   if (!apiKey) return res.status(400).json({ error: "API Key is required" });
   try {
-    const r = await axios.get("https://openrouter.ai/api/v1/auth/key", {
+    const r = await axios2.get("https://openrouter.ai/api/v1/auth/key", {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "HTTP-Referer": `https://${req.get("host")}`,
@@ -3889,22 +4431,22 @@ app.post("/api/cron/email-sync", async (_req, res) => {
   syncAllAccounts().catch(console.error);
   res.json({ ok: true });
 });
-app.all("/api/email/accounts", handler12);
-app.all("/api/email/auth/gmail/init", handler13);
-app.all("/api/email/auth/gmail/callback", handler13);
-app.all("/api/email/auth/microsoft/init", handler14);
-app.all("/api/email/auth/microsoft/callback", handler14);
-app.all("/api/email/messages", handler15);
-app.all("/api/email/messages/:id", handler15);
-app.all("/api/email/send", handler16);
-app.all("/api/email/action", handler17);
-app.all("/api/email/drafts", handler18);
-app.all("/api/email/draft", handler18);
-app.all("/api/email/draft/:id", handler18);
-app.all("/api/email/sync", handler19);
-app.all("/api/email/search", handler20);
-app.all("/api/email/settings", handler21);
-app.all("/api/email/stats", handler22);
+app.all("/api/email/accounts", handler14);
+app.all("/api/email/auth/gmail/init", handler15);
+app.all("/api/email/auth/gmail/callback", handler15);
+app.all("/api/email/auth/microsoft/init", handler16);
+app.all("/api/email/auth/microsoft/callback", handler16);
+app.all("/api/email/messages", handler17);
+app.all("/api/email/messages/:id", handler17);
+app.all("/api/email/send", handler18);
+app.all("/api/email/action", handler19);
+app.all("/api/email/drafts", handler20);
+app.all("/api/email/draft", handler20);
+app.all("/api/email/draft/:id", handler20);
+app.all("/api/email/sync", handler21);
+app.all("/api/email/search", handler22);
+app.all("/api/email/settings", handler23);
+app.all("/api/email/stats", handler24);
 var server_default = app;
 export {
   server_default as default
