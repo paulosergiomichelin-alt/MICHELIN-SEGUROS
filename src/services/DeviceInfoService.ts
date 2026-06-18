@@ -37,41 +37,30 @@ class DeviceInfoServiceClass {
     return 'desktop';
   }
 
+  private parseLocation(): string {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Desconhecido';
+    } catch {
+      return 'Desconhecido';
+    }
+  }
+
   async getInfo(): Promise<DeviceInfo> {
     if (this.cached) return this.cached;
     if (this.promise) return this.promise;
 
-    this.promise = (async () => {
+    this.promise = Promise.resolve().then(() => {
       const ua = navigator.userAgent;
-      let ip = '0.0.0.0';
-      let location = 'Desconhecido';
-
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 2000);
-        const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
-        clearTimeout(timeout);
-        if (res.ok) {
-          const data = await res.json();
-          ip = data.ip || '0.0.0.0';
-          const city = data.city || '';
-          const region = data.region_code || '';
-          location = [city, region].filter(Boolean).join('-') || data.country_name || 'Desconhecido';
-        }
-      } catch {
-        // Serviço de geolocalização indisponível — usa defaults sem logar erro
-      }
-
       this.cached = {
-        ip,
+        ip: '0.0.0.0',
         userAgent: ua,
         deviceType: this.parseDeviceType(ua),
         browser: this.parseBrowser(ua),
         os: this.parseOS(ua),
-        location,
+        location: this.parseLocation(),
       };
       return this.cached;
-    })();
+    });
 
     return this.promise;
   }
