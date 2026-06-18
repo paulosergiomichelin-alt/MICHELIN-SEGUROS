@@ -63,20 +63,23 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode; userProfile
 
   const activeSessions = sessions.filter(s => s.status === 'open');
 
-  // ── Contagem de conversas não lidas ──────────────────────────────────────────
+  // ── Contagem de conversas não lidas (cache-only, não cria listener realtime) ─
   useEffect(() => {
     if (!orgId || sessions.length === 0) { setTotalUnreadWA(0); return; }
     const sessionNames = new Set(sessions.map(s => s.sessionName).filter(Boolean));
+
+    // forceRealtime=false: usa cache se disponível — evita carregar centenas de
+    // documentos em tempo real só para exibir um badge numérico.
     const unsub = DataService.subscribeCollection(
       'whatsapp_conversations',
-      [limit(300)],
+      [limit(100)],
       (data: any[]) => {
         const total = data
           .filter(c => sessionNames.has(c.sessionName))
           .reduce((sum, c) => sum + Math.max(0, c.unreadCount ?? 0), 0);
         setTotalUnreadWA(total);
       },
-      true,
+      false,
       () => setTotalUnreadWA(0),
     );
     return unsub;

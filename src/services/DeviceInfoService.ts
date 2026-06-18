@@ -48,7 +48,7 @@ class DeviceInfoServiceClass {
 
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 4000);
+        const timeout = setTimeout(() => controller.abort(), 2000);
         const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
         clearTimeout(timeout);
         if (res.ok) {
@@ -59,7 +59,7 @@ class DeviceInfoServiceClass {
           location = [city, region].filter(Boolean).join('-') || data.country_name || 'Desconhecido';
         }
       } catch {
-        // offline ou bloqueado — usa defaults
+        // Serviço de geolocalização indisponível — usa defaults sem logar erro
       }
 
       this.cached = {

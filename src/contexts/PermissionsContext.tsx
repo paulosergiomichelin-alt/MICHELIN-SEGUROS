@@ -49,6 +49,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [error, setError] = useState<string | null>(null);
   
   const lastUpdateRef = useRef<UserProfile | null>(null);
+  const repairInProgressRef = useRef(false);
 
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
@@ -83,21 +84,22 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
           organizationId: userData.organizationId || 'default'
         } as UserProfile;
 
-        // Auto-repair missing fields if needed (only if any are strictly falsy/missing)
+        // Auto-repair missing fields — guard prevents the Firestore write from
+        // triggering another snapshot → another repair → infinite loop.
         const needsRepair = !userData.organizationId || !userData.userType || !userData.status || !userData.role || !userData.permissions || (!userData.profileId && !userData.accessProfileId);
-        if (needsRepair) {
-           console.log("[USER_PROFILE] Deep Repair triggered:", { uid: user.uid });
-           
-           // Determine default permissions if missing
-           const defaultPerms = userData.permissions || (userData.role === 'admin' ? {
-             canReadAllLeads: true,
-             canWriteAllLeads: true,
-             canDelete: true,
-             canAccessSettings: true,
-             canManageUsers: true
-           } : EMPTY_PERMISSIONS);
+        if (needsRepair && !repairInProgressRef.current) {
+          repairInProgressRef.current = true;
+          console.log("[USER_PROFILE] Deep Repair triggered:", { uid: user.uid });
 
-           DataService.update('users', user.uid, {
+          const defaultPerms = userData.permissions || (userData.role === 'admin' ? {
+            canReadAllLeads: true,
+            canWriteAllLeads: true,
+            canDelete: true,
+            canAccessSettings: true,
+            canManageUsers: true
+          } : EMPTY_PERMISSIONS);
+
+          DataService.update('users', user.uid, {
             organizationId: userData.organizationId || 'default',
             userType: userData.userType || 'HUMAN',
             status: userData.status || 'active',
@@ -105,7 +107,9 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
             permissions: defaultPerms,
             accessProfileId: userData.accessProfileId || 'default_atendente',
             updatedAt: new Date().toISOString()
-          }).catch(err => console.error("FAILED_TO_REPAIR_USER", err));
+          })
+            .catch(err => console.error("FAILED_TO_REPAIR_USER", err))
+            .finally(() => { repairInProgressRef.current = false; });
         }
 
         if (!isDeepEqual(lastUpdateRef.current, profile)) {
