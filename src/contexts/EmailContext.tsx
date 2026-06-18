@@ -220,7 +220,33 @@ interface EmailContextType {
   setDefaultAccount: (accountId: string) => Promise<void>;
 }
 
-const EmailContext = createContext<EmailContextType | undefined>(undefined);
+// Valor padrão garante que useEmail() nunca lança mesmo se o provider ainda
+// não montou (ex: Sidebar renderiza antes do EmailProvider durante HMR ou
+// numa rota pública). Os no-ops evitam crash; o estado ficará vazio até
+// o EmailProvider inicializar.
+const noop = async () => {};
+const DEFAULT_EMAIL_CTX: EmailContextType = {
+  state: { ...initialState, loading: false },
+  loadAccounts: noop,
+  selectAccount: () => {},
+  changeFolder: () => {},
+  loadMessages: noop,
+  loadMoreMessages: noop,
+  openMessage: noop,
+  doAction: noop,
+  openComposer: () => {},
+  closeComposer: () => {},
+  triggerSync: noop,
+  search: noop,
+  clearSearch: () => {},
+  loadStats: noop,
+  loadSettings: noop,
+  saveSettings: noop,
+  deleteAccount: noop,
+  setDefaultAccount: noop,
+};
+
+const EmailContext = createContext<EmailContextType>(DEFAULT_EMAIL_CTX);
 
 const PAGE_LIMIT = 30;
 
@@ -561,8 +587,4 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 };
 
-export const useEmail = (): EmailContextType => {
-  const ctx = useContext(EmailContext);
-  if (!ctx) throw new Error('useEmail must be used inside EmailProvider');
-  return ctx;
-};
+export const useEmail = (): EmailContextType => useContext(EmailContext);
