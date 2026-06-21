@@ -1,4 +1,4 @@
-﻿// Allow self-signed TLS certs (Evolution API VPS uses one). Safe in dev; production should use a valid cert.
+// Allow self-signed TLS certs (Evolution API VPS uses one). Safe in dev; production should use a valid cert.
 if (process.env.NODE_ENV !== 'production') {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
@@ -96,43 +96,26 @@ async function startServer() {
     }
   });
 
-  // â”€â”€ WhatsApp Webhook (Meta) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  app.get('/api/webhook/whatsapp', (req, res) => {
-    const mode      = req.query['hub.mode'];
-    const token     = req.query['hub.verify_token'];
-    const challenge = req.query['hub.challenge'];
-    const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
+  // ── Meta / WhatsApp Cloud API routes ─────────────────────────────────────────
+  const { handleVerify: metaVerify, handleEvent: metaEvent } = await import('./_api/webhook/whatsapp.js');
+  const { default: metaSendHandler }          = await import('./_api/meta/send.js');
+  const { default: metaStatusHandler }        = await import('./_api/meta/status.js');
+  const { default: metaMessagesHandler }      = await import('./_api/meta/messages.js');
+  const { default: metaConversationsHandler } = await import('./_api/meta/conversations.js');
 
-    if (mode === 'subscribe' && token === verifyToken) {
-      console.log('[WHATSAPP_WEBHOOK] VerificaÃ§Ã£o concluÃ­da com sucesso');
-      res.status(200).send(challenge);
-    } else {
-      console.warn('[WHATSAPP_WEBHOOK] Falha na verificaÃ§Ã£o â€” token invÃ¡lido');
-      res.sendStatus(403);
-    }
-  });
+  app.get('/api/webhook/whatsapp',   metaVerify);
+  app.post('/api/webhook/whatsapp',  metaEvent);
+  app.all('/api/meta/send',          metaSendHandler);
+  app.all('/api/meta/status',        metaStatusHandler);
+  app.all('/api/meta/messages',      metaMessagesHandler);
+  app.all('/api/meta/conversations', metaConversationsHandler);
+  console.log('[SERVER] Meta WhatsApp routes registradas');
 
-  app.post('/api/webhook/whatsapp', (req, res) => {
-    const body = req.body;
-    if (body?.object === 'whatsapp_business_account') {
-      const entries = body.entry ?? [];
-      for (const entry of entries) {
-        for (const change of entry.changes ?? []) {
-          if (change.field === 'messages') {
-            for (const msg of change.value?.messages ?? []) {
-              console.log('[WHATSAPP_WEBHOOK] Mensagem recebida:', JSON.stringify(msg));
-            }
-            for (const status of change.value?.statuses ?? []) {
-              console.log('[WHATSAPP_WEBHOOK] Status de entrega:', status.id, '->', status.status);
-            }
-          }
-        }
-      }
-      res.sendStatus(200);
-    } else {
-      res.sendStatus(404);
-    }
-  });
+  // ── Campaign routes ───────────────────────────────────────────────────────
+  const { default: campaignsStartHandler } = await import('./_api/campaigns/start.js');
+  const { default: campaignsPauseHandler } = await import('./_api/campaigns/pause.js');
+  app.all('/api/campaigns/start', campaignsStartHandler);
+  app.all('/api/campaigns/pause', campaignsPauseHandler);
 
   // Body-parser error handler (catches 413 before routes see it)
   app.use((err: any, _req: any, res: any, next: any) => {
@@ -304,4 +287,3 @@ async function startServer() {
 }
 
 startServer();
-

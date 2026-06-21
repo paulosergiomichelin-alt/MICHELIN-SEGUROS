@@ -149,7 +149,9 @@ export const EmailService = {
     ).then(r => r.json()),
 
   getMessage: (id: string, accountId: string): Promise<CachedEmail> =>
-    fetch(`/api/email/messages/${encodeURIComponent(id)}?accountId=${encodeURIComponent(accountId)}`).then(r => r.json()),
+    fetch(`/api/email/messages/${encodeURIComponent(id)}?accountId=${encodeURIComponent(accountId)}`)
+      .then(r => { if (!r.ok) throw new Error(`getMessage ${r.status}`); return r.json(); })
+      .then(data => { if (!data?.id) throw new Error('empty getMessage response'); return data; }),
 
   // ── Ações ───────────────────────────────────────────────────────────────────
   doAction: (

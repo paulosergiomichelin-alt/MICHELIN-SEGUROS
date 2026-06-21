@@ -39,6 +39,7 @@ interface EmailState {
   composerReplyTo: CachedEmail | null;
   unreadByFolder: Record<string, number>;
   error: string | null;
+  needsRefresh?: boolean;
 }
 
 const DEFAULT_STATS: EmailStats = {
@@ -98,7 +99,8 @@ type EmailAction =
   | { type: 'CLOSE_COMPOSER' }
   | { type: 'SET_UNREAD_BY_FOLDER'; payload: Record<string, number> }
   | { type: 'INCREMENT_UNREAD'; payload: string }
-  | { type: 'SET_ERROR'; payload: string | null };
+  | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'SET_NEEDS_REFRESH'; payload: boolean };
 
 function emailReducer(state: EmailState, action: EmailAction): EmailState {
   switch (action.type) {
@@ -192,6 +194,8 @@ function emailReducer(state: EmailState, action: EmailAction): EmailState {
     }
     case 'SET_ERROR':
       return { ...state, error: action.payload };
+    case 'SET_NEEDS_REFRESH':
+      return { ...state, needsRefresh: action.payload };
     default:
       return state;
   }
@@ -257,6 +261,8 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const { userProfile } = usePermissions();
   const socketRef = useRef<Socket | null>(null);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stateRef = useRef(state);
+  useEffect(() => { stateRef.current = state; }, [state]);
 
   // ── Socket.IO ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -270,7 +276,7 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       if (data.type === 'new' && data.message) {
         const folder = data.folder || 'inbox';
-        if (state.currentFolder === folder) {
+        if (stateRef.current.currentFolder === folder) {
           dispatch({ type: 'PREPEND_MESSAGE', payload: data.message });
         }
         dispatch({ type: 'INCREMENT_UNREAD', payload: folder });
@@ -346,8 +352,8 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     dispatch({ type: 'SET_FOLDER', payload: folder });
   }, []);
 
-  const loadMessages = useCallback(async (reset = true) => {
-    const { selectedAccountId, currentFolder } = state;
+  const loadMessages = useCallback(async (_reset = true) => {
+    const { selectedAccountId, currentFolder } = stateRef.current;
     if (!selectedAccountId) return;
 
     dispatch({ type: 'SET_MESSAGES_LOADING', payload: true });
@@ -377,10 +383,11 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       dispatch({ type: 'SET_MESSAGES_LOADING', payload: false });
     }
-  }, [state]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadMoreMessages = useCallback(async () => {
-    const { selectedAccountId, currentFolder, page, hasMore, messagesLoading } = state;
+    const { selectedAccountId, currentFolder, page, hasMore, messagesLoading } = stateRef.current;
     if (!selectedAccountId || !hasMore || messagesLoading) return;
 
     const nextPage = page + 1;
@@ -400,7 +407,8 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       dispatch({ type: 'SET_MESSAGES_LOADING', payload: false });
     }
-  }, [state]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openMessage = useCallback(async (message: CachedEmail) => {
     dispatch({ type: 'SET_SELECTED_MESSAGE', payload: message });
@@ -414,16 +422,18 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!message.bodyHtml && !message.bodyText) {
       try {
         const full = await EmailService.getMessage(message.id, message.accountId);
-        dispatch({ type: 'UPDATE_MESSAGE', payload: full });
-        dispatch({ type: 'SET_SELECTED_MESSAGE', payload: full });
+        if (full?.id) {
+          dispatch({ type: 'UPDATE_MESSAGE', payload: full });
+          dispatch({ type: 'SET_SELECTED_MESSAGE', payload: full });
+        }
       } catch {
-        // non-critical
+        // non-critical — keep showing the message with snippet only
       }
     }
   }, []);
 
   const doAction = useCallback(async (messageId: string, action: string) => {
-    const { selectedAccountId } = state;
+    const { selectedAccountId } = stateRef.current;
     if (!selectedAccountId) return;
 
     // Optimistic UI update
@@ -438,10 +448,11 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       await EmailService.doAction(selectedAccountId, messageId, action as any);
     } catch {
-      // Reload on error to re-sync state
-      loadMessages();
+      // Despachar refresh flag em vez de chamar loadMessages diretamente (evita circular dependency)
+      dispatch({ type: 'SET_NEEDS_REFRESH', payload: true });
     }
-  }, [state, loadMessages]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openComposer = useCallback((
     mode: EmailState['composerMode'] = 'new',
@@ -455,7 +466,7 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const triggerSync = useCallback(async () => {
-    const { selectedAccountId, syncing } = state;
+    const { selectedAccountId, syncing } = stateRef.current;
     if (!selectedAccountId || syncing) return;
 
     dispatch({ type: 'SET_SYNCING', payload: true });
@@ -467,10 +478,11 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       dispatch({ type: 'SET_SYNCING', payload: false });
     }
-  }, [state, loadMessages]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadMessages]);
 
   const search = useCallback(async (query: string) => {
-    const { selectedAccountId } = state;
+    const { selectedAccountId } = stateRef.current;
     if (!selectedAccountId) return;
 
     dispatch({ type: 'SET_SEARCH_QUERY', payload: query });
@@ -488,7 +500,8 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       dispatch({ type: 'SET_IS_SEARCHING', payload: false });
     }
-  }, [state]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const clearSearch = useCallback(() => {
     dispatch({ type: 'SET_SEARCH_QUERY', payload: '' });
@@ -550,6 +563,14 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       dispatch({ type: 'SET_ERROR', payload: 'Falha ao definir conta padrão.' });
     }
   }, [loadAccounts]);
+
+  // Reagir ao needsRefresh (disparado por doAction em caso de erro)
+  useEffect(() => {
+    if (state.needsRefresh) {
+      dispatch({ type: 'SET_NEEDS_REFRESH', payload: false });
+      loadMessages();
+    }
+  }, [state.needsRefresh, loadMessages]);
 
   // Auto-load messages when account or folder changes
   useEffect(() => {

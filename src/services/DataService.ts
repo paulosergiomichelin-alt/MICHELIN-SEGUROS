@@ -99,6 +99,9 @@ export class DataService {
     'whatsapp_conversation': 'whatsapp_conversations',
     'whatsapp_messages': 'whatsapp_messages',
     'whatsapp_message': 'whatsapp_messages',
+    'campaigns': 'campaigns',
+    'campaign': 'campaigns',
+    'campaign_log': 'campaign_log',
   };
 
   private static _lastOrgId: string | null = null;

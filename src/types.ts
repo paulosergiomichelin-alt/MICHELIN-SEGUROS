@@ -869,8 +869,13 @@ export interface Campaign {
   id: string;
   name: string;
   objective: string;
-  instructions: string;
-  status: 'idle' | 'running' | 'paused' | 'completed' | 'cancelled';
+  instructions?: string;
+  messageTemplate?: string;
+  sessionName?: string;
+  imageUrl?: string;
+  imageOrder?: 'before' | 'after' | '';
+  targetLeads?: string[];
+  status: 'idle' | 'running' | 'paused' | 'completed' | 'cancelled' | 'error';
   totalLeads: number;
   sentCount: number;
   errorCount: number;
@@ -878,7 +883,7 @@ export interface Campaign {
   createdAt: string;
   updatedAt: string;
   limit?: number;
-  interval?: number; // em segundos
+  interval?: number;
   filters?: {
     status?: LeadStatus[];
     temperature?: LeadTemperature[];

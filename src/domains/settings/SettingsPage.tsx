@@ -225,6 +225,55 @@ function EmpresaPerfil({ organizationId }: { organizationId: string }) {
   );
 }
 
+const WebhookUrlBox: React.FC = () => {
+  const [copied, setCopied] = useState(false);
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const productionUrl = 'https://michelin-seguros.vercel.app/api/webhook/whatsapp';
+  const webhookUrl = isLocalhost ? productionUrl : `${window.location.origin}/api/webhook/whatsapp`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(webhookUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="p-6 bg-gold-deep/5 rounded-3xl border border-gold-deep/10 space-y-4">
+      <h4 className="text-[10px] font-black text-gold-deep uppercase tracking-[0.2em] flex items-center gap-2">
+        <Info className="w-4 h-4" />
+        Configuração de Webhook
+      </h4>
+
+      {isLocalhost && (
+        <div className="flex items-start gap-2 p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-[9px] text-amber-300 leading-relaxed font-semibold">
+            A Meta não aceita <code className="font-mono">localhost</code>. Use a URL de produção (Vercel) abaixo.
+          </p>
+        </div>
+      )}
+
+      <div className="p-3 bg-black/50 rounded-xl border border-white/5 flex items-center gap-2 overflow-hidden">
+        <code className="text-[10px] font-mono text-gold-light truncate flex-1">{webhookUrl}</code>
+        <button
+          onClick={handleCopy}
+          title="Copiar URL"
+          className="shrink-0 p-1.5 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+        >
+          {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Save className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+
+      <p className="text-[9px] text-slate-400 leading-relaxed uppercase font-bold tracking-tight">
+        {isLocalhost
+          ? 'Faça o deploy para produção e configure este webhook no painel da Meta.'
+          : 'Aponte o seu Webhook da Meta para a URL acima para receber mensagens.'}
+      </p>
+    </div>
+  );
+};
+
 export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig, onUpdateVisualConfig, permissions, userProfile }: SettingsProps) {
   const { theme: currentTheme, setTheme: setAppTheme } = useTheme();
   const [activeSubTab, setActiveSubTab] = useState<'general' | 'diagnostic' | 'health' | 'admin' | 'visual' | 'ai_ocr' | 'empresa'>('general');
@@ -257,11 +306,15 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
       }
     }
 
-    return { 
+    return {
       webhookUrl: (n8nParsed as any).webhookUrl || '',
       apiKey: (n8nParsed as any).apiKey || '',
       whatsappApiUrl: (n8nParsed as any).whatsappApiUrl || '',
-      openrouterApiKey: loadedOrKey || (n8nParsed as any).openrouterApiKey || ''
+      openrouterApiKey: loadedOrKey || (n8nParsed as any).openrouterApiKey || '',
+      metaVerifyToken: (n8nParsed as any).metaVerifyToken || '',
+      metaAppSecret: (n8nParsed as any).metaAppSecret || '',
+      metaAccessToken: (n8nParsed as any).metaAccessToken || '',
+      whatsappPhoneId: (n8nParsed as any).whatsappPhoneId || '',
     };
   });
 
@@ -274,6 +327,20 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
     // Deterministic: no usage polling
   }, [config.openrouterApiKey]);
 
+  // Load Meta/Omnichannel config from Firestore on mount (overrides localStorage if set)
+  useEffect(() => {
+    DataService.get('config', 'omnichannel').then((data: any) => {
+      if (!data) return;
+      setConfig(prev => ({
+        ...prev,
+        metaVerifyToken: data.metaVerifyToken || prev.metaVerifyToken || '',
+        metaAppSecret: data.metaAppSecret || prev.metaAppSecret || '',
+        metaAccessToken: data.metaAccessToken || prev.metaAccessToken || '',
+        whatsappPhoneId: data.whatsappPhoneId || prev.whatsappPhoneId || '',
+      }));
+    }).catch(() => {});
+  }, []);
+
   const handleSave = useCallback(async (currentConfig: IntegrationConfig, testMode: boolean) => {
     console.log('[SETTINGS] handleSave triggered', { hasKey: !!currentConfig.openrouterApiKey, testMode });
     setAutoSaveStatus('saving');
@@ -285,6 +352,17 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
         await DataService.save('config', 'system', { isTestMode: testMode });
       } catch (e) {
         console.warn('Failed to sync system config to Firestore', e);
+      }
+
+      try {
+        await DataService.save('config', 'omnichannel', {
+          metaVerifyToken: currentConfig.metaVerifyToken || '',
+          metaAppSecret: currentConfig.metaAppSecret || '',
+          metaAccessToken: currentConfig.metaAccessToken || '',
+          whatsappPhoneId: currentConfig.whatsappPhoneId || '',
+        });
+      } catch (e) {
+        console.warn('Failed to sync omnichannel config to Firestore', e);
       }
 
       // Save functional configs
@@ -911,20 +989,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
               </div>
             ))}
 
-            <div className="p-6 bg-gold-deep/5 rounded-3xl border border-gold-deep/10 space-y-4">
-              <h4 className="text-[10px] font-black text-gold-deep uppercase tracking-[0.2em] flex items-center gap-2">
-                <Info className="w-4 h-4" />
-                Configuração de Webhook
-              </h4>
-              <div className="p-3 bg-black/50 rounded-xl border border-white/5 flex items-center justify-between overflow-hidden">
-                <code className="text-[10px] font-mono text-gold-light truncate flex-1">
-                  https://{window.location.host}/api/webhook
-                </code>
-              </div>
-              <p className="text-[9px] text-slate-400 leading-relaxed uppercase font-bold tracking-tight">
-                Aponte o seu Webhook da Meta para a URL acima para receber mensagens.
-              </p>
-            </div>
+            <WebhookUrlBox />
           </div>
         </section>
       </div>

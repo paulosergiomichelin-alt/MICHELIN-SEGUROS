@@ -428,7 +428,10 @@ export const WhatsAppInboxPage: React.FC = () => {
   const loadConversations = useCallback(async (sessionName: string) => {
     setConvLoading(true);
     try {
-      const r = await fetch(`/api/evolution/conversations?session=${encodeURIComponent(sessionName)}`);
+      const url = sessionName === META_SESSION_NAME
+        ? '/api/meta/conversations'
+        : `/api/evolution/conversations?session=${encodeURIComponent(sessionName)}`;
+      const r = await fetch(url);
       if (r.ok) {
         const data = await r.json();
         if (Array.isArray(data)) {

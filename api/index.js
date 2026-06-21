@@ -1156,6 +1156,30 @@ var EvolutionAPI = {
       return null;
     }
   },
+  async sendImage(instanceName, phone, mediaUrl, caption) {
+    try {
+      const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/message/sendMedia/${instanceName}`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          number: phone,
+          mediatype: "image",
+          media: mediaUrl,
+          caption: caption ?? "",
+          options: { delay: 1200, presence: "composing" }
+        })
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error(`[EvolutionAPI] sendImage ${instanceName}\u2192${phone} falhou (${res.status}): ${errText}`);
+        return null;
+      }
+      return await res.json();
+    } catch (err) {
+      console.error("[EvolutionAPI] sendImage error:", err);
+      return null;
+    }
+  },
   async fetchInstances() {
     try {
       const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/instance/fetchInstances`, {

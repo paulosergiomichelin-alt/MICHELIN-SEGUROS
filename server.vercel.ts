@@ -49,19 +49,25 @@ app.post('/api/datadog/llm-obs', async (req: any, res: any) => {
   } catch { res.status(204).end(); }
 });
 
-// WhatsApp Meta Webhook
-app.get('/api/webhook/whatsapp', (req: any, res: any) => {
-  const { 'hub.mode': mode, 'hub.verify_token': token, 'hub.challenge': challenge } = req.query;
-  if (mode === 'subscribe' && token === process.env.WHATSAPP_VERIFY_TOKEN) {
-    res.status(200).send(challenge);
-  } else {
-    res.sendStatus(403);
-  }
-});
-app.post('/api/webhook/whatsapp', (req: any, res: any) => {
-  if (req.body?.object === 'whatsapp_business_account') res.sendStatus(200);
-  else res.sendStatus(404);
-});
+// ── Meta / WhatsApp Cloud API routes ────────────────────────────────────────
+const { handleVerify: metaVerify, handleEvent: metaEvent } = await import('./_api/webhook/whatsapp.js');
+const { default: metaSendHandler }          = await import('./_api/meta/send.js');
+const { default: metaStatusHandler }        = await import('./_api/meta/status.js');
+const { default: metaMessagesHandler }      = await import('./_api/meta/messages.js');
+const { default: metaConversationsHandler } = await import('./_api/meta/conversations.js');
+
+const { default: campaignsStartHandler } = await import('./_api/campaigns/start.js');
+const { default: campaignsPauseHandler } = await import('./_api/campaigns/pause.js');
+
+app.all('/api/campaigns/start', campaignsStartHandler);
+app.all('/api/campaigns/pause', campaignsPauseHandler);
+
+app.get('/api/webhook/whatsapp',      metaVerify);
+app.post('/api/webhook/whatsapp',     metaEvent);
+app.all('/api/meta/send',             metaSendHandler);
+app.all('/api/meta/status',           metaStatusHandler);
+app.all('/api/meta/messages',         metaMessagesHandler);
+app.all('/api/meta/conversations',    metaConversationsHandler);
 
 // Body-parser error handler
 app.use((err: any, _req: any, res: any, next: any) => {
