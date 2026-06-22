@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Save, Link2, Key, Globe, RefreshCcw, CheckCircle2, AlertCircle, ShieldAlert, Code, Info, FileText, Bot, Wand2, Palette, Image as ImageIcon, Trash2, Upload, Moon, Sun, ShieldCheck, Lock, MessageSquare, BookOpen, Activity, Wrench, HelpCircle, Settings as Cog, Zap, Building2, Phone, Mail, Clock, Database, Users, Star, Shield } from 'lucide-react';
+import { Save, Link2, Key, Globe, RefreshCcw, CheckCircle2, AlertCircle, ShieldAlert, Code, Info, FileText, Bot, Wand2, Palette, Image as ImageIcon, Trash2, Upload, Moon, Sun, ShieldCheck, Lock, MessageSquare, BookOpen, Activity, Wrench, HelpCircle, Settings as Cog, Zap, Building2, Phone, Mail, Clock, Database, Users, Star, Shield, QrCode } from 'lucide-react';
 import { IntegrationConfig, VisualIdentityConfig, Theme, Permissions, UserProfile, Empresa } from '../../types';
 import { EmpresaService } from '../../services/EmpresaService';
 import { UserManagement } from '../admin/UserManagement';
@@ -19,6 +19,8 @@ import { auth } from '../../lib/firebase';
 import { CacheManager } from '../../services/CacheManager';
 import { AIDocumentExtractionPanel } from './AIDocumentExtractionPanel';
 import { AggerToolSettings } from '../../components/AggerToolSettings';
+import { AgentSettings } from './AgentSettings';
+import { SessionsPage } from '../whatsapp/SessionsPage';
 
 interface SettingsProps {
   canManageUsers?: boolean;
@@ -276,7 +278,7 @@ const WebhookUrlBox: React.FC = () => {
 
 export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig, onUpdateVisualConfig, permissions, userProfile }: SettingsProps) {
   const { theme: currentTheme, setTheme: setAppTheme } = useTheme();
-  const [activeSubTab, setActiveSubTab] = useState<'general' | 'diagnostic' | 'health' | 'admin' | 'visual' | 'ai_ocr' | 'empresa'>('general');
+  const [activeSubTab, setActiveSubTab] = useState<'general' | 'diagnostic' | 'health' | 'admin' | 'visual' | 'ai_ocr' | 'empresa' | 'sessoes_wa' | 'agente_ia'>('general');
 
   const [isDocsModalOpen, setIsDocsModalOpen] = useState(false);
   const [isTestMode, setIsTestMode] = useState<boolean>(() => {
@@ -660,6 +662,26 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
           <Bot className="w-3.5 h-3.5 flex-shrink-0" /> OCR IA
         </button>
 
+        <button
+          onClick={() => setActiveSubTab('sessoes_wa')}
+          className={cn(
+            "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
+            activeSubTab === 'sessoes_wa' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+          )}
+        >
+          <QrCode className="w-3.5 h-3.5 flex-shrink-0" /> Sessões WA
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('agente_ia')}
+          className={cn(
+            "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
+            activeSubTab === 'agente_ia' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+          )}
+        >
+          <Bot className="w-3.5 h-3.5 flex-shrink-0" /> Agente de IA
+        </button>
+
         {canManageUsers && (
           <button
             onClick={() => setActiveSubTab('diagnostic')}
@@ -1041,6 +1063,29 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
               <AdminTools />
               <PerformanceDashboard />
             </div>
+          </motion.div>
+        )}
+
+        {activeSubTab === 'sessoes_wa' && (
+          <motion.div
+            key="sessoes_wa"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <SessionsPage />
+          </motion.div>
+        )}
+
+        {activeSubTab === 'agente_ia' && (
+          <motion.div
+            key="agente_ia"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <AgentSettings
+              visualConfig={visualConfig}
+              onUpdate={async () => {}}
+            />
           </motion.div>
         )}
         </div>
