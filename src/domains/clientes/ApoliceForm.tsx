@@ -263,6 +263,7 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
     if (!form.produto) missing.push('Produto');
     if (!form.seguradoraId) missing.push('Seguradora');
     if (!form.fimVigencia) missing.push('Fim de Vigência');
+    if (!form.comissaoPct.trim()) missing.push('Comissão (%)');
     if (missing.length > 0) {
       setSaveError(`Preencha os campos obrigatórios: ${missing.join(', ')}`);
       return;
@@ -414,17 +415,17 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
                   onChange={e => set('valorTotal', fmtCurrency(e.target.value))} placeholder="0,00" />
               </div>
             </Field>
-            <Field label="Comissão (%)">
+            <Field label="Comissão (%)*">
               <div className="relative">
                 <input
-                  className={cn(inputCls, 'pr-8')}
+                  className={cn(inputCls, 'pr-8', !form.comissaoPct.trim() && 'border-amber-500/40')}
                   value={form.comissaoPct}
                   onChange={e => {
-                    // Allow only digits, comma and dot
                     const v = e.target.value.replace(/[^\d,.]/g, '');
                     set('comissaoPct', v);
                   }}
-                  placeholder="0,00"
+                  placeholder="10,00"
+                  required
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 text-[11px]">%</span>
               </div>

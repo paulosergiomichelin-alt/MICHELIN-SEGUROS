@@ -19,12 +19,6 @@ function fmtCurrency(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function avgPct(values: (number | null)[]): number | null {
-  const valid = values.filter((v): v is number => v !== null);
-  if (!valid.length) return null;
-  return valid.reduce((s, v) => s + v, 0) / valid.length;
-}
-
 function fmtShort(v: number) {
   if (v === 0) return '—';
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -34,7 +28,9 @@ export const RenovacoesPage: React.FC = () => {
   const { userProfile } = usePermissions();
   const [apolices, setApolices] = useState<Apolice[]>([]);
   const [selectedSeguradora, setSelectedSeguradora] = useState<string | null>(null);
+  const [selectedProduto, setSelectedProduto] = useState<string | null>(null);
   const [chartMetric, setChartMetric] = useState<'valor' | 'qtd'>('valor');
+  const [comissaoMetric, setComissaoMetric] = useState<'valor' | 'pct'>('valor');
 
   const organizationId = userProfile?.organizationId ?? 'default';
 
@@ -89,9 +85,10 @@ export const RenovacoesPage: React.FC = () => {
   }, []);
 
   const apolicesByMonth = useMemo(() => {
-    const filtered = selectedSeguradora
-      ? apolices.filter(a => a.seguradoraId === selectedSeguradora)
-      : apolices;
+    const filtered = apolices.filter(a =>
+      (!selectedSeguradora || a.seguradoraId === selectedSeguradora) &&
+      (!selectedProduto    || a.produto       === selectedProduto)
+    );
     const map: Record<string, { valorTotal: number; qtd: number }> = {};
     filtered.forEach(a => {
       const iso = a.inicioVigencia || a.createdAt;
@@ -102,7 +99,7 @@ export const RenovacoesPage: React.FC = () => {
       map[key].qtd += 1;
     });
     return map;
-  }, [apolices, selectedSeguradora]);
+  }, [apolices, selectedSeguradora, selectedProduto]);
 
   const chartData = useMemo(() =>
     last12Months.map(m => ({
@@ -138,7 +135,10 @@ export const RenovacoesPage: React.FC = () => {
     try { pytdE = format(new Date(py, now.getMonth(), now.getDate()), 'yyyy-MM-dd'); }
     catch { pytdE = `${py}-12-31`; }
 
-    const filtered = selectedSeguradora ? apolices.filter(a => a.seguradoraId === selectedSeguradora) : apolices;
+    const filtered = apolices.filter(a =>
+      (!selectedSeguradora || a.seguradoraId === selectedSeguradora) &&
+      (!selectedProduto    || a.produto       === selectedProduto)
+    );
     let t12V=0,t12Q=0, p12V=0,p12Q=0, ytdV=0,ytdQ=0, pytdV=0,pytdQ=0;
     filtered.forEach(a => {
       const iso = a.inicioVigencia || a.createdAt;
@@ -158,32 +158,37 @@ export const RenovacoesPage: React.FC = () => {
       crescYtdV: pytdV > 0 ? (ytdV  - pytdV) / pytdV * 100 : null,
       crescYtdQ: pytdQ > 0 ? (ytdQ  - pytdQ) / pytdQ * 100 : null,
     };
-  }, [apolices, selectedSeguradora, last12Months]);
+  }, [apolices, selectedSeguradora, selectedProduto, last12Months]);
 
   const comissaoByMonth = useMemo(() => {
-    const filtered = selectedSeguradora
-      ? apolices.filter(a => a.seguradoraId === selectedSeguradora)
-      : apolices;
-    const map: Record<string, { comissao: number; qtd: number }> = {};
+    const filtered = apolices.filter(a =>
+      (!selectedSeguradora || a.seguradoraId === selectedSeguradora) &&
+      (!selectedProduto    || a.produto       === selectedProduto)
+    );
+    const map: Record<string, { comissao: number; pctSum: number; qtd: number }> = {};
     filtered.forEach(a => {
       const iso = a.inicioVigencia || a.createdAt;
       if (!iso) return;
       const key = iso.substring(0, 7);
-      if (!map[key]) map[key] = { comissao: 0, qtd: 0 };
-      map[key].comissao += a.comissao ?? 0;
+      if (!map[key]) map[key] = { comissao: 0, pctSum: 0, qtd: 0 };
+      map[key].comissao += a.comissao    ?? 0;
+      map[key].pctSum   += a.comissaoPct ?? 0;
       map[key].qtd += 1;
     });
     return map;
-  }, [apolices, selectedSeguradora]);
+  }, [apolices, selectedSeguradora, selectedProduto]);
 
   const tableComissao = useMemo(() =>
     last12Months.map(m => {
-      const atual = comissaoByMonth[m.monthKey] ?? { comissao: 0, qtd: 0 };
-      const ant   = comissaoByMonth[m.prevKey]  ?? { comissao: 0, qtd: 0 };
+      const atual = comissaoByMonth[m.monthKey] ?? { comissao: 0, pctSum: 0, qtd: 0 };
+      const ant   = comissaoByMonth[m.prevKey]  ?? { comissao: 0, pctSum: 0, qtd: 0 };
       const cresc = ant.comissao > 0
         ? (atual.comissao - ant.comissao) / ant.comissao * 100
         : atual.comissao > 0 ? 100 : null;
-      return { ...m, atualComissao: atual.comissao, antComissao: ant.comissao, cresc };
+      const atualPct = atual.qtd > 0 ? atual.pctSum / atual.qtd : null;
+      const antPct   = ant.qtd   > 0 ? ant.pctSum   / ant.qtd   : null;
+      const crescPct = atualPct !== null && antPct !== null ? atualPct - antPct : null;
+      return { ...m, atualComissao: atual.comissao, antComissao: ant.comissao, cresc, atualPct, antPct, crescPct };
     }),
   [last12Months, comissaoByMonth]);
 
@@ -199,25 +204,38 @@ export const RenovacoesPage: React.FC = () => {
     try { pytdE = format(new Date(py, now.getMonth(), now.getDate()), 'yyyy-MM-dd'); }
     catch { pytdE = `${py}-12-31`; }
 
-    const filtered = selectedSeguradora ? apolices.filter(a => a.seguradoraId === selectedSeguradora) : apolices;
+    const filtered = apolices.filter(a =>
+      (!selectedSeguradora || a.seguradoraId === selectedSeguradora) &&
+      (!selectedProduto    || a.produto       === selectedProduto)
+    );
     let t12=0, p12=0, ytd=0, pytd=0;
+    let t12pct=0, p12pct=0, ytdpct=0, pytdpct=0;
+    let t12n=0, p12n=0, ytdn=0, pytdn=0;
     filtered.forEach(a => {
       const iso = a.inicioVigencia || a.createdAt;
       if (!iso) return;
       const key  = iso.substring(0, 7);
       const date = iso.substring(0, 10);
-      const val  = a.comissao ?? 0;
-      if (keys12.has(key)) t12  += val;
-      if (prev12.has(key)) p12  += val;
-      if (date >= ytdS  && date <= ytdE)  ytd  += val;
-      if (date >= pytdS && date <= pytdE) pytd += val;
+      const val  = a.comissao    ?? 0;
+      const pct  = a.comissaoPct ?? 0;
+      if (keys12.has(key)) { t12  += val; t12pct  += pct; t12n++;  }
+      if (prev12.has(key)) { p12  += val; p12pct  += pct; p12n++;  }
+      if (date >= ytdS  && date <= ytdE)  { ytd  += val; ytdpct  += pct; ytdn++;  }
+      if (date >= pytdS && date <= pytdE) { pytd += val; pytdpct += pct; pytdn++; }
     });
+    const rate12   = t12n  > 0 ? t12pct  / t12n  : null;
+    const rateP12  = p12n  > 0 ? p12pct  / p12n  : null;
+    const rateYtd  = ytdn  > 0 ? ytdpct  / ytdn  : null;
+    const ratePytd = pytdn > 0 ? pytdpct / pytdn  : null;
     return {
       t12, p12, ytd, pytd,
-      cresc12:  p12  > 0 ? (t12  - p12)  / p12  * 100 : null,
-      crescYtd: pytd > 0 ? (ytd  - pytd) / pytd * 100 : null,
+      rate12, rateP12, rateYtd, ratePytd,
+      cresc12:     p12   > 0 ? (t12  - p12)  / p12  * 100 : null,
+      crescYtd:    pytd  > 0 ? (ytd  - pytd) / pytd * 100 : null,
+      crescPct12:  rate12  !== null && rateP12  !== null ? rate12  - rateP12  : null,
+      crescPctYtd: rateYtd !== null && ratePytd !== null ? rateYtd - ratePytd : null,
     };
-  }, [apolices, selectedSeguradora, last12Months]);
+  }, [apolices, selectedSeguradora, selectedProduto, last12Months]);
 
   const ChartTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
@@ -331,16 +349,23 @@ export const RenovacoesPage: React.FC = () => {
               <BarChart2 className="w-4 h-4 text-gold-deep" />
               <h3 className="text-[10px] font-black text-white/60 uppercase tracking-widest">Carteira por Produto</h3>
               {selectedSeguradora && seguradoraNome && (
-                <div className="ml-auto flex items-center gap-1.5 bg-gold-deep/10 border border-gold-deep/20 rounded-full px-2 py-0.5">
-                  <span className="text-[9px] text-gold-deep font-bold truncate max-w-[80px]">{seguradoraNome}</span>
-                  <button
-                    onClick={() => setSelectedSeguradora(null)}
-                    className="text-gold-deep/60 hover:text-gold-deep transition-colors"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
+                <div className="flex items-center gap-1 bg-white/5 rounded-full px-2 py-0.5">
+                  <span className="text-[9px] text-gold-deep/70 font-bold truncate max-w-[60px]">{seguradoraNome}</span>
                 </div>
               )}
+              <div className="ml-auto">
+                {selectedProduto ? (
+                  <button
+                    onClick={() => setSelectedProduto(null)}
+                    className="flex items-center gap-1 text-[9px] font-black text-gold-deep/70 hover:text-gold-deep uppercase tracking-widest transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                    Limpar filtro
+                  </button>
+                ) : (
+                  <span className="text-[9px] text-white/25 font-medium">clique para filtrar</span>
+                )}
+              </div>
             </div>
             {byProduto.length === 0 ? (
               <p className="text-[11px] text-white/20">Sem dados</p>
@@ -355,10 +380,20 @@ export const RenovacoesPage: React.FC = () => {
                     ? apolices.filter(a => a.seguradoraId === selectedSeguradora).reduce((s, a) => s + (a.valorTotal ?? 0), 0)
                     : totalValor;
                   const pctValor = baseValor > 0 ? Math.round((valor / baseValor) * 100) : 0;
+                  const isSelected = selectedProduto === produto;
                   return (
-                    <div key={produto}>
+                    <button
+                      key={produto}
+                      onClick={() => setSelectedProduto(isSelected ? null : produto)}
+                      className={cn(
+                        'w-full text-left rounded-xl p-2.5 -mx-1 transition-colors',
+                        isSelected
+                          ? 'bg-gold-deep/10 border border-gold-deep/25'
+                          : 'hover:bg-white/3 border border-transparent',
+                      )}
+                    >
                       <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-[10px] text-white/60 font-medium">{produto}</span>
+                        <span className={cn('text-[10px] font-medium', isSelected ? 'text-white' : 'text-white/60')}>{produto}</span>
                         <div className="text-right">
                           <span className="text-[10px] text-white/70 font-mono">{count}</span>
                           <span className="text-[9px] text-white/40 ml-1">({pctCount}%)</span>
@@ -369,9 +404,9 @@ export const RenovacoesPage: React.FC = () => {
                         <span className="text-[9px] text-white/40">{pctValor}% do total</span>
                       </div>
                       <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                        <div className="h-full bg-gold-deep/40 rounded-full" style={{ width: `${pctValor}%` }} />
+                        <div className={cn('h-full rounded-full', isSelected ? 'bg-gold-deep' : 'bg-gold-deep/40')} style={{ width: `${pctValor}%` }} />
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -390,6 +425,14 @@ export const RenovacoesPage: React.FC = () => {
               <div className="flex items-center gap-1.5 bg-gold-deep/10 border border-gold-deep/20 rounded-full px-2 py-0.5">
                 <span className="text-[9px] text-gold-deep font-bold truncate max-w-[100px]">{seguradoraNome}</span>
                 <button onClick={() => setSelectedSeguradora(null)} className="text-gold-deep/60 hover:text-gold-deep transition-colors">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            {selectedProduto && (
+              <div className="flex items-center gap-1.5 bg-gold-deep/10 border border-gold-deep/20 rounded-full px-2 py-0.5">
+                <span className="text-[9px] text-gold-deep font-bold truncate max-w-[100px]">{selectedProduto}</span>
+                <button onClick={() => setSelectedProduto(null)} className="text-gold-deep/60 hover:text-gold-deep transition-colors">
                   <X className="w-3 h-3" />
                 </button>
               </div>
@@ -502,24 +545,21 @@ export const RenovacoesPage: React.FC = () => {
                   })}
                   <td className="py-2 px-2 text-center border-l border-white/5">
                     {(() => {
-                      const pct = avgPct(tableData.map(m => chartMetric === 'valor' ? m.crescValor : m.crescQtd));
+                      const pct = chartMetric === 'valor' ? tableTotals.cresc12V : tableTotals.cresc12Q;
                       return pct === null
                         ? <span className="text-white/20">—</span>
                         : <span className={cn('font-bold', pct >= 0 ? 'text-emerald-400' : 'text-red-400')}>
                             {pct >= 0 ? '+' : ''}{pct.toFixed(0)}%
-                            <span className="text-white/25 font-normal"> méd</span>
                           </span>;
                     })()}
                   </td>
                   <td className="py-2 px-2 text-center">
                     {(() => {
-                      const yr = new Date().getFullYear().toString();
-                      const pct = avgPct(tableData.filter(m => m.monthKey.startsWith(yr)).map(m => chartMetric === 'valor' ? m.crescValor : m.crescQtd));
+                      const pct = chartMetric === 'valor' ? tableTotals.crescYtdV : tableTotals.crescYtdQ;
                       return pct === null
                         ? <span className="text-white/20">—</span>
                         : <span className={cn('font-bold', pct >= 0 ? 'text-emerald-400' : 'text-red-400')}>
                             {pct >= 0 ? '+' : ''}{pct.toFixed(0)}%
-                            <span className="text-white/25 font-normal"> méd</span>
                           </span>;
                     })()}
                   </td>
@@ -573,6 +613,34 @@ export const RenovacoesPage: React.FC = () => {
                 </button>
               </div>
             )}
+            {selectedProduto && (
+              <div className="flex items-center gap-1.5 bg-gold-deep/10 border border-gold-deep/20 rounded-full px-2 py-0.5">
+                <span className="text-[9px] text-gold-deep font-bold truncate max-w-[100px]">{selectedProduto}</span>
+                <button onClick={() => setSelectedProduto(null)} className="text-gold-deep/60 hover:text-gold-deep transition-colors">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            <div className="ml-auto flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5">
+              <button
+                onClick={() => setComissaoMetric('valor')}
+                className={cn(
+                  'text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md transition-colors',
+                  comissaoMetric === 'valor' ? 'bg-gold-deep text-brand-black' : 'text-white/40 hover:text-white/70',
+                )}
+              >
+                Valor
+              </button>
+              <button
+                onClick={() => setComissaoMetric('pct')}
+                className={cn(
+                  'text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md transition-colors',
+                  comissaoMetric === 'pct' ? 'bg-gold-deep text-brand-black' : 'text-white/40 hover:text-white/70',
+                )}
+              >
+                % Média
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -593,35 +661,38 @@ export const RenovacoesPage: React.FC = () => {
                 {/* Crescimento */}
                 <tr className="border-b border-white/3">
                   <td className="py-2 px-2 text-white/35 font-bold">Crescimento</td>
-                  {tableComissao.map(m => (
-                    <td key={m.monthKey} className="py-2 px-1 text-center">
-                      {m.cresc === null
-                        ? <span className="text-white/20">—</span>
-                        : <span className={cn('font-bold', m.cresc >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                            {m.cresc >= 0 ? '+' : ''}{m.cresc.toFixed(0)}%
-                          </span>}
-                    </td>
-                  ))}
+                  {tableComissao.map(m => {
+                    const pct = comissaoMetric === 'valor' ? m.cresc : m.crescPct;
+                    const suffix = comissaoMetric === 'pct' ? 'pp' : '%';
+                    return (
+                      <td key={m.monthKey} className="py-2 px-1 text-center">
+                        {pct === null
+                          ? <span className="text-white/20">—</span>
+                          : <span className={cn('font-bold', pct >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                              {pct >= 0 ? '+' : ''}{pct.toFixed(1)}{suffix}
+                            </span>}
+                      </td>
+                    );
+                  })}
                   <td className="py-2 px-2 text-center border-l border-white/5">
                     {(() => {
-                      const pct = avgPct(tableComissao.map(m => m.cresc));
+                      const pct = comissaoMetric === 'valor' ? comissaoTotals.cresc12 : comissaoTotals.crescPct12;
+                      const suffix = comissaoMetric === 'pct' ? 'pp' : '%';
                       return pct === null
                         ? <span className="text-white/20">—</span>
                         : <span className={cn('font-bold', pct >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                            {pct >= 0 ? '+' : ''}{pct.toFixed(0)}%
-                            <span className="text-white/25 font-normal"> méd</span>
+                            {pct >= 0 ? '+' : ''}{pct.toFixed(1)}{suffix}
                           </span>;
                     })()}
                   </td>
                   <td className="py-2 px-2 text-center">
                     {(() => {
-                      const yr = new Date().getFullYear().toString();
-                      const pct = avgPct(tableComissao.filter(m => m.monthKey.startsWith(yr)).map(m => m.cresc));
+                      const pct = comissaoMetric === 'valor' ? comissaoTotals.crescYtd : comissaoTotals.crescPctYtd;
+                      const suffix = comissaoMetric === 'pct' ? 'pp' : '%';
                       return pct === null
                         ? <span className="text-white/20">—</span>
                         : <span className={cn('font-bold', pct >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                            {pct >= 0 ? '+' : ''}{pct.toFixed(0)}%
-                            <span className="text-white/25 font-normal"> méd</span>
+                            {pct >= 0 ? '+' : ''}{pct.toFixed(1)}{suffix}
                           </span>;
                     })()}
                   </td>
@@ -631,14 +702,20 @@ export const RenovacoesPage: React.FC = () => {
                   <td className="py-2 px-2 text-white/60 font-bold">Ano Atual</td>
                   {tableComissao.map(m => (
                     <td key={m.monthKey} className="py-2 px-1 text-center text-white/80 font-mono tabular-nums">
-                      {fmtShort(m.atualComissao)}
+                      {comissaoMetric === 'valor'
+                        ? fmtShort(m.atualComissao)
+                        : m.atualPct === null ? '—' : `${m.atualPct.toFixed(1)}%`}
                     </td>
                   ))}
                   <td className="py-2 px-2 text-center text-gold-deep font-bold border-l border-white/5 tabular-nums">
-                    {fmtShort(comissaoTotals.t12)}
+                    {comissaoMetric === 'valor'
+                      ? fmtShort(comissaoTotals.t12)
+                      : comissaoTotals.rate12 === null ? '—' : `${comissaoTotals.rate12.toFixed(1)}%`}
                   </td>
                   <td className="py-2 px-2 text-center text-gold-deep font-bold tabular-nums">
-                    {fmtShort(comissaoTotals.ytd)}
+                    {comissaoMetric === 'valor'
+                      ? fmtShort(comissaoTotals.ytd)
+                      : comissaoTotals.rateYtd === null ? '—' : `${comissaoTotals.rateYtd.toFixed(1)}%`}
                   </td>
                 </tr>
                 {/* Ano Anterior */}
@@ -646,14 +723,20 @@ export const RenovacoesPage: React.FC = () => {
                   <td className="py-2 px-2 text-white/35 font-bold">Ano Anterior</td>
                   {tableComissao.map(m => (
                     <td key={m.monthKey} className="py-2 px-1 text-center text-white/35 font-mono tabular-nums">
-                      {fmtShort(m.antComissao)}
+                      {comissaoMetric === 'valor'
+                        ? fmtShort(m.antComissao)
+                        : m.antPct === null ? '—' : `${m.antPct.toFixed(1)}%`}
                     </td>
                   ))}
                   <td className="py-2 px-2 text-center text-white/35 border-l border-white/5 tabular-nums">
-                    {fmtShort(comissaoTotals.p12)}
+                    {comissaoMetric === 'valor'
+                      ? fmtShort(comissaoTotals.p12)
+                      : comissaoTotals.rateP12 === null ? '—' : `${comissaoTotals.rateP12.toFixed(1)}%`}
                   </td>
                   <td className="py-2 px-2 text-center text-white/35 tabular-nums">
-                    {fmtShort(comissaoTotals.pytd)}
+                    {comissaoMetric === 'valor'
+                      ? fmtShort(comissaoTotals.pytd)
+                      : comissaoTotals.ratePytd === null ? '—' : `${comissaoTotals.ratePytd.toFixed(1)}%`}
                   </td>
                 </tr>
               </tbody>
