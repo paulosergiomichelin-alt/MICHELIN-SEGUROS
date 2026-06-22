@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClientes } from '../../contexts/ClienteRealtimeContext';
 import { DataService } from '../../services/DataService';
 import { ClienteService } from '../../services/ClienteService';
-import { Cliente } from '../../types';
+import { Cliente, UserProfile } from '../../types';
 import { ClientesView } from './ClientesView';
 import { ClienteForm } from './ClienteForm';
 import { usePermissions } from '../../contexts/PermissionsContext';
@@ -14,6 +14,20 @@ export const ClientesPage: React.FC = () => {
   const { userProfile } = usePermissions();
   const [showForm, setShowForm] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+
+  const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'gestor';
+
+  useEffect(() => {
+    const unsub = DataService.subscribeCollection('users', [], (data: any[]) => {
+      setUsers(
+        data.filter((u: UserProfile) =>
+          u.organizationId === userProfile?.organizationId && u.userType === 'HUMAN',
+        ),
+      );
+    });
+    return unsub;
+  }, [userProfile?.organizationId]);
 
   const handleNew = () => {
     setEditingCliente(null);
@@ -74,6 +88,9 @@ export const ClientesPage: React.FC = () => {
           onClose={() => { setShowForm(false); setEditingCliente(null); }}
           onSave={handleSave}
           cliente={editingCliente}
+          users={users}
+          currentUser={userProfile}
+          isAdmin={isAdmin}
         />
       </div>
     );

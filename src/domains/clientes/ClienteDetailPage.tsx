@@ -6,7 +6,7 @@ import {
   Calendar, DollarSign, Building2, ClipboardList, Car, Shield, Tag, Users,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { Cliente, Lead, Apolice, ClienteHistoricoItem, ClienteStatus } from '../../types';
+import { Cliente, Lead, Apolice, ClienteHistoricoItem, ClienteStatus, UserProfile } from '../../types';
 import { DataService } from '../../services/DataService';
 import { ClienteService } from '../../services/ClienteService';
 import { SeguradoraBadge } from '../../components/SeguradoraBadge';
@@ -81,6 +81,20 @@ export const ClienteDetailPage: React.FC = () => {
   const [showEditCliente, setShowEditCliente] = useState(false);
   const [showApoliceForm, setShowApoliceForm] = useState(false);
   const [editingApolice, setEditingApolice] = useState<Apolice | null>(null);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+
+  const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'gestor';
+
+  useEffect(() => {
+    const unsub = DataService.subscribeCollection('users', [], (data: any[]) => {
+      setUsers(
+        data.filter((u: UserProfile) =>
+          u.organizationId === userProfile?.organizationId && u.userType === 'HUMAN',
+        ),
+      );
+    });
+    return unsub;
+  }, [userProfile?.organizationId]);
 
   // Load cliente
   useEffect(() => {
@@ -239,6 +253,9 @@ export const ClienteDetailPage: React.FC = () => {
             onClose={() => setShowEditCliente(false)}
             onSave={handleSaveCliente}
             cliente={cliente}
+            users={users}
+            currentUser={userProfile}
+            isAdmin={isAdmin}
           />
         )}
         {!showEditCliente && <>

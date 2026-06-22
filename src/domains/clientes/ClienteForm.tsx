@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Loader2, User, Phone, MapPin, Briefcase, X, ArrowLeft, Upload, FileText, CheckCircle2, Paperclip, Trash2 } from 'lucide-react';
+import { Save, Loader2, User, Phone, MapPin, Briefcase, X, ArrowLeft, Upload, FileText, CheckCircle2, Paperclip, Trash2, Lock } from 'lucide-react';
 import { Cliente, ClienteDocumento, ClienteDocumentoTipo, UserProfile } from '../../types';
 import { StorageService } from '../../services/StorageService';
 import { cn, formatCPF, generateId } from '../../lib/utils';
@@ -12,6 +12,8 @@ interface ClienteFormProps {
   onSave: (data: Omit<Cliente, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   cliente?: Cliente | null;
   users?: UserProfile[];
+  currentUser?: UserProfile | null;
+  isAdmin?: boolean;
   inline?: boolean;
 }
 
@@ -68,7 +70,7 @@ function fmtCPF(v: string) {
   return r;
 }
 
-export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSave, cliente, users = [], inline = false }) => {
+export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSave, cliente, users = [], currentUser, isAdmin = true, inline = false }) => {
   const isEditing = !!cliente;
   const [saving, setSaving] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
@@ -124,12 +126,13 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
         nome: '', cpf: '', rg: '', rgDataExpedicao: '', rgOrgaoEmissor: '', dataNascimento: '', estadoCivil: '', profissao: '',
         telefone: '', whatsapp: '', email: '',
         cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '',
-        responsavelId: '', observacoes: '',
+        responsavelId: (!isAdmin && currentUser?.uid) ? currentUser.uid : '',
+        observacoes: '',
       });
       setSexo('');
       setDocumentos([]);
     }
-  }, [cliente, isOpen]);
+  }, [cliente, isOpen, isAdmin, currentUser]);
 
   useEffect(() => {
     const uf = form.estado;
@@ -483,14 +486,22 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
         <div>
           <SECTION label="Dados Internos" icon={Briefcase} />
           <div className="grid grid-cols-1 gap-3">
-            {users.length > 0 && (
-              <Field label="Vendedor responsável">
-                <select className={inputCls} value={form.responsavelId} onChange={e => set('responsavelId', e.target.value)}>
-                  <option value="">Sem responsável</option>
+            <Field label="Vendedor responsável">
+              <div className="relative">
+                <select
+                  className={cn(inputCls, !isAdmin && 'opacity-75 cursor-not-allowed pr-8')}
+                  value={form.responsavelId}
+                  onChange={e => isAdmin && set('responsavelId', e.target.value)}
+                  disabled={!isAdmin}
+                >
+                  <option value="">— Sem responsável —</option>
                   {users.map(u => <option key={u.uid} value={u.uid}>{u.name}</option>)}
                 </select>
-              </Field>
-            )}
+                {!isAdmin && (
+                  <Lock className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-white/25 pointer-events-none" />
+                )}
+              </div>
+            </Field>
             <Field label="Observações">
               <textarea
                 className={cn(inputCls, 'resize-none h-20')}

@@ -19,6 +19,7 @@ import {
   Smartphone,
   QrCode,
   Mail,
+  BarChart3,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Permissions, VisualIdentityConfig } from '../types';
@@ -129,9 +130,10 @@ export const Sidebar = React.memo(({
         {[
           { id: 'pipeline',    label: 'Pipeline',      icon: LayoutGrid,    permission: permissions.canReadAllLeads },
           { id: 'dashboard',   label: 'Início',        icon: PieChart,      permission: permissions.canReadAllLeads },
+          { id: 'relatorios',  label: 'Relatório',     icon: BarChart3,     permission: permissions.canReadAllLeads },
           { id: 'leads',       label: 'LEADS',         icon: Users,         permission: permissions.canReadAllLeads },
           { id: 'clientes',    label: 'Clientes',      icon: Briefcase,     permission: permissions.canReadAllLeads },
-          { id: 'renovacoes',       label: 'Renovações',    icon: RefreshCw,     permission: permissions.canReadAllLeads },
+          { id: 'renovacoes',       label: 'Dashboard',     icon: RefreshCw,     permission: permissions.canReadAllLeads },
           { id: 'ativos',           label: 'Ativos',        icon: Send,          permission: permissions.canReadAllLeads },
           { id: 'chat',             label: 'WhatsApp IA',   icon: MessageSquare, permission: permissions.canReadAllLeads },
           { id: 'whatsapp',         label: 'WA Pessoal',    icon: Smartphone,    permission: permissions.canReadAllLeads, badge: waBadge },

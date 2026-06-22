@@ -26,6 +26,7 @@ const SessionsPage       = lazy(() => import('../domains/whatsapp/SessionsPage')
 const EmailPage          = lazy(() => import('../domains/email/EmailPage').then(m => ({ default: m.EmailPage })));
 const EmailAccountsPage  = lazy(() => import('../domains/email/EmailAccountsPage').then(m => ({ default: m.EmailAccountsPage })));
 const EmailSettingsPage  = lazy(() => import('../domains/email/EmailSettingsPage').then(m => ({ default: m.EmailSettingsPage })));
+const RelatoriosPage     = lazy(() => import('../domains/relatorios/RelatoriosPage').then(m => ({ default: m.RelatoriosPage })));
 
 interface AppContentManagerProps {
   permissions: Permissions;
@@ -102,6 +103,7 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
           <Route path="/clientes" element={<ClientesPage />} />
           <Route path="/clientes/:id" element={<ClienteDetailPage />} />
           <Route path="/renovacoes" element={<RenovacoesPage />} />
+          <Route path="/relatorios" element={<RelatoriosPage />} />
 
           <Route path="/whatsapp" element={<WhatsAppInboxPage />} />
           <Route path="/whatsapp/sessoes" element={<SessionsPage />} />

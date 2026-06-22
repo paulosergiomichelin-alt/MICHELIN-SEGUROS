@@ -157,6 +157,32 @@ export class ClienteService {
     );
   }
 
+  static subscribeAllApolicesReport(
+    organizationId: string,
+    callback: (apolices: Apolice[]) => void,
+  ): () => void {
+    return onSnapshot(
+      query(
+        collectionGroup(db, 'apolices'),
+        where('organizationId', '==', organizationId),
+      ),
+      snap => {
+        callback(snap.docs.map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            ...data,
+            premioLiquido: (Number(data.premioLiquido) || 0) / 100,
+            valorTotal: (Number(data.valorTotal) || 0) / 100,
+            comissao: (Number(data.comissao) || 0) / 100,
+            createdAt: tsToISO(data.createdAt),
+            updatedAt: tsToISO(data.updatedAt),
+          } as Apolice;
+        }));
+      },
+    );
+  }
+
   // ── Histórico subcollection ────────────────────────────────────────────────
 
   static async addHistorico(
