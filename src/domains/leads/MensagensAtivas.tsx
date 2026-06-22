@@ -92,7 +92,6 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
 
   // ── Campaign Config ───────────────────────────────────────────────────────
   const [campaignName, setCampaignName] = useState('');
-  const [objective, setObjective] = useState('');
   const [message, setMessage] = useState('');
   const [interval, setInterval] = useState(10);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -187,7 +186,7 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
   };
 
   const handleCreateCampaign = async () => {
-    if (!campaignName || !objective || !message.trim() || !sessionName || targetLeads.length === 0) return;
+    if (!campaignName || !message.trim() || !sessionName || targetLeads.length === 0) return;
     try {
       let uploadedImageUrl = '';
       if (imageFile) {
@@ -205,7 +204,6 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
 
       const campaignData = {
         name: campaignName,
-        objective,
         messageTemplate: message,
         sessionName,
         imageUrl:        uploadedImageUrl,
@@ -586,25 +584,6 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                       />
                     </div>
 
-                    {/* Objetivo */}
-                    <div>
-                      <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2 block">
-                        Objetivo da Mensagem
-                      </label>
-                      <select
-                        value={objective}
-                        onChange={e => setObjective(e.target.value)}
-                        className="w-full px-5 py-4 bg-black/30 border border-white/5 rounded-2xl focus:ring-2 focus:ring-gold-deep/20 outline-none text-sm font-bold text-white appearance-none transition-all"
-                      >
-                        <option value="" className="bg-[#0B0B0D]">Selecione um objetivo...</option>
-                        <option value="reengajamento" className="bg-[#0B0B0D]">Reengajamento de Lead Parado</option>
-                        <option value="renovacao"     className="bg-[#0B0B0D]">Oferecer Renovação de Seguro</option>
-                        <option value="promocao"      className="bg-[#0B0B0D]">Promoção de Mês do Seguro</option>
-                        <option value="feedback"      className="bg-[#0B0B0D]">Pesquisa de Satisfação</option>
-                        <option value="cobranca"      className="bg-[#0B0B0D]">Lembrete de Pagamento ou Documento</option>
-                      </select>
-                    </div>
-
                     {/* Sessão WhatsApp */}
                     <div>
                       <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2 block">
@@ -853,7 +832,7 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                     </button>
                     <button
                       onClick={handleCreateCampaign}
-                      disabled={!campaignName || !objective || !message.trim() || !sessionName || targetLeads.length === 0 || imageUploading}
+                      disabled={!campaignName || !message.trim() || !sessionName || targetLeads.length === 0 || imageUploading}
                       className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-4 bg-gold-deep text-brand-black rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-gold-deep/25 hover:scale-[1.02] hover:shadow-gold-deep/40 transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed disabled:hover:scale-100"
                     >
                       {imageUploading

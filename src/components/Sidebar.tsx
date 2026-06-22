@@ -132,7 +132,7 @@ export const Sidebar = React.memo(({
           { id: 'leads',       label: 'LEADS',         icon: Users,         permission: permissions.canReadAllLeads },
           { id: 'clientes',    label: 'Clientes',      icon: Briefcase,     permission: permissions.canReadAllLeads },
           { id: 'renovacoes',       label: 'Dashboard',     icon: RefreshCw,     permission: permissions.canReadAllLeads },
-          { id: 'ativos',           label: 'Ativos',        icon: Send,          permission: permissions.canReadAllLeads },
+          { id: 'ativos',           label: 'Msgs Ativas',   icon: Send,          permission: permissions.canReadAllLeads },
           { id: 'chat',             label: 'WhatsApp IA',   icon: MessageSquare, permission: permissions.canReadAllLeads },
           { id: 'whatsapp',         label: 'WA Pessoal',    icon: Smartphone,    permission: permissions.canReadAllLeads, badge: waBadge },
           { id: 'email',            label: 'E-mails',       icon: Mail,          permission: permissions.canReadAllLeads, badge: emailUnreadBadge },
