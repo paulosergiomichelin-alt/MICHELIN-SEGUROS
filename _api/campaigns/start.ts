@@ -112,7 +112,17 @@ async function runCampaign(campaignId: string, campaign: Record<string, any>) {
     }
     console.log(`[CAMPAIGNS] ${ok ? '✓' : '✗'} ${sessionName}→${phone}: ${ok ? 'ok' : sendError}`);
 
-    if (ok) sentCount++; else errorCount++;
+    if (ok) {
+      sentCount++;
+      await fsUpdate('leads', leadId, {
+        status: 'Em Atendimento',
+        ultimaCampanha: campaign.name,
+        ultimaCampanhaId: campaignId,
+        updatedAt: ts,
+      }).catch(() => {});
+    } else {
+      errorCount++;
+    }
 
     // Persiste log da mensagem
     const logId = `clog_${campaignId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;

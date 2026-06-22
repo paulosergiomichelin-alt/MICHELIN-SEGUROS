@@ -243,6 +243,10 @@ export interface Lead {
 
   // Vínculo com módulo Clientes
   clienteId?: string;
+
+  // Campanhas
+  ultimaCampanha?: string;
+  ultimaCampanhaId?: string;
 }
 
 export type NotificationType = 
