@@ -23,7 +23,7 @@ async function getToken(): Promise<string> {
     aud: TOKEN_URL,
     iat: now,
     exp: now + 3600,
-    scope: 'https://www.googleapis.com/auth/datastore',
+    scope: 'https://www.googleapis.com/auth/cloud-platform',
   })).toString('base64url');
 
   const sigInput = `${header}.${claims}`;
