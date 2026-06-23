@@ -1,5 +1,8 @@
 import { EvolutionAPI } from '../lib/evolutionApi.js';
 import { fsSet, fsUpdate, fsDelete, fsQuery } from '../lib/adminFirebase.js';
+import { createLogger, errCtx } from '../lib/logger.js';
+
+const log = createLogger('evolution/sessions');
 
 export default async function handler(req: any, res: any) {
   // ── GET: list sessions ───────────────────────────────────────────────────────
@@ -15,7 +18,7 @@ export default async function handler(req: any, res: any) {
         : [];
       return res.status(200).json({ sessions });
     } catch (err: any) {
-      console.error('[EVOLUTION/sessions] GET error:', err);
+      log.error('GET sessions falhou', errCtx(err));
       return res.status(500).json({ error: 'Erro ao listar sessões', detail: err?.message });
     }
   }
@@ -39,10 +42,10 @@ export default async function handler(req: any, res: any) {
 
       const webhookUrl: string = process.env.EVOLUTION_WEBHOOK_URL || '';
 
-      console.log(`[EVOLUTION/sessions] Criando instância: ${instanceName} webhook=${webhookUrl || '(none)'}`);
+      log.info('Criando instância', { instance: instanceName, webhook: webhookUrl || '(none)' });
 
       const result = await EvolutionAPI.createInstance(instanceName, webhookUrl);
-      console.log('[EVOLUTION/sessions] createInstance result:', JSON.stringify(result)?.slice(0, 500));
+      log.debug('createInstance result', { instance: instanceName, result: JSON.stringify(result)?.slice(0, 200) });
       if (!result) {
         return res.status(502).json({ error: 'Falha ao criar instância na Evolution API. Verifique se a URL e a chave estão corretas e se o serviço está acessível.' });
       }
@@ -63,10 +66,10 @@ export default async function handler(req: any, res: any) {
         updatedAt: now,
       });
 
-      console.log(`[EVOLUTION/sessions] Sessão criada: ${instanceName}`);
+      log.info('Sessão criada', { instance: instanceName });
       return res.status(201).json({ instanceName, status: 'qr' });
     } catch (err: any) {
-      console.error('[EVOLUTION/sessions] POST error:', err);
+      log.error('POST sessions falhou', { instance: req.body?.sessionName, ...errCtx(err) });
       return res.status(500).json({ error: 'Erro ao criar sessão', detail: err?.message });
     }
   }
@@ -79,14 +82,14 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ error: 'Query param "name" é obrigatório' });
       }
 
-      console.log(`[EVOLUTION/sessions] Encerrando instância: ${name}`);
+      log.info('Encerrando instância', { instance: name });
       await EvolutionAPI.logoutInstance(name);
       await EvolutionAPI.deleteInstance(name);
       await fsDelete('whatsapp_sessions', name);
 
       return res.status(200).json({ success: true, instanceName: name });
     } catch (err: any) {
-      console.error('[EVOLUTION/sessions] DELETE error:', err);
+      log.error('DELETE sessions falhou', { instance: req.query?.name, ...errCtx(err) });
       return res.status(500).json({ error: 'Erro ao encerrar sessão', detail: err?.message });
     }
   }
@@ -99,7 +102,7 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ error: 'Campo "name" é obrigatório no body' });
       }
 
-      console.log(`[EVOLUTION/sessions] Reiniciando instância: ${name}`);
+      log.info('Reiniciando instância', { instance: name });
       await EvolutionAPI.logoutInstance(String(name));
       await EvolutionAPI.deleteInstance(String(name));
       await new Promise(r => setTimeout(r, 2000));
@@ -107,12 +110,11 @@ export default async function handler(req: any, res: any) {
       const webhookUrl: string = process.env.EVOLUTION_WEBHOOK_URL || '';
 
       const result = await EvolutionAPI.createInstance(String(name), webhookUrl);
-      console.log('[EVOLUTION/sessions] createInstance result:', JSON.stringify(result)?.slice(0, 500));
+      log.debug('createInstance result (PUT)', { instance: name, result: JSON.stringify(result)?.slice(0, 200) });
       if (!result) {
         return res.status(502).json({ error: 'Falha ao recriar instância na Evolution API' });
       }
 
-      // Evolution API v2 may return QR code in the create response
       const qrInCreate = result?.qrcode ?? result?.hash?.qrcode;
       const now = new Date().toISOString();
       await fsUpdate('whatsapp_sessions', String(name), {
@@ -121,10 +123,10 @@ export default async function handler(req: any, res: any) {
         updatedAt: now,
       });
 
-      console.log(`[EVOLUTION/sessions] Instância reiniciada: ${name}`);
+      log.info('Instância reiniciada', { instance: name });
       return res.status(200).json({ instanceName: name, status: 'qr' });
     } catch (err: any) {
-      console.error('[EVOLUTION/sessions] PUT error:', err);
+      log.error('PUT sessions falhou', { instance: req.body?.name, ...errCtx(err) });
       return res.status(500).json({ error: 'Erro ao reiniciar sessão', detail: err?.message });
     }
   }
@@ -143,7 +145,7 @@ export default async function handler(req: any, res: any) {
 
       return res.status(200).json({ success: true, instanceName: name, webhookUrl });
     } catch (err: any) {
-      console.error('[EVOLUTION/sessions] PATCH error:', err);
+      log.error('PATCH sessions (webhook) falhou', { instance: req.body?.name, ...errCtx(err) });
       return res.status(500).json({ error: 'Erro ao definir webhook', detail: err?.message });
     }
   }

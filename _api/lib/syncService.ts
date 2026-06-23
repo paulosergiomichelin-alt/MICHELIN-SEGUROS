@@ -1,7 +1,7 @@
 import { EvolutionAPI } from './evolutionApi.js';
 import { extractPhoneFromJid, isIgnoredJid, extractMessageContent, stripDDI } from './whatsappUtils.js';
 import {
-  setConversation, setMessage, updateConversation, getConversations,
+  setConversation, setMessage, updateConversation, getConversation, getConversations,
   getMessages, hasMessage, CachedConversation, CachedMessage,
 } from './conversationCache.js';
 import { emitToSession } from './socketRegistry.js';
@@ -93,6 +93,18 @@ export async function syncSession(
   const contacts = await EvolutionAPI.findContacts(sessionName).catch(() => [] as any[]);
   const contactNameMap = new Map<string, string>();
   const contactPictureMap = new Map<string, string>();
+
+  // Gera variantes do número BR com e sem o 9 extra (DDD9xxxxxxxx ↔ DDDxxxxxxxx)
+  function brVariants(phone: string): string[] {
+    if (phone.startsWith('55') && phone.length === 13 && phone[4] === '9') {
+      return [phone, phone.slice(0, 4) + phone.slice(5)]; // com e sem 9
+    }
+    if (phone.startsWith('55') && phone.length === 12) {
+      return [phone, phone.slice(0, 4) + '9' + phone.slice(4)]; // sem e com 9
+    }
+    return [phone];
+  }
+
   for (const c of contacts) {
     // Evolution API v2: campo é remoteJid (não id) e profilePicUrl (não profilePictureUrl)
     const jid: string = c.remoteJid ?? c.id ?? '';
@@ -100,8 +112,10 @@ export async function syncSession(
     const picture: string = c.profilePicUrl ?? c.profilePictureUrl ?? '';
     if (jid && !jid.startsWith('cm')) { // ignorar IDs internos do banco (começam com cm...)
       const phone = jid.replace(/@s\.whatsapp\.net$|@c\.us$|@g\.us$/, '').replace(/:\d+$/, '');
-      if (name) contactNameMap.set(phone, name);
-      if (picture) contactPictureMap.set(phone, picture);
+      for (const v of brVariants(phone)) {
+        if (name) contactNameMap.set(v, name);
+        if (picture) contactPictureMap.set(v, picture);
+      }
     }
   }
   process.stdout.write(`[SyncService] ${sessionName}: ${contacts.length} contatos carregados (${contactPictureMap.size} com foto)\n`);
@@ -274,6 +288,23 @@ export async function reconcileSession(
 
       setMessage(doc);
       imported++;
+
+      // Push novo msg para o frontend (websocket)
+      emitToSession(sessionName, 'wa:message_upsert', doc);
+
+      // Atualiza lastMessage da conversa se esta msg é mais recente
+      const existingConv = getConversation(conversationId);
+      if (existingConv && (!existingConv.lastMessageAt || new Date(doc.timestamp) > new Date(existingConv.lastMessageAt))) {
+        const patch = {
+          lastMessage: doc.body || `[${doc.messageType}]`,
+          lastMessageAt: doc.timestamp,
+          lastMessageDirection: doc.direction,
+          updatedAt: doc.timestamp,
+          unreadCount: doc.direction === 'inbound' ? (existingConv.unreadCount ?? 0) + 1 : (existingConv.unreadCount ?? 0),
+        };
+        updateConversation(conversationId, patch);
+        emitToSession(sessionName, 'wa:chat_upsert', { ...existingConv, ...patch });
+      }
     }
   }
 

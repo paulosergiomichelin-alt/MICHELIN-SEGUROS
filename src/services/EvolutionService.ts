@@ -66,6 +66,19 @@ export const EvolutionService = {
     } catch { return null; }
   },
 
+  async configureWebhook(sessionName: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await fetch('/api/evolution/sessions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: sessionName }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { success: false, error: data?.error ?? 'Falha ao configurar webhook' };
+      return { success: true };
+    } catch { return { success: false, error: 'Erro de conexão' }; }
+  },
+
   async sendMessage(sessionName: string, phone: string, message: string): Promise<boolean> {
     try {
       const res = await fetch('/api/evolution/send', {

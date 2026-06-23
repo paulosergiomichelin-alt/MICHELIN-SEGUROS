@@ -8,6 +8,9 @@ import {
   getConversation, findConversationsByPhone,
   CachedConversation, CachedMessage, setMessage,
 } from '../lib/conversationCache.js';
+import { createLogger, errCtx } from '../lib/logger.js';
+
+const log = createLogger('evolution/webhook');
 
 // ── Monitoramento ─────────────────────────────────────────────────────────────
 
@@ -41,7 +44,8 @@ async function resolveOrgId(sessionId: string): Promise<string> {
     const orgId = session?.organizationId ?? 'default';
     orgIdCache.set(sessionId, orgId);
     return orgId;
-  } catch {
+  } catch (err) {
+    log.warn('resolveOrgId falhou, usando default', { sessionId, ...errCtx(err) });
     return 'default';
   }
 }
@@ -101,10 +105,13 @@ async function handleMessagesUpsert(event: any) {
 
   const { body, messageType, mediaUrl, mimeType, fileName } = extractMessageContent(data);
 
-  // Diagnóstico temporário: logar payload de qualquer mídia para depurar
   if (messageType !== 'text' || data.messageType) {
-    console.log('[EVOLUTION/webhook] MEDIA_MSG topType=%s resolved=%s msgKeys=%s',
-      data.messageType ?? '—', messageType, Object.keys(data.message ?? {}).join(','));
+    log.debug('MEDIA_MSG recebido', {
+      topType: data.messageType ?? '—',
+      resolved: messageType,
+      msgKeys: Object.keys(data.message ?? {}).join(','),
+      session: sessionId,
+    });
   }
 
   if (fromMe && messageType === 'text' && !body) return; // protocolo/reação sem conteúdo
@@ -118,9 +125,10 @@ async function handleMessagesUpsert(event: any) {
   const storedMsgId = `wamsg_${msgId}`;
   const organizationId = await resolveOrgId(sessionId);
 
-  console.log(
-    `[EVOLUTION/webhook] MESSAGES_UPSERT session=${sessionId} phone=${phone} group=${groupChat} fromMe=${fromMe} type=${messageType} body="${body.slice(0, 60)}"`,
-  );
+  log.info('MESSAGES_UPSERT', {
+    session: sessionId, phone, group: groupChat, fromMe, type: messageType,
+    body: body.slice(0, 80),
+  });
 
   const msgDoc: CachedMessage = {
     id: storedMsgId,
@@ -211,7 +219,7 @@ async function handleMessagesDelete(event: any) {
     const storedId = `wamsg_${msgId}`;
     deleteMessage(storedId);
     emitToSession(sessionId, 'wa:message_delete', { id: storedId });
-    console.log(`[EVOLUTION/webhook] MESSAGES_DELETE msgId=${msgId}`);
+    log.info('MESSAGES_DELETE', { session: sessionId, msgId });
   }
 }
 
@@ -249,7 +257,7 @@ async function handleConnectionUpdate(event: any) {
   };
   const status = statusMap[rawState] ?? rawState;
 
-  console.log(`[EVOLUTION/webhook] CONNECTION_UPDATE instance=${instanceName} state=${rawState} → ${status}`);
+  log.info('CONNECTION_UPDATE', { instance: instanceName, state: rawState, mapped: status });
 
   const update: Record<string, any> = { status, updatedAt: new Date().toISOString() };
 
@@ -276,28 +284,24 @@ async function handleConnectionUpdate(event: any) {
   }
 
   await fsUpdate('whatsapp_sessions', instanceName, update).catch((err: any) =>
-    console.error('[EVOLUTION/webhook] fsUpdate sessions (CONNECTION_UPDATE) error:', err?.message),
+    log.error('fsUpdate sessions falhou (CONNECTION_UPDATE)', { instance: instanceName, ...errCtx(err) }),
   );
 
   // Emite para o frontend atualizar o status da sessão
   emitToSession(instanceName, 'wa:connection_update', { instanceName, status: rawState });
 
-  // Auto-sync quando sessão conecta
   if (rawState === 'open') {
-    console.log(`[EVOLUTION/webhook] Sessão conectada — iniciando sync automático: ${instanceName}`);
+    log.info('Sessão conectada — iniciando sync automático', { instance: instanceName });
     const orgId = await resolveOrgId(instanceName);
 
     syncSession(instanceName, orgId, false).then(result => {
-      console.log(
-        `[EVOLUTION/webhook] Auto-sync concluído: ${instanceName} — ${result.conversationsImported} conversas`,
-      );
-      // Emite lista de conversas após sync
+      log.info('Auto-sync concluído', { instance: instanceName, conversas: result.conversationsImported });
       emitToSession(instanceName, 'wa:sync_complete', {
         instanceName,
         conversationsImported: result.conversationsImported,
       });
     }).catch(err => {
-      console.error(`[EVOLUTION/webhook] Auto-sync falhou: ${instanceName}`, err?.message);
+      log.error('Auto-sync falhou', { instance: instanceName, ...errCtx(err) });
     });
   }
 }
@@ -307,7 +311,7 @@ async function handleQrcodeUpdated(event: any) {
   if (!instanceName) return;
 
   const qrcode = event.data?.qrcode ?? {};
-  console.log(`[EVOLUTION/webhook] QRCODE_UPDATED instance=${instanceName}`);
+  log.info('QRCODE_UPDATED', { instance: instanceName });
 
   await fsUpdate('whatsapp_sessions', instanceName, {
     status: 'qr',
@@ -315,7 +319,7 @@ async function handleQrcodeUpdated(event: any) {
     qrCode: qrcode.code ?? null,
     updatedAt: new Date().toISOString(),
   }).catch((err: any) =>
-    console.error('[EVOLUTION/webhook] fsUpdate sessions (QRCODE_UPDATED) error:', err?.message),
+    log.error('fsUpdate sessions falhou (QRCODE_UPDATED)', { instance: instanceName, ...errCtx(err) }),
   );
 }
 
@@ -358,7 +362,7 @@ async function handleContactsUpdate(event: any) {
     }
   }
 
-  console.log(`[EVOLUTION/webhook] CONTACTS_UPDATE session=${sessionId} contacts=${contacts.length}`);
+  log.info('CONTACTS_UPDATE', { session: sessionId, count: contacts.length });
 }
 
 async function handleChatsUpdate(event: any, isUpsert = false) {
@@ -421,7 +425,7 @@ async function handleChatsUpdate(event: any, isUpsert = false) {
     }
   }
 
-  console.log(`[EVOLUTION/webhook] CHATS_${isUpsert ? 'UPSERT' : 'UPDATE'} session=${sessionId} chats=${chats.length}`);
+  log.info(`CHATS_${isUpsert ? 'UPSERT' : 'UPDATE'}`, { session: sessionId, count: chats.length });
 }
 
 // ── Main processor ────────────────────────────────────────────────────────────
@@ -462,7 +466,7 @@ async function processEvent(event: any) {
       await handleChatsUpdate(event, true);
       break;
     default:
-      process.stdout.write(`[EVOLUTION/webhook] Evento não tratado: ${eventType}\n`);
+      log.debug('Evento não tratado', { eventType, instance: event.instance });
   }
 }
 
@@ -495,8 +499,10 @@ export default function handler(req: any, res: any) {
     events.map(event =>
       processEvent(event).catch(err => {
         messagesFailed++;
-        console.error('[EVOLUTION/webhook] processEvent error:', err);
+        const eventType = (event.event ?? '').toUpperCase();
+        const sessionId = event.instance ?? '?';
+        log.error('processEvent falhou', { eventType, session: sessionId, ...errCtx(err) });
       }),
     ),
-  ).catch(err => console.error('[EVOLUTION/webhook] Unhandled error:', err));
+  ).catch(err => log.error('Promise.all webhook falhou', errCtx(err)));
 }

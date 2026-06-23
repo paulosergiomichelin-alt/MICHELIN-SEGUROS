@@ -1,8 +1,11 @@
 import { fsGet } from '../lib/adminFirebase.js';
 import { enqueueMessage, getQueueStatus } from '../lib/messageQueue.js';
 import { markSentByUs } from '../lib/sentMessageIds.js';
-import { setMessage, updateMessage, updateConversation, CachedMessage } from '../lib/conversationCache.js';
+import { setMessage, updateMessage, updateConversation, getConversation, CachedMessage } from '../lib/conversationCache.js';
+import { emitToSession } from '../lib/socketRegistry.js';
+import { createLogger, errCtx } from '../lib/logger.js';
 
+const log = createLogger('evolution/send');
 const orgIdCache = new Map<string, string>();
 
 async function getOrgId(sessionName: string): Promise<string> {
@@ -12,7 +15,8 @@ async function getOrgId(sessionName: string): Promise<string> {
     const orgId = session?.organizationId ?? 'default';
     orgIdCache.set(sessionName, orgId);
     return orgId;
-  } catch {
+  } catch (err) {
+    log.warn('getOrgId falhou, usando default', { session: sessionName, ...errCtx(err) });
     return 'default';
   }
 }
@@ -54,12 +58,16 @@ export default async function handler(req: any, res: any) {
 
     // 1. Escrita otimista no cache — usuário vê a mensagem imediatamente
     setMessage(messageDoc);
+    emitToSession(String(sessionName), 'wa:message_upsert', messageDoc);
+
     updateConversation(conversationId, {
       lastMessage: String(message),
       lastMessageAt: now,
       lastMessageDirection: 'outbound',
       updatedAt: now,
     });
+    const updatedConv = getConversation(conversationId);
+    if (updatedConv) emitToSession(String(sessionName), 'wa:chat_upsert', updatedConv);
 
     // 2. Retornar imediatamente ao cliente
     res.status(200).json({ success: true, messageId: optimisticId });
@@ -77,12 +85,12 @@ export default async function handler(req: any, res: any) {
         }
       })
       .catch((err: any) => {
-        console.error(`[EVOLUTION/send] Entrega falhou para ${phone}:`, err?.message);
+        log.error('Entrega de mensagem falhou', { session: sessionName, phone, msgId: optimisticId, ...errCtx(err) });
         updateMessage(optimisticId, { status: 'failed' });
       });
 
   } catch (err: any) {
-    console.error('[EVOLUTION/send] POST error:', err);
+    log.error('POST /send erro inesperado', { session: req.body?.sessionName, phone: req.body?.phone, ...errCtx(err) });
     return res.status(500).json({ error: 'Erro ao enviar mensagem', detail: err?.message });
   }
 }

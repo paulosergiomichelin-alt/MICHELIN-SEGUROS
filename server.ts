@@ -3,6 +3,11 @@ if (process.env.NODE_ENV !== 'production') {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
 
+// On VPS production, the Evolution API itself uses a self-signed cert
+if (process.env.EVOLUTION_API_URL?.startsWith('https://')) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 import express from 'express';
 import { createServer } from 'http';
 import path from 'path';
@@ -10,26 +15,66 @@ import { fileURLToPath } from 'url';
 import axios from 'axios';
 import { Server as SocketIOServer } from 'socket.io';
 import { setIo } from './_api/lib/socketRegistry.js';
+import { log, errCtx } from './_api/lib/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// ── Process-level error guards ───────────────────────────────────────────────
+process.on('uncaughtException', (err) => {
+  log.error('uncaughtException — processo pode encerrar', errCtx(err));
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason) => {
+  log.error('unhandledRejection', errCtx(reason));
+});
+
+// ── Request ID counter ───────────────────────────────────────────────────────
+let reqCounter = 0;
+
 async function startServer() {
   const app = express();
-  const PORT = process.env.NODE_ENV === 'production' ? 3000 : 3001;
+  const PORT = Number(process.env.PORT) || (process.env.NODE_ENV === 'production' ? 3000 : 3001);
+
+  // CORS — permite Vercel frontend + localhost dev
+  const corsOrigins = (process.env.CORS_ORIGIN || 'https://michelin-seguros.vercel.app,http://localhost:3000')
+    .split(',').map(s => s.trim());
+  app.use((req: any, res: any, next: any) => {
+    const origin = req.headers.origin as string | undefined;
+    if (origin && (corsOrigins.includes(origin) || corsOrigins.includes('*'))) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    }
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Request-ID');
+    if (req.method === 'OPTIONS') return res.status(200).end();
+    next();
+  });
 
   const BODY_LIMIT = '25mb';
   app.use(express.json({ limit: BODY_LIMIT }));
   app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
-  console.log(`[SERVER] Body parser limit set to ${BODY_LIMIT} (was 100KB default)`);
+  log.info('Body parser configurado', { limit: BODY_LIMIT });
 
-  // Log only slow (>300ms) or error (4xx/5xx) requests
-  app.use((req, res, next) => {
+  // Atribui X-Request-ID a cada requisição e loga slow/error requests
+  app.use((req: any, res, next) => {
+    const reqId = `r${++reqCounter}_${Date.now()}`;
+    req.reqId = reqId;
+    res.setHeader('X-Request-ID', reqId);
+
     const start = Date.now();
     res.on('finish', () => {
       const duration = Date.now() - start;
-      if (duration > 300 || res.statusCode >= 400) {
-        console.log(`${new Date().toISOString()} [SERVER] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms)`);
+      const status = res.statusCode;
+      if (duration > 300 || status >= 400) {
+        const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+          ?? req.socket?.remoteAddress
+          ?? '?';
+        const ctx = { reqId, method: req.method, path: req.url, status, duration_ms: duration, ip };
+        if (status >= 500) log.error('Request com erro 5xx', ctx);
+        else if (status >= 400) log.warn('Request com erro 4xx', ctx);
+        else log.info('Request lento', ctx);
       }
     });
     next();
@@ -91,7 +136,7 @@ async function startServer() {
       );
       res.status(response.status).end();
     } catch (error: any) {
-      console.error('[DD_LLM_OBS] Failed to forward span:', error?.response?.status, error?.message);
+      log.warn('DD LLM Obs: falha ao repassar span', { dd_status: error?.response?.status, err_msg: error?.message });
       res.status(204).end();
     }
   });
@@ -109,7 +154,7 @@ async function startServer() {
   app.all('/api/meta/status',        metaStatusHandler);
   app.all('/api/meta/messages',      metaMessagesHandler);
   app.all('/api/meta/conversations', metaConversationsHandler);
-  console.log('[SERVER] Meta WhatsApp routes registradas');
+  log.info('Meta WhatsApp routes registradas');
 
   // ── Campaign routes ───────────────────────────────────────────────────────
   const { default: campaignsStartHandler } = await import('./_api/campaigns/start.js');
@@ -120,7 +165,7 @@ async function startServer() {
   // Body-parser error handler (catches 413 before routes see it)
   app.use((err: any, _req: any, res: any, next: any) => {
     if (err && (err.type === 'entity.too.large' || err.status === 413)) {
-      console.error(`[SERVER] 413 PayloadTooLarge â€” bumping body limit failed? Current=${BODY_LIMIT}`);
+      log.error('413 PayloadTooLarge', { limit: BODY_LIMIT });
       return res.status(413).json({ error: 'PAYLOAD_TOO_LARGE', limit: BODY_LIMIT });
     }
     next(err);
@@ -157,7 +202,7 @@ async function startServer() {
     } catch (error: any) {
       const errorStatus = error.response?.status || 500;
       const errorData = error.response?.data || { error: error.message || 'Internal Server Error' };
-      console.error(`[PROXY-REQ] Erro OpenRouter (${errorStatus}) em ${endpoint}:`, errorData);
+      log.error('OpenRouter proxy falhou', { endpoint, status: errorStatus, err_msg: error.message });
       res.status(errorStatus).json(errorData);
     }
   });
@@ -182,7 +227,7 @@ async function startServer() {
     } catch (error: any) {
       const errorStatus = error.response?.status || 500;
       const errorData = error.response?.data || { error: error.message || 'Internal Server Error' };
-      console.error(`[PROXY] Erro OpenRouter (${errorStatus}):`, errorData);
+      log.error('OpenRouter auth falhou', { status: errorStatus, err_msg: error.message });
       res.status(errorStatus).json(errorData);
     }
   });
@@ -198,6 +243,9 @@ async function startServer() {
   const { default: evolutionReconcileHandler, scheduleReconcile } = await import('./_api/evolution/reconcile.js');
   const { default: evolutionMediaHandler }            = await import('./_api/evolution/media.js');
   const { default: evolutionStatsHandler }           = await import('./_api/evolution/stats.js');
+  const { default: evolutionSendMediaHandler }       = await import('./_api/evolution/sendMedia.js');
+  const { default: evolutionAvatarHandler }          = await import('./_api/evolution/avatar.js');
+  const { default: evolutionContactsHandler }        = await import('./_api/evolution/contacts.js');
   const { default: evolutionWebhookHandler }         = await import('./_api/webhook/evolution.js');
 
   app.all('/api/evolution/sessions',      evolutionSessionsHandler);
@@ -210,12 +258,15 @@ async function startServer() {
   app.all('/api/evolution/reconcile',     evolutionReconcileHandler);
   app.all('/api/evolution/media',         evolutionMediaHandler);
   app.all('/api/evolution/stats',         evolutionStatsHandler);
+  app.all('/api/evolution/sendMedia',     evolutionSendMediaHandler);
+  app.all('/api/evolution/avatar',        evolutionAvatarHandler);
+  app.all('/api/evolution/contacts',      evolutionContactsHandler);
   // byEvents:true faz a Evolution API enviar para sub-caminhos (ex: /messages-upsert)
   app.all('/api/webhook/evolution', evolutionWebhookHandler);
   app.all('/api/webhook/evolution/:event', evolutionWebhookHandler);
 
   scheduleReconcile(5 * 60 * 1000);
-  console.log('[SERVER] Evolution API routes registradas');
+  log.info('Evolution API routes registradas');
 
   // â”€â”€ Email Module routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const { default: emailAccountsHandler }        = await import('./_api/email/accounts.js');
@@ -249,21 +300,42 @@ async function startServer() {
   app.all('/api/email/stats',               emailStatsHandler);
 
   scheduleEmailSync(5 * 60 * 1000);
-  console.log('[SERVER] Email Module routes registradas');
+  log.info('Email Module routes registradas');
 
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' && process.env.SERVE_STATIC !== 'false') {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
+    log.info('Servindo frontend estático', { distPath });
   }
+
+  // ── Global Express error handler ──────────────────────────────────────────
+  app.use((err: any, req: any, res: any, _next: any) => {
+    const status: number = err.status ?? err.statusCode ?? 500;
+    log.error('Erro Express não tratado', {
+      method: req.method,
+      path: req.path,
+      reqId: req.reqId,
+      status,
+      ...errCtx(err),
+    });
+    if (res.headersSent) return;
+    res.status(status).json({ error: err.message ?? 'Internal Server Error' });
+  });
 
   // â”€â”€ HTTP server + Socket.IO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const httpServer = createServer(app);
 
   const io = new SocketIOServer(httpServer, {
-    cors: { origin: '*', methods: ['GET', 'POST'] },
+    cors: {
+      origin: process.env.CORS_ORIGIN
+        ? process.env.CORS_ORIGIN.split(',').map(s => s.trim())
+        : '*',
+      methods: ['GET', 'POST'],
+      credentials: true,
+    },
     transports: ['websocket', 'polling'],
   });
 
@@ -272,17 +344,17 @@ async function startServer() {
   io.on('connection', socket => {
     socket.on('join_session', (sessionName: string) => {
       socket.join(`session:${sessionName}`);
-      console.log(`[SOCKET] ${socket.id} joined session:${sessionName}`);
+      log.debug('Socket joined session', { socketId: socket.id, sessionName });
     });
     socket.on('leave_session', (sessionName: string) => {
       socket.leave(`session:${sessionName}`);
     });
   });
 
-  console.log('[SERVER] Socket.IO inicializado');
+  log.info('Socket.IO inicializado');
 
   httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`Servidor rodando em http://localhost:${PORT}`);
+    log.info('Servidor iniciado', { port: PORT, env: process.env.NODE_ENV ?? 'development' });
   });
 }
 

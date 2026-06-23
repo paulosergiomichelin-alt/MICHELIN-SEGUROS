@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Smartphone, Plus, Trash2, RefreshCw, Loader2, CheckCircle2,
   AlertCircle, Clock, QrCode, WifiOff, User, BarChart2,
-  MessageSquare, Users, CheckCheck, XCircle, Activity, Inbox,
+  MessageSquare, Users, CheckCheck, XCircle, Activity, Inbox, Zap,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -200,6 +200,7 @@ export const SessionsPage: React.FC = () => {
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
+  const [webhookConfiguringId, setWebhookConfiguringId] = useState<string | null>(null);
   const [qrSession, setQrSession] = useState<string | null>(null);
   const [error, setError] = useState('');
 
@@ -234,6 +235,14 @@ export const SessionsPage: React.FC = () => {
     await EvolutionService.refreshSession(session.sessionName);
     setRefreshingId(null);
     setQrSession(session.sessionName);
+  };
+
+  const handleConfigureWebhook = async (session: WhatsAppSession) => {
+    setWebhookConfiguringId(session.id);
+    setError('');
+    const result = await EvolutionService.configureWebhook(session.sessionName);
+    if (!result.success) setError(result.error ?? 'Falha ao configurar webhook');
+    setWebhookConfiguringId(null);
   };
 
   // Only count active sessions (not closed) to decide if user can create a new one
@@ -386,6 +395,16 @@ export const SessionsPage: React.FC = () => {
                           className="p-2 rounded-lg bg-white/5 border border-white/10 text-white/40 hover:text-emerald-400 hover:border-emerald-500/30 transition-all disabled:opacity-40"
                         >
                           {isRefreshing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
+                      {session.status === 'open' && isAdmin && (
+                        <button
+                          onClick={() => handleConfigureWebhook(session)}
+                          disabled={webhookConfiguringId === session.id}
+                          title="Registrar webhook para mensagens em tempo real"
+                          className="p-2 rounded-lg bg-white/5 border border-white/10 text-white/40 hover:text-amber-400 hover:border-amber-500/30 transition-all disabled:opacity-40"
+                        >
+                          {webhookConfiguringId === session.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
                         </button>
                       )}
                       {(isOwn || isAdmin) && (

@@ -268,7 +268,10 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (!userProfile?.uid) return;
 
-    const socket = io('/', { path: '/socket.io', transports: ['websocket', 'polling'] });
+    const vpsUrl = import.meta.env.VITE_API_URL as string | undefined;
+    const socket = vpsUrl
+      ? io(vpsUrl, { path: '/socket.io', transports: ['websocket', 'polling'] })
+      : io({ path: '/socket.io', transports: ['websocket', 'polling'] });
     socketRef.current = socket;
 
     socket.on('email:update', (data: { type: string; userId: string; message: CachedEmail; folder?: string }) => {

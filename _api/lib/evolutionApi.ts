@@ -1,3 +1,6 @@
+import { createLogger, errCtx } from './logger.js';
+const log = createLogger('evolution/api');
+
 const EVOLUTION_API_URL = () => {
   const url = process.env.EVOLUTION_API_URL;
   if (!url) throw new Error('[EvolutionAPI] EVOLUTION_API_URL env var não definida');
@@ -56,46 +59,48 @@ export const EvolutionAPI = {
       if (!res.ok) {
         const text = await res.text();
         if (res.status === 403 && text.includes('already in use')) {
-          console.warn(`[EvolutionAPI] createInstance: instância ${instanceName} já existe, reutilizando`);
+          log.warn('createInstance: instância já existe, reutilizando', { instance: instanceName });
           return await EvolutionAPI.getInstanceInfo(instanceName) ?? { instanceName };
         }
-        console.error(`[EvolutionAPI] createInstance ${instanceName} falhou (${res.status}): ${text}`);
+        log.error('createInstance falhou', { instance: instanceName, status: res.status, body: text.slice(0, 200) });
         return null;
       }
       return await res.json();
     } catch (err) {
-      console.error('[EvolutionAPI] createInstance error:', err);
+      log.error('createInstance erro inesperado', { instance: instanceName, ...errCtx(err) });
       return null;
     }
   },
 
   async setWebhook(instanceName: string, webhookUrl: string): Promise<boolean> {
-    try {
-      const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/webhook/set/${instanceName}`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({
-          url: webhookUrl,
-          byEvents: true,
-          base64: false,
-          events: [
-            'MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'MESSAGES_DELETE',
-            'CONNECTION_UPDATE', 'QRCODE_UPDATED',
-            'CONTACTS_UPDATE', 'CHATS_UPDATE', 'CHATS_UPSERT', 'PRESENCE_UPDATE',
-          ],
-        }),
-      }, 8000);
-      if (!res.ok) {
+    const events = [
+      'MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'MESSAGES_DELETE',
+      'CONNECTION_UPDATE', 'QRCODE_UPDATED',
+      'CONTACTS_UPDATE', 'CHATS_UPDATE', 'CHATS_UPSERT', 'PRESENCE_UPDATE',
+    ];
+    // Tenta v2.x primeiro (body aninhado em "webhook"), depois v1.x (body flat)
+    const payloads = [
+      { webhook: { url: webhookUrl, byEvents: true, base64: false, events } },
+      { url: webhookUrl, byEvents: true, base64: false, events },
+    ];
+    for (const body of payloads) {
+      try {
+        const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/webhook/set/${instanceName}`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(body),
+        }, 8000);
+        if (res.ok) {
+          log.info('setWebhook OK', { instance: instanceName, url: webhookUrl });
+          return true;
+        }
         const text = await res.text();
-        console.error(`[EvolutionAPI] setWebhook ${instanceName} falhou (${res.status}): ${text}`);
-        return false;
+        log.warn('setWebhook falhou (tentando próximo payload)', { instance: instanceName, status: res.status, body: text.slice(0, 200) });
+      } catch (err) {
+        log.error('setWebhook erro inesperado', { instance: instanceName, ...errCtx(err) });
       }
-      console.log(`[EvolutionAPI] setWebhook ${instanceName} → ${webhookUrl}`);
-      return true;
-    } catch (err) {
-      console.error('[EvolutionAPI] setWebhook error:', err);
-      return false;
     }
+    return false;
   },
 
   async getQRCode(instanceName: string): Promise<{ base64?: string; code?: string } | null> {
@@ -105,7 +110,7 @@ export const EvolutionAPI = {
       });
       if (!res.ok) {
         const text = await res.text();
-        console.error(`[EvolutionAPI] getQRCode ${instanceName} falhou (${res.status}): ${text}`);
+        log.warn('getQRCode falhou', { instance: instanceName, status: res.status, body: text.slice(0, 200) });
         return null;
       }
       const data: any = await res.json();
@@ -118,10 +123,10 @@ export const EvolutionAPI = {
       try {
         const qr = await connectAndRead();
         if (qr) return qr;
-        console.log(`[EvolutionAPI] getQRCode ${instanceName}: tentativa ${i + 1}/3 sem QR`);
+        log.debug('getQRCode: tentativa sem QR', { instance: instanceName, attempt: i + 1 });
         await new Promise(r => setTimeout(r, 1500));
       } catch (err) {
-        console.error('[EvolutionAPI] getQRCode error:', err);
+        log.error('getQRCode erro inesperado', { instance: instanceName, ...errCtx(err) });
         return null;
       }
     }
@@ -130,7 +135,7 @@ export const EvolutionAPI = {
     const currentState = (
       (stateRes as any)?.instance?.state ?? (stateRes as any)?.state ?? ''
     ).toLowerCase();
-    console.log(`[EvolutionAPI] getQRCode ${instanceName}: sem QR, state=${currentState} — forçando logout`);
+    log.warn('getQRCode: sem QR após 3 tentativas, forçando logout', { instance: instanceName, state: currentState });
 
     if (currentState === 'open') return null;
 
@@ -142,7 +147,7 @@ export const EvolutionAPI = {
       await new Promise(r => setTimeout(r, 2000));
       return await connectAndRead();
     } catch (err) {
-      console.error('[EvolutionAPI] getQRCode post-logout error:', err);
+      log.error('getQRCode post-logout erro inesperado', { instance: instanceName, ...errCtx(err) });
       return null;
     }
   },
@@ -154,13 +159,13 @@ export const EvolutionAPI = {
       });
       if (!res.ok) {
         const text = await res.text();
-        console.error(`[EvolutionAPI] getConnectionState ${instanceName} falhou (${res.status}): ${text}`);
+        log.warn('getConnectionState falhou', { instance: instanceName, status: res.status, body: text.slice(0, 200) });
         return null;
       }
       const data: any = await res.json();
       return data ?? null;
     } catch (err) {
-      console.error('[EvolutionAPI] getConnectionState error:', err);
+      log.error('getConnectionState erro inesperado', { instance: instanceName, ...errCtx(err) });
       return null;
     }
   },
@@ -173,10 +178,10 @@ export const EvolutionAPI = {
       });
       if (!res.ok) {
         const text = await res.text();
-        console.warn(`[EvolutionAPI] logoutInstance ${instanceName} falhou (${res.status}): ${text}`);
+        log.warn('logoutInstance falhou', { instance: instanceName, status: res.status, body: text.slice(0, 200) });
       }
     } catch (err) {
-      console.error('[EvolutionAPI] logoutInstance error:', err);
+      log.error('logoutInstance erro inesperado', { instance: instanceName, ...errCtx(err) });
     }
   },
 
@@ -188,10 +193,10 @@ export const EvolutionAPI = {
       });
       if (!res.ok) {
         const text = await res.text();
-        console.warn(`[EvolutionAPI] deleteInstance ${instanceName} falhou (${res.status}): ${text}`);
+        log.warn('deleteInstance falhou', { instance: instanceName, status: res.status, body: text.slice(0, 200) });
       }
     } catch (err) {
-      console.error('[EvolutionAPI] deleteInstance error:', err);
+      log.error('deleteInstance erro inesperado', { instance: instanceName, ...errCtx(err) });
     }
   },
 
@@ -208,12 +213,12 @@ export const EvolutionAPI = {
       });
       if (!res.ok) {
         const errText = await res.text();
-        console.error(`[EvolutionAPI] sendText ${instanceName}→${phone} falhou (${res.status}): ${errText}`);
+        log.error('sendText falhou', { instance: instanceName, phone, status: res.status, body: errText.slice(0, 200) });
         return null;
       }
       return await res.json();
     } catch (err) {
-      console.error('[EvolutionAPI] sendText error:', err);
+      log.error('sendText erro inesperado', { instance: instanceName, phone, ...errCtx(err) });
       return null;
     }
   },
@@ -233,12 +238,39 @@ export const EvolutionAPI = {
       });
       if (!res.ok) {
         const errText = await res.text();
-        console.error(`[EvolutionAPI] sendImage ${instanceName}→${phone} falhou (${res.status}): ${errText}`);
+        log.error('sendImage falhou', { instance: instanceName, phone, status: res.status, body: errText.slice(0, 200) });
         return null;
       }
       return await res.json();
     } catch (err) {
-      console.error('[EvolutionAPI] sendImage error:', err);
+      log.error('sendImage erro inesperado', { instance: instanceName, phone, ...errCtx(err) });
+      return null;
+    }
+  },
+
+  async sendMediaBase64(instanceName: string, phone: string, mediatype: string, mimetype: string, base64: string, fileName?: string, caption?: string): Promise<any> {
+    try {
+      const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/message/sendMedia/${instanceName}`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          number: phone,
+          mediatype,
+          mimetype,
+          media: base64,
+          fileName: fileName ?? `arquivo.${mimetype?.split('/').pop() ?? 'bin'}`,
+          caption: caption ?? '',
+          options: { delay: 1200, presence: 'composing' },
+        }),
+      }, 60000);
+      if (!res.ok) {
+        const errText = await res.text();
+        log.error('sendMediaBase64 falhou', { instance: instanceName, phone, mediatype, status: res.status, body: errText.slice(0, 200) });
+        return null;
+      }
+      return await res.json();
+    } catch (err) {
+      log.error('sendMediaBase64 erro inesperado', { instance: instanceName, phone, mediatype, ...errCtx(err) });
       return null;
     }
   },
@@ -250,13 +282,13 @@ export const EvolutionAPI = {
       });
       if (!res.ok) {
         const text = await res.text();
-        console.error(`[EvolutionAPI] fetchInstances falhou (${res.status}): ${text}`);
+        log.error('fetchInstances falhou', { status: res.status, body: text.slice(0, 200) });
         return [];
       }
       const data: any = await res.json();
       return Array.isArray(data) ? data : [];
     } catch (err) {
-      console.error('[EvolutionAPI] fetchInstances error:', err);
+      log.error('fetchInstances erro inesperado', errCtx(err));
       return [];
     }
   },
@@ -270,14 +302,14 @@ export const EvolutionAPI = {
         body: JSON.stringify({ where: {} }),
       }, 20000);
       const text = await res.text();
-      process.stdout.write(`[EvolutionAPI] findChats ${instanceName} status=${res.status} chats=${text.length > 100 ? '(truncated)' : text}\n`);
+      log.debug('findChats resposta', { instance: instanceName, status: res.status, len: text.length });
       if (!res.ok) return [];
       try {
         const data: any = JSON.parse(text);
         return Array.isArray(data) ? data : [];
       } catch { return []; }
     } catch (err) {
-      process.stdout.write(`[EvolutionAPI] findChats error: ${err}\n`);
+      log.error('findChats erro inesperado', { instance: instanceName, ...errCtx(err) });
       return [];
     }
   },
@@ -303,14 +335,12 @@ export const EvolutionAPI = {
 
         const text = await res.text();
         if (!res.ok) {
-          process.stdout.write(`[EvolutionAPI] findMessages ${path} status=${res.status}\n`);
+          log.warn('findMessages retornou erro', { instance: instanceName, path, status: res.status });
           continue;
         }
 
         try {
           const data: any = JSON.parse(text);
-          // v2.x: { messages: { total, pages, currentPage, records: [...] } }
-          // v1.x: array direto
           const msgs = Array.isArray(data)
             ? data
             : Array.isArray(data?.messages?.records)
@@ -318,12 +348,12 @@ export const EvolutionAPI = {
               : Array.isArray(data?.messages)
                 ? data.messages
                 : [];
-          process.stdout.write(`[EvolutionAPI] findMessages via ${path}: ${msgs.length} msgs (total no banco: ${data?.messages?.total ?? '?'})\n`);
+          log.debug('findMessages OK', { instance: instanceName, path, count: msgs.length, total: data?.messages?.total ?? '?' });
           return msgs;
         } catch { continue; }
       } catch (err: any) {
         if (err?.name === 'AbortError') continue;
-        process.stdout.write(`[EvolutionAPI] findMessages ${path} error: ${err}\n`);
+        log.warn('findMessages timeout/erro', { instance: instanceName, path, ...errCtx(err) });
         continue;
       }
     }
@@ -346,7 +376,7 @@ export const EvolutionAPI = {
         return Array.isArray(data) ? data : [];
       } catch { return []; }
     } catch (err) {
-      process.stdout.write(`[EvolutionAPI] findContacts error: ${err}\n`);
+      log.error('findContacts erro inesperado', { instance: instanceName, ...errCtx(err) });
       return [];
     }
   },
@@ -422,14 +452,14 @@ export const EvolutionAPI = {
       );
       if (!res.ok) {
         const text = await res.text();
-        console.error(`[EvolutionAPI] getInstanceInfo ${instanceName} falhou (${res.status}): ${text}`);
+        log.warn('getInstanceInfo falhou', { instance: instanceName, status: res.status, body: text.slice(0, 200) });
         return null;
       }
       const data: any = await res.json();
       if (Array.isArray(data)) return data[0] ?? null;
       return data ?? null;
     } catch (err) {
-      console.error('[EvolutionAPI] getInstanceInfo error:', err);
+      log.error('getInstanceInfo erro inesperado', { instance: instanceName, ...errCtx(err) });
       return null;
     }
   },

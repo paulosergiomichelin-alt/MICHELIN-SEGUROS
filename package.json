@@ -4,12 +4,14 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n server,vite -c blue,green \"tsx watch --env-file=.env server.ts\" \"vite\"",
+    "dev": "node scripts/dev-start.mjs",
     "dev:server": "tsx watch --env-file=.env server.ts",
+    "dev:only": "concurrently -n server,vite -c blue,green \"tsx watch --env-file=.env server.ts\" \"vite\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "build:server": "node build-server.mjs"
+    "build:server": "node build-server.mjs",
+    "deploy:vps": "node scripts/deploy-vps.mjs"
   },
   "dependencies": {
     "@datadog/browser-logs": "^7.1.0",
@@ -25,6 +27,7 @@
     "clsx": "^2.1.1",
     "d3": "^7.9.0",
     "date-fns": "^4.1.0",
+    "emoji-picker-react": "^4.19.1",
     "express": "^5.2.1",
     "firebase": "^11.3.1",
     "framer-motion": "^12.4.7",

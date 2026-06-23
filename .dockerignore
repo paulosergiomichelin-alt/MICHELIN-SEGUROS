@@ -1,0 +1,14 @@
+node_modules
+dist
+.env
+.env.*
+*.log
+.git
+.claude
+evolution
+scripts
+src
+public
+api
+dist-server
+*.md
