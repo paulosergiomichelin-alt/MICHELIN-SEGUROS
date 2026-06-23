@@ -372,12 +372,14 @@ export const WhatsAppInboxPage: React.FC = () => {
   const autoSyncedRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const selectedConvRef = useRef<WhatsAppConversation | null>(null);
+  const selectedSessionRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
-  // Mantém ref sincronizada para uso dentro de closures de socket
+  // Mantém refs sincronizadas para uso dentro de closures de socket
   useEffect(() => { selectedConvRef.current = selectedConv; }, [selectedConv]);
+  useEffect(() => { selectedSessionRef.current = selectedSessionName; }, [selectedSessionName]);
 
   // Fecha emoji picker ao clicar fora
   useEffect(() => {
@@ -416,10 +418,9 @@ export const WhatsAppInboxPage: React.FC = () => {
 
     socket.on('connect', () => {
       setSocketConnected(true);
-      // Re-entrar na sala quando reconectar
-      if (selectedSessionName) {
-        socket.emit('join_session', selectedSessionName);
-      }
+      // Re-entrar na sala quando reconectar (usa ref para evitar closure stale)
+      const sName = selectedSessionRef.current;
+      if (sName) socket.emit('join_session', sName);
     });
 
     socket.on('disconnect', () => setSocketConnected(false));

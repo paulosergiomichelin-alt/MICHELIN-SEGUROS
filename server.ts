@@ -325,21 +325,47 @@ async function startServer() {
     res.status(status).json({ error: err.message ?? 'Internal Server Error' });
   });
 
-  // â”€â”€ HTTP server + Socket.IO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── HTTP server + Socket.IO ────────────────────────────────────────────────
   const httpServer = createServer(app);
+
+  // Log HTTP-level para diagnosticar se polling chega ao VPS (via Vercel rewrite)
+  httpServer.prependListener('request', (req: any, _res: any) => {
+    if (req.url?.startsWith('/socket.io')) {
+      log.info('[DIAG] socket.io HTTP', {
+        method: req.method,
+        url: (req.url as string).substring(0, 150),
+        origin: req.headers.origin,
+        host: req.headers.host,
+        fwd: req.headers['x-forwarded-for'],
+      });
+    }
+  });
+
+  const corsOriginList = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((s: string) => s.trim())
+    : ['*'];
+
+  log.info('Socket.IO CORS config', { origins: corsOriginList });
 
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: process.env.CORS_ORIGIN
-        ? process.env.CORS_ORIGIN.split(',').map(s => s.trim())
-        : '*',
+      origin: corsOriginList.length === 1 && corsOriginList[0] === '*' ? '*' : corsOriginList,
       methods: ['GET', 'POST'],
-      credentials: true,
+      credentials: corsOriginList[0] !== '*',
     },
     transports: ['websocket', 'polling'],
   });
 
   setIo(io as any);
+
+  // Engine.io nível mais baixo — para confirmar chegada antes do handshake Socket.IO
+  (io.engine as any).on('connection', (rawSocket: any) => {
+    log.info('[DIAG] engine.io raw connection', {
+      id: rawSocket.id,
+      transport: rawSocket.transport?.name,
+      remoteAddress: rawSocket.remoteAddress,
+    });
+  });
 
   io.on('connection', socket => {
     log.info('Socket.IO client conectado', { socketId: socket.id, transport: socket.conn.transport.name, ip: socket.handshake.address });
