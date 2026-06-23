@@ -8,8 +8,8 @@
       "destination": "http://143.95.211.30:3000/api/:path*"
     },
     {
-      "source": "/socket.io/:path*",
-      "destination": "http://143.95.211.30:3000/socket.io/:path*"
+      "source": "/socket.io(.*)",
+      "destination": "http://143.95.211.30:3000/socket.io$1"
     },
     {
       "source": "/((?!api/)(?!socket\\.io/).*)",

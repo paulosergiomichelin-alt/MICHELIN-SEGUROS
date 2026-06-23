@@ -342,12 +342,16 @@ async function startServer() {
   setIo(io as any);
 
   io.on('connection', socket => {
+    log.info('Socket.IO client conectado', { socketId: socket.id, transport: socket.conn.transport.name, ip: socket.handshake.address });
     socket.on('join_session', (sessionName: string) => {
       socket.join(`session:${sessionName}`);
-      log.debug('Socket joined session', { socketId: socket.id, sessionName });
+      log.info('Socket joined session', { socketId: socket.id, sessionName });
     });
     socket.on('leave_session', (sessionName: string) => {
       socket.leave(`session:${sessionName}`);
+    });
+    socket.on('disconnect', reason => {
+      log.info('Socket.IO client desconectado', { socketId: socket.id, reason });
     });
   });
 
