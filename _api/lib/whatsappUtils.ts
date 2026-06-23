@@ -120,3 +120,15 @@ export function extractPhoneFromJid(jid: string, remoteJidAlt?: string): string 
   if (isIgnoredJid(jid) && !jid.endsWith('@g.us')) return null;
   return extractPhone(jid);
 }
+
+const MEDIA_LABELS: Record<string, string> = {
+  audio: '🎤 Áudio',
+  video: '🎬 Vídeo',
+  image: '📷 Imagem',
+  document: '📄 Documento',
+  sticker: '🗳️ Figurinha',
+};
+
+export function mediaLabel(messageType: string): string {
+  return MEDIA_LABELS[messageType] ?? `[${messageType}]`;
+}

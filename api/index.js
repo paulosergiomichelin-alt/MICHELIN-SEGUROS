@@ -946,7 +946,91 @@ var init_emailSync = __esm({
 import express from "express";
 import axios2 from "axios";
 
+// _api/lib/logger.ts
+var LEVEL_RANK = { debug: 0, info: 1, warn: 2, error: 3 };
+var IS_PROD = process.env.NODE_ENV === "production";
+function minLevel() {
+  const env = (process.env.LOG_LEVEL ?? "").toLowerCase();
+  return LEVEL_RANK[env] !== void 0 ? env : IS_PROD ? "info" : "debug";
+}
+var CLR = {
+  debug: "\x1B[37m",
+  // white
+  info: "\x1B[36m",
+  // cyan
+  warn: "\x1B[33m",
+  // yellow
+  error: "\x1B[31m"
+  // red
+};
+var RST = "\x1B[0m";
+var DIM = "\x1B[90m";
+function devLine(level, ns, msg, ctx) {
+  const ts = (/* @__PURE__ */ new Date()).toISOString();
+  const ctxStr = Object.keys(ctx).length ? " " + Object.entries(ctx).map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`).join(" ") : "";
+  return `${CLR[level]}[${level.toUpperCase().padEnd(5)}]${RST} ${DIM}${ts}${RST} [${ns}] ${msg}${ctxStr}`;
+}
+function prodLine(level, ns, msg, ctx) {
+  return JSON.stringify({ ts: (/* @__PURE__ */ new Date()).toISOString(), level, ns, msg, ...ctx });
+}
+function writeLine(level, ns, msg, ctx) {
+  const line = IS_PROD ? prodLine(level, ns, msg, ctx) : devLine(level, ns, msg, ctx);
+  if (level === "error" || level === "warn") {
+    process.stderr.write(line + "\n");
+  } else {
+    process.stdout.write(line + "\n");
+  }
+}
+function ddForward(level, ns, msg, ctx) {
+  const apiKey = process.env.DD_API_KEY;
+  const site = process.env.DD_SITE ?? "us5.datadoghq.com";
+  if (!apiKey) return;
+  const payload = [{
+    ddsource: "nodejs",
+    ddtags: `env:${process.env.NODE_ENV ?? "development"},service:michelin-crm-api,ns:${ns}`,
+    service: "michelin-crm-api",
+    level,
+    message: msg,
+    ...ctx,
+    ts: (/* @__PURE__ */ new Date()).toISOString()
+  }];
+  fetch(`https://http-intake.logs.${site}/api/v2/logs`, {
+    method: "POST",
+    headers: { "DD-API-KEY": apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }).catch(() => {
+  });
+}
+function createLogger(namespace) {
+  const ns = namespace;
+  function log7(level, msg, ctx = {}) {
+    if (LEVEL_RANK[level] < LEVEL_RANK[minLevel()]) return;
+    writeLine(level, ns, msg, ctx);
+    if (level === "error") ddForward(level, ns, msg, ctx);
+  }
+  return {
+    debug: (msg, ctx) => log7("debug", msg, ctx),
+    info: (msg, ctx) => log7("info", msg, ctx),
+    warn: (msg, ctx) => log7("warn", msg, ctx),
+    error: (msg, ctx) => log7("error", msg, ctx)
+  };
+}
+function errCtx(err, extra) {
+  const base = extra ?? {};
+  if (err instanceof Error) {
+    return {
+      ...base,
+      err_type: err.constructor.name,
+      err_msg: err.message,
+      stack: err.stack?.split("\n").slice(1, 7).map((s) => s.trim()).join(" | ")
+    };
+  }
+  return { ...base, err_msg: String(err) };
+}
+var log = createLogger("server");
+
 // _api/lib/evolutionApi.ts
+var log2 = createLogger("evolution/api");
 var EVOLUTION_API_URL = () => {
   const url = process.env.EVOLUTION_API_URL;
   if (!url) throw new Error("[EvolutionAPI] EVOLUTION_API_URL env var n\xE3o definida");
@@ -1001,51 +1085,52 @@ var EvolutionAPI = {
       if (!res.ok) {
         const text = await res.text();
         if (res.status === 403 && text.includes("already in use")) {
-          console.warn(`[EvolutionAPI] createInstance: inst\xE2ncia ${instanceName} j\xE1 existe, reutilizando`);
+          log2.warn("createInstance: inst\xE2ncia j\xE1 existe, reutilizando", { instance: instanceName });
           return await EvolutionAPI.getInstanceInfo(instanceName) ?? { instanceName };
         }
-        console.error(`[EvolutionAPI] createInstance ${instanceName} falhou (${res.status}): ${text}`);
+        log2.error("createInstance falhou", { instance: instanceName, status: res.status, body: text.slice(0, 200) });
         return null;
       }
       return await res.json();
     } catch (err) {
-      console.error("[EvolutionAPI] createInstance error:", err);
+      log2.error("createInstance erro inesperado", { instance: instanceName, ...errCtx(err) });
       return null;
     }
   },
   async setWebhook(instanceName, webhookUrl) {
-    try {
-      const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/webhook/set/${instanceName}`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          url: webhookUrl,
-          byEvents: true,
-          base64: false,
-          events: [
-            "MESSAGES_UPSERT",
-            "MESSAGES_UPDATE",
-            "MESSAGES_DELETE",
-            "CONNECTION_UPDATE",
-            "QRCODE_UPDATED",
-            "CONTACTS_UPDATE",
-            "CHATS_UPDATE",
-            "CHATS_UPSERT",
-            "PRESENCE_UPDATE"
-          ]
-        })
-      }, 8e3);
-      if (!res.ok) {
+    const events = [
+      "MESSAGES_UPSERT",
+      "MESSAGES_UPDATE",
+      "MESSAGES_DELETE",
+      "CONNECTION_UPDATE",
+      "QRCODE_UPDATED",
+      "CONTACTS_UPDATE",
+      "CHATS_UPDATE",
+      "CHATS_UPSERT",
+      "PRESENCE_UPDATE"
+    ];
+    const payloads = [
+      { webhook: { url: webhookUrl, byEvents: true, base64: false, events } },
+      { url: webhookUrl, byEvents: true, base64: false, events }
+    ];
+    for (const body of payloads) {
+      try {
+        const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/webhook/set/${instanceName}`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify(body)
+        }, 8e3);
+        if (res.ok) {
+          log2.info("setWebhook OK", { instance: instanceName, url: webhookUrl });
+          return true;
+        }
         const text = await res.text();
-        console.error(`[EvolutionAPI] setWebhook ${instanceName} falhou (${res.status}): ${text}`);
-        return false;
+        log2.warn("setWebhook falhou (tentando pr\xF3ximo payload)", { instance: instanceName, status: res.status, body: text.slice(0, 200) });
+      } catch (err) {
+        log2.error("setWebhook erro inesperado", { instance: instanceName, ...errCtx(err) });
       }
-      console.log(`[EvolutionAPI] setWebhook ${instanceName} \u2192 ${webhookUrl}`);
-      return true;
-    } catch (err) {
-      console.error("[EvolutionAPI] setWebhook error:", err);
-      return false;
     }
+    return false;
   },
   async getQRCode(instanceName) {
     const connectAndRead = async () => {
@@ -1054,7 +1139,7 @@ var EvolutionAPI = {
       });
       if (!res.ok) {
         const text = await res.text();
-        console.error(`[EvolutionAPI] getQRCode ${instanceName} falhou (${res.status}): ${text}`);
+        log2.warn("getQRCode falhou", { instance: instanceName, status: res.status, body: text.slice(0, 200) });
         return null;
       }
       const data = await res.json();
@@ -1066,16 +1151,16 @@ var EvolutionAPI = {
       try {
         const qr = await connectAndRead();
         if (qr) return qr;
-        console.log(`[EvolutionAPI] getQRCode ${instanceName}: tentativa ${i + 1}/3 sem QR`);
+        log2.debug("getQRCode: tentativa sem QR", { instance: instanceName, attempt: i + 1 });
         await new Promise((r) => setTimeout(r, 1500));
       } catch (err) {
-        console.error("[EvolutionAPI] getQRCode error:", err);
+        log2.error("getQRCode erro inesperado", { instance: instanceName, ...errCtx(err) });
         return null;
       }
     }
     const stateRes = await EvolutionAPI.getConnectionState(instanceName);
     const currentState = (stateRes?.instance?.state ?? stateRes?.state ?? "").toLowerCase();
-    console.log(`[EvolutionAPI] getQRCode ${instanceName}: sem QR, state=${currentState} \u2014 for\xE7ando logout`);
+    log2.warn("getQRCode: sem QR ap\xF3s 3 tentativas, for\xE7ando logout", { instance: instanceName, state: currentState });
     if (currentState === "open") return null;
     try {
       await fetchWithTimeout(`${EVOLUTION_API_URL()}/instance/logout/${instanceName}`, {
@@ -1085,7 +1170,7 @@ var EvolutionAPI = {
       await new Promise((r) => setTimeout(r, 2e3));
       return await connectAndRead();
     } catch (err) {
-      console.error("[EvolutionAPI] getQRCode post-logout error:", err);
+      log2.error("getQRCode post-logout erro inesperado", { instance: instanceName, ...errCtx(err) });
       return null;
     }
   },
@@ -1096,13 +1181,13 @@ var EvolutionAPI = {
       });
       if (!res.ok) {
         const text = await res.text();
-        console.error(`[EvolutionAPI] getConnectionState ${instanceName} falhou (${res.status}): ${text}`);
+        log2.warn("getConnectionState falhou", { instance: instanceName, status: res.status, body: text.slice(0, 200) });
         return null;
       }
       const data = await res.json();
       return data ?? null;
     } catch (err) {
-      console.error("[EvolutionAPI] getConnectionState error:", err);
+      log2.error("getConnectionState erro inesperado", { instance: instanceName, ...errCtx(err) });
       return null;
     }
   },
@@ -1114,10 +1199,10 @@ var EvolutionAPI = {
       });
       if (!res.ok) {
         const text = await res.text();
-        console.warn(`[EvolutionAPI] logoutInstance ${instanceName} falhou (${res.status}): ${text}`);
+        log2.warn("logoutInstance falhou", { instance: instanceName, status: res.status, body: text.slice(0, 200) });
       }
     } catch (err) {
-      console.error("[EvolutionAPI] logoutInstance error:", err);
+      log2.error("logoutInstance erro inesperado", { instance: instanceName, ...errCtx(err) });
     }
   },
   async deleteInstance(instanceName) {
@@ -1128,10 +1213,10 @@ var EvolutionAPI = {
       });
       if (!res.ok) {
         const text = await res.text();
-        console.warn(`[EvolutionAPI] deleteInstance ${instanceName} falhou (${res.status}): ${text}`);
+        log2.warn("deleteInstance falhou", { instance: instanceName, status: res.status, body: text.slice(0, 200) });
       }
     } catch (err) {
-      console.error("[EvolutionAPI] deleteInstance error:", err);
+      log2.error("deleteInstance erro inesperado", { instance: instanceName, ...errCtx(err) });
     }
   },
   async sendText(instanceName, phone, text) {
@@ -1147,12 +1232,12 @@ var EvolutionAPI = {
       });
       if (!res.ok) {
         const errText = await res.text();
-        console.error(`[EvolutionAPI] sendText ${instanceName}\u2192${phone} falhou (${res.status}): ${errText}`);
+        log2.error("sendText falhou", { instance: instanceName, phone, status: res.status, body: errText.slice(0, 200) });
         return null;
       }
       return await res.json();
     } catch (err) {
-      console.error("[EvolutionAPI] sendText error:", err);
+      log2.error("sendText erro inesperado", { instance: instanceName, phone, ...errCtx(err) });
       return null;
     }
   },
@@ -1171,12 +1256,38 @@ var EvolutionAPI = {
       });
       if (!res.ok) {
         const errText = await res.text();
-        console.error(`[EvolutionAPI] sendImage ${instanceName}\u2192${phone} falhou (${res.status}): ${errText}`);
+        log2.error("sendImage falhou", { instance: instanceName, phone, status: res.status, body: errText.slice(0, 200) });
         return null;
       }
       return await res.json();
     } catch (err) {
-      console.error("[EvolutionAPI] sendImage error:", err);
+      log2.error("sendImage erro inesperado", { instance: instanceName, phone, ...errCtx(err) });
+      return null;
+    }
+  },
+  async sendMediaBase64(instanceName, phone, mediatype, mimetype, base64, fileName, caption) {
+    try {
+      const res = await fetchWithTimeout(`${EVOLUTION_API_URL()}/message/sendMedia/${instanceName}`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          number: phone,
+          mediatype,
+          mimetype,
+          media: base64,
+          fileName: fileName ?? `arquivo.${mimetype?.split("/").pop() ?? "bin"}`,
+          caption: caption ?? "",
+          options: { delay: 1200, presence: "composing" }
+        })
+      }, 6e4);
+      if (!res.ok) {
+        const errText = await res.text();
+        log2.error("sendMediaBase64 falhou", { instance: instanceName, phone, mediatype, status: res.status, body: errText.slice(0, 200) });
+        return null;
+      }
+      return await res.json();
+    } catch (err) {
+      log2.error("sendMediaBase64 erro inesperado", { instance: instanceName, phone, mediatype, ...errCtx(err) });
       return null;
     }
   },
@@ -1187,13 +1298,13 @@ var EvolutionAPI = {
       });
       if (!res.ok) {
         const text = await res.text();
-        console.error(`[EvolutionAPI] fetchInstances falhou (${res.status}): ${text}`);
+        log2.error("fetchInstances falhou", { status: res.status, body: text.slice(0, 200) });
         return [];
       }
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     } catch (err) {
-      console.error("[EvolutionAPI] fetchInstances error:", err);
+      log2.error("fetchInstances erro inesperado", errCtx(err));
       return [];
     }
   },
@@ -1206,8 +1317,7 @@ var EvolutionAPI = {
         body: JSON.stringify({ where: {} })
       }, 2e4);
       const text = await res.text();
-      process.stdout.write(`[EvolutionAPI] findChats ${instanceName} status=${res.status} chats=${text.length > 100 ? "(truncated)" : text}
-`);
+      log2.debug("findChats resposta", { instance: instanceName, status: res.status, len: text.length });
       if (!res.ok) return [];
       try {
         const data = JSON.parse(text);
@@ -1216,8 +1326,7 @@ var EvolutionAPI = {
         return [];
       }
     } catch (err) {
-      process.stdout.write(`[EvolutionAPI] findChats error: ${err}
-`);
+      log2.error("findChats erro inesperado", { instance: instanceName, ...errCtx(err) });
       return [];
     }
   },
@@ -1239,23 +1348,20 @@ var EvolutionAPI = {
         if (res.status === 404) continue;
         const text = await res.text();
         if (!res.ok) {
-          process.stdout.write(`[EvolutionAPI] findMessages ${path} status=${res.status}
-`);
+          log2.warn("findMessages retornou erro", { instance: instanceName, path, status: res.status });
           continue;
         }
         try {
           const data = JSON.parse(text);
           const msgs = Array.isArray(data) ? data : Array.isArray(data?.messages?.records) ? data.messages.records : Array.isArray(data?.messages) ? data.messages : [];
-          process.stdout.write(`[EvolutionAPI] findMessages via ${path}: ${msgs.length} msgs (total no banco: ${data?.messages?.total ?? "?"})
-`);
+          log2.debug("findMessages OK", { instance: instanceName, path, count: msgs.length, total: data?.messages?.total ?? "?" });
           return msgs;
         } catch {
           continue;
         }
       } catch (err) {
         if (err?.name === "AbortError") continue;
-        process.stdout.write(`[EvolutionAPI] findMessages ${path} error: ${err}
-`);
+        log2.warn("findMessages timeout/erro", { instance: instanceName, path, ...errCtx(err) });
         continue;
       }
     }
@@ -1278,8 +1384,7 @@ var EvolutionAPI = {
         return [];
       }
     } catch (err) {
-      process.stdout.write(`[EvolutionAPI] findContacts error: ${err}
-`);
+      log2.error("findContacts erro inesperado", { instance: instanceName, ...errCtx(err) });
       return [];
     }
   },
@@ -1355,14 +1460,14 @@ var EvolutionAPI = {
       );
       if (!res.ok) {
         const text = await res.text();
-        console.error(`[EvolutionAPI] getInstanceInfo ${instanceName} falhou (${res.status}): ${text}`);
+        log2.warn("getInstanceInfo falhou", { instance: instanceName, status: res.status, body: text.slice(0, 200) });
         return null;
       }
       const data = await res.json();
       if (Array.isArray(data)) return data[0] ?? null;
       return data ?? null;
     } catch (err) {
-      console.error("[EvolutionAPI] getInstanceInfo error:", err);
+      log2.error("getInstanceInfo erro inesperado", { instance: instanceName, ...errCtx(err) });
       return null;
     }
   }
@@ -1370,6 +1475,7 @@ var EvolutionAPI = {
 
 // _api/evolution/sessions.ts
 init_adminFirebase();
+var log3 = createLogger("evolution/sessions");
 async function handler(req, res) {
   if (req.method === "GET") {
     try {
@@ -1381,7 +1487,7 @@ async function handler(req, res) {
       const sessions = filters.length > 0 ? await fsQuery("whatsapp_sessions", filters) : [];
       return res.status(200).json({ sessions });
     } catch (err) {
-      console.error("[EVOLUTION/sessions] GET error:", err);
+      log3.error("GET sessions falhou", errCtx(err));
       return res.status(500).json({ error: "Erro ao listar sess\xF5es", detail: err?.message });
     }
   }
@@ -1398,9 +1504,9 @@ async function handler(req, res) {
       }
       const instanceName = sessionName || `michelin_${organizationId}_${userId}`;
       const webhookUrl = process.env.EVOLUTION_WEBHOOK_URL || "";
-      console.log(`[EVOLUTION/sessions] Criando inst\xE2ncia: ${instanceName} webhook=${webhookUrl || "(none)"}`);
+      log3.info("Criando inst\xE2ncia", { instance: instanceName, webhook: webhookUrl || "(none)" });
       const result = await EvolutionAPI.createInstance(instanceName, webhookUrl);
-      console.log("[EVOLUTION/sessions] createInstance result:", JSON.stringify(result)?.slice(0, 500));
+      log3.debug("createInstance result", { instance: instanceName, result: JSON.stringify(result)?.slice(0, 200) });
       if (!result) {
         return res.status(502).json({ error: "Falha ao criar inst\xE2ncia na Evolution API. Verifique se a URL e a chave est\xE3o corretas e se o servi\xE7o est\xE1 acess\xEDvel." });
       }
@@ -1419,10 +1525,10 @@ async function handler(req, res) {
         createdAt: now,
         updatedAt: now
       });
-      console.log(`[EVOLUTION/sessions] Sess\xE3o criada: ${instanceName}`);
+      log3.info("Sess\xE3o criada", { instance: instanceName });
       return res.status(201).json({ instanceName, status: "qr" });
     } catch (err) {
-      console.error("[EVOLUTION/sessions] POST error:", err);
+      log3.error("POST sessions falhou", { instance: req.body?.sessionName, ...errCtx(err) });
       return res.status(500).json({ error: "Erro ao criar sess\xE3o", detail: err?.message });
     }
   }
@@ -1432,13 +1538,13 @@ async function handler(req, res) {
       if (!name) {
         return res.status(400).json({ error: 'Query param "name" \xE9 obrigat\xF3rio' });
       }
-      console.log(`[EVOLUTION/sessions] Encerrando inst\xE2ncia: ${name}`);
+      log3.info("Encerrando inst\xE2ncia", { instance: name });
       await EvolutionAPI.logoutInstance(name);
       await EvolutionAPI.deleteInstance(name);
       await fsDelete("whatsapp_sessions", name);
       return res.status(200).json({ success: true, instanceName: name });
     } catch (err) {
-      console.error("[EVOLUTION/sessions] DELETE error:", err);
+      log3.error("DELETE sessions falhou", { instance: req.query?.name, ...errCtx(err) });
       return res.status(500).json({ error: "Erro ao encerrar sess\xE3o", detail: err?.message });
     }
   }
@@ -1448,13 +1554,13 @@ async function handler(req, res) {
       if (!name) {
         return res.status(400).json({ error: 'Campo "name" \xE9 obrigat\xF3rio no body' });
       }
-      console.log(`[EVOLUTION/sessions] Reiniciando inst\xE2ncia: ${name}`);
+      log3.info("Reiniciando inst\xE2ncia", { instance: name });
       await EvolutionAPI.logoutInstance(String(name));
       await EvolutionAPI.deleteInstance(String(name));
       await new Promise((r) => setTimeout(r, 2e3));
       const webhookUrl = process.env.EVOLUTION_WEBHOOK_URL || "";
       const result = await EvolutionAPI.createInstance(String(name), webhookUrl);
-      console.log("[EVOLUTION/sessions] createInstance result:", JSON.stringify(result)?.slice(0, 500));
+      log3.debug("createInstance result (PUT)", { instance: name, result: JSON.stringify(result)?.slice(0, 200) });
       if (!result) {
         return res.status(502).json({ error: "Falha ao recriar inst\xE2ncia na Evolution API" });
       }
@@ -1465,10 +1571,10 @@ async function handler(req, res) {
         ...qrInCreate?.base64 ? { qrBase64: qrInCreate.base64, qrCode: qrInCreate.code ?? null } : {},
         updatedAt: now
       });
-      console.log(`[EVOLUTION/sessions] Inst\xE2ncia reiniciada: ${name}`);
+      log3.info("Inst\xE2ncia reiniciada", { instance: name });
       return res.status(200).json({ instanceName: name, status: "qr" });
     } catch (err) {
-      console.error("[EVOLUTION/sessions] PUT error:", err);
+      log3.error("PUT sessions falhou", { instance: req.body?.name, ...errCtx(err) });
       return res.status(500).json({ error: "Erro ao reiniciar sess\xE3o", detail: err?.message });
     }
   }
@@ -1482,7 +1588,7 @@ async function handler(req, res) {
       if (!ok) return res.status(502).json({ error: "Falha ao definir webhook na Evolution API" });
       return res.status(200).json({ success: true, instanceName: name, webhookUrl });
     } catch (err) {
-      console.error("[EVOLUTION/sessions] PATCH error:", err);
+      log3.error("PATCH sessions (webhook) falhou", { instance: req.body?.name, ...errCtx(err) });
       return res.status(500).json({ error: "Erro ao definir webhook", detail: err?.message });
     }
   }
@@ -1654,6 +1760,26 @@ function clearSentById(evolutionId) {
 function getSentCount() {
   return sentMap.size;
 }
+var statusTrackMap = /* @__PURE__ */ new Map();
+var STATUS_TTL_MS = 10 * 60 * 1e3;
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, entry] of statusTrackMap) {
+    if (now - entry.addedAt > STATUS_TTL_MS) statusTrackMap.delete(id);
+  }
+}, 6e4);
+function trackForStatusUpdates(evolutionId, optimisticDocId) {
+  statusTrackMap.set(evolutionId, { optimisticDocId, addedAt: Date.now() });
+}
+function getOptimisticId(evolutionId) {
+  const entry = statusTrackMap.get(evolutionId);
+  if (!entry) return null;
+  if (Date.now() - entry.addedAt > STATUS_TTL_MS) {
+    statusTrackMap.delete(evolutionId);
+    return null;
+  }
+  return entry.optimisticDocId;
+}
 
 // _api/lib/conversationCache.ts
 var convStore = /* @__PURE__ */ new Map();
@@ -1710,6 +1836,8 @@ function hasMessage(id) {
 }
 
 // _api/evolution/send.ts
+init_socketRegistry();
+var log4 = createLogger("evolution/send");
 var orgIdCache = /* @__PURE__ */ new Map();
 async function getOrgId(sessionName) {
   if (orgIdCache.has(sessionName)) return orgIdCache.get(sessionName);
@@ -1718,7 +1846,8 @@ async function getOrgId(sessionName) {
     const orgId = session?.organizationId ?? "default";
     orgIdCache.set(sessionName, orgId);
     return orgId;
-  } catch {
+  } catch (err) {
+    log4.warn("getOrgId falhou, usando default", { session: sessionName, ...errCtx(err) });
     return "default";
   }
 }
@@ -1752,12 +1881,15 @@ async function handler3(req, res) {
       organizationId
     };
     setMessage(messageDoc);
+    emitToSession(String(sessionName), "wa:message_upsert", messageDoc);
     updateConversation(conversationId, {
       lastMessage: String(message),
       lastMessageAt: now,
       lastMessageDirection: "outbound",
       updatedAt: now
     });
+    const updatedConv = getConversation(conversationId);
+    if (updatedConv) emitToSession(String(sessionName), "wa:chat_upsert", updatedConv);
     res.status(200).json({ success: true, messageId: optimisticId });
     enqueueMessage(String(sessionName), String(phone), String(message)).then((result) => {
       const evolutionMsgId = result?.key?.id;
@@ -1768,11 +1900,11 @@ async function handler3(req, res) {
         updateMessage(optimisticId, { status: "sent" });
       }
     }).catch((err) => {
-      console.error(`[EVOLUTION/send] Entrega falhou para ${phone}:`, err?.message);
+      log4.error("Entrega de mensagem falhou", { session: sessionName, phone, msgId: optimisticId, ...errCtx(err) });
       updateMessage(optimisticId, { status: "failed" });
     });
   } catch (err) {
-    console.error("[EVOLUTION/send] POST error:", err);
+    log4.error("POST /send erro inesperado", { session: req.body?.sessionName, phone: req.body?.phone, ...errCtx(err) });
     return res.status(500).json({ error: "Erro ao enviar mensagem", detail: err?.message });
   }
 }
@@ -1856,11 +1988,22 @@ function extractPhoneFromJid(jid, remoteJidAlt) {
   if (isIgnoredJid(jid) && !jid.endsWith("@g.us")) return null;
   return extractPhone(jid);
 }
+var MEDIA_LABELS = {
+  audio: "\u{1F3A4} \xC1udio",
+  video: "\u{1F3AC} V\xEDdeo",
+  image: "\u{1F4F7} Imagem",
+  document: "\u{1F4C4} Documento",
+  sticker: "\u{1F5F3}\uFE0F Figurinha"
+};
+function mediaLabel(messageType) {
+  return MEDIA_LABELS[messageType] ?? `[${messageType}]`;
+}
 
 // _api/lib/syncService.ts
+init_socketRegistry();
 function extractBody(message) {
   if (!message) return "";
-  return message.conversation ?? message.extendedTextMessage?.text ?? message.imageMessage?.caption ?? message.videoMessage?.caption ?? message.documentMessage?.fileName ?? "[m\xEDdia]";
+  return message.conversation ?? message.extendedTextMessage?.text ?? message.imageMessage?.caption ?? message.videoMessage?.caption ?? message.documentMessage?.fileName ?? (message.audioMessage || message.pttMessage ? mediaLabel("audio") : null) ?? (message.stickerMessage ? mediaLabel("sticker") : null) ?? (message.videoMessage ? mediaLabel("video") : null) ?? (message.imageMessage ? mediaLabel("image") : null) ?? (message.documentMessage ? mediaLabel("document") : null) ?? mediaLabel("unknown");
 }
 async function importConversationMessages(sessionName, phone, organizationId, msgLimit = 100, isGroup2 = false) {
   const conversationId = `${sessionName}_${phone}`;
@@ -1907,14 +2050,25 @@ async function syncSession(sessionName, organizationId, importMessages = false) 
   const contacts = await EvolutionAPI.findContacts(sessionName).catch(() => []);
   const contactNameMap = /* @__PURE__ */ new Map();
   const contactPictureMap = /* @__PURE__ */ new Map();
+  function brVariants(phone) {
+    if (phone.startsWith("55") && phone.length === 13 && phone[4] === "9") {
+      return [phone, phone.slice(0, 4) + phone.slice(5)];
+    }
+    if (phone.startsWith("55") && phone.length === 12) {
+      return [phone, phone.slice(0, 4) + "9" + phone.slice(4)];
+    }
+    return [phone];
+  }
   for (const c of contacts) {
     const jid = c.remoteJid ?? c.id ?? "";
     const name = c.pushName || c.notify || c.name || "";
     const picture = c.profilePicUrl ?? c.profilePictureUrl ?? "";
     if (jid && !jid.startsWith("cm")) {
       const phone = jid.replace(/@s\.whatsapp\.net$|@c\.us$|@g\.us$/, "").replace(/:\d+$/, "");
-      if (name) contactNameMap.set(phone, name);
-      if (picture) contactPictureMap.set(phone, picture);
+      for (const v of brVariants(phone)) {
+        if (name) contactNameMap.set(v, name);
+        if (picture) contactPictureMap.set(v, picture);
+      }
     }
   }
   process.stdout.write(`[SyncService] ${sessionName}: ${contacts.length} contatos carregados (${contactPictureMap.size} com foto)
@@ -2048,6 +2202,19 @@ async function reconcileSession(sessionName, organizationId, lookbackMinutes = 6
       if (fileName) doc.fileName = fileName;
       setMessage(doc);
       imported++;
+      emitToSession(sessionName, "wa:message_upsert", doc);
+      const existingConv = getConversation(conversationId);
+      if (existingConv && (!existingConv.lastMessageAt || new Date(doc.timestamp) > new Date(existingConv.lastMessageAt))) {
+        const patch = {
+          lastMessage: doc.body || mediaLabel(doc.messageType),
+          lastMessageAt: doc.timestamp,
+          lastMessageDirection: doc.direction,
+          updatedAt: doc.timestamp,
+          unreadCount: doc.direction === "inbound" ? (existingConv.unreadCount ?? 0) + 1 : existingConv.unreadCount ?? 0
+        };
+        updateConversation(conversationId, patch);
+        emitToSession(sessionName, "wa:chat_upsert", { ...existingConv, ...patch });
+      }
     }
   }
   process.stdout.write(`[SyncService] reconcile ${sessionName}: ${checked} verificados, ${imported} importados
@@ -2142,6 +2309,7 @@ init_adminFirebase();
 // _api/webhook/evolution.ts
 init_adminFirebase();
 init_socketRegistry();
+var log5 = createLogger("evolution/webhook");
 var lastWebhookAt = null;
 var webhookCount = 0;
 var messagesProcessed = 0;
@@ -2162,7 +2330,8 @@ async function resolveOrgId(sessionId) {
     const orgId = session?.organizationId ?? "default";
     orgIdCache2.set(sessionId, orgId);
     return orgId;
-  } catch {
+  } catch (err) {
+    log5.warn("resolveOrgId falhou, usando default", { sessionId, ...errCtx(err) });
     return "default";
   }
 }
@@ -2196,6 +2365,7 @@ async function handleMessagesUpsert(event) {
     const sentEntry = getSentEntry(msgId);
     if (sentEntry) {
       clearSentById(msgId);
+      trackForStatusUpdates(msgId, sentEntry.optimisticDocId);
       updateMessage(sentEntry.optimisticDocId, { evolutionId: msgId, status: "sent" });
       emitToSession(sessionId, "wa:message_update", {
         id: sentEntry.optimisticDocId,
@@ -2206,13 +2376,13 @@ async function handleMessagesUpsert(event) {
     }
   }
   const { body, messageType, mediaUrl, mimeType, fileName } = extractMessageContent(data);
-  if (messageType !== "text" || data.messageType) {
-    console.log(
-      "[EVOLUTION/webhook] MEDIA_MSG topType=%s resolved=%s msgKeys=%s",
-      data.messageType ?? "\u2014",
-      messageType,
-      Object.keys(data.message ?? {}).join(",")
-    );
+  if (messageType !== "text") {
+    log5.info("MEDIA_MSG recebido", {
+      topType: data.messageType ?? "\u2014",
+      resolved: messageType,
+      msgKeys: Object.keys(data.message ?? {}).join(","),
+      session: sessionId
+    });
   }
   if (fromMe && messageType === "text" && !body) return;
   const timestampSec = Number(data.messageTimestamp ?? Math.floor(Date.now() / 1e3));
@@ -2222,9 +2392,14 @@ async function handleMessagesUpsert(event) {
   const conversationId = `${sessionId}_${phone}`;
   const storedMsgId = `wamsg_${msgId}`;
   const organizationId = await resolveOrgId(sessionId);
-  console.log(
-    `[EVOLUTION/webhook] MESSAGES_UPSERT session=${sessionId} phone=${phone} group=${groupChat} fromMe=${fromMe} type=${messageType} body="${body.slice(0, 60)}"`
-  );
+  log5.info("MESSAGES_UPSERT", {
+    session: sessionId,
+    phone,
+    group: groupChat,
+    fromMe,
+    type: messageType,
+    body: body.slice(0, 80)
+  });
   const msgDoc = {
     id: storedMsgId,
     conversationId,
@@ -2252,7 +2427,7 @@ async function handleMessagesUpsert(event) {
     contactName: existing?.contactName || (groupChat ? `Grupo ${phone}` : senderName),
     contactPicture: existing?.contactPicture,
     isGroup: groupChat || void 0,
-    lastMessage: body || `[${messageType}]`,
+    lastMessage: body || mediaLabel(messageType),
     lastMessageAt: timestamp,
     lastMessageDirection: direction,
     updatedAt: timestamp,
@@ -2294,9 +2469,11 @@ async function handleMessagesUpdate(event) {
     };
     const status = statusMap[rawStatus] ?? rawStatus.toLowerCase();
     if (!status) continue;
-    const storedId = `wamsg_${msgId}`;
-    updateMessage(storedId, { status });
-    emitToSession(sessionId, "wa:message_update", { id: storedId, patch: { status } });
+    const optimisticId = getOptimisticId(msgId);
+    const emitId = optimisticId ?? `wamsg_${msgId}`;
+    log5.info("MESSAGES_UPDATE", { session: sessionId, msgId, rawStatus, status, resolvedId: emitId });
+    updateMessage(emitId, { status });
+    emitToSession(sessionId, "wa:message_update", { id: emitId, patch: { status } });
   }
 }
 async function handleMessagesDelete(event) {
@@ -2309,7 +2486,7 @@ async function handleMessagesDelete(event) {
     const storedId = `wamsg_${msgId}`;
     deleteMessage(storedId);
     emitToSession(sessionId, "wa:message_delete", { id: storedId });
-    console.log(`[EVOLUTION/webhook] MESSAGES_DELETE msgId=${msgId}`);
+    log5.info("MESSAGES_DELETE", { session: sessionId, msgId });
   }
 }
 async function handlePresenceUpdate(event) {
@@ -2338,7 +2515,7 @@ async function handleConnectionUpdate(event) {
     qr: "qr"
   };
   const status = statusMap[rawState] ?? rawState;
-  console.log(`[EVOLUTION/webhook] CONNECTION_UPDATE instance=${instanceName} state=${rawState} \u2192 ${status}`);
+  log5.info("CONNECTION_UPDATE", { instance: instanceName, state: rawState, mapped: status });
   const update = { status, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
   if (rawState === "open") {
     const instanceData = event.data?.instance ?? {};
@@ -2360,22 +2537,20 @@ async function handleConnectionUpdate(event) {
     activeSessions.delete(instanceName);
   }
   await fsUpdate("whatsapp_sessions", instanceName, update).catch(
-    (err) => console.error("[EVOLUTION/webhook] fsUpdate sessions (CONNECTION_UPDATE) error:", err?.message)
+    (err) => log5.error("fsUpdate sessions falhou (CONNECTION_UPDATE)", { instance: instanceName, ...errCtx(err) })
   );
   emitToSession(instanceName, "wa:connection_update", { instanceName, status: rawState });
   if (rawState === "open") {
-    console.log(`[EVOLUTION/webhook] Sess\xE3o conectada \u2014 iniciando sync autom\xE1tico: ${instanceName}`);
+    log5.info("Sess\xE3o conectada \u2014 iniciando sync autom\xE1tico", { instance: instanceName });
     const orgId = await resolveOrgId(instanceName);
     syncSession(instanceName, orgId, false).then((result) => {
-      console.log(
-        `[EVOLUTION/webhook] Auto-sync conclu\xEDdo: ${instanceName} \u2014 ${result.conversationsImported} conversas`
-      );
+      log5.info("Auto-sync conclu\xEDdo", { instance: instanceName, conversas: result.conversationsImported });
       emitToSession(instanceName, "wa:sync_complete", {
         instanceName,
         conversationsImported: result.conversationsImported
       });
     }).catch((err) => {
-      console.error(`[EVOLUTION/webhook] Auto-sync falhou: ${instanceName}`, err?.message);
+      log5.error("Auto-sync falhou", { instance: instanceName, ...errCtx(err) });
     });
   }
 }
@@ -2383,14 +2558,14 @@ async function handleQrcodeUpdated(event) {
   const instanceName = event.instance ?? "";
   if (!instanceName) return;
   const qrcode = event.data?.qrcode ?? {};
-  console.log(`[EVOLUTION/webhook] QRCODE_UPDATED instance=${instanceName}`);
+  log5.info("QRCODE_UPDATED", { instance: instanceName });
   await fsUpdate("whatsapp_sessions", instanceName, {
     status: "qr",
     qrBase64: qrcode.base64 ?? null,
     qrCode: qrcode.code ?? null,
     updatedAt: (/* @__PURE__ */ new Date()).toISOString()
   }).catch(
-    (err) => console.error("[EVOLUTION/webhook] fsUpdate sessions (QRCODE_UPDATED) error:", err?.message)
+    (err) => log5.error("fsUpdate sessions falhou (QRCODE_UPDATED)", { instance: instanceName, ...errCtx(err) })
   );
 }
 async function handleContactsUpdate(event) {
@@ -2425,7 +2600,7 @@ async function handleContactsUpdate(event) {
       }
     }
   }
-  console.log(`[EVOLUTION/webhook] CONTACTS_UPDATE session=${sessionId} contacts=${contacts.length}`);
+  log5.info("CONTACTS_UPDATE", { session: sessionId, count: contacts.length });
 }
 async function handleChatsUpdate(event, isUpsert = false) {
   const sessionId = event.instance ?? "";
@@ -2472,7 +2647,7 @@ async function handleChatsUpdate(event, isUpsert = false) {
       emitToSession(sessionId, "wa:chat_upsert", newConv);
     }
   }
-  console.log(`[EVOLUTION/webhook] CHATS_${isUpsert ? "UPSERT" : "UPDATE"} session=${sessionId} chats=${chats.length}`);
+  log5.info(`CHATS_${isUpsert ? "UPSERT" : "UPDATE"}`, { session: sessionId, count: chats.length });
 }
 async function processEvent(event) {
   lastWebhookAt = (/* @__PURE__ */ new Date()).toISOString();
@@ -2508,8 +2683,7 @@ async function processEvent(event) {
       await handleChatsUpdate(event, true);
       break;
     default:
-      process.stdout.write(`[EVOLUTION/webhook] Evento n\xE3o tratado: ${eventType}
-`);
+      log5.debug("Evento n\xE3o tratado", { eventType, instance: event.instance });
   }
 }
 function handler8(req, res) {
@@ -2531,10 +2705,12 @@ function handler8(req, res) {
     events.map(
       (event) => processEvent(event).catch((err) => {
         messagesFailed++;
-        console.error("[EVOLUTION/webhook] processEvent error:", err);
+        const eventType = (event.event ?? "").toUpperCase();
+        const sessionId = event.instance ?? "?";
+        log5.error("processEvent falhou", { eventType, session: sessionId, ...errCtx(err) });
       })
     )
-  ).catch((err) => console.error("[EVOLUTION/webhook] Unhandled error:", err));
+  ).catch((err) => log5.error("Promise.all webhook falhou", errCtx(err)));
 }
 
 // _api/evolution/reconcile.ts
@@ -2726,6 +2902,141 @@ async function handler11(req, res) {
   } catch (err) {
     console.error("[EVOLUTION/stats] error:", err);
     return res.status(500).json({ error: "Erro ao gerar stats", detail: err?.message });
+  }
+}
+
+// _api/evolution/sendMedia.ts
+init_socketRegistry();
+async function handler12(req, res) {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  const { sessionName, phone, base64, mediatype, mimetype, fileName, caption } = req.body ?? {};
+  if (!sessionName || !phone || !base64 || !mediatype) {
+    return res.status(400).json({ error: "sessionName, phone, base64 e mediatype s\xE3o obrigat\xF3rios" });
+  }
+  try {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const optimisticId = `wamsg_out_${Date.now()}`;
+    const conversationId = `${sessionName}_${phone}`;
+    const messageDoc = {
+      id: optimisticId,
+      conversationId,
+      sessionId: String(sessionName),
+      direction: "outbound",
+      messageType: String(mediatype),
+      body: caption || fileName || `[${mediatype}]`,
+      phone: String(phone),
+      contactName: String(phone),
+      timestamp: now,
+      status: "sending",
+      organizationId: "default"
+    };
+    if (fileName) messageDoc.fileName = fileName;
+    if (mimetype) messageDoc.mimeType = mimetype;
+    setMessage(messageDoc);
+    emitToSession(String(sessionName), "wa:message_upsert", messageDoc);
+    updateConversation(conversationId, {
+      lastMessage: caption || fileName || `[${mediatype}]`,
+      lastMessageAt: now,
+      lastMessageDirection: "outbound",
+      updatedAt: now
+    });
+    const updatedConv = getConversation(conversationId);
+    if (updatedConv) emitToSession(String(sessionName), "wa:chat_upsert", updatedConv);
+    res.status(200).json({ success: true, messageId: optimisticId });
+    EvolutionAPI.sendMediaBase64(
+      String(sessionName),
+      String(phone),
+      String(mediatype),
+      String(mimetype ?? "application/octet-stream"),
+      String(base64),
+      fileName,
+      caption
+    ).then(() => {
+      updateMessage(optimisticId, { status: "sent" });
+      emitToSession(String(sessionName), "wa:message_update", { id: optimisticId, patch: { status: "sent" } });
+    }).catch((err) => {
+      console.error(`[EVOLUTION/sendMedia] Falhou para ${phone}:`, err?.message);
+      updateMessage(optimisticId, { status: "failed" });
+      emitToSession(String(sessionName), "wa:message_update", { id: optimisticId, patch: { status: "failed" } });
+    });
+  } catch (err) {
+    console.error("[EVOLUTION/sendMedia] POST error:", err);
+    return res.status(500).json({ error: "Erro ao enviar m\xEDdia", detail: err?.message });
+  }
+}
+
+// _api/evolution/avatar.ts
+var log6 = createLogger("evolution/avatar");
+var cache = /* @__PURE__ */ new Map();
+var TTL = 2 * 60 * 60 * 1e3;
+var MISS_TTL = 30 * 60 * 1e3;
+async function handler13(req, res) {
+  if (req.method !== "GET") return res.status(405).end();
+  const { session, phone } = req.query ?? {};
+  if (!session || !phone) return res.status(400).end();
+  const key = `${session}:${phone}`;
+  const hit = cache.get(key);
+  if (hit) {
+    const age = Date.now() - hit.ts;
+    if (hit.type === "miss" && age < MISS_TTL) {
+      return res.status(404).end();
+    }
+    if (hit.type === "hit" && age < TTL) {
+      res.setHeader("Content-Type", hit.mime);
+      res.setHeader("Cache-Control", "public, max-age=7200");
+      return res.end(hit.buf);
+    }
+  }
+  try {
+    const url = await EvolutionAPI.fetchProfilePicture(String(session), String(phone));
+    if (!url) {
+      log6.debug("Avatar n\xE3o encontrado na Evolution API", { session, phone });
+      cache.set(key, { type: "miss", ts: Date.now() });
+      return res.status(404).end();
+    }
+    const r = await fetch(url, { signal: AbortSignal.timeout(8e3) });
+    if (!r.ok) {
+      log6.debug("CDN retornou erro ao buscar avatar", { session, phone, status: r.status, url: url.slice(0, 80) });
+      cache.set(key, { type: "miss", ts: Date.now() });
+      return res.status(404).end();
+    }
+    const buf = Buffer.from(await r.arrayBuffer());
+    const mime = r.headers.get("content-type") || "image/jpeg";
+    cache.set(key, { type: "hit", buf, mime, ts: Date.now() });
+    res.setHeader("Content-Type", mime);
+    res.setHeader("Cache-Control", "public, max-age=7200");
+    return res.end(buf);
+  } catch (err) {
+    log6.warn("Erro ao buscar avatar", { session, phone, ...errCtx(err) });
+    cache.set(key, { type: "miss", ts: Date.now() });
+    return res.status(404).end();
+  }
+}
+
+// _api/evolution/contacts.ts
+async function handler14(req, res) {
+  if (req.method !== "GET") return res.status(405).end();
+  const { session } = req.query ?? {};
+  if (!session) return res.status(400).json({ error: "session \xE9 obrigat\xF3rio" });
+  const sessionName = String(session);
+  try {
+    const rawContacts = await EvolutionAPI.findContacts(sessionName);
+    const conversations = getConversations(sessionName);
+    const convPhones = new Set(conversations.map((c) => c.phone));
+    const result = rawContacts.filter((c) => {
+      const jid = c.remoteJid ?? c.id ?? "";
+      return jid && !jid.includes("@g.us") && !jid.startsWith("cm") && !jid.includes("@lid");
+    }).map((c) => {
+      const jid = c.remoteJid ?? c.id ?? "";
+      const phone = jid.replace(/@s\.whatsapp\.net$|@c\.us$|@g\.us$/, "").replace(/:\d+$/, "");
+      const name = c.pushName || c.notify || c.name || phone;
+      const picture = c.profilePicUrl ?? c.profilePictureUrl ?? void 0;
+      return { phone, name, picture, hasChat: convPhones.has(phone) };
+    }).filter((c) => c.phone && c.phone.length >= 8).sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }));
+    return res.json(result);
+  } catch (err) {
+    console.error("[EVOLUTION/contacts] erro:", err?.message);
+    return res.status(500).json({ error: err?.message });
   }
 }
 
@@ -3165,7 +3476,7 @@ async function findOrCreateLead(phone, organizationId, now, profileName) {
 // _api/meta/send.ts
 init_adminFirebase();
 init_socketRegistry();
-async function handler12(req, res) {
+async function handler15(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const { to, type = "text", message, imageUrl, documentUrl, filename, audioUrl, templateName, languageCode, components, caption } = req.body ?? {};
   if (!to) return res.status(400).json({ error: 'Campo "to" obrigat\xF3rio' });
@@ -3290,7 +3601,7 @@ async function findOrCreateLead2(phone, organizationId, now) {
 }
 
 // _api/meta/status.ts
-async function handler13(req, res) {
+async function handler16(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
   const phoneNumberId2 = process.env.META_PHONE_NUMBER_ID ?? process.env.WHATSAPP_PHONE_NUMBER_ID ?? "";
   const wabaId = process.env.META_WABA_ID ?? "";
@@ -3351,7 +3662,7 @@ async function handler13(req, res) {
 
 // _api/meta/messages.ts
 init_adminFirebase();
-async function handler14(req, res) {
+async function handler17(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
   const { phone } = req.query ?? {};
   if (!phone) return res.status(400).json({ error: "phone \xE9 obrigat\xF3rio" });
@@ -3404,7 +3715,7 @@ function stripTokens(account) {
   const { accessToken, refreshToken, ...safe } = account;
   return safe;
 }
-async function handler15(req, res) {
+async function handler18(req, res) {
   try {
     if (req.method === "GET") {
       const { userId } = req.query ?? {};
@@ -3456,7 +3767,7 @@ var SCOPES = [
 function generateId() {
   return `gmail_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
-async function handler16(req, res) {
+async function handler19(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -3588,7 +3899,7 @@ var SCOPES2 = [
 function generateId2() {
   return `microsoft_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
-async function handler17(req, res) {
+async function handler20(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -3720,7 +4031,7 @@ async function loadAccount(accountId) {
   if (!account) throw new Error(`Account ${accountId} not found`);
   return account;
 }
-async function handler18(req, res) {
+async function handler21(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -3885,7 +4196,7 @@ function buildMicrosoftPayload(params) {
   };
   return { message, saveToSentItems: true };
 }
-async function handler19(req, res) {
+async function handler22(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -4058,7 +4369,7 @@ function applyLocalCacheUpdate(accountId, messageId, action) {
       break;
   }
 }
-async function handler20(req, res) {
+async function handler23(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -4136,7 +4447,7 @@ function buildMsDraftPayload(params) {
     isDraft: true
   };
 }
-async function handler21(req, res) {
+async function handler24(req, res) {
   try {
     const url = req.url ?? "";
     const query = req.query ?? {};
@@ -4225,7 +4536,7 @@ async function handler21(req, res) {
 // _api/email/sync.ts
 init_emailSync();
 init_emailCache();
-async function handler22(req, res) {
+async function handler25(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -4332,7 +4643,7 @@ function searchCache(accountId, q, folder) {
   }
   return results;
 }
-async function handler23(req, res) {
+async function handler26(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -4392,7 +4703,7 @@ var DEFAULT_SETTINGS = {
   previewPane: "right",
   emailsPerPage: 50
 };
-async function handler24(req, res) {
+async function handler27(req, res) {
   try {
     if (req.method === "GET") {
       const { userId } = req.query ?? {};
@@ -4440,7 +4751,7 @@ async function handler24(req, res) {
 // _api/email/stats.ts
 init_adminFirebase();
 init_emailCache();
-async function handler25(req, res) {
+async function handler28(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -4514,9 +4825,9 @@ app.post("/api/datadog/llm-obs", async (req, res) => {
 });
 app.get("/api/webhook/whatsapp", handleVerify);
 app.post("/api/webhook/whatsapp", handleEvent);
-app.get("/api/meta/status", handler13);
-app.post("/api/meta/send", handler12);
-app.get("/api/meta/messages", handler14);
+app.get("/api/meta/status", handler16);
+app.post("/api/meta/send", handler15);
+app.get("/api/meta/messages", handler17);
 app.post("/api/proxy/openrouter/request", async (req, res) => {
   const { apiKey, method, endpoint, data } = req.body;
   if (!apiKey) return res.status(400).json({ error: "API Key is required" });
@@ -4567,6 +4878,9 @@ app.all("/api/evolution/messages", handler7);
 app.all("/api/evolution/reconcile", handler9);
 app.all("/api/evolution/media", handler10);
 app.all("/api/evolution/stats", handler11);
+app.all("/api/evolution/sendMedia", handler12);
+app.all("/api/evolution/avatar", handler13);
+app.all("/api/evolution/contacts", handler14);
 app.all("/api/webhook/evolution", handler8);
 app.all("/api/webhook/evolution/:event", handler8);
 app.post("/api/cron/reconcile", async (_req, res) => {
@@ -4577,22 +4891,22 @@ app.post("/api/cron/email-sync", async (_req, res) => {
   syncAllAccounts().catch(console.error);
   res.json({ ok: true });
 });
-app.all("/api/email/accounts", handler15);
-app.all("/api/email/auth/gmail/init", handler16);
-app.all("/api/email/auth/gmail/callback", handler16);
-app.all("/api/email/auth/microsoft/init", handler17);
-app.all("/api/email/auth/microsoft/callback", handler17);
-app.all("/api/email/messages", handler18);
-app.all("/api/email/messages/:id", handler18);
-app.all("/api/email/send", handler19);
-app.all("/api/email/action", handler20);
-app.all("/api/email/drafts", handler21);
-app.all("/api/email/draft", handler21);
-app.all("/api/email/draft/:id", handler21);
-app.all("/api/email/sync", handler22);
-app.all("/api/email/search", handler23);
-app.all("/api/email/settings", handler24);
-app.all("/api/email/stats", handler25);
+app.all("/api/email/accounts", handler18);
+app.all("/api/email/auth/gmail/init", handler19);
+app.all("/api/email/auth/gmail/callback", handler19);
+app.all("/api/email/auth/microsoft/init", handler20);
+app.all("/api/email/auth/microsoft/callback", handler20);
+app.all("/api/email/messages", handler21);
+app.all("/api/email/messages/:id", handler21);
+app.all("/api/email/send", handler22);
+app.all("/api/email/action", handler23);
+app.all("/api/email/drafts", handler24);
+app.all("/api/email/draft", handler24);
+app.all("/api/email/draft/:id", handler24);
+app.all("/api/email/sync", handler25);
+app.all("/api/email/search", handler26);
+app.all("/api/email/settings", handler27);
+app.all("/api/email/stats", handler28);
 var server_default = app;
 export {
   server_default as default

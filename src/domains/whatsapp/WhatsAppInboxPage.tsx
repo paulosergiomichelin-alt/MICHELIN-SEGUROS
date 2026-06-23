@@ -193,10 +193,11 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage; session: string; isGroup?: boo
 
         {/* Áudio */}
         {msg.messageType === 'audio' && (
-          <div className="px-3 pt-2 pb-6">
+          <div className="px-3 pt-2 pb-2">
             {msg.id ? (
-              <audio controls className="w-full max-w-[260px]" style={{ accentColor: '#25d366', height: '36px' }}>
-                <source src={mediaProxyUrl(session, msg.id)} type={msg.mimeType ?? 'audio/ogg'} />
+              <audio controls className="w-full max-w-[280px]" style={{ accentColor: '#25d366' }}>
+                <source src={mediaProxyUrl(session, msg.id)} type={msg.mimeType ?? 'audio/ogg; codecs=opus'} />
+                <source src={mediaProxyUrl(session, msg.id)} type="audio/ogg" />
                 <source src={mediaProxyUrl(session, msg.id)} />
               </audio>
             ) : (

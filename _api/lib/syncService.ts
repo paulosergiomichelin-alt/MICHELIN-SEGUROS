@@ -1,5 +1,5 @@
 import { EvolutionAPI } from './evolutionApi.js';
-import { extractPhoneFromJid, isIgnoredJid, extractMessageContent, stripDDI } from './whatsappUtils.js';
+import { extractPhoneFromJid, isIgnoredJid, extractMessageContent, stripDDI, mediaLabel } from './whatsappUtils.js';
 import {
   setConversation, setMessage, updateConversation, getConversation, getConversations,
   getMessages, hasMessage, CachedConversation, CachedMessage,
@@ -21,7 +21,12 @@ function extractBody(message: any): string {
     message.imageMessage?.caption ??
     message.videoMessage?.caption ??
     message.documentMessage?.fileName ??
-    '[mídia]'
+    (message.audioMessage || message.pttMessage ? mediaLabel('audio') : null) ??
+    (message.stickerMessage ? mediaLabel('sticker') : null) ??
+    (message.videoMessage ? mediaLabel('video') : null) ??
+    (message.imageMessage ? mediaLabel('image') : null) ??
+    (message.documentMessage ? mediaLabel('document') : null) ??
+    mediaLabel('unknown')
   );
 }
 
@@ -296,7 +301,7 @@ export async function reconcileSession(
       const existingConv = getConversation(conversationId);
       if (existingConv && (!existingConv.lastMessageAt || new Date(doc.timestamp) > new Date(existingConv.lastMessageAt))) {
         const patch = {
-          lastMessage: doc.body || `[${doc.messageType}]`,
+          lastMessage: doc.body || mediaLabel(doc.messageType),
           lastMessageAt: doc.timestamp,
           lastMessageDirection: doc.direction,
           updatedAt: doc.timestamp,

@@ -1,5 +1,5 @@
 import { fsUpdate, fsQuery, fsGet, fsSet } from '../lib/adminFirebase.js';
-import { extractPhone, stripDDI, isGroup, isIgnoredJid, extractMessageContent, extractPhoneFromJid } from '../lib/whatsappUtils.js';
+import { extractPhone, stripDDI, isGroup, isIgnoredJid, extractMessageContent, extractPhoneFromJid, mediaLabel } from '../lib/whatsappUtils.js';
 import { getSentEntry, clearSentById, trackForStatusUpdates, getOptimisticId } from '../lib/sentMessageIds.js';
 import { syncSession } from '../lib/syncService.js';
 import { emitToSession } from '../lib/socketRegistry.js';
@@ -107,8 +107,8 @@ async function handleMessagesUpsert(event: any) {
 
   const { body, messageType, mediaUrl, mimeType, fileName } = extractMessageContent(data);
 
-  if (messageType !== 'text' || data.messageType) {
-    log.debug('MEDIA_MSG recebido', {
+  if (messageType !== 'text') {
+    log.info('MEDIA_MSG recebido', {
       topType: data.messageType ?? '—',
       resolved: messageType,
       msgKeys: Object.keys(data.message ?? {}).join(','),
@@ -161,7 +161,7 @@ async function handleMessagesUpsert(event: any) {
     contactName: existing?.contactName || (groupChat ? `Grupo ${phone}` : senderName),
     contactPicture: existing?.contactPicture,
     isGroup: groupChat || undefined,
-    lastMessage: body || `[${messageType}]`,
+    lastMessage: body || mediaLabel(messageType),
     lastMessageAt: timestamp,
     lastMessageDirection: direction,
     updatedAt: timestamp,
