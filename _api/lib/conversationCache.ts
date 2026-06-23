@@ -105,6 +105,15 @@ export function hasMessage(id: string): boolean {
   return msgStore.has(id);
 }
 
+export function clearMessages(conversationId: string): number {
+  const ids = msgByConv.get(conversationId);
+  if (!ids) return 0;
+  const count = ids.size;
+  for (const id of ids) msgStore.delete(id);
+  msgByConv.delete(conversationId);
+  return count;
+}
+
 export function cacheStats() {
   return { conversations: convStore.size, messages: msgStore.size };
 }

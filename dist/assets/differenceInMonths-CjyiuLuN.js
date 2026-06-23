@@ -1,0 +1,6 @@
+import{g as d}from"./index-CKskM5lx.js";import{t as l,n as i}from"./format-Doxfhhwt.js";/**
+ * @license lucide-react v0.475.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const D=[["circle",{cx:"12",cy:"12",r:"10",key:"1mglay"}],["circle",{cx:"12",cy:"12",r:"6",key:"1vlfrh"}],["circle",{cx:"12",cy:"12",r:"2",key:"1c9p78"}]],o=d("Target",D);function s(r,t){const e=+l(r)-+l(t);return e<0?-1:e>0?1:e}function M(r,t,e){const[c,n]=i(e==null?void 0:e.in,r,t),a=c.getFullYear()-n.getFullYear(),f=c.getMonth()-n.getMonth();return a*12+f}function y(r,t){const e=l(r,t==null?void 0:t.in);return e.setHours(23,59,59,999),e}function m(r,t){const e=l(r,t==null?void 0:t.in),c=e.getMonth();return e.setFullYear(e.getFullYear(),c+1,0),e.setHours(23,59,59,999),e}function _(r,t){const e=l(r,t==null?void 0:t.in);return+y(e,t)==+m(e,t)}function x(r,t,e){const[c,n,a]=i(e==null?void 0:e.in,r,r,t),f=s(n,a),u=Math.abs(M(n,a));if(u<1)return 0;n.getMonth()===1&&n.getDate()>27&&n.setDate(30),n.setMonth(n.getMonth()-f*u);let g=s(n,a)===-f;_(c)&&u===1&&s(c,a)===1&&(g=!1);const h=f*(u-+g);return h===0?0:h}export{o as T,s as c,x as d};

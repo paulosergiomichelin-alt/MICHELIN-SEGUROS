@@ -1834,6 +1834,14 @@ function getMessages(conversationId) {
 function hasMessage(id) {
   return msgStore.has(id);
 }
+function clearMessages(conversationId) {
+  const ids = msgByConv.get(conversationId);
+  if (!ids) return 0;
+  const count = ids.size;
+  for (const id of ids) msgStore.delete(id);
+  msgByConv.delete(conversationId);
+  return count;
+}
 
 // _api/evolution/send.ts
 init_socketRegistry();
@@ -2287,22 +2295,33 @@ async function handler7(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
-  const { session, phone } = req.query ?? {};
+  const { session, phone, force } = req.query ?? {};
   if (!session || !phone) {
     return res.status(400).json({ error: "session e phone s\xE3o obrigat\xF3rios" });
   }
   const sessionName = String(session);
   const phoneStr = String(phone);
+  const forceRefresh = force === "true" || force === "1";
   const conversationId = `${sessionName}_${phoneStr}`;
   try {
     const convCached = getConversation(conversationId);
-    const { imported, contactName } = await importConversationMessages(sessionName, phoneStr, "default", 50, convCached?.isGroup);
+    if (forceRefresh) {
+      clearMessages(conversationId);
+    }
+    const limit = forceRefresh ? 100 : 50;
+    const { imported, contactName } = await importConversationMessages(
+      sessionName,
+      phoneStr,
+      "default",
+      limit,
+      convCached?.isGroup
+    );
     if (contactName !== phoneStr) {
       updateConversation(conversationId, { contactName, updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
     }
     const messages = getMessages(conversationId);
     res.setHeader("Cache-Control", "no-store");
-    return res.status(200).json({ success: true, imported, contactName, messages });
+    return res.status(200).json({ success: true, imported, contactName, messages, forced: forceRefresh });
   } catch (err) {
     console.error("[EVOLUTION/messages] error:", err);
     return res.status(500).json({ error: "Erro ao buscar mensagens", detail: err?.message });

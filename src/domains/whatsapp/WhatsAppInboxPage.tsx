@@ -275,6 +275,14 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage; session: string; isGroup?: boo
           </p>
         )}
 
+        {/* Fallback para tipos de mídia não renderizados */}
+        {!msg.body && msg.messageType !== 'text' && !['image','video','audio','document','sticker'].includes(msg.messageType) && (
+          <div className="flex items-center gap-2 px-3 pt-2 pb-5 text-white/40">
+            <MicIcon className="w-3.5 h-3.5 shrink-0" />
+            <span className="text-[11px] italic">{msg.messageType}</span>
+          </div>
+        )}
+
         {/* Rodapé: hora + status */}
         <div className="absolute bottom-0.5 right-1.5 flex items-center gap-1 select-none">
           <span className="text-[8px] text-white/30 font-medium">{fmtTime(msg.timestamp)}</span>
@@ -531,28 +539,34 @@ export const WhatsAppInboxPage: React.FC = () => {
   }, [selectedSessionName, loadConversations]);
 
   // ── Carregar mensagens quando abre uma conversa ────────────────────────────
+  const loadMessages = useCallback(async (conv: WhatsAppConversation, sessionName: string, force = false) => {
+    setMsgLoading(true);
+    const isMeta = sessionName === META_SESSION_NAME;
+    const url = isMeta
+      ? `/api/meta/messages?phone=${encodeURIComponent(conv.phone)}`
+      : `/api/evolution/messages?session=${encodeURIComponent(sessionName)}&phone=${encodeURIComponent(conv.phone)}${force ? '&force=true' : ''}`;
+    try {
+      const r = await fetch(url);
+      const data = await r.json();
+      if (Array.isArray(data.messages)) setMessages(data.messages as WhatsAppMessage[]);
+    } catch {}
+    setMsgLoading(false);
+  }, []);
+
   useEffect(() => {
     if (!selectedConv || !selectedSessionName) { setMessages([]); return; }
-    setMsgLoading(true);
-
-    const isMeta = selectedSessionName === META_SESSION_NAME;
-    const url = isMeta
-      ? `/api/meta/messages?phone=${encodeURIComponent(selectedConv.phone)}`
-      : `/api/evolution/messages?session=${encodeURIComponent(selectedSessionName)}&phone=${encodeURIComponent(selectedConv.phone)}`;
-
-    fetch(url)
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data.messages)) setMessages(data.messages as WhatsAppMessage[]);
-      })
-      .catch(() => {})
-      .finally(() => setMsgLoading(false));
-
+    loadMessages(selectedConv, selectedSessionName);
     if ((selectedConv.unreadCount ?? 0) > 0) {
+      const isMeta = selectedSessionName === META_SESSION_NAME;
       if (!isMeta) patchConversation(selectedConv.id, { unreadCount: 0 });
       setConversations(prev => prev.map(c => c.id === selectedConv.id ? { ...c, unreadCount: 0 } : c));
     }
   }, [selectedConv?.id, selectedSessionName]);
+
+  const handleRefreshMessages = useCallback(async () => {
+    if (!selectedConv || !selectedSessionName || msgLoading) return;
+    await loadMessages(selectedConv, selectedSessionName, true);
+  }, [selectedConv, selectedSessionName, msgLoading, loadMessages]);
 
   const handleSelectConv = (conv: WhatsAppConversation) => {
     setSelectedConv(conv);
@@ -991,6 +1005,14 @@ export const WhatsAppInboxPage: React.FC = () => {
                     )}
                   </div>
                 </div>
+                <button
+                  onClick={handleRefreshMessages}
+                  disabled={msgLoading}
+                  title="Atualizar mensagens (limpa cache e recarrega)"
+                  className="p-1.5 rounded-lg text-[#aebac1] hover:bg-[#374248] transition-colors disabled:opacity-30"
+                >
+                  <RefreshCw className={cn('w-3.5 h-3.5', msgLoading && 'animate-spin')} />
+                </button>
                 <button
                   onClick={() => setShowPanel(p => !p)}
                   className={cn(
