@@ -407,9 +407,11 @@ export const WhatsAppInboxPage: React.FC = () => {
   // ── Socket.IO connection (once, persistent) ────────────────────────────────
   useEffect(() => {
     const vpsUrl = import.meta.env.VITE_API_URL as string | undefined;
+    // Vercel não faz proxy de upgrade WebSocket para URLs HTTP externas —
+    // usar polling apenas (funciona via rewrite, latência ~1s).
     const socket = vpsUrl
-      ? io(vpsUrl, { path: '/socket.io', transports: ['websocket', 'polling'] })
-      : io({ path: '/socket.io', transports: ['websocket', 'polling'] });
+      ? io(vpsUrl, { path: '/socket.io', transports: ['polling'] })
+      : io({ path: '/socket.io', transports: ['polling'] });
     socketRef.current = socket;
 
     socket.on('connect', () => {
