@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Política de Privacidade | Michelin Seguros</title>
+  <meta name="description" content="Conheça como a Michelin Seguros coleta, utiliza, compartilha e protege os dados pessoais de seus clientes e usuários." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://michelin-seguros.vercel.app/politica-de-privacidade" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Política de Privacidade | Michelin Seguros" />
+  <meta property="og:description" content="Conheça como a Michelin Seguros coleta, utiliza, compartilha e protege os dados pessoais de seus clientes e usuários." />
+  <meta property="og:url" content="https://michelin-seguros.vercel.app/politica-de-privacidade" />
+  <meta property="og:site_name" content="Michelin Seguros" />
+  <meta property="og:locale" content="pt_BR" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold: #CFA764;
+      --gold-light: #E8C97A;
+      --black: #0a0a0a;
+      --dark: #111111;
+      --dark2: #1a1a1a;
+      --white: #ffffff;
+      --muted: rgba(255,255,255,0.55);
+      --border: rgba(255,255,255,0.08);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--black);
+      color: var(--white);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--gold); text-decoration: none; }
+    a:hover { color: var(--gold-light); text-decoration: underline; }
+
+    /* Header */
+    header {
+      background: var(--dark);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-inner {
+      max-width: 860px;
+      margin: 0 auto;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo-text {
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+    .header-badge {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    /* Breadcrumb */
+    .breadcrumb {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 16px 24px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.35);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .breadcrumb span { color: var(--gold); }
+
+    /* Main */
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
+
+    /* Hero */
+    .page-hero {
+      border-left: 3px solid var(--gold);
+      padding-left: 20px;
+      margin-bottom: 40px;
+    }
+    .page-tag {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: rgba(207,167,100,0.1);
+      border: 1px solid rgba(207,167,100,0.25);
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: clamp(22px, 4vw, 32px);
+      font-weight: 900;
+      color: var(--white);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    .page-date {
+      font-size: 11px;
+      color: rgba(255,255,255,0.3);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* Sections */
+    section {
+      background: var(--dark2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 28px;
+      margin-bottom: 16px;
+    }
+    h2 {
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h2::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 14px;
+      background: var(--gold);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    p { color: var(--muted); margin-bottom: 10px; }
+    p:last-child { margin-bottom: 0; }
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0 0;
+    }
+    ul li {
+      color: var(--muted);
+      padding: 5px 0 5px 18px;
+      position: relative;
+      font-size: 14px;
+    }
+    ul li::before {
+      content: '–';
+      position: absolute;
+      left: 0;
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    /* Contact card */
+    .contact-card {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(207,167,100,0.06);
+      border: 1px solid rgba(207,167,100,0.15);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gold-light);
+    }
+    .contact-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    /* Footer */
+    footer {
+      background: var(--dark);
+      border-top: 1px solid var(--border);
+      padding: 28px 24px;
+      text-align: center;
+    }
+    .footer-inner { max-width: 860px; margin: 0 auto; }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .footer-links a {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--gold); text-decoration: none; }
+    .footer-copy {
+      font-size: 11px;
+      color: rgba(255,255,255,0.2);
+      font-weight: 500;
+    }
+
+    @media (max-width: 600px) {
+      section { padding: 20px 18px; }
+      .contact-card { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <span class="logo-text">Michelin Seguros</span>
+    <span class="header-badge">Dourados – MS</span>
+  </div>
+</header>
+
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/">Início</a>
+  <span>›</span>
+  <span>Política de Privacidade</span>
+</nav>
+
+<main>
+  <div class="page-hero">
+    <div class="page-tag">LGPD · Meta · WhatsApp Business</div>
+    <h1>Política de Privacidade</h1>
+    <p class="page-date">Última atualização: junho de 2025</p>
+  </div>
+
+  <section>
+    <h2>1. Introdução</h2>
+    <p>
+      A <strong style="color:#fff">Michelin Seguros Administradora e Corretora de Seguros</strong>, com sede em
+      Dourados – Mato Grosso do Sul, está comprometida com a proteção dos dados pessoais de seus
+      clientes, parceiros e usuários, em plena conformidade com a
+      <strong style="color:#fff">Lei Geral de Proteção de Dados Pessoais – LGPD (Lei nº 13.709/2018)</strong>
+      e demais legislações aplicáveis.
+    </p>
+    <p>
+      Esta Política de Privacidade descreve como coletamos, utilizamos, armazenamos, compartilhamos
+      e protegemos as informações pessoais, bem como os direitos que você possui sobre esses dados.
+    </p>
+  </section>
+
+  <section>
+    <h2>2. Informações Coletadas</h2>
+    <p>Podemos coletar as seguintes categorias de dados pessoais:</p>
+    <ul>
+      <li>Nome completo;</li>
+      <li>CPF e CNPJ;</li>
+      <li>Endereço completo e CEP;</li>
+      <li>E-mail;</li>
+      <li>Telefone e WhatsApp;</li>
+      <li>Dados do veículo (placa, chassi, modelo, ano);</li>
+      <li>Informações necessárias para cotação e contratação de seguros;</li>
+      <li>Informações provenientes do Facebook, Instagram e WhatsApp, quando autorizadas pelo usuário.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>3. Finalidade da Utilização dos Dados</h2>
+    <p>Os dados coletados poderão ser utilizados para:</p>
+    <ul>
+      <li>Realizar cotações de seguros;</li>
+      <li>Emitir propostas e apólices;</li>
+      <li>Atendimento ao cliente via telefone, WhatsApp e e-mail;</li>
+      <li>Cumprimento de obrigações legais e regulatórias;</li>
+      <li>Envio de comunicações sobre produtos e serviços, mediante consentimento;</li>
+      <li>Melhoria contínua dos serviços prestados.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>4. Base Legal do Tratamento</h2>
+    <p>Os dados pessoais são tratados com fundamento nas seguintes bases legais previstas na LGPD:</p>
+    <ul>
+      <li>Consentimento do titular (art. 7º, I);</li>
+      <li>Execução de contrato (art. 7º, V);</li>
+      <li>Cumprimento de obrigação legal ou regulatória (art. 7º, II);</li>
+      <li>Exercício regular de direitos (art. 7º, VI);</li>
+      <li>Legítimo interesse do controlador (art. 7º, IX).</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>5. Compartilhamento de Dados</h2>
+    <p>Os dados poderão ser compartilhados com:</p>
+    <ul>
+      <li>Seguradoras parceiras, para fins de cotação e contratação;</li>
+      <li>Prestadores de serviços de tecnologia e hospedagem;</li>
+      <li>Serviços de comunicação por e-mail e mensageria;</li>
+      <li>Meta Platforms (Facebook, Instagram e WhatsApp), conforme permissões concedidas pelo usuário;</li>
+      <li>Autoridades competentes, quando exigido por lei ou ordem judicial.</li>
+    </ul>
+    <p style="margin-top:14px;">
+      <strong style="color:#fff">A Michelin Seguros não vende informações pessoais a terceiros.</strong>
+    </p>
+  </section>
+
+  <section>
+    <h2>6. Integração com Meta (Facebook, Instagram e WhatsApp)</h2>
+    <p>
+      Quando o usuário utiliza as plataformas da Meta para interagir com a Michelin Seguros, podemos
+      acessar somente as informações expressamente autorizadas pelo próprio usuário. Essas informações
+      são utilizadas exclusivamente para a prestação dos serviços solicitados e atendimento ao cliente.
+    </p>
+    <p>
+      O tratamento de dados provenientes dessas plataformas segue as políticas de dados da Meta
+      Platforms e os termos desta Política de Privacidade.
+    </p>
+  </section>
+
+  <section>
+    <h2>7. Cookies</h2>
+    <p>O site poderá utilizar cookies para melhorar a experiência do usuário:</p>
+    <ul>
+      <li><strong style="color:#fff">Cookies essenciais:</strong> necessários para o funcionamento básico do site;</li>
+      <li><strong style="color:#fff">Cookies analíticos:</strong> para compreender como os usuários interagem com o site;</li>
+      <li><strong style="color:#fff">Cookies de desempenho:</strong> para otimizar a velocidade e estabilidade.</li>
+    </ul>
+    <p>O usuário pode configurar seu navegador para recusar cookies, porém isso pode afetar a experiência de uso.</p>
+  </section>
+
+  <section>
+    <h2>8. Segurança das Informações</h2>
+    <p>
+      Adotamos medidas técnicas e administrativas adequadas para proteger os dados pessoais contra
+      acesso não autorizado, alteração, divulgação indevida, destruição ou perda, incluindo:
+    </p>
+    <ul>
+      <li>Criptografia em trânsito (TLS/HTTPS);</li>
+      <li>Controle de acesso baseado em perfis;</li>
+      <li>Registro de auditoria de operações;</li>
+      <li>Backups regulares e seguros.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>9. Retenção dos Dados</h2>
+    <p>Os dados pessoais serão armazenados pelo período necessário para:</p>
+    <ul>
+      <li>Prestação dos serviços contratados;</li>
+      <li>Cumprimento de obrigações legais e regulatórias;</li>
+      <li>Exercício regular de direitos em processos administrativos ou judiciais;</li>
+      <li>Atendimento às exigências das entidades reguladoras do mercado de seguros.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>10. Direitos do Titular dos Dados</h2>
+    <p>Nos termos da LGPD, você possui os seguintes direitos:</p>
+    <ul>
+      <li>Confirmar a existência do tratamento de seus dados;</li>
+      <li>Acessar seus dados pessoais;</li>
+      <li>Corrigir dados incompletos, inexatos ou desatualizados;</li>
+      <li>Solicitar portabilidade dos dados;</li>
+      <li>Solicitar anonimização, bloqueio ou eliminação de dados desnecessários;</li>
+      <li>Solicitar a exclusão dos dados pessoais tratados com base no consentimento;</li>
+      <li>Revogar o consentimento previamente concedido.</li>
+    </ul>
+    <p style="margin-top:12px;">
+      Para exercer esses direitos, entre em contato conosco pelos canais indicados na seção 11.
+    </p>
+  </section>
+
+  <section>
+    <h2>11. Controlador dos Dados</h2>
+    <p>
+      O controlador responsável pelo tratamento dos dados pessoais é:
+    </p>
+    <p style="margin-top:8px;">
+      <strong style="color:#fff">Michelin Seguros Administradora e Corretora de Seguros</strong><br />
+      Dourados – Mato Grosso do Sul
+    </p>
+    <div class="contact-card">
+      <div class="contact-item">
+        <div>
+          <span class="contact-label">WhatsApp</span>
+          <a href="https://wa.me/5567996748603" style="color:inherit;">(67) 99674-8603</a>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div>
+          <span class="contact-label">E-mail</span>
+          <a href="mailto:contato@michelinseguros.com.br" style="color:inherit;">contato@michelinseguros.com.br</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>12. Alterações desta Política</h2>
+    <p>
+      Esta Política de Privacidade poderá ser atualizada periodicamente para refletir mudanças em
+      nossas práticas ou exigências legais. A versão mais recente estará sempre disponível nesta
+      página, com a data da última atualização indicada no topo.
+    </p>
+    <p>
+      Recomendamos que você consulte esta página regularmente. O uso continuado dos nossos serviços
+      após qualquer alteração constitui aceitação da nova versão.
+    </p>
+  </section>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <nav class="footer-links" aria-label="Links do rodapé">
+      <a href="/">Início</a>
+      <a href="/politica-de-privacidade" aria-current="page">Política de Privacidade</a>
+      <a href="/exclusao-de-dados">Exclusão de Dados</a>
+    </nav>
+    <p class="footer-copy">
+      &copy; 2025 Michelin Seguros Administradora e Corretora de Seguros · Dourados – MS
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

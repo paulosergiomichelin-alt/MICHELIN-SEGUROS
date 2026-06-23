@@ -397,7 +397,7 @@ async function handleChatsUpdate(event: any, isUpsert = false) {
                         : (chat.unreadMessages !== undefined ? chat.unreadMessages : undefined);
       if (unreadCount !== undefined) patch.unreadCount = unreadCount;
       if (chat.name || chat.pushName) patch.contactName = chat.name || chat.pushName;
-      if (chat.profilePicUrl && !existing.contactPicture) patch.contactPicture = chat.profilePicUrl;
+      if (chat.profilePicUrl) patch.contactPicture = chat.profilePicUrl;
 
       updateConversation(conversationId, patch);
       emitToSession(sessionId, 'wa:chat_update', { id: conversationId, patch });

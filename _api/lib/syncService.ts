@@ -165,20 +165,28 @@ export async function syncSession(
       : (chat.updatedAt as string | undefined) ?? new Date().toISOString();
     const lastMsgDir: 'inbound' | 'outbound' = lastMsg?.key?.fromMe ? 'outbound' : 'inbound';
 
+    // Preserva lastMessage/lastMessageAt do cache se for mais recente (webhook pode ter chegado antes do sync)
+    const cachedConv = getConversation(convId);
+    const cachedTs = cachedConv?.lastMessageAt ? new Date(cachedConv.lastMessageAt).getTime() : 0;
+    const syncTs = new Date(lastMsgTs).getTime();
+    const useCache = cachedTs > syncTs;
+
     const conv: CachedConversation = {
       id: convId,
       sessionId: sessionName,
       sessionName,
       phone,
       contactName: resolvedName,
-      contactPicture: resolvedPicture || undefined,
+      contactPicture: resolvedPicture || cachedConv?.contactPicture || undefined,
       isGroup: groupChat || undefined,
-      lastMessage: lastMsgBody,
-      lastMessageAt: lastMsgTs,
-      lastMessageDirection: lastMsgDir,
-      unreadCount: (chat.unreadMessages as number) ?? 0,
+      lastMessage: useCache ? (cachedConv!.lastMessage ?? lastMsgBody) : lastMsgBody,
+      lastMessageAt: useCache ? cachedConv!.lastMessageAt! : lastMsgTs,
+      lastMessageDirection: useCache ? (cachedConv!.lastMessageDirection ?? lastMsgDir) : lastMsgDir,
+      unreadCount: cachedConv?.unreadCount ?? (chat.unreadMessages as number) ?? 0,
       organizationId,
-      updatedAt: lastMsgTs,
+      updatedAt: useCache ? cachedConv!.lastMessageAt! : lastMsgTs,
+      leadId: cachedConv?.leadId,
+      clienteId: cachedConv?.clienteId,
     };
     setConversation(conv);
     result.conversationsImported++;

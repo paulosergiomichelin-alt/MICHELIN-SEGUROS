@@ -2096,20 +2096,26 @@ async function syncSession(sessionName, organizationId, importMessages = false) 
     const lastMsgBody = lastMsg ? extractBody(lastMsg.message) : "";
     const lastMsgTs = lastMsg?.messageTimestamp ? new Date(lastMsg.messageTimestamp * 1e3).toISOString() : chat.updatedAt ?? (/* @__PURE__ */ new Date()).toISOString();
     const lastMsgDir = lastMsg?.key?.fromMe ? "outbound" : "inbound";
+    const cachedConv = getConversation(convId);
+    const cachedTs = cachedConv?.lastMessageAt ? new Date(cachedConv.lastMessageAt).getTime() : 0;
+    const syncTs = new Date(lastMsgTs).getTime();
+    const useCache = cachedTs > syncTs;
     const conv = {
       id: convId,
       sessionId: sessionName,
       sessionName,
       phone,
       contactName: resolvedName,
-      contactPicture: resolvedPicture || void 0,
+      contactPicture: resolvedPicture || cachedConv?.contactPicture || void 0,
       isGroup: groupChat || void 0,
-      lastMessage: lastMsgBody,
-      lastMessageAt: lastMsgTs,
-      lastMessageDirection: lastMsgDir,
-      unreadCount: chat.unreadMessages ?? 0,
+      lastMessage: useCache ? cachedConv.lastMessage ?? lastMsgBody : lastMsgBody,
+      lastMessageAt: useCache ? cachedConv.lastMessageAt : lastMsgTs,
+      lastMessageDirection: useCache ? cachedConv.lastMessageDirection ?? lastMsgDir : lastMsgDir,
+      unreadCount: cachedConv?.unreadCount ?? chat.unreadMessages ?? 0,
       organizationId,
-      updatedAt: lastMsgTs
+      updatedAt: useCache ? cachedConv.lastMessageAt : lastMsgTs,
+      leadId: cachedConv?.leadId,
+      clienteId: cachedConv?.clienteId
     };
     setConversation(conv);
     result.conversationsImported++;
@@ -2620,7 +2626,7 @@ async function handleChatsUpdate(event, isUpsert = false) {
       const unreadCount = typeof chat.unreadCount === "number" ? chat.unreadCount : chat.unreadMessages !== void 0 ? chat.unreadMessages : void 0;
       if (unreadCount !== void 0) patch.unreadCount = unreadCount;
       if (chat.name || chat.pushName) patch.contactName = chat.name || chat.pushName;
-      if (chat.profilePicUrl && !existing.contactPicture) patch.contactPicture = chat.profilePicUrl;
+      if (chat.profilePicUrl) patch.contactPicture = chat.profilePicUrl;
       updateConversation(conversationId, patch);
       emitToSession(sessionId, "wa:chat_update", { id: conversationId, patch });
     } else if (isUpsert) {
@@ -2736,7 +2742,7 @@ async function runReconcile() {
     });
     const sessions = new Map(inMemory);
     for (const inst of openInstances) {
-      const name = inst.instance?.instanceName ?? inst.instanceName ?? "";
+      const name = inst.instance?.instanceName ?? inst.instanceName ?? inst.name ?? "";
       if (name && !sessions.has(name)) sessions.set(name, "default");
     }
     process.stdout.write(`[EVOLUTION/reconcile] ${sessions.size} sess\xF5es ativas

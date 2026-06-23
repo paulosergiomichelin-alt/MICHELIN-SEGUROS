@@ -35,7 +35,7 @@ export async function runReconcile(): Promise<void> {
     // Merge das duas fontes
     const sessions = new Map<string, string>(inMemory);
     for (const inst of openInstances) {
-      const name: string = inst.instance?.instanceName ?? inst.instanceName ?? '';
+      const name: string = inst.instance?.instanceName ?? inst.instanceName ?? inst.name ?? '';
       if (name && !sessions.has(name)) sessions.set(name, 'default');
     }
 

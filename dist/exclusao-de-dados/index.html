@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exclusão de Dados | Michelin Seguros</title>
+  <meta name="description" content="Saiba como solicitar a exclusão dos seus dados pessoais da Michelin Seguros, conforme previsto pela Lei Geral de Proteção de Dados (LGPD)." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://michelin-seguros.vercel.app/exclusao-de-dados" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Exclusão de Dados | Michelin Seguros" />
+  <meta property="og:description" content="Saiba como solicitar a exclusão dos seus dados pessoais da Michelin Seguros, conforme a LGPD." />
+  <meta property="og:url" content="https://michelin-seguros.vercel.app/exclusao-de-dados" />
+  <meta property="og:site_name" content="Michelin Seguros" />
+  <meta property="og:locale" content="pt_BR" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold: #CFA764;
+      --gold-light: #E8C97A;
+      --black: #0a0a0a;
+      --dark: #111111;
+      --dark2: #1a1a1a;
+      --white: #ffffff;
+      --muted: rgba(255,255,255,0.55);
+      --border: rgba(255,255,255,0.08);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--black);
+      color: var(--white);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--gold); text-decoration: none; }
+    a:hover { color: var(--gold-light); text-decoration: underline; }
+
+    header {
+      background: var(--dark);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-inner {
+      max-width: 860px;
+      margin: 0 auto;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo-text {
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+    .header-badge {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    .breadcrumb {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 16px 24px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.35);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .breadcrumb span { color: var(--gold); }
+
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
+
+    .page-hero {
+      border-left: 3px solid var(--gold);
+      padding-left: 20px;
+      margin-bottom: 40px;
+    }
+    .page-tag {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: rgba(207,167,100,0.1);
+      border: 1px solid rgba(207,167,100,0.25);
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: clamp(22px, 4vw, 32px);
+      font-weight: 900;
+      color: var(--white);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    .page-date {
+      font-size: 11px;
+      color: rgba(255,255,255,0.3);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    section {
+      background: var(--dark2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 28px;
+      margin-bottom: 16px;
+    }
+    h2 {
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h2::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 14px;
+      background: var(--gold);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    p { color: var(--muted); margin-bottom: 10px; }
+    p:last-child { margin-bottom: 0; }
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0 0;
+    }
+    ul li {
+      color: var(--muted);
+      padding: 5px 0 5px 18px;
+      position: relative;
+      font-size: 14px;
+    }
+    ul li::before {
+      content: '–';
+      position: absolute;
+      left: 0;
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    .contact-card {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(207,167,100,0.06);
+      border: 1px solid rgba(207,167,100,0.15);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 13px;
+    }
+    .contact-icon {
+      width: 18px;
+      height: 18px;
+      color: var(--gold);
+      flex-shrink: 0;
+    }
+    .contact-label {
+      color: rgba(255,255,255,0.3);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      display: block;
+    }
+    .contact-value {
+      color: var(--white);
+      font-weight: 600;
+    }
+
+    /* Steps */
+    .steps { margin-top: 8px; }
+    .step {
+      display: flex;
+      gap: 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      width: 32px;
+      height: 32px;
+      background: rgba(207,167,100,0.12);
+      border: 1px solid rgba(207,167,100,0.3);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 900;
+      color: var(--gold);
+      flex-shrink: 0;
+    }
+    .step-body { flex: 1; }
+    .step-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+    .step-desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    /* CTA box */
+    .cta-box {
+      background: linear-gradient(135deg, rgba(207,167,100,0.08) 0%, rgba(207,167,100,0.03) 100%);
+      border: 1px solid rgba(207,167,100,0.25);
+      border-radius: 14px;
+      padding: 28px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .cta-title {
+      font-size: 16px;
+      font-weight: 900;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+    .cta-desc { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+    .cta-btn {
+      display: inline-block;
+      background: var(--gold);
+      color: var(--black);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 12px 28px;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .cta-btn:hover { background: var(--gold-light); text-decoration: none; color: var(--black); }
+
+    /* Alert */
+    .alert {
+      background: rgba(207,167,100,0.06);
+      border: 1px solid rgba(207,167,100,0.2);
+      border-left: 3px solid var(--gold);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 16px;
+      margin-top: 14px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+    }
+
+    footer {
+      background: var(--dark);
+      border-top: 1px solid var(--border);
+      padding: 32px 24px;
+    }
+    .footer-inner {
+      max-width: 860px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-copy {
+      font-size: 11px;
+      color: rgba(255,255,255,0.25);
+    }
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .footer-links a {
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 0.05em;
+    }
+    .footer-links a:hover { color: var(--gold); text-decoration: none; }
+
+    @media (max-width: 600px) {
+      main { padding: 24px 16px 60px; }
+      section { padding: 20px 16px; }
+      .contact-card { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <span class="logo-text">Michelin Seguros</span>
+    <span class="header-badge">LGPD · Art. 18</span>
+  </div>
+</header>
+
+<div class="breadcrumb">
+  <a href="/">Início</a>
+  <span>›</span>
+  <span>Exclusão de Dados</span>
+</div>
+
+<main>
+
+  <div class="page-hero">
+    <div class="page-tag">Direitos do Titular · LGPD</div>
+    <h1>Exclusão de Dados Pessoais</h1>
+    <p class="page-date">Atualizado em 17 de junho de 2026</p>
+  </div>
+
+  <!-- Intro -->
+  <section>
+    <h2>Seu Direito à Exclusão</h2>
+    <p>A Lei Geral de Proteção de Dados (Lei nº 13.709/2018) garante a você, titular dos dados pessoais, o direito de solicitar a exclusão, anonimização ou bloqueio de dados desnecessários, excessivos ou tratados em desconformidade com a legislação.</p>
+    <p>A <strong style="color:#fff">Michelin Seguros Administradora e Corretora de Seguros Ltda</strong> respeita e honra plenamente esse direito. Esta página descreve como exercê-lo de forma simples e transparente.</p>
+  </section>
+
+  <!-- Como solicitar -->
+  <section>
+    <h2>Como Solicitar a Exclusão</h2>
+    <p>Você pode solicitar a exclusão dos seus dados pessoais por qualquer um dos canais abaixo. Sua solicitação será processada em até <strong style="color:#fff">15 (quinze) dias úteis</strong> a partir da confirmação de identidade.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Entre em contato</div>
+          <p class="step-desc">Envie sua solicitação por e-mail para <a href="mailto:contato@michelinseguros.com.br">contato@michelinseguros.com.br</a> ou pelo WhatsApp <a href="https://wa.me/5567996748603">(67) 99674-8603</a>, informando nome completo e CPF.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Confirmação de identidade</div>
+          <p class="step-desc">Podemos solicitar documentos para verificar sua identidade e garantir que apenas o titular autorize a exclusão dos próprios dados.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Processamento</div>
+          <p class="step-desc">Após a confirmação, seus dados serão excluídos dos nossos sistemas ativos dentro do prazo legal de 15 dias úteis. Você receberá confirmação por escrito.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Confirmação de exclusão</div>
+          <p class="step-desc">Enviaremos uma confirmação formal de que os dados foram excluídos, salvo nas hipóteses em que a retenção seja legalmente obrigatória.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div class="cta-box">
+    <div class="cta-title">Solicitar Exclusão Agora</div>
+    <p class="cta-desc">Clique abaixo para iniciar sua solicitação pelo WhatsApp ou envie um e-mail diretamente.</p>
+    <a href="https://wa.me/5567996748603?text=Olá,%20gostaria%20de%20solicitar%20a%20exclusão%20dos%20meus%20dados%20pessoais." class="cta-btn">Solicitar pelo WhatsApp</a>
+  </div>
+
+  <!-- O que será excluído -->
+  <section>
+    <h2>O Que Será Excluído</h2>
+    <p>Ao exercer o direito de exclusão, removeremos das nossas bases ativas os seguintes dados pessoais vinculados à sua identidade:</p>
+    <ul>
+      <li>Nome completo, CPF, RG e demais dados de identificação</li>
+      <li>Endereço, e-mail, telefone e WhatsApp</li>
+      <li>Dados de apólices de seguro contratadas</li>
+      <li>Histórico de atendimentos e comunicações</li>
+      <li>Dados coletados via integração com plataformas de mensagens (WhatsApp Business)</li>
+      <li>Dados de navegação e interação com nossas plataformas digitais</li>
+    </ul>
+  </section>
+
+  <!-- Exceções legais -->
+  <section>
+    <h2>Exceções à Exclusão</h2>
+    <p>Conforme o Art. 16 da LGPD, em determinadas hipóteses legais os dados podem ser mantidos mesmo após sua solicitação de exclusão:</p>
+    <ul>
+      <li>Cumprimento de obrigação legal ou regulatória pelo controlador</li>
+      <li>Uso exclusivo pelo controlador, vedado o acesso por terceiros, com dados anonimizados</li>
+      <li>Transferência a terceiro, desde que respeitados os requisitos de tratamento previstos em lei</li>
+      <li>Uso em processos judiciais, administrativos ou arbitrais em andamento</li>
+      <li>Obrigações estabelecidas pelo SUSEP, Receita Federal ou demais órgãos reguladores do setor de seguros</li>
+    </ul>
+    <div class="alert">
+      Nos casos acima, informaremos sobre quais dados não podem ser excluídos no momento e o motivo legal que justifica a retenção.
+    </div>
+  </section>
+
+  <!-- Dados de redes sociais / Meta -->
+  <section>
+    <h2>Dados Provenientes do WhatsApp e Meta</h2>
+    <p>Se você interagiu conosco por meio do <strong style="color:#fff">WhatsApp Business</strong> ou outras plataformas da Meta (Facebook, Instagram), podemos ter recebido e armazenado dados de contato e mensagens trocadas para fins de atendimento.</p>
+    <p>Ao solicitar a exclusão, removeremos também os dados vinculados a essas interações de nossos sistemas internos. Ressaltamos que a Meta (WhatsApp Inc.) possui suas próprias políticas de privacidade e retenção de dados, independentes das nossas — para solicitar exclusão junto à Meta, acesse as configurações de privacidade do seu aplicativo WhatsApp.</p>
+  </section>
+
+  <!-- Prazo e contato -->
+  <section>
+    <h2>Prazo e Canais de Contato</h2>
+    <p>Todas as solicitações de exclusão são respondidas em até <strong style="color:#fff">15 (quinze) dias úteis</strong>. Em caso de solicitações complexas, podemos prorrogar por igual período, informando o motivo.</p>
+
+    <div class="contact-card">
+      <div class="contact-item">
+        <svg class="contact-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <div>
+          <span class="contact-label">E-mail (DPO)</span>
+          <a href="mailto:contato@michelinseguros.com.br" class="contact-value">contato@michelinseguros.com.br</a>
+        </div>
+      </div>
+      <div class="contact-item">
+        <svg class="contact-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.6 19.79 19.79 0 0 1 1.61 5a2 2 0 0 1 1.99-2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 10.5a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        <div>
+          <span class="contact-label">WhatsApp</span>
+          <a href="https://wa.me/5567996748603" class="contact-value">(67) 99674-8603</a>
+        </div>
+      </div>
+      <div class="contact-item">
+        <svg class="contact-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <div>
+          <span class="contact-label">Endereço</span>
+          <span class="contact-value">Dourados, MS — Brasil</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANPD -->
+  <section>
+    <h2>Autoridade Nacional de Proteção de Dados</h2>
+    <p>Se considerar que sua solicitação não foi atendida de forma adequada, você tem o direito de peticionar à <strong style="color:#fff">ANPD (Autoridade Nacional de Proteção de Dados)</strong>, órgão competente para fiscalizar o cumprimento da LGPD no Brasil.</p>
+    <p>Mais informações em: <a href="https://www.gov.br/anpd" target="_blank" rel="noopener noreferrer">www.gov.br/anpd</a></p>
+  </section>
+
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-copy">
+      © 2026 Michelin Seguros Administradora e Corretora de Seguros Ltda<br>
+      CNPJ registrado · Dourados, MS · Brasil
+    </div>
+    <div class="footer-links">
+      <a href="/politica-de-privacidade">Política de Privacidade</a>
+      <a href="/exclusao-de-dados">Exclusão de Dados</a>
+      <a href="mailto:contato@michelinseguros.com.br">Contato</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
