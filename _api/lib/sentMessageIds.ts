@@ -45,3 +45,31 @@ export function clearSentById(evolutionId: string): void {
 export function getSentCount(): number {
   return sentMap.size;
 }
+
+// ── Mapeamento evolutionId → optimisticDocId para status updates ──────────────
+// Mantido separado do sentMap (que é limpo no echo) com TTL maior (10 min)
+// para cobrir DELIVERY_ACK e READ que chegam depois do eco.
+
+const statusTrackMap = new Map<string, { optimisticDocId: string; addedAt: number }>();
+const STATUS_TTL_MS = 10 * 60 * 1000;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, entry] of statusTrackMap) {
+    if (now - entry.addedAt > STATUS_TTL_MS) statusTrackMap.delete(id);
+  }
+}, 60_000);
+
+export function trackForStatusUpdates(evolutionId: string, optimisticDocId: string): void {
+  statusTrackMap.set(evolutionId, { optimisticDocId, addedAt: Date.now() });
+}
+
+export function getOptimisticId(evolutionId: string): string | null {
+  const entry = statusTrackMap.get(evolutionId);
+  if (!entry) return null;
+  if (Date.now() - entry.addedAt > STATUS_TTL_MS) {
+    statusTrackMap.delete(evolutionId);
+    return null;
+  }
+  return entry.optimisticDocId;
+}

@@ -1,6 +1,6 @@
 import { fsUpdate, fsQuery, fsGet, fsSet } from '../lib/adminFirebase.js';
 import { extractPhone, stripDDI, isGroup, isIgnoredJid, extractMessageContent, extractPhoneFromJid } from '../lib/whatsappUtils.js';
-import { getSentEntry, clearSentById } from '../lib/sentMessageIds.js';
+import { getSentEntry, clearSentById, trackForStatusUpdates, getOptimisticId } from '../lib/sentMessageIds.js';
 import { syncSession } from '../lib/syncService.js';
 import { emitToSession } from '../lib/socketRegistry.js';
 import {
@@ -93,6 +93,8 @@ async function handleMessagesUpsert(event: any) {
     const sentEntry = getSentEntry(msgId);
     if (sentEntry) {
       clearSentById(msgId);
+      // Guarda mapeamento para DELIVERY_ACK/READ que chegam depois do eco
+      trackForStatusUpdates(msgId, sentEntry.optimisticDocId);
       updateMessage(sentEntry.optimisticDocId, { evolutionId: msgId, status: 'sent' });
       emitToSession(sessionId, 'wa:message_update', {
         id: sentEntry.optimisticDocId,
@@ -201,9 +203,14 @@ async function handleMessagesUpdate(event: any) {
     const status = statusMap[rawStatus] ?? rawStatus.toLowerCase();
     if (!status) continue;
 
-    const storedId = `wamsg_${msgId}`;
-    updateMessage(storedId, { status });
-    emitToSession(sessionId, 'wa:message_update', { id: storedId, patch: { status } });
+    // Tenta resolver o ID otimista (mensagens enviadas pelo CRM)
+    const optimisticId = getOptimisticId(msgId);
+    const emitId = optimisticId ?? `wamsg_${msgId}`;
+
+    log.info('MESSAGES_UPDATE', { session: sessionId, msgId, rawStatus, status, resolvedId: emitId });
+
+    updateMessage(emitId, { status });
+    emitToSession(sessionId, 'wa:message_update', { id: emitId, patch: { status } });
   }
 }
 
