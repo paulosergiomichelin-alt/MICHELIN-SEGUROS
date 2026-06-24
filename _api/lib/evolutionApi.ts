@@ -328,7 +328,7 @@ export const EvolutionAPI = {
         const res = await fetchWithTimeout(url, {
           method,
           headers: authHeaders(),
-          body: JSON.stringify({ where: { key: { remoteJid } }, limit: msgLimit }),
+          body: JSON.stringify({ where: { key: { remoteJid } }, offset: msgLimit, page: 1 }),
         }, 15000);
 
         if (res.status === 404) continue; // Endpoint não existe nesta versão
@@ -420,7 +420,7 @@ export const EvolutionAPI = {
       const res = await fetchWithTimeout(url, {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ where: { key: { id: waId } }, limit: 1 }),
+        body: JSON.stringify({ where: { key: { id: waId } }, offset: 1, page: 1 }),
       }, 10000);
       if (!res.ok) return null;
       const data: any = await res.json();
