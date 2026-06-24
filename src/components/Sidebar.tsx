@@ -18,6 +18,7 @@ import {
   Smartphone,
   Mail,
   BarChart3,
+  Receipt,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Permissions, VisualIdentityConfig } from '../types';
@@ -138,8 +139,16 @@ export const Sidebar = React.memo(({
           { id: 'email',            label: 'E-mails',       icon: Mail,          permission: permissions.canReadAllLeads, badge: emailUnreadBadge },
           { id: 'users',       label: 'Equipe',        icon: ShieldAlert,   permission: permissions.canManageUsers },
           { id: 'empresas',    label: 'Empresas',      icon: Building2,     permission: userProfile?.superadmin === true },
+          { id: '_sep_fin',    label: 'FINANCEIRO',    icon: null as any,   permission: permissions.canReadAllLeads, type: 'section' as const },
+          { id: 'nfse',        label: 'Notas Fiscais', icon: Receipt,       permission: permissions.canReadAllLeads },
           { id: 'settings',    label: 'Configurações', icon: Cog,           permission: permissions.canAccessSettings },
         ].map((item) => {
+          if (item.type === 'section') {
+            if (!item.permission) return null;
+            return isSidebarOpen
+              ? <div key={item.id} className="px-3 pt-3 pb-1"><p className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em]">{item.label}</p></div>
+              : <div key={item.id} className="mx-2 my-1 border-t border-white/[0.06]" />;
+          }
           if (!item.permission) return null;
 
           const Icon = item.icon;

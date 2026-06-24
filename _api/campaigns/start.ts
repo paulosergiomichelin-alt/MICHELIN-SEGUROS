@@ -41,7 +41,7 @@ async function sleep(ms: number) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-async function runCampaign(campaignId: string, campaign: Record<string, any>) {
+async function runCampaign(campaignId: string, campaign: Record<string, any>, startIndex = 0) {
   const state = runners.get(campaignId)!;
   const {
     targetLeads = [] as string[],
@@ -52,10 +52,13 @@ async function runCampaign(campaignId: string, campaign: Record<string, any>) {
     interval = 10,
   } = campaign;
 
+  const leads = targetLeads as string[];
   let sentCount  = Number(campaign.sentCount  ?? 0);
   let errorCount = Number(campaign.errorCount ?? 0);
 
-  for (const leadId of targetLeads as string[]) {
+  for (let i = startIndex; i < leads.length; i++) {
+    const leadId = leads[i];
+
     if (state.status === 'cancelled') break;
 
     while (state.status === 'paused') {
@@ -73,12 +76,24 @@ async function runCampaign(campaignId: string, campaign: Record<string, any>) {
 
     if (!lead) {
       errorCount++;
+      await fsUpdate('campaigns', campaignId, { errorCount, currentIndex: i + 1, updatedAt: ts }).catch(() => {});
+      continue;
+    }
+
+    // Deduplicação: pula leads que já receberam esta campanha
+    if (lead.ultimaCampanhaId === campaignId) {
+      console.log(`[CAMPAIGNS] Pulando ${leadId} — já recebeu esta campanha`);
+      await fsUpdate('campaigns', campaignId, { currentIndex: i + 1, updatedAt: ts }).catch(() => {});
       continue;
     }
 
     const text  = renderTemplate(messageTemplate, lead);
     const rawPhone = (lead.phone || '').replace(/\D/g, '');
-    if (!rawPhone) { errorCount++; continue; }
+    if (!rawPhone) {
+      errorCount++;
+      await fsUpdate('campaigns', campaignId, { errorCount, currentIndex: i + 1, updatedAt: ts }).catch(() => {});
+      continue;
+    }
     // Normaliza para formato Evolution API (DDI 55 obrigatório)
     const phone = rawPhone.startsWith('55') && rawPhone.length >= 12
       ? rawPhone
@@ -119,7 +134,7 @@ async function runCampaign(campaignId: string, campaign: Record<string, any>) {
         ultimaCampanha: campaign.name,
         ultimaCampanhaId: campaignId,
         updatedAt: ts,
-      }).catch(() => {});
+      }).catch(err => console.warn(`[CAMPAIGNS] Falha ao marcar lead ${leadId}:`, err?.message));
     } else {
       errorCount++;
     }
@@ -137,14 +152,15 @@ async function runCampaign(campaignId: string, campaign: Record<string, any>) {
       timestamp: ts,
     }).catch(() => {});
 
-    // Atualiza progresso da campanha
+    // Persiste progresso (currentIndex para recuperação após restart)
     await fsUpdate('campaigns', campaignId, {
       sentCount,
       errorCount,
+      currentIndex: i + 1,
       updatedAt: ts,
     }).catch(() => {});
 
-    console.log(`[CAMPAIGNS] progresso: ${sentCount} enviados / ${errorCount} erros de ${targetLeads.length} leads`);
+    console.log(`[CAMPAIGNS] progresso: ${sentCount} enviados / ${errorCount} erros de ${leads.length} leads`);
 
     if (state.status !== 'cancelled') {
       await sleep(interval * 1000);
@@ -157,6 +173,7 @@ async function runCampaign(campaignId: string, campaign: Record<string, any>) {
       status:    'completed',
       sentCount,
       errorCount,
+      currentIndex: leads.length,
       updatedAt: new Date().toISOString(),
     }).catch(() => {});
     console.log(`[CAMPAIGNS] Campanha ${campaignId} concluída — enviados: ${sentCount}, erros: ${errorCount}`);
@@ -195,13 +212,14 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ success: true, status: 'resumed' });
     }
 
-    // Fresh start
+    // Fresh start (ou recuperação após restart do servidor)
+    const savedIndex = Number(campaign.currentIndex ?? 0);
     runners.set(campaignId, { status: 'running' });
     await fsUpdate('campaigns', campaignId, { status: 'running', updatedAt: new Date().toISOString() });
 
-    res.status(200).json({ success: true, status: 'started' });
+    res.status(200).json({ success: true, status: savedIndex > 0 ? 'resumed' : 'started' });
 
-    runCampaign(campaignId, campaign).catch(err => {
+    runCampaign(campaignId, campaign, savedIndex).catch(err => {
       console.error('[CAMPAIGNS/start] Erro no runner:', err);
       fsUpdate('campaigns', campaignId, { status: 'error', updatedAt: new Date().toISOString() }).catch(() => {});
       runners.delete(campaignId);

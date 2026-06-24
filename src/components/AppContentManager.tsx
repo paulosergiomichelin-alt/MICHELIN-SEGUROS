@@ -27,6 +27,8 @@ const EmailPage          = lazy(() => import('../domains/email/EmailPage').then(
 const EmailAccountsPage  = lazy(() => import('../domains/email/EmailAccountsPage').then(m => ({ default: m.EmailAccountsPage })));
 const EmailSettingsPage  = lazy(() => import('../domains/email/EmailSettingsPage').then(m => ({ default: m.EmailSettingsPage })));
 const RelatoriosPage     = lazy(() => import('../domains/relatorios/RelatoriosPage').then(m => ({ default: m.RelatoriosPage })));
+const NfseListPage       = lazy(() => import('../domains/nfse/pages/NfseListPage').then(m => ({ default: m.NfseListPage })));
+const NfseDashboard      = lazy(() => import('../domains/nfse/pages/NfseDashboard').then(m => ({ default: m.NfseDashboard })));
 
 interface AppContentManagerProps {
   permissions: Permissions;
@@ -210,6 +212,23 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
             element={
               userProfile?.superadmin === true
                 ? <EmpresasManagement />
+                : <Navigate to="/pipeline" replace />
+            }
+          />
+
+          <Route
+            path="/nfse"
+            element={
+              permissions.canReadAllLeads
+                ? <NfseListPage />
+                : <Navigate to="/pipeline" replace />
+            }
+          />
+          <Route
+            path="/nfse/dashboard"
+            element={
+              permissions.canReadAllLeads
+                ? <NfseDashboard />
                 : <Navigate to="/pipeline" replace />
             }
           />

@@ -314,7 +314,7 @@ export const EvolutionAPI = {
     }
   },
 
-  // POST /chat/findMessages/{instance} com { where: { key: { remoteJid } }, limit }
+  // POST /chat/findMessages/{instance} com { where: { key: { remoteJid } }, offset (page size), page (1-based) }
   // Resposta v2.x: { messages: { total, pages, currentPage, records: [...] } }
   async findMessages(instanceName: string, remoteJid: string, msgLimit = 50): Promise<any[]> {
     const candidates = [

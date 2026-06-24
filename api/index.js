@@ -1330,7 +1330,7 @@ var EvolutionAPI = {
       return [];
     }
   },
-  // POST /chat/findMessages/{instance} com { where: { key: { remoteJid } }, limit }
+  // POST /chat/findMessages/{instance} com { where: { key: { remoteJid } }, offset (page size), page (1-based) }
   // Resposta v2.x: { messages: { total, pages, currentPage, records: [...] } }
   async findMessages(instanceName, remoteJid, msgLimit = 50) {
     const candidates = [
@@ -1343,7 +1343,7 @@ var EvolutionAPI = {
         const res = await fetchWithTimeout(url, {
           method,
           headers: authHeaders(),
-          body: JSON.stringify({ where: { key: { remoteJid } }, limit: msgLimit })
+          body: JSON.stringify({ where: { key: { remoteJid } }, offset: msgLimit, page: 1 })
         }, 15e3);
         if (res.status === 404) continue;
         const text = await res.text();
@@ -1426,7 +1426,7 @@ var EvolutionAPI = {
       const res = await fetchWithTimeout(url, {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ where: { key: { id: waId } }, limit: 1 })
+        body: JSON.stringify({ where: { key: { id: waId } }, offset: 1, page: 1 })
       }, 1e4);
       if (!res.ok) return null;
       const data = await res.json();

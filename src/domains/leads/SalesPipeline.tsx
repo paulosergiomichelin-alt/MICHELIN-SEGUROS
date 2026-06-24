@@ -199,14 +199,18 @@ const PipelineStage = React.memo(({
   crmUsers: UserProfile[];
   sIdx: number;
 }) => {
+  // setNodeRef on the entire column so dropping on the header also registers
   const { setNodeRef, isOver } = useDroppable({ id: stage });
   const { color, icon: Icon } = STAGE_CONFIG[stage] || STAGE_CONFIG['Novo Lead'];
 
   return (
-    <div className={cn(
-      'flex flex-col w-[80vw] sm:w-[280px] md:w-64 h-full snap-center md:snap-align-none transition-opacity duration-200',
-      isDragging && !isOver && 'opacity-60'
-    )}>
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'flex flex-col w-[80vw] sm:w-[280px] md:w-64 h-full snap-center md:snap-align-none transition-opacity duration-200',
+        isDragging && !isOver && 'opacity-60'
+      )}
+    >
       {/* Column header */}
       <div className="flex items-center gap-2 mb-3.5 px-0.5">
         <div className={cn('w-6 h-6 rounded-lg flex items-center justify-center', color)}>
@@ -220,9 +224,8 @@ const PipelineStage = React.memo(({
         </div>
       </div>
 
-      {/* Drop zone */}
+      {/* Cards container — visual highlight only */}
       <div
-        ref={setNodeRef}
         className={cn(
           'flex-1 rounded-2xl p-2.5 flex flex-col border border-dashed transition-all duration-200 overflow-y-auto scrollbar-hide',
           isOver && isDragging
@@ -264,10 +267,31 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [crmUsers, setCrmUsers] = React.useState<UserProfile[]>([]);
+  // Optimistic moves: leadId → pending new status (shown immediately, before Firestore confirms)
+  const [pendingMoves, setPendingMoves] = React.useState<Record<string, LeadStatus>>({});
+  // Timestamp of last drag end — used to suppress the click event that fires right after drop
+  const dragEndAtRef = React.useRef<number>(0);
 
   React.useEffect(() => {
     DataService.list('users').then(users => setCrmUsers(users as UserProfile[])).catch(() => {});
   }, []);
+
+  // Clean up pendingMoves once the Firestore subscription confirms the new status
+  React.useEffect(() => {
+    if (Object.keys(pendingMoves).length === 0) return;
+    setPendingMoves(prev => {
+      const next = { ...prev };
+      let changed = false;
+      for (const [id, pendingStatus] of Object.entries(prev)) {
+        const confirmed = leads.find(l => l.id === id);
+        if (confirmed && confirmed.status === pendingStatus) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [leads]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -275,26 +299,28 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
     })
   );
 
-  const onStatusChange = React.useCallback(async (leadId: string, newStatus: LeadStatus) => {
-    try {
-      await DataService.update('lead', leadId, { status: newStatus });
-    } catch (error) {
-      console.error('[PIPELINE] Erro ao atualizar status:', error);
-    }
-  }, []);
-
   const handleDragStart = ({ active }: DragStartEvent) => {
     setActiveId(active.id as string);
   };
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     setActiveId(null);
+    dragEndAtRef.current = Date.now();
+
     if (!over) return;
     const newStatus = over.id as LeadStatus;
     const lead = leads.find(l => l.id === active.id);
-    if (lead && lead.status !== newStatus) {
-      onStatusChange(active.id as string, newStatus);
-    }
+    if (!lead || lead.status === newStatus) return;
+
+    const leadId = active.id as string;
+    // Optimistic: move card immediately without waiting for Firestore
+    setPendingMoves(prev => ({ ...prev, [leadId]: newStatus }));
+
+    DataService.update('lead', leadId, { status: newStatus }).catch(error => {
+      console.error('[PIPELINE] Erro ao atualizar status:', error);
+      // Rollback optimistic move on failure
+      setPendingMoves(prev => { const n = { ...prev }; delete n[leadId]; return n; });
+    });
   };
 
   const handleDragCancel = () => setActiveId(null);
@@ -304,17 +330,21 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
     if (setActiveTab) setActiveTab('chat');
   };
 
-  const onEditLead = (lead: Lead) => {
+  const onEditLead = React.useCallback((lead: Lead) => {
+    // Suppress the click event that browsers synthesize right after a pointer drag
+    if (Date.now() - dragEndAtRef.current < 300) return;
     navigate('/leads/' + lead.id);
-  };
+  }, [navigate]);
 
   const groupedLeads = useMemo(() => {
     const groups = {} as Record<string, Lead[]>;
     STAGES.forEach(stage => {
-      groups[stage] = leads.filter(l => (l.status || 'Novo Lead') === stage);
+      groups[stage] = leads
+        .map(l => pendingMoves[l.id] ? { ...l, status: pendingMoves[l.id] as LeadStatus } : l)
+        .filter(l => (l.status || 'Novo Lead') === stage);
     });
     return groups;
-  }, [leads]);
+  }, [leads, pendingMoves]);
 
   const activeLead = activeId ? leads.find(l => l.id === activeId) : null;
 

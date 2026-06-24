@@ -4,10 +4,16 @@ import {
   Building2, Search, RefreshCw, CheckCircle2, XCircle, PauseCircle,
   AlertTriangle, Clock, ChevronUp, ChevronDown, Eye, ShieldCheck, ShieldOff,
   Users, Loader2, AlertCircle, X, Plus, Pencil, Trash2, Upload, Save,
+  FileText, ShieldCheck as CertIcon, Briefcase, MapPin, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 import { EmpresaService } from '../../services/EmpresaService';
 import { CompanyRegistration } from '../onboarding/CompanyRegistration';
-import type { Empresa, StatusEmpresa, PlanSaas } from '../../types';
+import type {
+  Empresa, StatusEmpresa, PlanSaas,
+  FiscalSettings, CertificateInfo, FiscalService,
+  RegimeTributario, NfseEnvironment, NfseProvider,
+} from '../../types';
+import { fetchCep, certDaysLeft, certStatusColor } from '../nfse/utils/nfse-utils';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -200,6 +206,8 @@ interface EditModalProps {
   onSaved(updated: Empresa): void;
 }
 
+type EditModalTab = 'dados_gerais' | 'dados_fiscais' | 'certificado' | 'servicos';
+
 type EditForm = Pick<Empresa,
   'nomeRazaoSocial'|'nomeFantasia'|'emailCorporativo'|'telefone'|
   'planoSaas'|'status'|'limiteUsuarios'|'limiteLeadsMes'|'limiteStorageMb'|
@@ -207,13 +215,27 @@ type EditForm = Pick<Empresa,
 >;
 
 function EditModal({ empresa, onClose, onSaved }: EditModalProps) {
-  const [form, setForm] = useState<EditForm | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [tab, setTab]           = useState<EditModalTab>('dados_gerais');
+  const [form, setForm]         = useState<EditForm | null>(null);
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const fileRef    = useRef<HTMLInputElement>(null);
+  const certRef    = useRef<HTMLInputElement>(null);
+
+  // ─── Fiscal ────────────────────────────────────────────────────────────────
+  const [fiscal, setFiscal] = useState<FiscalSettings>({});
+  const [fetchingCep, setFetchingCep] = useState(false);
+
+  // ─── Certificate ───────────────────────────────────────────────────────────
+  const [cert, setCert]     = useState<CertificateInfo>({ type: 'A1' });
+  const [certFile, setCertFile] = useState<File | null>(null);
+
+  // ─── Serviços ──────────────────────────────────────────────────────────────
+  const [services, setServices] = useState<FiscalService[]>([]);
+  const [editSvc, setEditSvc]   = useState<Partial<FiscalService> | null>(null);
 
   useEffect(() => {
     if (!empresa) { setForm(null); return; }
@@ -231,13 +253,20 @@ function EditModal({ empresa, onClose, onSaved }: EditModalProps) {
       timezone: empresa.timezone,
       idioma: empresa.idioma,
     });
+    setFiscal(empresa.fiscalSettings ?? {});
+    setCert(empresa.certificate ?? { type: 'A1' });
+    setServices(empresa.fiscalServices ?? []);
     setLogoFile(null);
     setLogoPreview(null);
     setError(null);
+    setTab('dados_gerais');
   }, [empresa]);
 
   const set = <K extends keyof EditForm>(k: K, v: EditForm[K]) =>
     setForm(f => f ? { ...f, [k]: v } : f);
+
+  const setF = <K extends keyof FiscalSettings>(k: K, v: FiscalSettings[K]) =>
+    setFiscal(f => ({ ...f, [k]: v }));
 
   const handlePlanChange = (plan: PlanSaas) => {
     const limits = PLAN_LIMITS[plan];
@@ -251,24 +280,56 @@ function EditModal({ empresa, onClose, onSaved }: EditModalProps) {
     setLogoPreview(URL.createObjectURL(file));
   };
 
+  const handleCepBlur = async () => {
+    const cep = fiscal.enderecoFiscal?.cep ?? '';
+    if (cep.replace(/\D/g, '').length !== 8) return;
+    setFetchingCep(true);
+    const data = await fetchCep(cep);
+    if (data) {
+      setFiscal(f => ({
+        ...f,
+        enderecoFiscal: {
+          ...f.enderecoFiscal,
+          cep: cep,
+          logradouro: data.logradouro,
+          bairro:     data.bairro,
+          cidade:     data.localidade,
+          estado:     data.uf,
+          numero:     f.enderecoFiscal?.numero ?? '',
+        },
+      }));
+    }
+    setFetchingCep(false);
+  };
+
+  const handleCertSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCertFile(file);
+    setCert(c => ({ ...c, fileName: file.name }));
+  };
+
   const handleSave = async () => {
     if (!empresa || !form) return;
     setSaving(true);
     setError(null);
     try {
       const patch: Partial<Empresa> = {
-        nomeRazaoSocial: form.nomeRazaoSocial.trim(),
-        nomeFantasia:    form.nomeFantasia?.trim() || undefined,
+        nomeRazaoSocial:  form.nomeRazaoSocial.trim(),
+        nomeFantasia:     form.nomeFantasia?.trim() || undefined,
         emailCorporativo: form.emailCorporativo.trim(),
-        telefone:        form.telefone?.trim() || undefined,
-        planoSaas:       form.planoSaas,
-        status:          form.status,
-        limiteUsuarios:  Number(form.limiteUsuarios),
-        limiteLeadsMes:  Number(form.limiteLeadsMes),
-        limiteStorageMb: Number(form.limiteStorageMb),
-        trialExpiraEm:   form.trialExpiraEm ? new Date(form.trialExpiraEm).toISOString() : undefined,
-        timezone:        form.timezone.trim(),
-        idioma:          form.idioma,
+        telefone:         form.telefone?.trim() || undefined,
+        planoSaas:        form.planoSaas,
+        status:           form.status,
+        limiteUsuarios:   Number(form.limiteUsuarios),
+        limiteLeadsMes:   Number(form.limiteLeadsMes),
+        limiteStorageMb:  Number(form.limiteStorageMb),
+        trialExpiraEm:    form.trialExpiraEm ? new Date(form.trialExpiraEm).toISOString() : undefined,
+        timezone:         form.timezone.trim(),
+        idioma:           form.idioma,
+        fiscalSettings:   fiscal,
+        certificate:      cert,
+        fiscalServices:   services,
       };
 
       if (!patch.nomeRazaoSocial) throw new Error('Nome da empresa é obrigatório.');
@@ -294,15 +355,26 @@ function EditModal({ empresa, onClose, onSaved }: EditModalProps) {
 
   if (!empresa || !form) return null;
 
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div>
-      <label className="block text-[9px] font-black text-[#8E8E93]/60 uppercase tracking-[0.18em] mb-1.5">{label}</label>
+  const inputCls  = "w-full h-9 bg-[#0E0F11] border border-white/[0.07] rounded-lg px-3 text-[12px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#D4A854]/40 focus:ring-2 focus:ring-[#D4A854]/10 transition-all";
+  const selectCls = inputCls + " appearance-none cursor-pointer";
+  const labelCls  = "block text-[9px] font-black text-[#8E8E93]/60 uppercase tracking-[0.18em] mb-1.5";
+
+  const Field = ({ label, children, span2 }: { label: string; children: React.ReactNode; span2?: boolean }) => (
+    <div className={span2 ? 'col-span-2' : ''}>
+      <label className={labelCls}>{label}</label>
       {children}
     </div>
   );
 
-  const inputCls = "w-full h-9 bg-[#0E0F11] border border-white/[0.07] rounded-lg px-3 text-[12px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#D4A854]/40 focus:ring-2 focus:ring-[#D4A854]/10 transition-all";
-  const selectCls = inputCls + " appearance-none cursor-pointer";
+  const modalTabs: { id: EditModalTab; label: string; Icon: React.ElementType }[] = [
+    { id: 'dados_gerais',  label: 'Dados Gerais',  Icon: Building2 },
+    { id: 'dados_fiscais', label: 'Dados Fiscais',  Icon: FileText },
+    { id: 'certificado',   label: 'Certificado',    Icon: CertIcon },
+    { id: 'servicos',      label: 'Serviços Fiscais', Icon: Briefcase },
+  ];
+
+  const certDays = certDaysLeft(cert.expirationDate);
+  const certColor = certStatusColor(certDays);
 
   return (
     <AnimatePresence>
@@ -310,10 +382,9 @@ function EditModal({ empresa, onClose, onSaved }: EditModalProps) {
         <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={!saving ? onClose : undefined} />
 
         <motion.div initial={{opacity:0,scale:.96,y:16}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:.96,y:16}}
-          className="relative w-full max-w-lg rounded-[22px] border border-white/[0.07] bg-[#0E0F11]/97 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+          className="relative w-full max-w-xl rounded-[22px] border border-white/[0.07] bg-[#0E0F11]/97 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
           onClick={e => e.stopPropagation()}>
 
-          {/* top accent */}
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#D4A854]/40 to-transparent" />
 
           {/* Header */}
@@ -333,119 +404,396 @@ function EditModal({ empresa, onClose, onSaved }: EditModalProps) {
             </button>
           </div>
 
+          {/* Tabs */}
+          <div className="shrink-0 border-b border-white/[0.05] px-5 flex gap-0 overflow-x-auto">
+            {modalTabs.map(t => {
+              const Icon = t.Icon;
+              return (
+                <button key={t.id} onClick={() => setTab(t.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-2.5 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap',
+                    tab === t.id ? 'border-[#D4A854] text-[#D4A854]' : 'border-transparent text-white/30 hover:text-white/60',
+                  )}>
+                  <Icon className="w-3 h-3" />{t.label}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Body */}
-          <div className="overflow-y-auto flex-1 p-5 space-y-4">
+          <div className="overflow-y-auto flex-1 p-5">
 
-            {/* Logo */}
-            <Field label="Logo">
-              <div className="flex items-center gap-3">
-                <div className="w-14 h-14 rounded-xl border border-white/[0.07] bg-[#16181B] flex items-center justify-center overflow-hidden shrink-0">
-                  {logoPreview || empresa.logoUrl ? (
-                    <img src={logoPreview ?? empresa.logoUrl} alt="logo" className="w-full h-full object-contain" />
-                  ) : (
-                    <Building2 className="w-6 h-6 text-[#8E8E93]/30" />
-                  )}
-                </div>
+            {/* ── Dados Gerais ── */}
+            {tab === 'dados_gerais' && (
+              <div className="space-y-4">
                 <div>
-                  <button type="button" onClick={() => fileRef.current?.click()}
-                    className="h-8 px-3 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[11px] font-semibold text-[#8E8E93]/80 hover:border-[#D4A854]/30 hover:text-[#D4A854] transition-all flex items-center gap-1.5">
-                    <Upload className="w-3 h-3" /> Alterar logo
-                  </button>
-                  <p className="text-[9.5px] text-[#8E8E93]/40 mt-1">PNG, JPG ou WebP · máx 2 MB</p>
-                  <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleLogoSelect} />
+                  <label className={labelCls}>Logo</label>
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-xl border border-white/[0.07] bg-[#16181B] flex items-center justify-center overflow-hidden shrink-0">
+                      {logoPreview || empresa.logoUrl
+                        ? <img src={logoPreview ?? empresa.logoUrl} alt="logo" className="w-full h-full object-contain" />
+                        : <Building2 className="w-6 h-6 text-[#8E8E93]/30" />}
+                    </div>
+                    <div>
+                      <button type="button" onClick={() => fileRef.current?.click()}
+                        className="h-8 px-3 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[11px] font-semibold text-[#8E8E93]/80 hover:border-[#D4A854]/30 hover:text-[#D4A854] transition-all flex items-center gap-1.5">
+                        <Upload className="w-3 h-3" /> Alterar logo
+                      </button>
+                      <p className="text-[9.5px] text-[#8E8E93]/40 mt-1">PNG, JPG ou WebP · máx 2 MB</p>
+                      <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleLogoSelect} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Razão Social" span2>
+                    <input className={inputCls} value={form.nomeRazaoSocial} onChange={e => set('nomeRazaoSocial', e.target.value)} placeholder="Nome da empresa" />
+                  </Field>
+                  <Field label="Nome Fantasia" span2>
+                    <input className={inputCls} value={form.nomeFantasia ?? ''} onChange={e => set('nomeFantasia', e.target.value)} placeholder="Opcional" />
+                  </Field>
+                  <Field label="CNPJ" span2>
+                    <div className={cn(inputCls, "flex items-center opacity-50 cursor-not-allowed bg-white/[0.02]")}>
+                      {formatCnpj(empresa.cnpj)}
+                    </div>
+                  </Field>
+                  <Field label="E-mail Corporativo">
+                    <input className={inputCls} type="email" value={form.emailCorporativo} onChange={e => set('emailCorporativo', e.target.value)} placeholder="contato@empresa.com" />
+                  </Field>
+                  <Field label="Telefone">
+                    <input className={inputCls} value={form.telefone ?? ''} onChange={e => set('telefone', e.target.value)} placeholder="(11) 99999-9999" />
+                  </Field>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Plano">
+                    <select className={selectCls} value={form.planoSaas} onChange={e => handlePlanChange(e.target.value as PlanSaas)}>
+                      <option value="basico">Básico</option>
+                      <option value="profissional">Profissional</option>
+                      <option value="enterprise">Enterprise</option>
+                    </select>
+                  </Field>
+                  <Field label="Status">
+                    <select className={selectCls} value={form.status} onChange={e => set('status', e.target.value as StatusEmpresa)}>
+                      <option value="trial">Trial</option>
+                      <option value="ativo">Ativo</option>
+                      <option value="suspenso">Suspenso</option>
+                      <option value="inadimplente">Inadimplente</option>
+                      <option value="cancelado">Cancelado</option>
+                    </select>
+                  </Field>
+                </div>
+
+                <div>
+                  <p className={labelCls}>Limites do Plano</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { key: 'limiteUsuarios',  label: 'Usuários' },
+                      { key: 'limiteLeadsMes',  label: 'Leads/Mês' },
+                      { key: 'limiteStorageMb', label: 'Storage MB' },
+                    ] as const).map(({ key, label }) => (
+                      <div key={key}>
+                        <label className="block text-[9px] text-[#8E8E93]/50 mb-1">{label}</label>
+                        <input type="number" min={0} className={inputCls} value={form[key]}
+                          onChange={e => set(key, Number(e.target.value))} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Trial expira em">
+                    <input type="date" className={inputCls} value={toDateInput(form.trialExpiraEm)}
+                      onChange={e => set('trialExpiraEm', e.target.value)} />
+                  </Field>
+                  <Field label="Idioma">
+                    <select className={selectCls} value={form.idioma} onChange={e => set('idioma', e.target.value)}>
+                      <option value="pt-BR">Português (BR)</option>
+                      <option value="en-US">English (US)</option>
+                      <option value="es-ES">Español</option>
+                    </select>
+                  </Field>
+                  <Field label="Timezone" span2>
+                    <input className={inputCls} value={form.timezone} onChange={e => set('timezone', e.target.value)} placeholder="America/Sao_Paulo" />
+                  </Field>
                 </div>
               </div>
-            </Field>
+            )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
-                <Field label="Razão Social">
-                  <input className={inputCls} value={form.nomeRazaoSocial} onChange={e => set('nomeRazaoSocial', e.target.value)} placeholder="Nome da empresa" />
-                </Field>
-              </div>
-              <div className="col-span-2">
-                <Field label="Nome Fantasia">
-                  <input className={inputCls} value={form.nomeFantasia ?? ''} onChange={e => set('nomeFantasia', e.target.value)} placeholder="Opcional" />
-                </Field>
-              </div>
+            {/* ── Dados Fiscais ── */}
+            {tab === 'dados_fiscais' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Inscrição Municipal">
+                    <input className={inputCls} value={fiscal.inscricaoMunicipal ?? ''} onChange={e => setF('inscricaoMunicipal', e.target.value)} placeholder="000000" />
+                  </Field>
+                  <Field label="Inscrição Estadual">
+                    <input className={inputCls} value={fiscal.inscricaoEstadual ?? ''} onChange={e => setF('inscricaoEstadual', e.target.value)} placeholder="Opcional" />
+                  </Field>
+                  <Field label="Regime Tributário">
+                    <select className={selectCls} value={fiscal.regimeTributario ?? ''} onChange={e => setF('regimeTributario', e.target.value as RegimeTributario)}>
+                      <option value="">— Selecionar —</option>
+                      <option value="simples_nacional">Simples Nacional</option>
+                      <option value="lucro_presumido">Lucro Presumido</option>
+                      <option value="lucro_real">Lucro Real</option>
+                      <option value="mei">MEI</option>
+                    </select>
+                  </Field>
+                  <Field label="CNAE Principal">
+                    <input className={inputCls} value={fiscal.cnaePrincipal ?? ''} onChange={e => setF('cnaePrincipal', e.target.value)} placeholder="6622300" />
+                  </Field>
+                  <Field label="Código Serviço Padrão">
+                    <input className={inputCls} value={fiscal.codigoServicoPadrao ?? ''} onChange={e => setF('codigoServicoPadrao', e.target.value)} placeholder="10.05" />
+                  </Field>
+                  <Field label="Alíquota ISS (%)">
+                    <input className={inputCls} type="number" min={0} max={100} step={0.01} value={fiscal.aliquotaISS ?? ''} onChange={e => setF('aliquotaISS', parseFloat(e.target.value) || 0)} placeholder="2.00" />
+                  </Field>
+                  <Field label="Código Município IBGE" span2>
+                    <input className={inputCls} value={fiscal.codigoMunicipioIBGE ?? ''} onChange={e => setF('codigoMunicipioIBGE', e.target.value)} placeholder="5005400 (Maracaju-MS)" />
+                  </Field>
+                </div>
 
-              {/* CNPJ read-only */}
-              <div className="col-span-2">
-                <Field label="CNPJ">
-                  <div className={cn(inputCls, "flex items-center opacity-50 cursor-not-allowed bg-white/[0.02]")}>
-                    {formatCnpj(empresa.cnpj)}
+                <div>
+                  <button type="button" onClick={() => setFiscal(f => ({ ...f, simplesNacional: !f.simplesNacional }))}
+                    className="flex items-center gap-2 text-[11px] font-semibold text-white/70 hover:text-white transition-colors">
+                    {fiscal.simplesNacional
+                      ? <ToggleRight className="w-5 h-5 text-[#D4A854]" />
+                      : <ToggleLeft className="w-5 h-5 text-white/30" />}
+                    Optante pelo Simples Nacional
+                  </button>
+                </div>
+
+                <div>
+                  <p className={labelCls + ' mt-2'}>Endereço Fiscal</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="CEP">
+                      <div className="relative">
+                        <input className={inputCls + ' pr-8'} value={fiscal.enderecoFiscal?.cep ?? ''} placeholder="79000-000"
+                          onChange={e => setFiscal(f => ({ ...f, enderecoFiscal: { ...f.enderecoFiscal, cep: e.target.value } as any }))}
+                          onBlur={handleCepBlur} />
+                        {fetchingCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#D4A854] animate-spin" />}
+                        {!fetchingCep && <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />}
+                      </div>
+                    </Field>
+                    <Field label="Número">
+                      <input className={inputCls} value={fiscal.enderecoFiscal?.numero ?? ''} placeholder="123"
+                        onChange={e => setFiscal(f => ({ ...f, enderecoFiscal: { ...f.enderecoFiscal, numero: e.target.value } as any }))} />
+                    </Field>
+                    <Field label="Logradouro" span2>
+                      <input className={inputCls} value={fiscal.enderecoFiscal?.logradouro ?? ''} placeholder="Rua, Av., ..."
+                        onChange={e => setFiscal(f => ({ ...f, enderecoFiscal: { ...f.enderecoFiscal, logradouro: e.target.value } as any }))} />
+                    </Field>
+                    <Field label="Complemento">
+                      <input className={inputCls} value={fiscal.enderecoFiscal?.complemento ?? ''} placeholder="Sala 1..."
+                        onChange={e => setFiscal(f => ({ ...f, enderecoFiscal: { ...f.enderecoFiscal, complemento: e.target.value } as any }))} />
+                    </Field>
+                    <Field label="Bairro">
+                      <input className={inputCls} value={fiscal.enderecoFiscal?.bairro ?? ''} placeholder="Bairro"
+                        onChange={e => setFiscal(f => ({ ...f, enderecoFiscal: { ...f.enderecoFiscal, bairro: e.target.value } as any }))} />
+                    </Field>
+                    <Field label="Cidade">
+                      <input className={inputCls} value={fiscal.enderecoFiscal?.cidade ?? ''} placeholder="Maracaju"
+                        onChange={e => setFiscal(f => ({ ...f, enderecoFiscal: { ...f.enderecoFiscal, cidade: e.target.value } as any }))} />
+                    </Field>
+                    <Field label="Estado">
+                      <input className={inputCls} value={fiscal.enderecoFiscal?.estado ?? ''} placeholder="MS" maxLength={2}
+                        onChange={e => setFiscal(f => ({ ...f, enderecoFiscal: { ...f.enderecoFiscal, estado: e.target.value } as any }))} />
+                    </Field>
                   </div>
-                </Field>
-              </div>
+                </div>
 
-              <Field label="E-mail Corporativo">
-                <input className={inputCls} type="email" value={form.emailCorporativo} onChange={e => set('emailCorporativo', e.target.value)} placeholder="contato@empresa.com" />
-              </Field>
-              <Field label="Telefone">
-                <input className={inputCls} value={form.telefone ?? ''} onChange={e => set('telefone', e.target.value)} placeholder="(11) 99999-9999" />
-              </Field>
-            </div>
-
-            {/* Plan & Status */}
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Plano">
-                <select className={selectCls} value={form.planoSaas} onChange={e => handlePlanChange(e.target.value as PlanSaas)}>
-                  <option value="basico">Básico</option>
-                  <option value="profissional">Profissional</option>
-                  <option value="enterprise">Enterprise</option>
-                </select>
-              </Field>
-              <Field label="Status">
-                <select className={selectCls} value={form.status} onChange={e => set('status', e.target.value as StatusEmpresa)}>
-                  <option value="trial">Trial</option>
-                  <option value="ativo">Ativo</option>
-                  <option value="suspenso">Suspenso</option>
-                  <option value="inadimplente">Inadimplente</option>
-                  <option value="cancelado">Cancelado</option>
-                </select>
-              </Field>
-            </div>
-
-            {/* Limits */}
-            <div>
-              <p className="text-[9px] font-black text-[#8E8E93]/60 uppercase tracking-[0.18em] mb-2">Limites do Plano</p>
-              <div className="grid grid-cols-3 gap-2">
-                {([
-                  { key: 'limiteUsuarios',  label: 'Usuários' },
-                  { key: 'limiteLeadsMes',  label: 'Leads/Mês' },
-                  { key: 'limiteStorageMb', label: 'Storage MB' },
-                ] as const).map(({ key, label }) => (
-                  <div key={key}>
-                    <label className="block text-[9px] text-[#8E8E93]/50 mb-1">{label}</label>
-                    <input type="number" min={0} className={inputCls} value={form[key]}
-                      onChange={e => set(key, Number(e.target.value))} />
+                <div>
+                  <p className={labelCls + ' mt-2'}>Configurações NFS-e</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Ambiente</label>
+                      <select className={selectCls} value={fiscal.nfseEnvironment ?? 'homologacao'} onChange={e => setF('nfseEnvironment', e.target.value as NfseEnvironment)}>
+                        <option value="homologacao">Homologação (Testes)</option>
+                        <option value="producao">Produção</option>
+                      </select>
+                      <div className="mt-1.5">
+                        {fiscal.nfseEnvironment === 'producao'
+                          ? <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">PRODUÇÃO</span>
+                          : <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">HOMOLOGAÇÃO</span>}
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Provedor</label>
+                      <select className={selectCls} value={fiscal.nfseProvider ?? 'betha'} onChange={e => setF('nfseProvider', e.target.value as NfseProvider)}>
+                        <option value="betha">Betha Sistemas</option>
+                        <option value="ginfes" disabled>GINFES (em breve)</option>
+                        <option value="webiss" disabled>WebISS (em breve)</option>
+                        <option value="ipm" disabled>IPM (em breve)</option>
+                        <option value="abrasf" disabled>ABRASF (em breve)</option>
+                      </select>
+                    </div>
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Trial & Settings */}
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Trial expira em">
-                <input type="date" className={inputCls} value={toDateInput(form.trialExpiraEm)}
-                  onChange={e => set('trialExpiraEm', e.target.value)} />
-              </Field>
-              <Field label="Idioma">
-                <select className={selectCls} value={form.idioma} onChange={e => set('idioma', e.target.value)}>
-                  <option value="pt-BR">Português (BR)</option>
-                  <option value="en-US">English (US)</option>
-                  <option value="es-ES">Español</option>
-                </select>
-              </Field>
-              <div className="col-span-2">
-                <Field label="Timezone">
-                  <input className={inputCls} value={form.timezone} onChange={e => set('timezone', e.target.value)} placeholder="America/Sao_Paulo" />
-                </Field>
+            {/* ── Certificado Digital ── */}
+            {tab === 'certificado' && (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-[#D4A854]/15 bg-[#D4A854]/[0.04] p-4">
+                  <p className="text-[10px] font-black text-[#D4A854]/80 uppercase tracking-widest mb-1">Certificado A1</p>
+                  <p className="text-[11px] text-[#8E8E93]/60">Arquivo .pfx ou .p12 com a chave privada da empresa emissora. Utilizado para assinatura digital dos XMLs.</p>
+                </div>
+
+                {/* Upload */}
+                <div>
+                  <label className={labelCls}>Arquivo do Certificado (.pfx / .p12)</label>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-9 bg-[#0E0F11] border border-white/[0.07] rounded-lg px-3 flex items-center text-[11px] text-white/50 truncate">
+                      {cert.fileName ?? certFile?.name ?? 'Nenhum arquivo selecionado'}
+                    </div>
+                    <button type="button" onClick={() => certRef.current?.click()}
+                      className="h-9 px-3 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[11px] font-semibold text-[#8E8E93]/80 hover:border-[#D4A854]/30 hover:text-[#D4A854] transition-all flex items-center gap-1.5 shrink-0">
+                      <Upload className="w-3.5 h-3.5" /> Selecionar
+                    </button>
+                    <input ref={certRef} type="file" accept=".pfx,.p12" className="hidden" onChange={handleCertSelect} />
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label className={labelCls}>Senha do Certificado</label>
+                  <input type="password" className={inputCls} value={cert.password ?? ''} onChange={e => setCert(c => ({ ...c, password: e.target.value }))} placeholder="Senha do arquivo .pfx" />
+                  <p className="text-[9.5px] text-[#8E8E93]/40 mt-1">A senha é armazenada de forma criptografada.</p>
+                </div>
+
+                {/* Validade */}
+                <div>
+                  <label className={labelCls}>Data de Validade</label>
+                  <input type="date" className={inputCls} value={cert.expirationDate ? cert.expirationDate.slice(0, 10) : ''} onChange={e => setCert(c => ({ ...c, expirationDate: e.target.value }))} />
+                </div>
+
+                {/* Status card */}
+                {cert.expirationDate && (
+                  <div className="rounded-xl border p-4 flex items-center gap-3" style={{ borderColor: `${certColor}30`, background: `${certColor}08` }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${certColor}15`, border: `1px solid ${certColor}30` }}>
+                      <CertIcon className="w-4 h-4" style={{ color: certColor }} />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-white">
+                        {certDays !== null && certDays > 0
+                          ? `Válido por mais ${certDays} dia${certDays !== 1 ? 's' : ''}`
+                          : certDays === 0
+                          ? 'Vence hoje!'
+                          : 'Certificado vencido'}
+                      </p>
+                      <p className="text-[9.5px] text-[#8E8E93]/50">
+                        Expira em {new Date(cert.expirationDate).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
+            )}
+
+            {/* ── Serviços Fiscais ── */}
+            {tab === 'servicos' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-semibold text-white/60">{services.length} serviço{services.length !== 1 ? 's' : ''} cadastrado{services.length !== 1 ? 's' : ''}</p>
+                  <button type="button" onClick={() => setEditSvc({ id: crypto.randomUUID(), ativo: true, aliquotaISS: fiscal.aliquotaISS ?? 2 })}
+                    className="h-8 px-3 rounded-lg border border-[#D4A854]/20 bg-[#D4A854]/[0.06] text-[10px] font-black text-[#D4A854]/80 hover:text-[#D4A854] transition-all flex items-center gap-1.5">
+                    <Plus className="w-3 h-3" /> Adicionar
+                  </button>
+                </div>
+
+                {/* Service form */}
+                {editSvc && (
+                  <div className="rounded-xl border border-[#D4A854]/20 bg-[#D4A854]/[0.04] p-4 space-y-3">
+                    <p className="text-[10px] font-black text-[#D4A854]/80 uppercase tracking-widest">{editSvc.descricao ? 'Editar Serviço' : 'Novo Serviço'}</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <label className={labelCls}>Descrição</label>
+                        <input className={inputCls} value={editSvc.descricao ?? ''} onChange={e => setEditSvc(s => ({ ...s, descricao: e.target.value }))} placeholder="Corretagem de Seguros" />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Item Lista Serviço</label>
+                        <input className={inputCls} value={editSvc.itemListaServico ?? ''} onChange={e => setEditSvc(s => ({ ...s, itemListaServico: e.target.value }))} placeholder="10.05" />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Código Serviço Municipal</label>
+                        <input className={inputCls} value={editSvc.codigoServicoMunicipal ?? ''} onChange={e => setEditSvc(s => ({ ...s, codigoServicoMunicipal: e.target.value }))} placeholder="Opcional" />
+                      </div>
+                      <div>
+                        <label className={labelCls}>CNAE</label>
+                        <input className={inputCls} value={editSvc.cnae ?? ''} onChange={e => setEditSvc(s => ({ ...s, cnae: e.target.value }))} placeholder="6622300" />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Alíquota ISS (%)</label>
+                        <input className={inputCls} type="number" min={0} max={100} step={0.01} value={editSvc.aliquotaISS ?? ''} onChange={e => setEditSvc(s => ({ ...s, aliquotaISS: parseFloat(e.target.value) || 0 }))} />
+                      </div>
+                      <div className="col-span-2">
+                        <label className={labelCls}>Observações Padrão</label>
+                        <input className={inputCls} value={editSvc.observacoesPadrao ?? ''} onChange={e => setEditSvc(s => ({ ...s, observacoesPadrao: e.target.value }))} placeholder="Texto que aparecerá automaticamente nas notas" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => {
+                        if (!editSvc.descricao || !editSvc.itemListaServico) return;
+                        const svc = editSvc as FiscalService;
+                        setServices(prev => {
+                          const exists = prev.findIndex(s => s.id === svc.id);
+                          return exists >= 0
+                            ? prev.map(s => s.id === svc.id ? svc : s)
+                            : [...prev, svc];
+                        });
+                        setEditSvc(null);
+                      }} className="h-8 px-4 rounded-lg bg-[#D4A854] text-[#050505] text-[10px] font-black uppercase tracking-wide hover:bg-[#C49844] transition-all">
+                        Salvar Serviço
+                      </button>
+                      <button type="button" onClick={() => setEditSvc(null)}
+                        className="h-8 px-3 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[10px] font-semibold text-[#8E8E93]/80 hover:text-white transition-all">
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Services list */}
+                {services.length > 0 && (
+                  <div className="rounded-xl border border-white/[0.06] overflow-hidden">
+                    {services.map(svc => (
+                      <div key={svc.id} className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-semibold text-white truncate">{svc.descricao}</p>
+                          <p className="text-[9.5px] text-[#8E8E93]/50">Item {svc.itemListaServico} · ISS {svc.aliquotaISS}%{svc.cnae ? ` · CNAE ${svc.cnae}` : ''}</p>
+                        </div>
+                        <button type="button" onClick={() => setServices(s => s.map(sv => sv.id === svc.id ? { ...sv, ativo: !sv.ativo } : sv))}
+                          className={cn('text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded transition-all',
+                            svc.ativo ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-white/[0.03] text-white/30 border border-white/[0.07]',
+                          )}>
+                          {svc.ativo ? 'Ativo' : 'Inativo'}
+                        </button>
+                        <button type="button" onClick={() => setEditSvc(svc)}
+                          className="w-6 h-6 rounded-lg border border-white/[0.07] flex items-center justify-center text-[#8E8E93]/50 hover:text-blue-400 hover:border-blue-400/30 transition-all">
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                        <button type="button" onClick={() => setServices(s => s.filter(sv => sv.id !== svc.id))}
+                          className="w-6 h-6 rounded-lg border border-red-500/20 bg-red-500/[0.04] flex items-center justify-center text-red-400/60 hover:text-red-400 hover:border-red-500/40 transition-all">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {services.length === 0 && !editSvc && (
+                  <div className="flex flex-col items-center justify-center py-10 gap-3">
+                    <Briefcase className="w-8 h-8 text-[#8E8E93]/20" />
+                    <p className="text-[11px] text-white/30">Nenhum serviço cadastrado</p>
+                    <p className="text-[10px] text-[#8E8E93]/30 text-center max-w-xs">Exemplo: Corretagem de Seguros · Item 10.05 · ISS 2%</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {error && (
-              <div className="flex items-center gap-2 p-3 rounded-xl border border-red-500/20 bg-red-500/[0.06]">
+              <div className="flex items-center gap-2 p-3 rounded-xl border border-red-500/20 bg-red-500/[0.06] mt-3">
                 <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
                 <p className="text-[11px] text-red-400">{error}</p>
               </div>

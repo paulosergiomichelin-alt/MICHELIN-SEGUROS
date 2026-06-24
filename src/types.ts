@@ -284,6 +284,11 @@ export interface Permissions {
   canAccessSettings: boolean;
   canManageUsers: boolean;
   query?: boolean;
+  canViewInvoices?: boolean;
+  canEmitInvoices?: boolean;
+  canCancelInvoices?: boolean;
+  canDownloadXml?: boolean;
+  canDownloadPdf?: boolean;
 }
 
 export interface UserMetrics {
@@ -948,6 +953,9 @@ export interface Empresa {
   organizationId: string;
   criadoEm: string;
   atualizadoEm: string;
+  fiscalSettings?: FiscalSettings;
+  certificate?: CertificateInfo;
+  fiscalServices?: FiscalService[];
 }
 
 export interface EmpresaMetricas {
@@ -1062,4 +1070,104 @@ export interface EmailStats {
   drafts: number;
   archived: number;
   spam: number;
+}
+
+// ─── NFS-e Module ─────────────────────────────────────────────────────────────
+
+export type NfseStatus = 'rascunho' | 'processando' | 'emitida' | 'cancelada' | 'erro';
+export type NfseProvider = 'betha' | 'ginfes' | 'webiss' | 'ipm' | 'abrasf' | 'sigep';
+export type NfseEnvironment = 'homologacao' | 'producao';
+export type RegimeTributario = 'simples_nacional' | 'lucro_presumido' | 'lucro_real' | 'mei';
+export type CertificateType = 'A1';
+
+export interface EnderecoFiscal {
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+}
+
+export interface FiscalSettings {
+  inscricaoMunicipal?: string;
+  inscricaoEstadual?: string;
+  regimeTributario?: RegimeTributario;
+  simplesNacional?: boolean;
+  cnaePrincipal?: string;
+  codigoServicoPadrao?: string;
+  aliquotaISS?: number;
+  codigoMunicipioIBGE?: string;
+  enderecoFiscal?: EnderecoFiscal;
+  nfseEnvironment?: NfseEnvironment;
+  nfseProvider?: NfseProvider;
+}
+
+export interface CertificateInfo {
+  type: CertificateType;
+  fileUrl?: string;
+  fileName?: string;
+  password?: string;
+  expirationDate?: string;
+  uploadedAt?: string;
+}
+
+export interface FiscalService {
+  id: string;
+  descricao: string;
+  itemListaServico: string;
+  codigoServicoMunicipal?: string;
+  cnae?: string;
+  aliquotaISS: number;
+  observacoesPadrao?: string;
+  ativo: boolean;
+}
+
+export interface NfseDocument {
+  id: string;
+  organizationId: string;
+  numeroNota?: string;
+  numeroRps?: string;
+  protocolo?: string;
+  codigoVerificacao?: string;
+  clienteId?: string;
+  clienteNome: string;
+  clienteCpfCnpj: string;
+  clienteEmail?: string;
+  clienteTelefone?: string;
+  clienteEndereco?: EnderecoFiscal;
+  servicoId?: string;
+  descricaoServico: string;
+  valorServico: number;
+  quantidade: number;
+  desconto?: number;
+  valorISS?: number;
+  aliquotaISS: number;
+  issRetido: boolean;
+  naturezaOperacao?: string;
+  exigibilidadeISS?: string;
+  observacoes?: string;
+  ambiente: NfseEnvironment;
+  provider: NfseProvider;
+  status: NfseStatus;
+  xmlUrl?: string;
+  pdfUrl?: string;
+  errorMessage?: string;
+  createdAt: string;
+  emittedAt?: string;
+  canceledAt?: string;
+}
+
+export interface NfseLog {
+  id: string;
+  organizationId: string;
+  nfseId: string;
+  action: 'emit' | 'consult' | 'cancel' | 'download_xml' | 'download_pdf' | 'error';
+  status: 'success' | 'error';
+  message?: string;
+  providerResponse?: string;
+  processingTimeMs?: number;
+  userId?: string;
+  createdAt: string;
 }
