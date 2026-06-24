@@ -40,6 +40,29 @@ function serveBuffer(req: any, res: any, data: Buffer, mime: string) {
 // Cache em memória: chave = "session:msgId" → base64 decodificado
 const mediaCache = new Map<string, { data: Buffer; mime: string; ts: number }>();
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutos
+const CACHE_MAX = 200; // máximo de entradas para evitar OOM
+
+// Map de promises pendentes para deduplicar requests concorrentes para o mesmo arquivo
+const inflight = new Map<string, Promise<{ data: Buffer; mime: string } | null>>();
+
+// Evicta entradas mais antigas quando cache cheio
+function evictOldestIfNeeded() {
+  if (mediaCache.size < CACHE_MAX) return;
+  let oldestKey = '';
+  let oldestTs = Infinity;
+  for (const [k, v] of mediaCache) {
+    if (v.ts < oldestTs) { oldestTs = v.ts; oldestKey = k; }
+  }
+  if (oldestKey) mediaCache.delete(oldestKey);
+}
+
+// Limpeza periódica de entradas expiradas
+setInterval(() => {
+  const cutoff = Date.now() - CACHE_TTL_MS;
+  for (const [k, v] of mediaCache) {
+    if (v.ts < cutoff) mediaCache.delete(k);
+  }
+}, 5 * 60 * 1000);
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -58,24 +81,32 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    // 1. Buscar a mensagem completa (key + message) na Evolution API
-    const msgs = await EvolutionAPI.findMessageById(sessionName, waId);
-    if (!msgs || !msgs.key || !msgs.message) {
-      return res.status(404).json({ error: 'Mensagem não encontrada' });
+    // Dedup: se já há um fetch em andamento para esta mídia, aguarda o mesmo
+    let pending = inflight.get(cacheKey);
+    if (!pending) {
+      pending = (async () => {
+        // 1. Buscar a mensagem completa (key + message) na Evolution API
+        const msgs = await EvolutionAPI.findMessageById(sessionName, waId);
+        if (!msgs || !msgs.key || !msgs.message) return null;
+
+        // 2. Pedir base64 descriptografado
+        const result = await EvolutionAPI.getMediaBase64(sessionName, msgs);
+        if (!result?.base64) return null;
+
+        const mime = result.mimetype ?? 'application/octet-stream';
+        const data = Buffer.from(result.base64, 'base64');
+
+        evictOldestIfNeeded();
+        mediaCache.set(cacheKey, { data, mime, ts: Date.now() });
+        return { data, mime };
+      })().finally(() => inflight.delete(cacheKey));
+      inflight.set(cacheKey, pending);
     }
 
-    // 2. Pedir base64 descriptografado
-    const result = await EvolutionAPI.getMediaBase64(sessionName, msgs);
-    if (!result?.base64) {
-      return res.status(404).json({ error: 'Mídia não disponível' });
-    }
+    const media = await pending;
+    if (!media) return res.status(404).json({ error: 'Mídia não disponível' });
 
-    const mime = result.mimetype ?? 'application/octet-stream';
-    const data = Buffer.from(result.base64, 'base64');
-
-    mediaCache.set(cacheKey, { data, mime, ts: Date.now() });
-
-    return serveBuffer(req, res, data, mime);
+    return serveBuffer(req, res, media.data, media.mime);
   } catch (err: any) {
     console.error('[EVOLUTION/media] erro:', err?.message);
     return res.status(500).json({ error: err?.message });

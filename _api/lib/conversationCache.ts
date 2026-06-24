@@ -42,8 +42,39 @@ const convStore = new Map<string, CachedConversation>();
 const msgStore = new Map<string, CachedMessage>();
 const msgByConv = new Map<string, Set<string>>();
 
+const MAX_CONVERSATIONS = 2000;
+const MAX_MESSAGES = 20000;
+
+// Evicta conversas mais antigas (pelo lastMessageAt) quando limite excedido
+function evictOldestConversation() {
+  if (convStore.size <= MAX_CONVERSATIONS) return;
+  let oldestKey = '';
+  let oldestTs = Infinity;
+  for (const [k, v] of convStore) {
+    const ts = v.lastMessageAt ? new Date(v.lastMessageAt).getTime() : 0;
+    if (ts < oldestTs) { oldestTs = ts; oldestKey = k; }
+  }
+  if (oldestKey) {
+    clearMessages(oldestKey);
+    convStore.delete(oldestKey);
+  }
+}
+
+// Evicta mensagens mais antigas quando limite excedido
+function evictOldestMessage() {
+  if (msgStore.size <= MAX_MESSAGES) return;
+  let oldestKey = '';
+  let oldestTs = Infinity;
+  for (const [k, v] of msgStore) {
+    const ts = v.timestamp ? new Date(v.timestamp).getTime() : 0;
+    if (ts < oldestTs) { oldestTs = ts; oldestKey = k; }
+  }
+  if (oldestKey) deleteMessage(oldestKey);
+}
+
 export function setConversation(conv: CachedConversation): void {
   convStore.set(conv.id, conv);
+  evictOldestConversation();
 }
 
 export function updateConversation(id: string, patch: Partial<CachedConversation>): void {
@@ -78,6 +109,7 @@ export function setMessage(msg: CachedMessage): void {
   msgStore.set(msg.id, msg);
   if (!msgByConv.has(msg.conversationId)) msgByConv.set(msg.conversationId, new Set());
   msgByConv.get(msg.conversationId)!.add(msg.id);
+  evictOldestMessage();
 }
 
 export function updateMessage(id: string, patch: Partial<CachedMessage>): void {

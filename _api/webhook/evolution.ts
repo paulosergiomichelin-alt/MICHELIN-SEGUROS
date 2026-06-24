@@ -404,9 +404,10 @@ async function handleChatsUpdate(event: any, isUpsert = false) {
     } else if (isUpsert) {
       // CHATS_UPSERT: novo chat que ainda não está no cache
       const lastMsg = chat.lastMessage ?? null;
-      const lastMsgBody = lastMsg?.message?.conversation
-        ?? lastMsg?.message?.extendedTextMessage?.text
-        ?? (lastMsg ? '[mídia]' : '');
+      const { body: lastMsgBody, messageType: lastMsgType } = lastMsg
+        ? extractMessageContent(lastMsg)
+        : { body: '', messageType: 'text' as const };
+      const displayBody = lastMsgBody || (lastMsg && lastMsgType !== 'text' ? mediaLabel(lastMsgType) : '');
       const lastMsgTs = lastMsg?.messageTimestamp
         ? new Date((lastMsg.messageTimestamp as number) * 1000).toISOString()
         : new Date().toISOString();
@@ -420,7 +421,7 @@ async function handleChatsUpdate(event: any, isUpsert = false) {
         contactName: chat.name || chat.pushName || phone,
         contactPicture: chat.profilePicUrl || undefined,
         isGroup: groupChat || undefined,
-        lastMessage: lastMsgBody,
+        lastMessage: displayBody,
         lastMessageAt: lastMsgTs,
         lastMessageDirection: lastMsg?.key?.fromMe ? 'outbound' : 'inbound',
         unreadCount: chat.unreadMessages ?? 0,

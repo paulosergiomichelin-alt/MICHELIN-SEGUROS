@@ -43,13 +43,6 @@ const BODY_LIMIT = '25mb';
 app.use(express.json({ limit: BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
 
-app.use((err: any, _req: any, res: any, next: any) => {
-  if (err?.type === 'entity.too.large' || err?.status === 413) {
-    return res.status(413).json({ error: 'PAYLOAD_TOO_LARGE' });
-  }
-  next(err);
-});
-
 app.get('/api/health', (_req: any, res: any) =>
   res.json({ status: 'ok', time: new Date().toISOString() }));
 
@@ -143,5 +136,16 @@ app.all('/api/email/sync',                    emailSyncHandler);
 app.all('/api/email/search',                  emailSearchHandler);
 app.all('/api/email/settings',                emailSettingsHandler);
 app.all('/api/email/stats',                   emailStatsHandler);
+
+// ── Error handlers (devem vir após todas as rotas) ───────────────────────────
+app.use((err: any, _req: any, res: any, _next: any) => {
+  if (err?.type === 'entity.too.large' || err?.status === 413) {
+    return res.status(413).json({ error: 'PAYLOAD_TOO_LARGE' });
+  }
+  const status = err?.status ?? err?.statusCode ?? 500;
+  const message = err?.message ?? 'Erro interno do servidor';
+  console.error('[server] Unhandled error:', err?.stack ?? message);
+  if (!res.headersSent) res.status(status).json({ error: message });
+});
 
 export default app;

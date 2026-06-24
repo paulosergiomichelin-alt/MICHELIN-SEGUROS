@@ -1705,6 +1705,10 @@ async function processQueue(instanceName) {
     processing.delete(instanceName);
     if ((queues.get(instanceName) ?? []).length === 0) {
       queues.delete(instanceName);
+      const now = Date.now();
+      const ts = (sentCount.get(instanceName) ?? []).filter((t) => t > now - 6e4);
+      if (ts.length === 0) sentCount.delete(instanceName);
+      else sentCount.set(instanceName, ts);
     }
   }
 }
@@ -1735,7 +1739,7 @@ function getQueueStatus() {
 
 // _api/lib/sentMessageIds.ts
 var sentMap = /* @__PURE__ */ new Map();
-var TTL_MS = 2 * 60 * 1e3;
+var TTL_MS = 5 * 60 * 1e3;
 setInterval(() => {
   const now = Date.now();
   for (const [id, entry] of sentMap) {
@@ -1785,8 +1789,40 @@ function getOptimisticId(evolutionId) {
 var convStore = /* @__PURE__ */ new Map();
 var msgStore = /* @__PURE__ */ new Map();
 var msgByConv = /* @__PURE__ */ new Map();
+var MAX_CONVERSATIONS = 2e3;
+var MAX_MESSAGES = 2e4;
+function evictOldestConversation() {
+  if (convStore.size <= MAX_CONVERSATIONS) return;
+  let oldestKey = "";
+  let oldestTs = Infinity;
+  for (const [k, v] of convStore) {
+    const ts = v.lastMessageAt ? new Date(v.lastMessageAt).getTime() : 0;
+    if (ts < oldestTs) {
+      oldestTs = ts;
+      oldestKey = k;
+    }
+  }
+  if (oldestKey) {
+    clearMessages(oldestKey);
+    convStore.delete(oldestKey);
+  }
+}
+function evictOldestMessage() {
+  if (msgStore.size <= MAX_MESSAGES) return;
+  let oldestKey = "";
+  let oldestTs = Infinity;
+  for (const [k, v] of msgStore) {
+    const ts = v.timestamp ? new Date(v.timestamp).getTime() : 0;
+    if (ts < oldestTs) {
+      oldestTs = ts;
+      oldestKey = k;
+    }
+  }
+  if (oldestKey) deleteMessage(oldestKey);
+}
 function setConversation(conv) {
   convStore.set(conv.id, conv);
+  evictOldestConversation();
 }
 function updateConversation(id, patch) {
   const existing = convStore.get(id);
@@ -1815,6 +1851,7 @@ function setMessage(msg) {
   msgStore.set(msg.id, msg);
   if (!msgByConv.has(msg.conversationId)) msgByConv.set(msg.conversationId, /* @__PURE__ */ new Set());
   msgByConv.get(msg.conversationId).add(msg.id);
+  evictOldestMessage();
 }
 function updateMessage(id, patch) {
   const existing = msgStore.get(id);
@@ -1847,6 +1884,7 @@ function clearMessages(conversationId) {
 init_socketRegistry();
 var log4 = createLogger("evolution/send");
 var orgIdCache = /* @__PURE__ */ new Map();
+var _seq = 0;
 async function getOrgId(sessionName) {
   if (orgIdCache.has(sessionName)) return orgIdCache.get(sessionName);
   try {
@@ -1872,7 +1910,7 @@ async function handler3(req, res) {
   }
   try {
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const optimisticId = `wamsg_out_${Date.now()}`;
+    const optimisticId = `wamsg_out_${Date.now()}_${++_seq}`;
     const conversationId = `${sessionName}_${phone}`;
     const organizationId = await getOrgId(String(sessionName));
     const messageDoc = {
@@ -1910,6 +1948,10 @@ async function handler3(req, res) {
     }).catch((err) => {
       log4.error("Entrega de mensagem falhou", { session: sessionName, phone, msgId: optimisticId, ...errCtx(err) });
       updateMessage(optimisticId, { status: "failed" });
+      emitToSession(String(sessionName), "wa:message_update", {
+        id: optimisticId,
+        patch: { status: "failed" }
+      });
     });
   } catch (err) {
     log4.error("POST /send erro inesperado", { session: req.body?.sessionName, phone: req.body?.phone, ...errCtx(err) });
@@ -2650,7 +2692,8 @@ async function handleChatsUpdate(event, isUpsert = false) {
       emitToSession(sessionId, "wa:chat_update", { id: conversationId, patch });
     } else if (isUpsert) {
       const lastMsg = chat.lastMessage ?? null;
-      const lastMsgBody = lastMsg?.message?.conversation ?? lastMsg?.message?.extendedTextMessage?.text ?? (lastMsg ? "[m\xEDdia]" : "");
+      const { body: lastMsgBody, messageType: lastMsgType } = lastMsg ? extractMessageContent(lastMsg) : { body: "", messageType: "text" };
+      const displayBody = lastMsgBody || (lastMsg && lastMsgType !== "text" ? mediaLabel(lastMsgType) : "");
       const lastMsgTs = lastMsg?.messageTimestamp ? new Date(lastMsg.messageTimestamp * 1e3).toISOString() : (/* @__PURE__ */ new Date()).toISOString();
       const groupChat = remoteJid.endsWith("@g.us");
       const newConv = {
@@ -2661,7 +2704,7 @@ async function handleChatsUpdate(event, isUpsert = false) {
         contactName: chat.name || chat.pushName || phone,
         contactPicture: chat.profilePicUrl || void 0,
         isGroup: groupChat || void 0,
-        lastMessage: lastMsgBody,
+        lastMessage: displayBody,
         lastMessageAt: lastMsgTs,
         lastMessageDirection: lastMsg?.key?.fromMe ? "outbound" : "inbound",
         unreadCount: chat.unreadMessages ?? 0,
@@ -2837,6 +2880,26 @@ function serveBuffer(req, res, data, mime) {
 }
 var mediaCache = /* @__PURE__ */ new Map();
 var CACHE_TTL_MS = 30 * 60 * 1e3;
+var CACHE_MAX = 200;
+var inflight = /* @__PURE__ */ new Map();
+function evictOldestIfNeeded() {
+  if (mediaCache.size < CACHE_MAX) return;
+  let oldestKey = "";
+  let oldestTs = Infinity;
+  for (const [k, v] of mediaCache) {
+    if (v.ts < oldestTs) {
+      oldestTs = v.ts;
+      oldestKey = k;
+    }
+  }
+  if (oldestKey) mediaCache.delete(oldestKey);
+}
+setInterval(() => {
+  const cutoff = Date.now() - CACHE_TTL_MS;
+  for (const [k, v] of mediaCache) {
+    if (v.ts < cutoff) mediaCache.delete(k);
+  }
+}, 5 * 60 * 1e3);
 async function handler10(req, res) {
   if (req.method !== "GET") return res.status(405).end();
   const { session, msgId } = req.query ?? {};
@@ -2849,18 +2912,24 @@ async function handler10(req, res) {
     return serveBuffer(req, res, cached.data, cached.mime);
   }
   try {
-    const msgs = await EvolutionAPI.findMessageById(sessionName, waId);
-    if (!msgs || !msgs.key || !msgs.message) {
-      return res.status(404).json({ error: "Mensagem n\xE3o encontrada" });
+    let pending = inflight.get(cacheKey);
+    if (!pending) {
+      pending = (async () => {
+        const msgs = await EvolutionAPI.findMessageById(sessionName, waId);
+        if (!msgs || !msgs.key || !msgs.message) return null;
+        const result = await EvolutionAPI.getMediaBase64(sessionName, msgs);
+        if (!result?.base64) return null;
+        const mime = result.mimetype ?? "application/octet-stream";
+        const data = Buffer.from(result.base64, "base64");
+        evictOldestIfNeeded();
+        mediaCache.set(cacheKey, { data, mime, ts: Date.now() });
+        return { data, mime };
+      })().finally(() => inflight.delete(cacheKey));
+      inflight.set(cacheKey, pending);
     }
-    const result = await EvolutionAPI.getMediaBase64(sessionName, msgs);
-    if (!result?.base64) {
-      return res.status(404).json({ error: "M\xEDdia n\xE3o dispon\xEDvel" });
-    }
-    const mime = result.mimetype ?? "application/octet-stream";
-    const data = Buffer.from(result.base64, "base64");
-    mediaCache.set(cacheKey, { data, mime, ts: Date.now() });
-    return serveBuffer(req, res, data, mime);
+    const media = await pending;
+    if (!media) return res.status(404).json({ error: "M\xEDdia n\xE3o dispon\xEDvel" });
+    return serveBuffer(req, res, media.data, media.mime);
   } catch (err) {
     console.error("[EVOLUTION/media] erro:", err?.message);
     return res.status(500).json({ error: err?.message });
@@ -2995,6 +3064,26 @@ var log6 = createLogger("evolution/avatar");
 var cache = /* @__PURE__ */ new Map();
 var TTL = 2 * 60 * 60 * 1e3;
 var MISS_TTL = 30 * 60 * 1e3;
+var CACHE_MAX2 = 500;
+function evictIfNeeded() {
+  if (cache.size <= CACHE_MAX2) return;
+  let oldestKey = "";
+  let oldestTs = Infinity;
+  for (const [k, v] of cache) {
+    if (v.ts < oldestTs) {
+      oldestTs = v.ts;
+      oldestKey = k;
+    }
+  }
+  if (oldestKey) cache.delete(oldestKey);
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of cache) {
+    const ttl = v.type === "miss" ? MISS_TTL : TTL;
+    if (now - v.ts > ttl) cache.delete(k);
+  }
+}, 30 * 60 * 1e3);
 async function handler13(req, res) {
   if (req.method !== "GET") return res.status(405).end();
   const { session, phone } = req.query ?? {};
@@ -3027,6 +3116,7 @@ async function handler13(req, res) {
     }
     const buf = Buffer.from(await r.arrayBuffer());
     const mime = r.headers.get("content-type") || "image/jpeg";
+    evictIfNeeded();
     cache.set(key, { type: "hit", buf, mime, ts: Date.now() });
     res.setHeader("Content-Type", mime);
     res.setHeader("Cache-Control", "public, max-age=7200");
@@ -4825,12 +4915,6 @@ var app = express();
 var BODY_LIMIT = "25mb";
 app.use(express.json({ limit: BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
-app.use((err, _req, res, next) => {
-  if (err?.type === "entity.too.large" || err?.status === 413) {
-    return res.status(413).json({ error: "PAYLOAD_TOO_LARGE" });
-  }
-  next(err);
-});
 app.get("/api/health", (_req, res) => res.json({ status: "ok", time: (/* @__PURE__ */ new Date()).toISOString() }));
 app.get("/favicon.ico", (_req, res) => res.status(204).end());
 app.post("/api/datadog/llm-obs", async (req, res) => {
@@ -4932,6 +5016,15 @@ app.all("/api/email/sync", handler25);
 app.all("/api/email/search", handler26);
 app.all("/api/email/settings", handler27);
 app.all("/api/email/stats", handler28);
+app.use((err, _req, res, _next) => {
+  if (err?.type === "entity.too.large" || err?.status === 413) {
+    return res.status(413).json({ error: "PAYLOAD_TOO_LARGE" });
+  }
+  const status = err?.status ?? err?.statusCode ?? 500;
+  const message = err?.message ?? "Erro interno do servidor";
+  console.error("[server] Unhandled error:", err?.stack ?? message);
+  if (!res.headersSent) res.status(status).json({ error: message });
+});
 var server_default = app;
 export {
   server_default as default

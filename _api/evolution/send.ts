@@ -7,6 +7,7 @@ import { createLogger, errCtx } from '../lib/logger.js';
 
 const log = createLogger('evolution/send');
 const orgIdCache = new Map<string, string>();
+let _seq = 0;
 
 async function getOrgId(sessionName: string): Promise<string> {
   if (orgIdCache.has(sessionName)) return orgIdCache.get(sessionName)!;
@@ -38,7 +39,7 @@ export default async function handler(req: any, res: any) {
 
   try {
     const now = new Date().toISOString();
-    const optimisticId = `wamsg_out_${Date.now()}`;
+    const optimisticId = `wamsg_out_${Date.now()}_${++_seq}`;
     const conversationId = `${sessionName}_${phone}`;
     const organizationId = await getOrgId(String(sessionName));
 
@@ -87,6 +88,10 @@ export default async function handler(req: any, res: any) {
       .catch((err: any) => {
         log.error('Entrega de mensagem falhou', { session: sessionName, phone, msgId: optimisticId, ...errCtx(err) });
         updateMessage(optimisticId, { status: 'failed' });
+        emitToSession(String(sessionName), 'wa:message_update', {
+          id: optimisticId,
+          patch: { status: 'failed' },
+        });
       });
 
   } catch (err: any) {

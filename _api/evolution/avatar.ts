@@ -10,6 +10,26 @@ type CacheEntry =
 const cache = new Map<string, CacheEntry>();
 const TTL = 2 * 60 * 60 * 1000; // 2h
 const MISS_TTL = 30 * 60 * 1000; // 30min — não tenta de novo tão cedo
+const CACHE_MAX = 500;
+
+function evictIfNeeded() {
+  if (cache.size <= CACHE_MAX) return;
+  let oldestKey = '';
+  let oldestTs = Infinity;
+  for (const [k, v] of cache) {
+    if (v.ts < oldestTs) { oldestTs = v.ts; oldestKey = k; }
+  }
+  if (oldestKey) cache.delete(oldestKey);
+}
+
+// Limpeza periódica de entradas expiradas
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of cache) {
+    const ttl = v.type === 'miss' ? MISS_TTL : TTL;
+    if (now - v.ts > ttl) cache.delete(k);
+  }
+}, 30 * 60 * 1000);
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -49,6 +69,7 @@ export default async function handler(req: any, res: any) {
     const buf = Buffer.from(await r.arrayBuffer());
     const mime = r.headers.get('content-type') || 'image/jpeg';
 
+    evictIfNeeded();
     cache.set(key, { type: 'hit', buf, mime, ts: Date.now() });
 
     res.setHeader('Content-Type', mime);

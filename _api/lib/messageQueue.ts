@@ -101,9 +101,14 @@ async function processQueue(instanceName: string) {
     }
   } finally {
     processing.delete(instanceName);
-    // Clean up empty queue
+    // Clean up empty queue and stale sentCount entries
     if ((queues.get(instanceName) ?? []).length === 0) {
       queues.delete(instanceName);
+      // Prune sentCount for this instance if no sent messages in last 60s
+      const now = Date.now();
+      const ts = (sentCount.get(instanceName) ?? []).filter(t => t > now - 60_000);
+      if (ts.length === 0) sentCount.delete(instanceName);
+      else sentCount.set(instanceName, ts);
     }
   }
 }

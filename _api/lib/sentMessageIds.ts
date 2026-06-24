@@ -14,7 +14,7 @@ interface SentEntry {
 }
 
 const sentMap = new Map<string, SentEntry>(); // evolutionId → SentEntry
-const TTL_MS = 2 * 60 * 1000; // 2 minutos
+const TTL_MS = 5 * 60 * 1000; // 5 minutos — cobre filas lentas e delays de webhook
 
 // Limpeza periódica de entradas expiradas
 setInterval(() => {
