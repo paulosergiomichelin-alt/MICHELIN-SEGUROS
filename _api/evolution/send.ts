@@ -81,8 +81,11 @@ export default async function handler(req: any, res: any) {
         if (evolutionMsgId) {
           markSentByUs(evolutionMsgId, optimisticId);
           updateMessage(optimisticId, { evolutionId: evolutionMsgId, status: 'sent' });
+          // Webhook echo (MESSAGES_UPSERT fromMe) emitirá o update via dedup
         } else {
+          // Sem evolutionId — sem eco de webhook; emitir diretamente para o frontend
           updateMessage(optimisticId, { status: 'sent' });
+          emitToSession(String(sessionName), 'wa:message_update', { id: optimisticId, patch: { status: 'sent' } });
         }
       })
       .catch((err: any) => {

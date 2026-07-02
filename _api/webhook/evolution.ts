@@ -35,14 +35,16 @@ export function getActiveSessions(): Map<string, string> {
 
 // ── Cache de orgId por sessão ─────────────────────────────────────────────────
 
-const orgIdCache = new Map<string, string>();
+const ORG_CACHE_TTL_MS = 30 * 60 * 1000; // 30 min
+const orgIdCache = new Map<string, { orgId: string; ts: number }>();
 
 async function resolveOrgId(sessionId: string): Promise<string> {
-  if (orgIdCache.has(sessionId)) return orgIdCache.get(sessionId)!;
+  const cached = orgIdCache.get(sessionId);
+  if (cached && Date.now() - cached.ts < ORG_CACHE_TTL_MS) return cached.orgId;
   try {
     const session = await fsGet('whatsapp_sessions', sessionId);
     const orgId = session?.organizationId ?? 'default';
-    orgIdCache.set(sessionId, orgId);
+    orgIdCache.set(sessionId, { orgId, ts: Date.now() });
     return orgId;
   } catch (err) {
     log.warn('resolveOrgId falhou, usando default', { sessionId, ...errCtx(err) });

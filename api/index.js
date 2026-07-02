@@ -1944,6 +1944,7 @@ async function handler3(req, res) {
         updateMessage(optimisticId, { evolutionId: evolutionMsgId, status: "sent" });
       } else {
         updateMessage(optimisticId, { status: "sent" });
+        emitToSession(String(sessionName), "wa:message_update", { id: optimisticId, patch: { status: "sent" } });
       }
     }).catch((err) => {
       log4.error("Entrega de mensagem falhou", { session: sessionName, phone, msgId: optimisticId, ...errCtx(err) });
@@ -1978,7 +1979,7 @@ function isIgnoredJid(jid) {
 }
 function unwrapMessage(m) {
   if (!m) return {};
-  const inner = m.viewOnceMessage?.message ?? m.viewOnceMessageV2?.message ?? m.viewOnceMessageV2Extension?.message ?? m.ephemeralMessage?.message ?? m.documentWithCaptionMessage?.message ?? m.templateMessage?.hydratedFourRowTemplate?.hydratedContentText;
+  const inner = m.viewOnceMessage?.message ?? m.viewOnceMessageV2?.message ?? m.viewOnceMessageV2Extension?.message ?? m.ephemeralMessage?.message ?? m.documentWithCaptionMessage?.message;
   return inner ? unwrapMessage(inner) : m;
 }
 function extractMessageContent(msg) {
@@ -1987,6 +1988,9 @@ function extractMessageContent(msg) {
   const topType = (msg?.messageType ?? "").toLowerCase();
   if (m.conversation) return { body: m.conversation, messageType: "text" };
   if (m.extendedTextMessage?.text) return { body: m.extendedTextMessage.text, messageType: "text" };
+  if (m.templateMessage?.hydratedFourRowTemplate) {
+    return { body: m.templateMessage.hydratedFourRowTemplate.hydratedContentText ?? "", messageType: "text" };
+  }
   if (m.imageMessage) return {
     body: m.imageMessage.caption ?? "",
     messageType: "image",
@@ -2227,7 +2231,8 @@ async function reconcileSession(sessionName, organizationId, lookbackMinutes = 6
   for (const conv of conversations.slice(0, 30)) {
     const phone = conv.phone ?? "";
     if (!phone) continue;
-    const msgs = await EvolutionAPI.findMessages(sessionName, `${phone}@s.whatsapp.net`, 20).catch(() => []);
+    const jid = conv.isGroup ? `${phone}@g.us` : `${phone}@s.whatsapp.net`;
+    const msgs = await EvolutionAPI.findMessages(sessionName, jid, 20).catch(() => []);
     const conversationId = `${sessionName}_${phone}`;
     for (const msg of msgs) {
       const key = msg.key ?? {};
@@ -2351,10 +2356,11 @@ async function handler7(req, res) {
       clearMessages(conversationId);
     }
     const limit = forceRefresh ? 100 : 50;
+    const organizationId = convCached?.organizationId ?? "default";
     const { imported, contactName } = await importConversationMessages(
       sessionName,
       phoneStr,
-      "default",
+      organizationId,
       limit,
       convCached?.isGroup
     );
@@ -2389,13 +2395,15 @@ var activeSessions = /* @__PURE__ */ new Map();
 function getActiveSessions() {
   return activeSessions;
 }
+var ORG_CACHE_TTL_MS = 30 * 60 * 1e3;
 var orgIdCache2 = /* @__PURE__ */ new Map();
 async function resolveOrgId(sessionId) {
-  if (orgIdCache2.has(sessionId)) return orgIdCache2.get(sessionId);
+  const cached = orgIdCache2.get(sessionId);
+  if (cached && Date.now() - cached.ts < ORG_CACHE_TTL_MS) return cached.orgId;
   try {
     const session = await fsGet("whatsapp_sessions", sessionId);
     const orgId = session?.organizationId ?? "default";
-    orgIdCache2.set(sessionId, orgId);
+    orgIdCache2.set(sessionId, { orgId, ts: Date.now() });
     return orgId;
   } catch (err) {
     log5.warn("resolveOrgId falhou, usando default", { sessionId, ...errCtx(err) });
@@ -2868,12 +2876,13 @@ function serveBuffer(req, res, data, mime) {
   }
   const start = match[1] ? parseInt(match[1], 10) : 0;
   const end = match[2] ? parseInt(match[2], 10) : total - 1;
-  if (start > end || start >= total || end >= total) {
+  if (start > end || start >= total) {
     res.setHeader("Content-Range", `bytes */${total}`);
     return res.status(416).end();
   }
-  const chunk = data.subarray(start, end + 1);
-  res.setHeader("Content-Range", `bytes ${start}-${end}/${total}`);
+  const clampedEnd = Math.min(end, total - 1);
+  const chunk = data.subarray(start, clampedEnd + 1);
+  res.setHeader("Content-Range", `bytes ${start}-${clampedEnd}/${total}`);
   res.setHeader("Content-Length", chunk.length);
   res.status(206);
   return res.end(chunk);

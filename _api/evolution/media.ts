@@ -25,13 +25,15 @@ function serveBuffer(req: any, res: any, data: Buffer, mime: string) {
   const start = match[1] ? parseInt(match[1], 10) : 0;
   const end   = match[2] ? parseInt(match[2], 10) : total - 1;
 
-  if (start > end || start >= total || end >= total) {
+  if (start > end || start >= total) {
     res.setHeader('Content-Range', `bytes */${total}`);
     return res.status(416).end();
   }
+  // RFC 7233 §2.1: clamp end to last byte when client over-requests
+  const clampedEnd = Math.min(end, total - 1);
 
-  const chunk = data.subarray(start, end + 1);
-  res.setHeader('Content-Range', `bytes ${start}-${end}/${total}`);
+  const chunk = data.subarray(start, clampedEnd + 1);
+  res.setHeader('Content-Range', `bytes ${start}-${clampedEnd}/${total}`);
   res.setHeader('Content-Length', chunk.length);
   res.status(206);
   return res.end(chunk);

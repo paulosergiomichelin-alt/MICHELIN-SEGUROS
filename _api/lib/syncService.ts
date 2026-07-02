@@ -265,7 +265,8 @@ export async function reconcileSession(
     const phone: string = conv.phone ?? '';
     if (!phone) continue;
 
-    const msgs = await EvolutionAPI.findMessages(sessionName, `${phone}@s.whatsapp.net`, 20).catch(() => [] as any[]);
+    const jid = conv.isGroup ? `${phone}@g.us` : `${phone}@s.whatsapp.net`;
+    const msgs = await EvolutionAPI.findMessages(sessionName, jid, 20).catch(() => [] as any[]);
     const conversationId = `${sessionName}_${phone}`;
 
     for (const msg of msgs) {

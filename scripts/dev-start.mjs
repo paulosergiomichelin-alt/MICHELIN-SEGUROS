@@ -235,14 +235,7 @@ async function main() {
   console.log('[dev]   Iniciando Express + Vite...\n');
 
   const devProc = spawn(
-    'npx',
-    [
-      'concurrently', '--kill-others', '--kill-others-on-fail',
-      '-n', 'server,vite',
-      '-c', 'blue,green',
-      'tsx watch --env-file=.env server.ts',
-      'vite',
-    ],
+    'npx concurrently --kill-others --kill-others-on-fail -n server,vite -c blue,green "npx tsx watch --env-file=.env server.ts" "npx vite"',
     { stdio: 'inherit', shell: true, cwd: ROOT },
   );
 

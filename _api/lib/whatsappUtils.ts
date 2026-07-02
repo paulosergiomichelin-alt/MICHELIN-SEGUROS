@@ -46,8 +46,7 @@ function unwrapMessage(m: any): any {
     m.viewOnceMessageV2?.message ??
     m.viewOnceMessageV2Extension?.message ??
     m.ephemeralMessage?.message ??
-    m.documentWithCaptionMessage?.message ??
-    m.templateMessage?.hydratedFourRowTemplate?.hydratedContentText;
+    m.documentWithCaptionMessage?.message;
   return inner ? unwrapMessage(inner) : m;
 }
 
@@ -59,6 +58,9 @@ export function extractMessageContent(msg: any): ExtractedMessage {
 
   if (m.conversation) return { body: m.conversation, messageType: 'text' };
   if (m.extendedTextMessage?.text) return { body: m.extendedTextMessage.text, messageType: 'text' };
+  if (m.templateMessage?.hydratedFourRowTemplate) {
+    return { body: m.templateMessage.hydratedFourRowTemplate.hydratedContentText ?? '', messageType: 'text' };
+  }
 
   if (m.imageMessage) return {
     body: m.imageMessage.caption ?? '',

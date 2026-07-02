@@ -71,12 +71,16 @@ async function sftpUpload(localPath, remotePath) {
 // ── Cria tarball dos arquivos do servidor ─────────────────────────────────────
 
 async function createTarball() {
-  const { tar } = await import('tar').catch(() => {
+  const tar = await import('tar').catch(() => {
     throw new Error('tar não instalado. Rode: npm install tar');
   });
 
+  const tarMod = tar.default ?? tar;
+  const createFn = tarMod.create ?? tarMod.c;
+  if (!createFn) throw new Error('tar.create não encontrado — versão incompatível?');
+
   const outPath = resolve(ROOT, 'crm-server.tar.gz');
-  await tar.create(
+  await createFn(
     { gzip: true, file: outPath, cwd: ROOT },
     [
       'package.json', 'package-lock.json',

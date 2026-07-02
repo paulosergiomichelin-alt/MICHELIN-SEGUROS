@@ -24,8 +24,9 @@ export default async function handler(req: any, res: any) {
     }
 
     const limit = forceRefresh ? 100 : 50;
+    const organizationId = convCached?.organizationId ?? 'default';
     const { imported, contactName } = await importConversationMessages(
-      sessionName, phoneStr, 'default', limit, convCached?.isGroup,
+      sessionName, phoneStr, organizationId, limit, convCached?.isGroup,
     );
 
     if (contactName !== phoneStr) {
