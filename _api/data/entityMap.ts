@@ -25,4 +25,10 @@ export const ENTITY_TABLE: Record<string, any> = {
   campaign_log: schema.campaignLog,
   settings: schema.settings,
   config: schema.config,
+  platform_agent_templates: schema.platformAgentTemplates,
+  platform_guardrails: schema.platformGuardrails,
+  tenant_agent_configs: schema.tenantAgentConfigs,
+  tenant_onboarding_wizard_state: schema.tenantOnboardingWizardState,
+  nfse_documents: schema.nfseDocuments,
+  nfse_logs: schema.nfseLogs,
 };
