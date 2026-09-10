@@ -10,7 +10,6 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "build:server": "node build-server.mjs",
     "deploy:vps": "node scripts/deploy-vps.mjs",
     "db:generate": "dotenv -e .env -- drizzle-kit generate",
     "db:push": "dotenv -e .env -- drizzle-kit push",
