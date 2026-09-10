@@ -1,7 +1,7 @@
 
-import { 
-  doc, 
-  getDoc, 
+import {
+  doc,
+  getDoc,
   getDocFromServer,
   getDocs,
   getDocsFromServer,
@@ -10,16 +10,16 @@ import {
   writeBatch,
   increment,
   onSnapshot,
-  where,
-  limit,
-  orderBy,
-  startAfter,
-  QueryConstraint,
   QueryDocumentSnapshot,
   getDocsFromCache,
   serverTimestamp,
   updateDoc
 } from 'firebase/firestore';
+import { where, limit, orderBy, startAfter, QueryConstraint } from '../lib/queryConstraints';
+import { toFirestoreConstraints } from '../lib/constraintsToFirestore';
+import { dataApiClient } from '../lib/dataApiClient';
+import { USE_POSTGRES } from '../lib/featureFlags';
+import { getRealtimeSocket } from '../lib/realtimeSocket';
 import { db, auth } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestore-utils';
 import { AuditLog, UserProfile, UserMetrics } from '../types';
@@ -229,6 +229,22 @@ export class DataService {
   private static async updateAggregates(entity: string, before: any, after: any, isDelete = false) {
     if (entity !== 'lead') return;
 
+    if (USE_POSTGRES) {
+      const calls: Promise<any>[] = [];
+      if (!before && after) {
+        calls.push(dataApiClient.create('_metrics/lead-status-count' as any, { status: after.status || 'Novo Lead', delta: 1 }));
+        calls.push(dataApiClient.create('_metrics/total-leads' as any, { delta: 1 }));
+      } else if (before && !isDelete && after && before.status !== after.status) {
+        calls.push(dataApiClient.create('_metrics/lead-status-count' as any, { status: before.status || 'Novo Lead', delta: -1 }));
+        calls.push(dataApiClient.create('_metrics/lead-status-count' as any, { status: after.status || 'Novo Lead', delta: 1 }));
+      } else if (isDelete && before) {
+        calls.push(dataApiClient.create('_metrics/lead-status-count' as any, { status: before.status || 'Novo Lead', delta: -1 }));
+        calls.push(dataApiClient.create('_metrics/total-leads' as any, { delta: -1 }));
+      }
+      await Promise.all(calls).catch(e => console.warn('[DataService] Falha ao atualizar agregados:', e));
+      return;
+    }
+
     try {
       const metricsRef = doc(db, 'system_metrics', 'dashboard');
       const updates: any = {};
@@ -292,8 +308,24 @@ export class DataService {
       logger.warn('DATA_SERVICE', `SUBSCRIBE rejected: Invalid ID for entity ${entity}`);
       return () => {};
     }
+
+    if (USE_POSTGRES) {
+      let cancelled = false;
+      const orgId = DataPolicyService.getCurrentUser()?.organizationId;
+      const collName = this.getCollectionName(entity);
+      const refetch = () => this.get(entity, id).then(d => !cancelled && callback(d)).catch(e => onError?.(e));
+      refetch();
+      const socket = orgId ? getRealtimeSocket(orgId) : null;
+      const handler = (evt: { entity: string; id: string }) => {
+        if (evt.entity === collName && evt.id === id) refetch();
+      };
+      socket?.on('data:changed', handler);
+      const poll = setInterval(refetch, 45000);
+      return () => { cancelled = true; socket?.off('data:changed', handler); clearInterval(poll); };
+    }
+
     const cacheKey = this.getCacheKey(entity, id);
-    
+
     // 1. Mandatory Cache Delivery
     const cached = CacheManager.get(cacheKey);
     if (cached) {
@@ -357,9 +389,22 @@ export class DataService {
   static subscribeCollection(entity: string, constraints: QueryConstraint[], callback: (data: any[]) => void, forceRealtime = false, onError?: (err: any) => void): () => void {
     const finalConstraints = this.applyVisibilityConstraints(entity, constraints);
     const collName = this.getCollectionName(entity);
+
+    if (USE_POSTGRES) {
+      let cancelled = false;
+      const orgId = DataPolicyService.getCurrentUser()?.organizationId;
+      const refetch = () => this.list(entity, constraints).then(d => !cancelled && callback(d)).catch(e => onError?.(e));
+      refetch();
+      const socket = orgId ? getRealtimeSocket(orgId) : null;
+      const handler = (evt: { entity: string }) => { if (evt.entity === collName) refetch(); };
+      socket?.on('data:changed', handler);
+      const poll = setInterval(refetch, 45000);
+      return () => { cancelled = true; socket?.off('data:changed', handler); clearInterval(poll); };
+    }
+
     const registryKey = QueryFingerprintService.getFingerprint(collName, finalConstraints);
     const cacheKey = `list:${registryKey}`;
-    
+
     // 1. Mandatory Cache Check
     let ttl = this.QUERY_CACHE_TTL;
     if (entity === 'users' || entity === 'user') ttl = 300000;
@@ -382,7 +427,7 @@ export class DataService {
     if (this.isQuotaExceeded || !QuotaProtectionService.canRead()) return () => {};
 
     return SubscriptionRegistry.register(registryKey, () => {
-      const q = query(collection(db, collName), ...finalConstraints);
+      const q = query(collection(db, collName), ...toFirestoreConstraints(finalConstraints));
       console.log(`[SUBSCRIPTION_START] Collection: ${collName}, fingerprint: ${registryKey}`);
       console.log(`[LEADS_QUERY_FILTERS] Applied to snapshot:`, finalConstraints.length);
       
@@ -427,6 +472,7 @@ export class DataService {
   // --- PUBLIC API ---
 
   static async getFromServer(entity: string, id: string): Promise<any | null> {
+    if (USE_POSTGRES) return dataApiClient.get(this.getCollectionName(entity), this.resolveDocId(entity, id));
     if (this.isQuotaExceeded) return this.get(entity, id);
 
     try {
@@ -448,12 +494,13 @@ export class DataService {
   }
 
   static async listFromServer(entity: string, constraints: QueryConstraint[] = []): Promise<any[]> {
+    const finalConstraints = this.applyVisibilityConstraints(entity, constraints);
+    if (USE_POSTGRES) return dataApiClient.query(this.getCollectionName(entity), finalConstraints);
     if (this.isQuotaExceeded) return this.list(entity, constraints);
-    
+
     try {
-      const finalConstraints = this.applyVisibilityConstraints(entity, constraints);
       const collName = this.getCollectionName(entity);
-      const q = query(collection(db, collName), ...finalConstraints);
+      const q = query(collection(db, collName), ...toFirestoreConstraints(finalConstraints));
       metricsService.track('db_reads_actual', 1, { entity, type: 'list_server' });
       const snap = await getDocsFromServer(q);
       let results = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -481,6 +528,7 @@ export class DataService {
       logger.warn('DATA_SERVICE', `GET rejected: Invalid ID for entity ${entity}`);
       return null;
     }
+    if (USE_POSTGRES) return dataApiClient.get(this.getCollectionName(entity), this.resolveDocId(entity, id));
     const cacheKey = this.getCacheKey(entity, id);
 
     // 1. Check Cache
@@ -546,6 +594,7 @@ export class DataService {
 
   static async list(entity: string, constraints: QueryConstraint[] = []): Promise<any[]> {
     const finalConstraints = this.applyVisibilityConstraints(entity, constraints);
+    if (USE_POSTGRES) return dataApiClient.query(this.getCollectionName(entity), finalConstraints);
     const queryKey = `${entity}:${JSON.stringify(finalConstraints)}`;
     const cacheKey = `list:${queryKey}`;
     
@@ -563,7 +612,7 @@ export class DataService {
       // Try to get from Firestore cache if quota is exceeded
       try {
         const collName = this.getCollectionName(entity);
-        const q = query(collection(db, collName), ...finalConstraints);
+        const q = query(collection(db, collName), ...toFirestoreConstraints(finalConstraints));
         const snap = await getDocsFromCache(q);
         return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       } catch (e) {
@@ -578,7 +627,7 @@ export class DataService {
 
     const fetchPromise = (async () => {
       const collName = this.getCollectionName(entity);
-      const q = query(collection(db, collName), ...finalConstraints);
+      const q = query(collection(db, collName), ...toFirestoreConstraints(finalConstraints));
       
       try {
         metricsService.track('db_reads_actual', 1, { entity, type: 'list' });
@@ -628,13 +677,26 @@ export class DataService {
   ): Promise<{ data: any[], lastVisible: QueryDocumentSnapshot | null, hasMore: boolean }> {
     const finalConstraints = this.applyVisibilityConstraints(entity, constraints);
     const collName = this.getCollectionName(entity);
-    
+
+    if (USE_POSTGRES) {
+      // `lastDoc`/`lastVisible` são tratados como cursor opaco pelos call-sites (nunca
+      // introspectados) — aqui carregam o valor bruto do campo de orderBy, não um
+      // QueryDocumentSnapshot real. Ver Fase 2 Task 3 da spec de migração.
+      const ob = finalConstraints.find((c) => c.kind === 'orderBy') as { field: string } | undefined;
+      const pgConstraints = [...finalConstraints, limit(pageSize)];
+      if (lastDoc !== undefined) pgConstraints.push(startAfter(lastDoc as any));
+      const data = await dataApiClient.query(collName, pgConstraints);
+      const hasMore = data.length === pageSize;
+      const lastVisible = (data.length > 0 && ob) ? (data[data.length - 1] as any)[ob.field] : null;
+      return { data, lastVisible, hasMore } as any;
+    }
+
     const paginatedConstraints = [...finalConstraints, limit(pageSize)];
     if (lastDoc) {
       paginatedConstraints.push(startAfter(lastDoc));
     }
 
-    const q = query(collection(db, collName), ...paginatedConstraints);
+    const q = query(collection(db, collName), ...toFirestoreConstraints(paginatedConstraints));
     
     // Cache Check for First Page
     const cacheKey = `list:paginated:${entity}:${JSON.stringify(finalConstraints)}:${pageSize}`;
@@ -843,6 +905,18 @@ export class DataService {
     // Permission check
     this.checkPermissions('CREATE', entity, finalData);
 
+    if (USE_POSTGRES) {
+      const created = await dataApiClient.create(collName, finalData);
+      if (entity !== 'system_metrics' && entity !== 'Metric') {
+        const log = this.generateAuditLog('CREATE', entity, created.id, null, created, origin);
+        if (log) await dataApiClient.create('audit_logs', log);
+      }
+      CacheManager.set(this.getCacheKey(entity, created.id), created);
+      CacheManager.invalidatePattern(`list:${entity}`);
+      this.updateAggregates(entity, null, created);
+      return created.id;
+    }
+
     if (this.isQuotaExceeded || !QuotaProtectionService.canWrite()) {
       throw new Error(`[QUOTA_BLOCKED] Escrita negada para ${entity} (Quota ou Proteção)`);
     }
@@ -922,9 +996,8 @@ export class DataService {
     let before = CacheManager.get(cacheKey);
 
     if (!before) {
-      const snap = await getDoc(doc(db, collName, docId));
-      if (!snap.exists()) throw new Error(`Entity ${entity} with id ${id} not found`);
-      before = snap.data();
+      before = await this.get(entity, id);
+      if (!before) throw new Error(`Entity ${entity} with id ${id} not found`);
     }
 
     // Permission check
@@ -972,7 +1045,17 @@ export class DataService {
     }
 
     console.log(`[DataService] WRITE_ATTEMPT: UPDATE ${collName}/${docId}`, { origin, keys: Object.keys(sanitizedUpdates) });
-    
+
+    if (USE_POSTGRES) {
+      const updated = await dataApiClient.update(collName, docId, after);
+      const log = this.generateAuditLog('UPDATE', entity, id, before, after, origin);
+      if (log) await dataApiClient.create('audit_logs', log);
+      CacheManager.set(cacheKey, updated ?? after);
+      CacheManager.invalidatePattern(`list:${entity}`);
+      this.updateAggregates(entity, before, after);
+      return;
+    }
+
     if (this.isQuotaExceeded || !QuotaProtectionService.canWrite()) {
       throw new Error(`[QUOTA_BLOCKED] Escrita negada para atualização de ${entity} (Quota ou Proteção)`);
     }
@@ -1043,13 +1126,22 @@ export class DataService {
     }
     const collName = this.getCollectionName(entity);
     const docId = this.resolveDocId(entity, id);
-    const docRef = doc(db, collName, docId);
-    const snap = await getDoc(docRef);
-    const before = snap.exists() ? snap.data() : null;
+    const before = await this.get(entity, id);
 
     // Permission check
     this.checkPermissions('DELETE', entity, before);
 
+    if (USE_POSTGRES) {
+      const log = this.generateAuditLog('DELETE', entity, id, before, null, origin);
+      if (log) await dataApiClient.create('audit_logs', log);
+      await dataApiClient.remove(collName, docId);
+      CacheManager.invalidate(this.getCacheKey(entity, id));
+      CacheManager.invalidatePattern(`list:${entity}`);
+      this.updateAggregates(entity, before, null, true);
+      return;
+    }
+
+    const docRef = doc(db, collName, docId);
     const batch = writeBatch(db);
     const log = this.generateAuditLog('DELETE', entity, id, before, null, origin);
     if (log) batch.set(doc(db, 'audit_logs', log.id), log);
@@ -1069,13 +1161,10 @@ export class DataService {
   static async save(entity: string, id: string, data: any, origin: AuditLog['origin'] = 'USUARIO'): Promise<void> {
     // Smart save: Choose Create or Update based on existence in org-scoped location
     const cacheKey = this.getCacheKey(entity, id);
-    const docId = this.resolveDocId(entity, id);
     let existing = CacheManager.get(cacheKey);
 
     if (!existing) {
-      const collName = this.getCollectionName(entity);
-      const snap = await getDoc(doc(db, collName, docId));
-      existing = snap.exists() ? snap.data() : null;
+      existing = await this.get(entity, id);
     }
 
     if (!existing) {

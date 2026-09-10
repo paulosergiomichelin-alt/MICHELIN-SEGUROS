@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { getDb } from '../lib/db';
 import { requireAuth } from '../lib/authMiddleware';
 import { loadTenantContext, ORG_SCOPED_ENTITIES } from './tenantMiddleware';
 import { ENTITY_TABLE } from './entityMap';
 import { buildWhere, buildOrderBy, buildStartAfter, getLimit } from './constraintsToSql';
 import { emitDataChanged } from '../lib/realtimeBus';
+import { leadStatusCounts, systemMetricsDashboard } from '../db/schema';
 
 export const dataRouter = Router();
 dataRouter.use(requireAuth);
@@ -27,6 +28,25 @@ function orgScopeWhere(entity: string, table: any, req: any) {
   if (!ORG_SCOPED_ENTITIES.has(entity) || !table.organizationId) return undefined;
   return eq(table.organizationId, req.organizationId);
 }
+
+// Rotas de incremento atômico para os agregados de métricas (DataService.updateAggregates).
+// Registradas antes das rotas genéricas /:entity para não depender de ordem — de qualquer
+// forma não colidem, pois nenhuma rota genérica POST de 2 segmentos aceita um segundo
+// segmento livre além do literal "query".
+dataRouter.post('/_metrics/lead-status-count', async (req, res) => {
+  const { status, delta } = req.body;
+  await getDb().insert(leadStatusCounts).values({ status, count: delta })
+    .onConflictDoUpdate({ target: leadStatusCounts.status, set: { count: sql`${leadStatusCounts.count} + ${delta}` } });
+  res.status(204).end();
+});
+
+dataRouter.post('/_metrics/total-leads', async (req, res) => {
+  const { delta } = req.body;
+  await getDb().update(systemMetricsDashboard)
+    .set({ totalLeads: sql`${systemMetricsDashboard.totalLeads} + ${delta}` })
+    .where(eq(systemMetricsDashboard.id, 'dashboard'));
+  res.status(204).end();
+});
 
 dataRouter.get('/:entity/:id', async (req: any, res) => {
   const table = resolveTable(req.params.entity, res); if (!table) return;
