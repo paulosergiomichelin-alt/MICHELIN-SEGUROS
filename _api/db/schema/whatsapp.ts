@@ -14,8 +14,8 @@ export const whatsappSessions = pgTable('whatsapp_sessions', {
   status: text('status').notNull(),
   qrBase64: text('qr_base64'),
   qrCode: text('qr_code'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });
 
 // Novas tabelas reais (ADR-9) — hoje só em memória em conversationCache.ts. Sem dado
@@ -32,11 +32,11 @@ export const whatsappConversations = pgTable('whatsapp_conversations', {
   leadId: text('lead_id').references(() => leads.id),
   clienteId: text('cliente_id').references(() => clientes.id),
   lastMessage: text('last_message'),
-  lastMessageAt: timestamp('last_message_at', { withTimezone: true }),
+  lastMessageAt: timestamp('last_message_at', { withTimezone: true, mode: 'string' }),
   lastMessageDirection: text('last_message_direction'),
   unreadCount: integer('unread_count').notNull().default(0),
   presence: text('presence'),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 }, (t) => [
   index('idx_wa_conv_session').on(t.sessionId, t.updatedAt),
 ]);
@@ -58,7 +58,7 @@ export const whatsappMessages = pgTable('whatsapp_messages', {
   transcription: text('transcription'),
   status: text('status'),
   evolutionId: text('evolution_id'),
-  timestamp: timestamp('timestamp', { withTimezone: true }).notNull(),
+  timestamp: timestamp('timestamp', { withTimezone: true, mode: 'string' }).notNull(),
 }, (t) => [
   index('idx_wa_msg_conv').on(t.conversationId, t.timestamp),
 ]);

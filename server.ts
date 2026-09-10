@@ -157,6 +157,8 @@ async function startServer() {
   const { eq: eqForApolices, and: andForApolices, inArray: inArrayForApolices } = await import('drizzle-orm');
   const { clienteApolices: clienteApolicesTable, clientes: clientesTable } = await import('./_api/db/schema/index.js');
 
+  const { normalizeTimestamps: normalizeTimestampsForApolices } = await import('./_api/lib/normalizeTimestamps.js');
+
   app.get('/api/data/apolices', requireAuthForApolices, loadTenantForApolices, async (req: any, res: any) => {
     const statusFilter = typeof req.query.status === 'string' ? req.query.status.split(',') : null;
     const orgClause = req.userSuperadmin ? undefined : eqForApolices(clientesTable.organizationId, req.organizationId);
@@ -165,7 +167,7 @@ async function startServer() {
     const rows = await getDbForApolices().select().from(clienteApolicesTable)
       .innerJoin(clientesTable, eqForApolices(clienteApolicesTable.clienteId, clientesTable.id))
       .where(clauses.length ? andForApolices(...clauses) : undefined);
-    res.json(rows.map((r: any) => r.cliente_apolices));
+    res.json(normalizeTimestampsForApolices(rows.map((r: any) => r.cliente_apolices)));
   });
 
   log.info('API genérica de dados (Postgres) registrada em /api/data');

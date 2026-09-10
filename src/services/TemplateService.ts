@@ -1,7 +1,4 @@
-import {
-  doc, getDoc, setDoc, updateDoc, collection, getDocs,
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { DataService } from './DataService';
 import {
   AgentTemplate,
   TenantAgentConfig,
@@ -69,14 +66,13 @@ export class TemplateService {
     if (cached) return cached;
 
     try {
-      const snap = await getDocs(collection(db, 'platform_agent_templates'));
-      if (!snap.empty) {
-        const result = snap.docs.map(d => ({ id: d.id, ...d.data() } as AgentTemplate));
+      const result = await DataService.list('platform_agent_templates') as AgentTemplate[];
+      if (result.length > 0) {
         this.cache.set('templates:all', result);
         return result;
       }
     } catch (err) {
-      logger.warn('TEMPLATE_SERVICE', 'Firestore unavailable, using seed templates', err);
+      logger.warn('TEMPLATE_SERVICE', 'Backend unavailable, using seed templates', err);
     }
 
     this.cache.set('templates:all', AGENT_TEMPLATES);
@@ -89,14 +85,13 @@ export class TemplateService {
     if (cached) return cached;
 
     try {
-      const snap = await getDoc(doc(db, 'platform_agent_templates', templateId));
-      if (snap.exists()) {
-        const result = { id: snap.id, ...snap.data() } as AgentTemplate;
+      const result = await DataService.get('platform_agent_templates', templateId) as AgentTemplate | null;
+      if (result) {
         this.cache.set(cacheKey, result);
         return result;
       }
     } catch (err) {
-      logger.warn('TEMPLATE_SERVICE', `Firestore get failed for template ${templateId}`, err);
+      logger.warn('TEMPLATE_SERVICE', `Backend get failed for template ${templateId}`, err);
     }
 
     const seed = AGENT_TEMPLATES.find(t => t.id === templateId) ?? null;
@@ -109,14 +104,13 @@ export class TemplateService {
     if (cached) return cached;
 
     try {
-      const snap = await getDoc(doc(db, 'platform_guardrails', 'universal'));
-      if (snap.exists()) {
-        const result = snap.data() as UniversalGuardrails;
+      const result = await DataService.get('platform_guardrails', 'universal') as UniversalGuardrails | null;
+      if (result) {
         this.cache.set('guardrails:universal', result);
         return result;
       }
     } catch (err) {
-      logger.warn('TEMPLATE_SERVICE', 'Could not fetch guardrails from Firestore', err);
+      logger.warn('TEMPLATE_SERVICE', 'Could not fetch guardrails from backend', err);
     }
 
     this.cache.set('guardrails:universal', PLATFORM_GUARDRAILS);
@@ -131,11 +125,8 @@ export class TemplateService {
     if (cached) return cached;
 
     try {
-      const snap = await getDoc(
-        doc(db, 'tenants', organizationId, 'config', 'agent_config')
-      );
-      if (snap.exists()) {
-        const result = snap.data() as TenantAgentConfig;
+      const result = await DataService.get('tenant_agent_configs', organizationId) as TenantAgentConfig | null;
+      if (result) {
         this.cache.set(cacheKey, result);
         return result;
       }
@@ -151,24 +142,21 @@ export class TemplateService {
     updates: Partial<Pick<TenantAgentConfig, 'customPersona' | 'customSalesBlocks' | 'customHardRules' | 'businessContext'>>,
     updatedBy: string
   ): Promise<void> {
-    await updateDoc(
-      doc(db, 'tenants', organizationId, 'config', 'agent_config'),
-      { ...updates, updatedAt: new Date().toISOString(), updatedBy }
-    );
+    await DataService.update('tenant_agent_configs', organizationId, {
+      ...updates, updatedAt: new Date().toISOString(), updatedBy,
+    });
     this.cache.invalidate(`tenant:${organizationId}:config`);
     this.cache.invalidate(`tenant:${organizationId}:resolved`);
   }
 
   async isOnboardingComplete(organizationId: string): Promise<boolean> {
     try {
-      const snap = await getDoc(
-        doc(db, 'tenants', organizationId, 'config', 'agent_config')
-      );
-      // Document doesn't exist → tenant pre-dates this feature, skip wizard
-      if (!snap.exists()) return true;
-      return snap.data()?.onboarding?.completed === true;
+      const config = await DataService.get('tenant_agent_configs', organizationId);
+      // Não existe → tenant é anterior a este recurso, pula o wizard
+      if (!config) return true;
+      return (config as any)?.onboarding?.completed === true;
     } catch (_) {
-      // Permission denied or network error → skip wizard (conservative)
+      // Erro de permissão/rede → pula o wizard (conservador)
       return true;
     }
   }
@@ -264,59 +252,53 @@ export class TemplateService {
       updatedBy,
     };
 
-    await setDoc(
-      doc(db, 'tenants', organizationId, 'config', 'agent_config'),
-      tenantConfig
-    );
+    await DataService.save('tenant_agent_configs', organizationId, tenantConfig);
 
     this.cache.invalidatePrefix(`tenant:${organizationId}`);
     logger.info('TEMPLATE_SERVICE', `Template ${templateId} applied to ${organizationId}`);
   }
 
   async completeOnboarding(organizationId: string, updatedBy: string): Promise<void> {
-    await updateDoc(
-      doc(db, 'tenants', organizationId, 'config', 'agent_config'),
-      {
-        'onboarding.completed': true,
-        'onboarding.completedAt': new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        updatedBy,
-      }
-    );
+    // `onboarding` é uma coluna jsonb única — sem dot-notation de update parcial como
+    // no Firestore, precisa ler o objeto atual, mesclar e regravar por completo.
+    const current = await DataService.get('tenant_agent_configs', organizationId);
+    const onboarding = {
+      ...(current?.onboarding ?? {}),
+      completed: true,
+      completedAt: new Date().toISOString(),
+    };
+    await DataService.update('tenant_agent_configs', organizationId, {
+      onboarding,
+      updatedAt: new Date().toISOString(),
+      updatedBy,
+    });
     this.cache.invalidatePrefix(`tenant:${organizationId}`);
   }
 
   // ─── Wizard state ────────────────────────────────────────────────────────────
 
   async saveWizardState(organizationId: string, state: object): Promise<void> {
-    await setDoc(
-      doc(db, 'tenants', organizationId, 'onboarding', 'wizard_state'),
-      { ...state, updatedAt: new Date().toISOString() }
-    );
+    await DataService.save('tenant_onboarding_wizard_state', organizationId, {
+      ...state, updatedAt: new Date().toISOString(),
+    });
   }
 
   async getWizardState(organizationId: string): Promise<object | null> {
     try {
-      const snap = await getDoc(
-        doc(db, 'tenants', organizationId, 'onboarding', 'wizard_state')
-      );
-      return snap.exists() ? snap.data() : null;
+      return await DataService.get('tenant_onboarding_wizard_state', organizationId);
     } catch (err) {
       logger.warn('TEMPLATE_SERVICE', `Could not fetch wizard state for ${organizationId}`, err);
       return null;
     }
   }
 
-  // ─── Seed Firestore ─────────────────────────────────────────────────────────
+  // ─── Seed backend ────────────────────────────────────────────────────────────
 
   async seedTemplates(): Promise<void> {
     logger.info('TEMPLATE_SERVICE', 'Seeding platform templates and guardrails');
 
     try {
-      await setDoc(
-        doc(db, 'platform_guardrails', 'universal'),
-        PLATFORM_GUARDRAILS
-      );
+      await DataService.save('platform_guardrails', 'universal', PLATFORM_GUARDRAILS);
       logger.info('TEMPLATE_SERVICE', 'Guardrails seeded');
     } catch (err) {
       logger.warn('TEMPLATE_SERVICE', 'Guardrails seed failed', err);
@@ -324,10 +306,7 @@ export class TemplateService {
 
     for (const template of AGENT_TEMPLATES) {
       try {
-        await setDoc(
-          doc(db, 'platform_agent_templates', template.id),
-          template
-        );
+        await DataService.save('platform_agent_templates', template.id, template);
         logger.info('TEMPLATE_SERVICE', `Seeded template: ${template.id}`);
       } catch (err) {
         logger.warn('TEMPLATE_SERVICE', `Template ${template.id} seed failed`, err);

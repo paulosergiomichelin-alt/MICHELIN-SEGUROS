@@ -4,7 +4,7 @@ import { organizations } from './core';
 export const auditLogs = pgTable('audit_logs', {
   id: text('id').primaryKey(),
   organizationId: text('organization_id').references(() => organizations.id),
-  timestamp: timestamp('timestamp', { withTimezone: true }).notNull(),
+  timestamp: timestamp('timestamp', { withTimezone: true, mode: 'string' }).notNull(),
   userId: text('user_id').notNull(),
   userName: text('user_name'),
   ip: text('ip'),
@@ -36,20 +36,20 @@ export const systemLogs = pgTable('system_logs', {
   level: text('level').notNull(),
   message: text('message').notNull(),
   context: jsonb('context'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });
 
 export const migrationLogs = pgTable('migration_logs', {
   id: text('id').primaryKey(),
   stats: jsonb('stats').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });
 
 export const deadLetterQueue = pgTable('dead_letter_queue', {
   id: text('id').primaryKey(),
   payload: jsonb('payload').notNull(),
   error: text('error'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });
 
 export const processingLocks = pgTable('processing_locks', {
@@ -57,6 +57,6 @@ export const processingLocks = pgTable('processing_locks', {
   resourceId: text('resource_id').notNull(),
   ownerId: text('owner_id').notNull(),
   instanceId: text('instance_id').notNull(),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'string' }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });

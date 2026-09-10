@@ -32,3 +32,22 @@ export const ENTITY_TABLE: Record<string, any> = {
   nfse_documents: schema.nfseDocuments,
   nfse_logs: schema.nfseLogs,
 };
+
+// A maioria das tabelas usa `id` como PK — estas duas usam organization_id como PK
+// (SPEC §4.11: são chaveadas 1:1 por tenant, sem coleção separada por doc). Sem este mapa,
+// o router genérico (que sempre fazia eq(table.id, req.params.id)) quebrava com
+// "Cannot read properties of undefined (reading 'keyAsName')" para essas duas entidades —
+// descoberto ao testar TemplateService na Fase 3. Estender este mapa ao adicionar entidades
+// cuja PK não se chama `id` (ex.: email_settings, PK user_id, na Fase 4).
+export const PK_COLUMN: Record<string, string> = {
+  tenant_agent_configs: 'organizationId',
+  tenant_onboarding_wizard_state: 'organizationId',
+};
+
+export function pkPropertyName(entity: string): string {
+  return PK_COLUMN[entity] ?? 'id';
+}
+
+export function pkColumn(entity: string, table: any) {
+  return table[pkPropertyName(entity)];
+}

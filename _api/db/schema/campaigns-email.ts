@@ -21,8 +21,8 @@ export const campaigns = pgTable('campaigns', {
   limit: integer('limit'),
   interval: integer('interval'),
   filters: jsonb('filters'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });
 
 export const campaignLog = pgTable('campaign_log', {
@@ -33,7 +33,7 @@ export const campaignLog = pgTable('campaign_log', {
   status: text('status').notNull(),
   message: text('message'),
   error: text('error'),
-  timestamp: timestamp('timestamp', { withTimezone: true }).notNull(),
+  timestamp: timestamp('timestamp', { withTimezone: true, mode: 'string' }).notNull(),
 }, (t) => [
   index('idx_campaignlog_campaign').on(t.campaignId),
 ]);
@@ -47,11 +47,11 @@ export const emailAccounts = pgTable('email_accounts', {
   displayName: text('display_name'),
   isDefault: boolean('is_default').notNull().default(false),
   status: text('status').notNull(),
-  lastSync: timestamp('last_sync', { withTimezone: true }),
+  lastSync: timestamp('last_sync', { withTimezone: true, mode: 'string' }),
   syncError: text('sync_error'),
   oauthTokens: jsonb('oauth_tokens').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });
 
 export const emailSettings = pgTable('email_settings', {
@@ -61,5 +61,5 @@ export const emailSettings = pgTable('email_settings', {
   defaultAccountId: text('default_account_id'),
   autoReply: jsonb('auto_reply'),
   notifications: jsonb('notifications').notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });

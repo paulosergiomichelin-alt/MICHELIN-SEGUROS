@@ -8,7 +8,7 @@ export const platformAgentTemplates = pgTable('platform_agent_templates', {
   name: text('name').notNull(),
   description: text('description'),
   version: integer('version').notNull(),
-  publishedAt: timestamp('published_at', { withTimezone: true }).notNull(),
+  publishedAt: timestamp('published_at', { withTimezone: true, mode: 'string' }).notNull(),
   publishedBy: text('published_by').notNull(),
   defaultPersona: jsonb('default_persona').notNull(),
   defaultSalesBlocks: jsonb('default_sales_blocks').notNull(),
@@ -29,7 +29,7 @@ export const platformGuardrails = pgTable('platform_guardrails', {
   maxQuestionsPerMessage: integer('max_questions_per_message').notNull(),
   forbiddenPhrases: jsonb('forbidden_phrases').notNull(),
   version: integer('version').notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });
 
 export const tenantAgentConfigs = pgTable('tenant_agent_configs', {
@@ -42,7 +42,7 @@ export const tenantAgentConfigs = pgTable('tenant_agent_configs', {
   customHardRules: jsonb('custom_hard_rules'),
   businessContext: jsonb('business_context').notNull(),
   onboarding: jsonb('onboarding').notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
   updatedBy: text('updated_by').notNull(),
 });
 
@@ -56,8 +56,8 @@ export const tenantOnboardingWizardState = pgTable('tenant_onboarding_wizard_sta
   businessContext: jsonb('business_context'),
   tone: text('tone'),
   completed: boolean('completed').notNull().default(false),
-  startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
-  completedAt: timestamp('completed_at', { withTimezone: true }),
+  startedAt: timestamp('started_at', { withTimezone: true, mode: 'string' }).notNull(),
+  completedAt: timestamp('completed_at', { withTimezone: true, mode: 'string' }),
   lastSavedStep: integer('last_saved_step').notNull(),
 });
 
@@ -91,9 +91,9 @@ export const nfseDocuments = pgTable('nfse_documents', {
   xmlUrl: text('xml_url'),
   pdfUrl: text('pdf_url'),
   errorMessage: text('error_message'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  emittedAt: timestamp('emitted_at', { withTimezone: true }),
-  canceledAt: timestamp('canceled_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  emittedAt: timestamp('emitted_at', { withTimezone: true, mode: 'string' }),
+  canceledAt: timestamp('canceled_at', { withTimezone: true, mode: 'string' }),
 }, (t) => [
   index('idx_nfse_org').on(t.organizationId),
 ]);
@@ -108,5 +108,5 @@ export const nfseLogs = pgTable('nfse_logs', {
   providerResponse: text('provider_response'),
   processingTimeMs: integer('processing_time_ms'),
   userId: text('user_id'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });

@@ -39,8 +39,8 @@ export const clientes = pgTable('clientes', {
   produtoAtual: text('produto_atual'),
   dataRenovacao: date('data_renovacao'),
   documentos: jsonb('documentos'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 }, (t) => [
   index('idx_clientes_org').on(t.organizationId),
 ]);
@@ -64,10 +64,10 @@ export const clienteApolices = pgTable('cliente_apolices', {
   documentoUrl: text('documento_url'),
   documentoPath: text('documento_path'),
   documentoFileName: text('documento_file_name'),
-  documentoUploadedAt: timestamp('documento_uploaded_at', { withTimezone: true }),
+  documentoUploadedAt: timestamp('documento_uploaded_at', { withTimezone: true, mode: 'string' }),
   anexos: jsonb('anexos'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 }, (t) => [
   index('idx_apolices_cliente').on(t.clienteId),
 ]);
@@ -80,7 +80,7 @@ export const clienteHistorico = pgTable('cliente_historico', {
   usuarioId: text('usuario_id'),
   usuarioNome: text('usuario_nome'),
   dadosExtras: jsonb('dados_extras'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 }, (t) => [
   index('idx_historico_cliente').on(t.clienteId),
 ]);
@@ -97,6 +97,6 @@ export const clienteRelacionamentos = pgTable('cliente_relacionamentos', {
   relatedClienteCpf: text('related_cliente_cpf'),
   tipoRelacionamento: text('tipo_relacionamento').notNull(),
   organizationId: text('organization_id').references(() => organizations.id),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });

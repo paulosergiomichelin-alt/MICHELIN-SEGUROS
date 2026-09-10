@@ -6,9 +6,15 @@ import { requireAuth } from '../lib/authMiddleware';
 import { loadTenantContext } from './tenantMiddleware';
 import { clienteApolices, clienteHistorico, clientes } from '../db/schema';
 import { emitDataChanged } from '../lib/realtimeBus';
+import { normalizeTimestamps } from '../lib/normalizeTimestamps';
 
 export const clientesRouter = Router();
 clientesRouter.use(requireAuth, loadTenantContext);
+clientesRouter.use((req, res, next) => {
+  const originalJson = res.json.bind(res);
+  res.json = (body: any) => originalJson(normalizeTimestamps(body));
+  next();
+});
 
 async function assertClienteInOrg(clienteId: string, req: any) {
   if (req.userSuperadmin) return true;

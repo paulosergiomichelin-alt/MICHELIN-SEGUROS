@@ -14,7 +14,7 @@ export const organizations = pgTable('organizations', {
   limiteLeadsMes: integer('limite_leads_mes').notNull(),
   limiteStorageMb: integer('limite_storage_mb').notNull(),
   status: text('status').notNull(),
-  trialExpiraEm: timestamp('trial_expira_em', { withTimezone: true }),
+  trialExpiraEm: timestamp('trial_expira_em', { withTimezone: true, mode: 'string' }),
   timezone: text('timezone').notNull(),
   idioma: text('idioma').notNull(),
   ownerUserId: text('owner_user_id'),
@@ -22,8 +22,8 @@ export const organizations = pgTable('organizations', {
   fiscalSettings: jsonb('fiscal_settings'),
   certificate: jsonb('certificate'),
   fiscalServices: jsonb('fiscal_services'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });
 
 export const users = pgTable('users', {
@@ -45,9 +45,9 @@ export const users = pgTable('users', {
   theme: text('theme'),
   chatPreferences: jsonb('chat_preferences'),
   superadmin: boolean('superadmin').notNull().default(false),
-  lastAccess: timestamp('last_access', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  lastAccess: timestamp('last_access', { withTimezone: true, mode: 'string' }),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 }, (t) => [
   index('idx_users_org').on(t.organizationId),
 ]);
@@ -61,6 +61,6 @@ export const accessProfiles = pgTable('access_profiles', {
   permissions: jsonb('permissions').notNull(),
   menuPermissions: jsonb('menu_permissions').notNull().default([]),
   fieldPermissions: jsonb('field_permissions').notNull().default([]),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });

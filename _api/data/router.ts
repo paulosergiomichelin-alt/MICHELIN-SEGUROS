@@ -3,13 +3,23 @@ import { eq, and, sql } from 'drizzle-orm';
 import { getDb } from '../lib/db';
 import { requireAuth } from '../lib/authMiddleware';
 import { loadTenantContext, ORG_SCOPED_ENTITIES } from './tenantMiddleware';
-import { ENTITY_TABLE } from './entityMap';
+import { ENTITY_TABLE, pkColumn, pkPropertyName } from './entityMap';
 import { buildWhere, buildOrderBy, buildStartAfter, getLimit } from './constraintsToSql';
 import { emitDataChanged } from '../lib/realtimeBus';
+import { normalizeTimestamps } from '../lib/normalizeTimestamps';
 import { leadStatusCounts, systemMetricsDashboard, organizations, users } from '../db/schema';
 
 export const dataRouter = Router();
 dataRouter.use(requireAuth);
+
+// Normaliza toda resposta JSON desta rota (timestamps Postgres → ISO 8601) — ver
+// _api/lib/normalizeTimestamps.ts. Aplicado como middleware, não por chamada, para
+// nenhuma rota nova esquecer.
+dataRouter.use((req, res, next) => {
+  const originalJson = res.json.bind(res);
+  res.json = (body: any) => originalJson(normalizeTimestamps(body));
+  next();
+});
 
 dataRouter.get('/_whoami', (req: any, res) => res.json({ uid: req.userId }));
 
@@ -79,7 +89,8 @@ dataRouter.post('/_metrics/total-leads', async (req, res) => {
 dataRouter.get('/:entity/:id', async (req: any, res) => {
   const table = resolveTable(req.params.entity, res); if (!table) return;
   const scope = orgScopeWhere(req.params.entity, table, req);
-  const where = scope ? and(eq(table.id, req.params.id), scope) : eq(table.id, req.params.id);
+  const idEq = eq(pkColumn(req.params.entity, table), req.params.id);
+  const where = scope ? and(idEq, scope) : idEq;
   const [row] = await getDb().select().from(table).where(where);
   // Se o registro existe mas é de outra organização, retorna 404 (não 403) para não
   // revelar existência do dado a quem não tem acesso.
@@ -112,14 +123,15 @@ dataRouter.post('/:entity', async (req: any, res) => {
     req.body.organizationId = req.organizationId;
   }
   const [row] = await getDb().insert(table).values(req.body).returning();
-  await emitDataChanged(req.params.entity, row.id, row.organizationId ?? null);
+  await emitDataChanged(req.params.entity, row[pkPropertyName(req.params.entity)], row.organizationId ?? null);
   res.status(201).json(row);
 });
 
 dataRouter.patch('/:entity/:id', async (req: any, res) => {
   const table = resolveTable(req.params.entity, res); if (!table) return;
   const scope = orgScopeWhere(req.params.entity, table, req);
-  const where = scope ? and(eq(table.id, req.params.id), scope) : eq(table.id, req.params.id);
+  const idEq = eq(pkColumn(req.params.entity, table), req.params.id);
+  const where = scope ? and(idEq, scope) : idEq;
   const [row] = await getDb().update(table).set(req.body).where(where).returning();
   await emitDataChanged(req.params.entity, req.params.id, row?.organizationId ?? null);
   res.json(row ?? null);
@@ -133,10 +145,11 @@ dataRouter.put('/:entity/:id', async (req: any, res) => {
     }
     req.body.organizationId = req.organizationId;
   }
+  const pkProp = pkPropertyName(req.params.entity);
   const [row] = await getDb()
     .insert(table)
-    .values({ ...req.body, id: req.params.id })
-    .onConflictDoUpdate({ target: table.id, set: req.body })
+    .values({ ...req.body, [pkProp]: req.params.id })
+    .onConflictDoUpdate({ target: pkColumn(req.params.entity, table), set: req.body })
     .returning();
   await emitDataChanged(req.params.entity, req.params.id, row?.organizationId ?? null);
   res.json(row);
@@ -145,7 +158,8 @@ dataRouter.put('/:entity/:id', async (req: any, res) => {
 dataRouter.delete('/:entity/:id', async (req: any, res) => {
   const table = resolveTable(req.params.entity, res); if (!table) return;
   const scope = orgScopeWhere(req.params.entity, table, req);
-  const where = scope ? and(eq(table.id, req.params.id), scope) : eq(table.id, req.params.id);
+  const idEq = eq(pkColumn(req.params.entity, table), req.params.id);
+  const where = scope ? and(idEq, scope) : idEq;
   // .returning() ANTES de perder a linha — sem isso, organizationId vira null no evento
   // e o socket emite pro grupo 'global' em vez da room certa.
   const [deleted] = await getDb().delete(table).where(where).returning();
