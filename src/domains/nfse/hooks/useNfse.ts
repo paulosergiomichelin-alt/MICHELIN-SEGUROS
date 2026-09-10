@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from 'react';
-import type { DocumentSnapshot } from 'firebase/firestore';
 import type { NfseDocument, NfseStatus } from '../../../types';
 import { NfseService } from '../services/NfseService';
 
@@ -20,7 +19,7 @@ export function useNfse(organizationId: string) {
     hasMore: false,
   });
 
-  const lastDocRef = useRef<DocumentSnapshot | null>(null);
+  const lastDocRef = useRef<unknown | null>(null);
   const statusRef  = useRef<NfseStatus | undefined>(undefined);
   const cacheRef   = useRef<Map<string, NfseDocument>>(new Map());
 

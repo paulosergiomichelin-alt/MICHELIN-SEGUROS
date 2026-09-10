@@ -37,7 +37,7 @@ export const users = pgTable('users', {
   profileId: text('profile_id'),
   permissions: jsonb('permissions').notNull(),
   cargo: text('cargo'),
-  photoUrl: text('photo_url'),
+  photoURL: text('photo_url'), // UserProfile.photoURL (types.ts) — capitalização exata importa
   status: text('status').notNull(),
   onboardingCompleted: boolean('onboarding_completed'),
   metrics: jsonb('metrics'),

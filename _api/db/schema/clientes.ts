@@ -57,7 +57,7 @@ export const clienteApolices = pgTable('cliente_apolices', {
   premioLiquidoCentavos: integer('premio_liquido_centavos').notNull(),
   valorTotalCentavos: integer('valor_total_centavos').notNull(),
   comissaoCentavos: integer('comissao_centavos').notNull(),
-  comissaoPct: numeric('comissao_pct'),
+  comissaoPct: numeric('comissao_pct', { mode: 'number' }),
   corretoraOrigem: text('corretora_origem'),
   observacoes: text('observacoes'),
   status: text('status').notNull(),
@@ -94,7 +94,7 @@ export const clienteRelacionamentos = pgTable('cliente_relacionamentos', {
   relatedClienteNome: text('related_cliente_nome').notNull(),
   relatedClienteTelefone: text('related_cliente_telefone'),
   relatedClienteWhatsapp: text('related_cliente_whatsapp'),
-  relatedClienteCpf: text('related_cliente_cpf'),
+  relatedClienteCPF: text('related_cliente_cpf'), // ClienteRelacionamento.relatedClienteCPF (types.ts)
   tipoRelacionamento: text('tipo_relacionamento').notNull(),
   organizationId: text('organization_id').references(() => organizations.id),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),

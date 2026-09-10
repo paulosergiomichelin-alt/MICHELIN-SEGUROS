@@ -76,14 +76,19 @@ export const nfseDocuments = pgTable('nfse_documents', {
   clienteEndereco: jsonb('cliente_endereco'),
   servicoId: text('servico_id'),
   descricaoServico: text('descricao_servico').notNull(),
-  valorServicoCentavos: integer('valor_servico_centavos').notNull(),
+  // Valores em reais decimais (numeric), NÃO centavos — diferente de cliente_apolices.
+  // NfseDocument.valorServico/desconto/valorISS circulam como float direto no domínio
+  // (EmitirNfseModal usa parseFloat crú, formatCurrency exibe sem dividir por 100).
+  valorServico: numeric('valor_servico', { mode: 'number' }).notNull(),
   quantidade: integer('quantidade').notNull(),
-  descontoCentavos: integer('desconto_centavos'),
-  valorIssCentavos: integer('valor_iss_centavos'),
-  aliquotaIss: numeric('aliquota_iss').notNull(),
+  desconto: numeric('desconto', { mode: 'number' }),
+  // Nome exato `valorISS` (não valorIss) para casar com NfseDocument.valorISS em types.ts —
+  // downstream (DanfseGenerator.ts, EmitirNfseModal.tsx) lê/escreve essa capitalização.
+  valorISS: numeric('valor_iss', { mode: 'number' }),
+  aliquotaISS: numeric('aliquota_iss', { mode: 'number' }).notNull(),
   issRetido: boolean('iss_retido').notNull().default(false),
   naturezaOperacao: text('natureza_operacao'),
-  exigibilidadeIss: text('exigibilidade_iss'),
+  exigibilidadeISS: text('exigibilidade_iss'),
   observacoes: text('observacoes'),
   ambiente: text('ambiente').notNull(),
   provider: text('provider').notNull(),
