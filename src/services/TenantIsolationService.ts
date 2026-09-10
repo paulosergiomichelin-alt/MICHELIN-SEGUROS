@@ -1,9 +1,7 @@
-
-import { collection, getDocs, query, where, getDoc, doc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { DataService } from './DataService';
+import { dataApiClient } from '../lib/dataApiClient';
 import { DataPolicyService } from './policy/DataPolicyService';
 import { logger } from './LoggerService';
-import { CacheManager } from './CacheManager';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entities that carry organizationId and MUST be org-scoped
@@ -82,11 +80,10 @@ export class TenantIsolationService {
 
     for (const coll of ORG_SCOPED_COLLECTIONS) {
       try {
-        const snap = await getDocs(collection(db, coll));
-        snap.docs.forEach(d => {
-          const data = d.data();
+        const rows = await DataService.list(coll) as any[];
+        rows.forEach((data) => {
           if (!data.organizationId) {
-            warnings.push(`${coll}/${d.id}: missing organizationId`);
+            warnings.push(`${coll}/${data.id}: missing organizationId`);
           }
         });
       } catch (e: any) {
@@ -103,9 +100,10 @@ export class TenantIsolationService {
 
   /**
    * Simulates a cross-tenant read attack from the current user's perspective.
-   * Attempts to read a document from a different org by constructing a direct doc path.
+   * Attempts to read a document from a different org via a direct API call, bypassing
+   * client-side guards on purpose — testa o isolamento no SERVIDOR (antes, testava as
+   * Firestore rules; agora testa orgScopeWhere em _api/data/router.ts).
    * Safe to call — any actual data returned is BLOCKED and logged.
-   * Use from AdminTools to verify that guards are working.
    */
   static async testCrossTenantReadAttack(targetCollection: string, targetDocId: string, targetOrgId: string): Promise<{ blocked: boolean; message: string }> {
     const user = DataPolicyService.getCurrentUser();
@@ -116,23 +114,19 @@ export class TenantIsolationService {
     }
 
     try {
-      const snap = await getDoc(doc(db, targetCollection, targetDocId));
-      if (!snap.exists()) {
-        return { blocked: true, message: `Document does not exist (Firestore rules blocked or doc absent)` };
+      const data = await dataApiClient.get(targetCollection, targetDocId);
+      if (!data) {
+        return { blocked: true, message: `Document does not exist ou bloqueado pelo isolamento de tenant no servidor (retorna null de propósito, para não revelar existência)` };
       }
 
-      const data = snap.data();
-      // If Firestore returned data from another org, the client-side guard should catch it
+      // Se o servidor retornou dados de outra org, o isolamento está com falha real.
       if (data?.organizationId && data.organizationId !== user.organizationId) {
-        logger.error('SECURITY', `CROSS_TENANT_TEST_FAILED: Firestore returned doc from org="${data.organizationId}" for caller org="${user.organizationId}". Rules may be misconfigured!`);
-        return { blocked: false, message: `SECURITY ALERT: Firestore returned cross-tenant data for ${targetCollection}/${targetDocId}. Client guard blocked display.` };
+        logger.error('SECURITY', `CROSS_TENANT_TEST_FAILED: backend retornou doc de org="${data.organizationId}" para caller org="${user.organizationId}". orgScopeWhere pode estar com bug!`);
+        return { blocked: false, message: `SECURITY ALERT: backend retornou dado cross-tenant para ${targetCollection}/${targetDocId}.` };
       }
 
       return { blocked: true, message: `Document accessible but belongs to caller's org (no violation)` };
     } catch (e: any) {
-      if (e.code === 'permission-denied') {
-        return { blocked: true, message: `Blocked at Firestore rules layer (permission-denied)` };
-      }
       return { blocked: false, message: `Error: ${e.message}` };
     }
   }
