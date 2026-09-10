@@ -1,6 +1,5 @@
 
-import { collection, doc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { nanoid } from 'nanoid';
 
 /**
  * SecurityService: Centraliza geração de IDs seguros e hashes criptográficos.
@@ -8,11 +7,13 @@ import { db } from '../lib/firebase';
  */
 export class SecurityService {
   /**
-   * Gera um ID único e seguro usando o gerador do Firestore.
-   * Coleção opcional para contexto, mas o ID é gerado no client sem round-trip.
+   * Gera um ID único e seguro (nanoid — sem round-trip a nenhum backend).
+   * Parâmetro de coleção mantido só por compatibilidade de assinatura com os
+   * call-sites existentes; não influencia mais o ID gerado (antes era usado só
+   * para namespacing dentro do gerador do Firestore).
    */
-  public static generateId(collName: string = 'temp'): string {
-    return doc(collection(db, collName)).id;
+  public static generateId(_collName: string = 'temp'): string {
+    return nanoid();
   }
 
   /**
