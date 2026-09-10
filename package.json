@@ -11,7 +11,10 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "build:server": "node build-server.mjs",
-    "deploy:vps": "node scripts/deploy-vps.mjs"
+    "deploy:vps": "node scripts/deploy-vps.mjs",
+    "db:generate": "dotenv -e .env -- drizzle-kit generate",
+    "db:push": "dotenv -e .env -- drizzle-kit push",
+    "db:studio": "dotenv -e .env -- drizzle-kit studio"
   },
   "dependencies": {
     "@datadog/browser-logs": "^7.1.0",
