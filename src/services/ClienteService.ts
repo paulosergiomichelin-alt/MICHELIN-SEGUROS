@@ -1,21 +1,9 @@
-import {
-  collection, collectionGroup, doc, addDoc, updateDoc, deleteDoc,
-  getDocs, onSnapshot, orderBy, query, where, serverTimestamp, Timestamp,
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import { DataService } from './DataService';
-import { Apolice, ApoliceStatus, Cliente, ClienteHistoricoItem, ClienteStatus, Lead } from '../types';
-import { generateId } from '../lib/utils';
+import { authHeader } from '../lib/dataApiClient';
+import { Apolice, Cliente, ClienteHistoricoItem, ClienteStatus, Lead } from '../types';
 
 function nowISO() {
   return new Date().toISOString();
-}
-
-function tsToISO(ts: any): string {
-  if (!ts) return nowISO();
-  if (ts instanceof Timestamp) return ts.toDate().toISOString();
-  if (typeof ts === 'string') return ts;
-  return nowISO();
 }
 
 function computeClienteStatus(dataRenovacao?: string): ClienteStatus {
@@ -28,31 +16,53 @@ function computeClienteStatus(dataRenovacao?: string): ClienteStatus {
   return 'ativo';
 }
 
+// Os valores monetários de Apolice (premioLiquido/valorTotal/comissao) já circulam em
+// CENTAVOS no domínio da app (ver ApoliceForm.tsx: * 100 ao salvar, / 100 ao popular o
+// form) — a coluna Postgres é só um rename (premioLiquidoCentavos), não uma conversão.
+function apoliceToRow(data: Partial<Apolice>): Record<string, any> {
+  const { premioLiquido, valorTotal, comissao, ...rest } = data as any;
+  const row: Record<string, any> = { ...rest };
+  if (premioLiquido !== undefined) row.premioLiquidoCentavos = premioLiquido;
+  if (valorTotal !== undefined) row.valorTotalCentavos = valorTotal;
+  if (comissao !== undefined) row.comissaoCentavos = comissao;
+  return row;
+}
+
+// `divideBy100`: false preserva o contrato atual de listApolices/subscribeApolices (cents,
+// consumido por ApoliceForm); true reproduz subscribeAllApolices/Report (reais, consumido
+// por RenovacoesPage/RelatoriosPage/ContactSidePanel/ClienteDetailPage via fmtMoney).
+function rowToApolice(row: any, divideBy100: boolean): Apolice {
+  const { premioLiquidoCentavos, valorTotalCentavos, comissaoCentavos, ...rest } = row;
+  const div = divideBy100 ? 100 : 1;
+  return {
+    ...rest,
+    premioLiquido: (Number(premioLiquidoCentavos) || 0) / div,
+    valorTotal: (Number(valorTotalCentavos) || 0) / div,
+    comissao: (Number(comissaoCentavos) || 0) / div,
+  } as Apolice;
+}
+
+async function fetchJson(path: string, init?: RequestInit) {
+  const res = await fetch(path, { ...init, headers: { ...(await authHeader()), ...(init?.headers ?? {}) } });
+  if (res.status === 204) return null;
+  if (!res.ok) throw new Error(`${path} respondeu ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
 export class ClienteService {
-  // ── Apolices subcollection ─────────────────────────────────────────────────
-
-  private static apolicesRef(clienteId: string) {
-    return collection(db, 'clientes', clienteId, 'apolices');
-  }
-
-  private static historicoRef(clienteId: string) {
-    return collection(db, 'clientes', clienteId, 'historico');
-  }
+  // ── Apólices ─────────────────────────────────────────────────────────────
 
   static async createApolice(
     clienteId: string,
     data: Omit<Apolice, 'id' | 'createdAt' | 'updatedAt'>,
     organizationId?: string,
   ): Promise<string> {
-    const ref = await addDoc(this.apolicesRef(clienteId), {
-      ...data,
-      clienteId,
-      organizationId,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+    const row = await fetchJson(`/api/data/clientes/${clienteId}/apolices`, {
+      method: 'POST',
+      body: JSON.stringify({ ...apoliceToRow(data), clienteId, organizationId }),
     });
 
-    // Denormalize latest apolice info onto cliente document
+    // Denormalize latest apolice info onto cliente
     const newStatus = computeClienteStatus(data.dataRenovacao);
     await DataService.update('cliente', clienteId, {
       seguradoraAtualId: data.seguradoraId,
@@ -69,7 +79,7 @@ export class ClienteService {
       organizationId,
     });
 
-    return ref.id;
+    return row.id;
   }
 
   static async updateApolice(
@@ -77,8 +87,10 @@ export class ClienteService {
     apoliceId: string,
     data: Partial<Apolice>,
   ): Promise<void> {
-    const ref = doc(this.apolicesRef(clienteId), apoliceId);
-    await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
+    await fetchJson(`/api/data/clientes/${clienteId}/apolices/${apoliceId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(apoliceToRow(data)),
+    });
 
     if (data.dataRenovacao || data.seguradoraId || data.produto) {
       const allApolices = await this.listApolices(clienteId);
@@ -97,101 +109,64 @@ export class ClienteService {
   }
 
   static async deleteApolice(clienteId: string, apoliceId: string): Promise<void> {
-    const ref = doc(this.apolicesRef(clienteId), apoliceId);
-    await deleteDoc(ref);
+    await fetchJson(`/api/data/clientes/${clienteId}/apolices/${apoliceId}`, { method: 'DELETE' });
   }
 
   static async listApolices(clienteId: string): Promise<Apolice[]> {
-    const snap = await getDocs(
-      query(this.apolicesRef(clienteId), orderBy('createdAt', 'desc'))
-    );
-    return snap.docs.map(d => ({
-      id: d.id,
-      ...d.data(),
-      createdAt: tsToISO(d.data().createdAt),
-      updatedAt: tsToISO(d.data().updatedAt),
-    } as Apolice));
+    const rows = await fetchJson(`/api/data/clientes/${clienteId}/apolices`);
+    return (rows ?? []).map((r: any) => rowToApolice(r, false));
   }
 
+  // Sem onSnapshot nativo para uma subcoleção só — usa o polling de segurança do
+  // DataService.subscribe/subscribeCollection não se aplica aqui (não é uma entidade
+  // genérica do ENTITY_TABLE); reimplementado como polling simples de 15s, suficiente
+  // para uma lista de apólices de um cliente (baixa frequência de mudança).
   static subscribeApolices(
     clienteId: string,
     callback: (apolices: Apolice[]) => void,
   ): () => void {
-    return onSnapshot(
-      query(this.apolicesRef(clienteId), orderBy('createdAt', 'desc')),
-      snap => {
-        callback(snap.docs.map(d => ({
-          id: d.id,
-          ...d.data(),
-          createdAt: tsToISO(d.data().createdAt),
-          updatedAt: tsToISO(d.data().updatedAt),
-        } as Apolice)));
-      },
-    );
+    let cancelled = false;
+    const refetch = () => this.listApolices(clienteId).then(a => !cancelled && callback(a)).catch(() => {});
+    refetch();
+    const poll = setInterval(refetch, 15000);
+    return () => { cancelled = true; clearInterval(poll); };
   }
 
   static subscribeAllApolices(
     organizationId: string,
     callback: (apolices: Apolice[]) => void,
   ): () => void {
-    return onSnapshot(
-      query(
-        collectionGroup(db, 'apolices'),
-        where('organizationId', '==', organizationId),
-        where('status', 'in', ['ativo', 'em_renovacao']),
-      ),
-      snap => {
-        callback(snap.docs.map(d => {
-          const data = d.data();
-          return {
-            id: d.id,
-            ...data,
-            premioLiquido: (Number(data.premioLiquido) || 0) / 100,
-            valorTotal: (Number(data.valorTotal) || 0) / 100,
-            comissao: (Number(data.comissao) || 0) / 100,
-            createdAt: tsToISO(data.createdAt),
-            updatedAt: tsToISO(data.updatedAt),
-          } as Apolice;
-        }));
-      },
-    );
+    let cancelled = false;
+    const refetch = () => fetchJson(`/api/data/apolices?status=ativo,em_renovacao`)
+      .then((rows) => !cancelled && callback((rows ?? []).map((r: any) => rowToApolice(r, true))))
+      .catch(() => {});
+    refetch();
+    const poll = setInterval(refetch, 30000);
+    return () => { cancelled = true; clearInterval(poll); };
   }
 
   static subscribeAllApolicesReport(
     organizationId: string,
     callback: (apolices: Apolice[]) => void,
   ): () => void {
-    return onSnapshot(
-      query(
-        collectionGroup(db, 'apolices'),
-        where('organizationId', '==', organizationId),
-      ),
-      snap => {
-        callback(snap.docs.map(d => {
-          const data = d.data();
-          return {
-            id: d.id,
-            ...data,
-            premioLiquido: (Number(data.premioLiquido) || 0) / 100,
-            valorTotal: (Number(data.valorTotal) || 0) / 100,
-            comissao: (Number(data.comissao) || 0) / 100,
-            createdAt: tsToISO(data.createdAt),
-            updatedAt: tsToISO(data.updatedAt),
-          } as Apolice;
-        }));
-      },
-    );
+    let cancelled = false;
+    const refetch = () => fetchJson(`/api/data/apolices`)
+      .then((rows) => !cancelled && callback((rows ?? []).map((r: any) => rowToApolice(r, true))))
+      .catch(() => {});
+    refetch();
+    const poll = setInterval(refetch, 30000);
+    return () => { cancelled = true; clearInterval(poll); };
   }
 
-  // ── Histórico subcollection ────────────────────────────────────────────────
+  // ── Histórico ────────────────────────────────────────────────────────────
 
   static async addHistorico(
     clienteId: string,
     item: Omit<ClienteHistoricoItem, 'id' | 'createdAt'> & { organizationId?: string },
   ): Promise<void> {
-    await addDoc(this.historicoRef(clienteId), {
-      ...item,
-      createdAt: serverTimestamp(),
+    await fetchJson(`/api/data/clientes/${clienteId}/historico`, {
+      method: 'POST',
+      body: JSON.stringify(item),
     });
   }
 
@@ -199,19 +174,16 @@ export class ClienteService {
     clienteId: string,
     callback: (items: ClienteHistoricoItem[]) => void,
   ): () => void {
-    return onSnapshot(
-      query(this.historicoRef(clienteId), orderBy('createdAt', 'desc')),
-      snap => {
-        callback(snap.docs.map(d => ({
-          id: d.id,
-          ...d.data(),
-          createdAt: tsToISO(d.data().createdAt),
-        } as ClienteHistoricoItem)));
-      },
-    );
+    let cancelled = false;
+    const refetch = () => fetchJson(`/api/data/clientes/${clienteId}/historico`)
+      .then((rows) => !cancelled && callback(rows ?? []))
+      .catch(() => {});
+    refetch();
+    const poll = setInterval(refetch, 15000);
+    return () => { cancelled = true; clearInterval(poll); };
   }
 
-  // ── Conversão Lead → Cliente ───────────────────────────────────────────────
+  // ── Conversão Lead → Cliente ─────────────────────────────────────────────
 
   static async convertLeadToCliente(
     lead: Lead,

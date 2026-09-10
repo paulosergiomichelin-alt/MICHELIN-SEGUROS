@@ -64,6 +64,7 @@ export const clienteApolices = pgTable('cliente_apolices', {
   documentoUrl: text('documento_url'),
   documentoPath: text('documento_path'),
   documentoFileName: text('documento_file_name'),
+  documentoUploadedAt: timestamp('documento_uploaded_at', { withTimezone: true }),
   anexos: jsonb('anexos'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

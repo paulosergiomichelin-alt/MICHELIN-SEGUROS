@@ -145,6 +145,29 @@ async function startServer() {
   // ── API genérica de dados (Postgres/Neon) — migração gradual do Firestore ────
   const { dataRouter } = await import('./_api/data/router.js');
   app.use('/api/data', dataRouter);
+
+  const { clientesRouter } = await import('./_api/data/clientesRouter.js');
+  app.use('/api/data/clientes', clientesRouter);
+
+  // Equivalente ao collectionGroup(db, 'apolices') — apólices de TODOS os clientes da
+  // organização. Fora do clientesRouter porque não é aninhada sob um :clienteId.
+  const { requireAuth: requireAuthForApolices } = await import('./_api/lib/authMiddleware.js');
+  const { loadTenantContext: loadTenantForApolices } = await import('./_api/data/tenantMiddleware.js');
+  const { getDb: getDbForApolices } = await import('./_api/lib/db.js');
+  const { eq: eqForApolices, and: andForApolices, inArray: inArrayForApolices } = await import('drizzle-orm');
+  const { clienteApolices: clienteApolicesTable, clientes: clientesTable } = await import('./_api/db/schema/index.js');
+
+  app.get('/api/data/apolices', requireAuthForApolices, loadTenantForApolices, async (req: any, res: any) => {
+    const statusFilter = typeof req.query.status === 'string' ? req.query.status.split(',') : null;
+    const orgClause = req.userSuperadmin ? undefined : eqForApolices(clientesTable.organizationId, req.organizationId);
+    const statusClause = statusFilter ? inArrayForApolices(clienteApolicesTable.status, statusFilter) : undefined;
+    const clauses = [orgClause, statusClause].filter(Boolean);
+    const rows = await getDbForApolices().select().from(clienteApolicesTable)
+      .innerJoin(clientesTable, eqForApolices(clienteApolicesTable.clienteId, clientesTable.id))
+      .where(clauses.length ? andForApolices(...clauses) : undefined);
+    res.json(rows.map((r: any) => r.cliente_apolices));
+  });
+
   log.info('API genérica de dados (Postgres) registrada em /api/data');
 
   // ── Meta / WhatsApp Cloud API routes ─────────────────────────────────────────

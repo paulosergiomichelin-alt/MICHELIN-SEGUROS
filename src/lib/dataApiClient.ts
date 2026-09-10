@@ -1,7 +1,7 @@
 import { auth } from './firebase';
 import type { QueryConstraint } from './queryConstraints';
 
-async function authHeader(): Promise<Record<string, string>> {
+export async function authHeader(): Promise<Record<string, string>> {
   const token = await auth.currentUser?.getIdToken();
   if (!token) throw new Error('Usuário não autenticado');
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
