@@ -15,7 +15,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { AppNotification, NotificationType, NotificationPriority } from '../types';
 import { DataService } from '../services/DataService';
-import { where, orderBy, limit } from 'firebase/firestore';
+import { where, orderBy, limit } from '../lib/queryConstraints';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '../lib/utils';

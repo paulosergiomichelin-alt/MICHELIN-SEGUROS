@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { DataService } from '../services/DataService';
-import { orderBy, limit } from 'firebase/firestore';
+import { orderBy, limit } from '../lib/queryConstraints';
 
 interface Notification {
   id: string;

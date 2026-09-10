@@ -27,11 +27,8 @@ import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { 
-  orderBy, 
-  where,
-  QueryDocumentSnapshot
-} from 'firebase/firestore';
+import { QueryDocumentSnapshot } from 'firebase/firestore';
+import { orderBy, where } from '../../lib/queryConstraints';
 import { DataService } from '../../services/DataService';
 import { AuditLog } from '../../types';
 

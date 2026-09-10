@@ -31,7 +31,7 @@ import { cn } from '../../lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { auth } from '../../lib/firebase';
-import { where, orderBy, limit as firestoreLimit } from 'firebase/firestore';
+import { where, orderBy, limit as firestoreLimit } from '../../lib/queryConstraints';
 import { DataService } from '../../services/DataService';
 import { useWhatsApp } from '../../contexts/WhatsAppContext';
 import { StorageService } from '../../services/StorageService';

@@ -954,7 +954,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
     if (field === 'phone' && clean.length < 10) { setDuplicateAlert(null); return; }
     if (field === 'cpf' && clean.length !== 11) { setDuplicateAlert(null); return; }
     // Query only leads matching the exact formatted value — avoids full-collection scan
-    const { where } = await import('firebase/firestore');
+    const { where } = await import('../../lib/queryConstraints');
     const matches = await DataService.list('leads', [where(field, '==', rawValue)]) as Lead[];
     const duplicate = matches.find(l => l.id !== formData.id);
     setDuplicateAlert(duplicate ? { lead: duplicate, field } : null);

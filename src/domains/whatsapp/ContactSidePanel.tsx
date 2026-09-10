@@ -7,7 +7,7 @@ import {
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
-import { where } from 'firebase/firestore';
+import { where } from '../../lib/queryConstraints';
 import { cn } from '../../lib/utils';
 import { Lead, Cliente, Apolice } from '../../types';
 import { DataService } from '../../services/DataService';

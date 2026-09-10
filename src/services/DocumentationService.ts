@@ -1,4 +1,4 @@
-import { limit } from 'firebase/firestore';
+import { limit } from '../lib/queryConstraints';
 import { DataService } from './DataService';
 
 export interface SystemInfo {

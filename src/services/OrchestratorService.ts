@@ -1,4 +1,4 @@
-import { where, orderBy, limit, QueryConstraint } from 'firebase/firestore';
+import { where, orderBy, limit, QueryConstraint } from '../lib/queryConstraints';
 import { Lead, Message, AgentConfig, TenantConfig } from '../types';
 import { DataService } from './DataService';
 import { agentService } from './agentService';

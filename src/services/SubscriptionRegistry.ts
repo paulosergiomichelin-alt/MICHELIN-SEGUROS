@@ -1,5 +1,5 @@
 
-import { Unsubscribe } from 'firebase/firestore';
+type Unsubscribe = () => void;
 
 /**
  * Registro de assinaturas Realtime.

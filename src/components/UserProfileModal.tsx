@@ -22,7 +22,8 @@ import firebaseConfig from '../../firebase-applet-config.json';
 import { auditLogger } from '../services/AuditLogger';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { orderBy, where, QueryDocumentSnapshot } from 'firebase/firestore';
+import { QueryDocumentSnapshot } from 'firebase/firestore';
+import { orderBy, where } from '../lib/queryConstraints';
 
 interface UserProfileModalProps {
   mode?: 'create' | 'edit';

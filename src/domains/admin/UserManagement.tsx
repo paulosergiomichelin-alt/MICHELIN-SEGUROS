@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { auth } from '../../lib/firebase';
-import { 
-  collection, 
-  query, 
-  orderBy,
+import {
+  collection,
+  query,
   Timestamp,
   QueryDocumentSnapshot,
-  limit
 } from 'firebase/firestore';
+import { orderBy, limit } from '../../lib/queryConstraints';
 import { handleFirestoreError, OperationType } from '../../lib/firestore-utils';
 import { 
   createUserWithEmailAndPassword,

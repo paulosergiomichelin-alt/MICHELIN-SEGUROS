@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { orderBy, limit } from 'firebase/firestore';
+import { orderBy, limit } from '../../lib/queryConstraints';
 import { realtimeService, ConnectionState } from '../../services/RealtimeService';
 import { Activity, Zap, AlertTriangle, Clock, Server, Wifi, Cpu, FileText, Printer, Download } from 'lucide-react';
 import { cn } from '../../lib/utils';

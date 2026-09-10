@@ -2,7 +2,7 @@
 import { auth } from '../../lib/firebase';
 import { UserProfile } from '../../types';
 import { logger } from '../LoggerService';
-import { where, QueryConstraint } from 'firebase/firestore';
+import { where, QueryConstraint } from '../../lib/queryConstraints';
 
 export class DataPolicyService {
   private static currentUserProfile: UserProfile | null = null;

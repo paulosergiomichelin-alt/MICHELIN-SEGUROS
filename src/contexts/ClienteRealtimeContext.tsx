@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Cliente, UserProfile } from '../types';
 import { DataService } from '../services/DataService';
-import { orderBy, limit } from 'firebase/firestore';
+import { orderBy, limit } from '../lib/queryConstraints';
 
 interface ClienteRealtimeContextType {
   clientes: Cliente[];

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { where, orderBy, limit } from 'firebase/firestore';
+import { where, orderBy, limit } from '../../lib/queryConstraints';
 import { handleFirestoreError, OperationType } from '../../lib/firestore-utils';
 import { FollowUp, FollowUpStatus } from '../../types';
 import { DataService } from '../../services/DataService';

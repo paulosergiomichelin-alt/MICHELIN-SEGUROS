@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { limit } from 'firebase/firestore';
+import { limit } from '../lib/queryConstraints';
 import { WhatsAppSession, UserProfile } from '../types';
 import { DataService } from '../services/DataService';
 

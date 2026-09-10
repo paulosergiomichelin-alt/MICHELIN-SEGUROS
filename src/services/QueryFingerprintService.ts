@@ -1,5 +1,5 @@
 
-import { QueryConstraint } from 'firebase/firestore';
+import { QueryConstraint } from '../lib/queryConstraints';
 import { SecurityService } from './SecurityService';
 
 /**

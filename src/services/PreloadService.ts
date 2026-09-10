@@ -4,7 +4,7 @@ import { CacheManager } from './CacheManager';
 import { MessageCacheService } from './MessageCacheService';
 import { metricsService } from './MetricsService';
 import { logger } from './LoggerService';
-import { where, orderBy, limit, QueryConstraint } from 'firebase/firestore';
+import { where, orderBy, limit, QueryConstraint } from '../lib/queryConstraints';
 
 export class PreloadService {
   private static isPreloading = false;

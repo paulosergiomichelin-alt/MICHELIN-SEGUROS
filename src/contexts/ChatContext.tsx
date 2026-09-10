@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Message, Lead } from '../types';
 import { DataService } from '../services/DataService';
-import { orderBy, where, limit } from 'firebase/firestore';
+import { orderBy, where, limit } from '../lib/queryConstraints';
 import { OrchestratorService } from '../services/OrchestratorService';
 import { useLeads } from './LeadRealtimeContext';
 

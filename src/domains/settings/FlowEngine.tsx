@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { Flow, LeadStatus } from '../../types';
 import { DataService } from '../../services/DataService';
-import { orderBy, where } from 'firebase/firestore';
+import { orderBy, where } from '../../lib/queryConstraints';
 import { cn } from '../../lib/utils';
 import { handleFirestoreError, OperationType } from '../../lib/firestore-utils';
 import { CacheManager } from '../../services/CacheManager';

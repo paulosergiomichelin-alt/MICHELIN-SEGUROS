@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { orderBy, where } from 'firebase/firestore';
+import { orderBy, where } from '../../lib/queryConstraints';
 import { DataService } from '../../services/DataService';
 import { AccessProfile } from '../../types';
 import {
