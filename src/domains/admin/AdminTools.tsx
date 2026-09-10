@@ -13,9 +13,8 @@ import {
   Zap,
   Crown
 } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
 import { cn } from '../../lib/utils';
-import { db, auth } from '../../lib/firebase';
+import { auth } from '../../lib/firebase';
 import { DataService } from '../../services/DataService';
 import { CacheManager } from '../../services/CacheManager';
 import { metricsService } from '../../services/MetricsService';
@@ -45,7 +44,7 @@ export function AdminTools() {
     if (!uid) { addLog('Nenhum usuário autenticado.', 'error'); return; }
     setMasterLoading(true);
     try {
-      await updateDoc(doc(db, 'users', uid), { superadmin: true });
+      await DataService.update('users', uid, { superadmin: true });
       setMasterDone(true);
       addLog('superadmin: true definido com sucesso. Recarregue a página.', 'success');
     } catch (e: any) {

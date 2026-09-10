@@ -1,5 +1,4 @@
-import { auth, db } from '../lib/firebase';
-import { writeBatch, doc, increment, serverTimestamp, collection } from 'firebase/firestore';
+import { auth } from '../lib/firebase';
 import { SecurityService } from './SecurityService';
 import { DataService } from './DataService';
 
@@ -81,11 +80,9 @@ class MetricsService {
 
     this.isFlushing = true;
     const batchData = [...this.buffer];
-    const firestoreBatch = writeBatch(db);
-    
+
     const today = new Date().toISOString().split('T')[0];
-    const userMetricsRef = doc(db, 'metrics_users', `${user.uid}_${today}`);
-    const dailyMetricsRef = doc(db, 'metrics_daily', today);
+    const userMetricsId = `${user.uid}_${today}`;
 
     // Aggregate values in memory before batching
     const aggregations: Record<string, number> = {};
@@ -94,25 +91,35 @@ class MetricsService {
     });
 
     try {
-      // Multi-document write for distributed scale
-      const updateData: any = {};
-      Object.entries(aggregations).forEach(([name, value]) => {
-        updateData[`values.${name}`] = increment(value);
+      // metrics_users/metrics_daily guardam um jsonb `data` de granularidade diária —
+      // sem dot-notation de increment como no Firestore, lê o valor atual, soma em
+      // memória e regrava por completo (aceitável: métrica por usuário/dia, baixa
+      // concorrência simultânea no mesmo dia).
+      const [existingUserMetrics, existingDailyMetrics] = await Promise.all([
+        DataService.get('metrics_users', userMetricsId),
+        DataService.get('metrics_daily', today),
+      ]);
+
+      const mergeValues = (existing: any) => {
+        const values = { ...(existing?.data?.values ?? {}) };
+        Object.entries(aggregations).forEach(([name, value]) => {
+          values[name] = (values[name] || 0) + value;
+        });
+        return { values, updatedAt: new Date().toISOString(), userId: user.uid };
+      };
+
+      await DataService.save('metrics_users', userMetricsId, {
+        id: userMetricsId, userId: user.uid, day: today, data: mergeValues(existingUserMetrics),
       });
-      updateData.updatedAt = serverTimestamp();
-      updateData.userId = user.uid;
-
-      firestoreBatch.set(userMetricsRef, updateData, { merge: true });
-      firestoreBatch.set(dailyMetricsRef, updateData, { merge: true });
-
-      // Keep raw logs in separate collection for audit but with auto-id
-      batchData.forEach(m => {
-        const ref = doc(collection(db, 'metrics_raw'));
-        firestoreBatch.set(ref, { ...m, userId: user.uid });
+      await DataService.save('metrics_daily', today, {
+        day: today, data: mergeValues(existingDailyMetrics),
       });
 
-      await firestoreBatch.commit();
-      
+      // Keep raw logs in separate collection for audit but with auto-id (bigserial —
+      // sem PK de negócio, cada evento vai direto via create/insert simples, não via
+      // _batch, para deixar o Postgres gerar o id automaticamente).
+      await Promise.all(batchData.map((m) => DataService.create('metrics_raw', { event: { ...m, userId: user.uid } })));
+
       this.buffer = this.buffer.filter(m => !batchData.includes(m));
       console.log(`[METRICS_BATCH_SUCCESS] ${batchData.length} distributed metrics persisted.`);
     } catch (err) {

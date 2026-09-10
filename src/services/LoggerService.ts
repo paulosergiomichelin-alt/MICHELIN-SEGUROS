@@ -1,6 +1,6 @@
 
-import { db, auth } from '../lib/firebase';
-import { collection, serverTimestamp, writeBatch, doc } from 'firebase/firestore';
+import { auth } from '../lib/firebase';
+import { dataApiClient } from '../lib/dataApiClient';
 
 export enum LogLevel {
   INFO = 'INFO',
@@ -89,12 +89,9 @@ class LoggerService {
     this.logQueue = [];
 
     try {
-      const batch = writeBatch(db);
-      
-      for (const log of logsToSync) {
+      const operations = logsToSync.map((log) => {
         const logId = SecurityService.generateId(this.collectionName);
-        const logRef = doc(collection(db, this.collectionName), logId);
-        
+
         // Clean undefined fields
         const cleanLog: any = {};
         Object.keys(log).forEach(key => {
@@ -103,13 +100,15 @@ class LoggerService {
             }
         });
 
-        batch.set(logRef, {
-          ...cleanLog,
-          timestamp: serverTimestamp()
-        });
-      }
-      
-      await batch.commit();
+        return {
+          type: 'set' as const,
+          entity: this.collectionName,
+          id: logId,
+          data: { ...cleanLog, id: logId, timestamp: new Date().toISOString() },
+        };
+      });
+
+      await dataApiClient.create('_batch' as any, { operations });
     } catch (e) {
       console.error('Logger failed to flush logs:', e);
       // Fallback: put logs back in queue if not too large

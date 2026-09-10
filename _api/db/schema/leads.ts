@@ -54,21 +54,25 @@ export const messages = pgTable('messages', {
   index('idx_messages_lead').on(t.leadId, t.timestamp),
 ]);
 
+// AppNotification (types.ts) mistura snake_case e camelCase no mesmo tipo (user_id,
+// lead_id, created_at, created_by são snake — leadName, organizationId são camel) —
+// nomes de propriedade abaixo casam exatamente com o tipo, não com uma convenção única,
+// porque é isso que o código que constrói/lê AppNotification já espera.
 export const notifications = pgTable('notifications', {
   id: text('id').primaryKey(),
   organizationId: text('organization_id').references(() => organizations.id),
-  userId: text('user_id').notNull(),
-  leadId: text('lead_id').references(() => leads.id),
+  user_id: text('user_id').notNull(),
+  lead_id: text('lead_id').references(() => leads.id),
   leadName: text('lead_name'),
   title: text('title').notNull(),
   message: text('message').notNull(),
   type: text('type').notNull(),
   priority: text('priority').notNull(),
   read: boolean('read').notNull().default(false),
-  createdBy: text('created_by').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  created_by: text('created_by').notNull(),
+  created_at: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 }, (t) => [
-  index('idx_notifications_user_read').on(t.userId, t.read),
+  index('idx_notifications_user_read').on(t.user_id, t.read),
 ]);
 
 export const followUps = pgTable('follow_ups', {

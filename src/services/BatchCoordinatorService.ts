@@ -1,5 +1,4 @@
-import { writeBatch, doc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { dataApiClient } from '../lib/dataApiClient';
 import { logger } from './LoggerService';
 
 export interface BatchOperation {
@@ -10,8 +9,9 @@ export interface BatchOperation {
 }
 
 /**
- * BatchCoordinatorService: Consolida múltiplas operações no Firestore em um único commit atômico.
- * Reduz custos e previne estados inconsistentes.
+ * BatchCoordinatorService: Consolida múltiplas operações no Postgres em uma única
+ * transação atômica (POST /api/data/_batch). Reduz round-trips e previne estados
+ * inconsistentes.
  */
 export class BatchCoordinatorService {
   private static readonly MAX_BATCH_SIZE = 500;
@@ -30,26 +30,15 @@ export class BatchCoordinatorService {
       return;
     }
 
-    const batch = writeBatch(db);
-    
-    for (const op of operations) {
-      const ref = doc(db, op.collection, op.id);
-      
-      switch (op.type) {
-        case 'set':
-          batch.set(ref, { ...op.data, updatedAt: new Date().toISOString() });
-          break;
-        case 'update':
-          batch.update(ref, { ...op.data, updatedAt: new Date().toISOString() });
-          break;
-        case 'delete':
-          batch.delete(ref);
-          break;
-      }
-    }
+    const payload = operations.map((op) => ({
+      type: op.type,
+      entity: op.collection,
+      id: op.id,
+      data: op.type === 'delete' ? undefined : { ...op.data, updatedAt: new Date().toISOString() },
+    }));
 
     try {
-      await batch.commit();
+      await dataApiClient.create('_batch' as any, { operations: payload });
       logger.info('BATCH', `Commit de ${operations.length} operações realizado com sucesso. Fonte: ${source}`);
     } catch (error) {
       logger.error('BATCH', `Falha no commit do batch (${operations.length} ops)`, error);

@@ -31,6 +31,9 @@ export const ENTITY_TABLE: Record<string, any> = {
   tenant_onboarding_wizard_state: schema.tenantOnboardingWizardState,
   nfse_documents: schema.nfseDocuments,
   nfse_logs: schema.nfseLogs,
+  metrics_raw: schema.metricsRaw,
+  metrics_users: schema.metricsUsers,
+  metrics_daily: schema.metricsDaily,
 };
 
 // A maioria das tabelas usa `id` como PK — estas duas usam organization_id como PK
@@ -42,6 +45,7 @@ export const ENTITY_TABLE: Record<string, any> = {
 export const PK_COLUMN: Record<string, string> = {
   tenant_agent_configs: 'organizationId',
   tenant_onboarding_wizard_state: 'organizationId',
+  metrics_daily: 'day',
 };
 
 export function pkPropertyName(entity: string): string {

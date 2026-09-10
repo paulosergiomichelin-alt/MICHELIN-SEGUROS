@@ -30,13 +30,20 @@ export const auditLogs = pgTable('audit_logs', {
   index('idx_audit_org_time').on(t.organizationId, t.timestamp),
 ]);
 
-// Schema exato a confirmar contra LoggerService.ts antes de migrar dados reais (ver SPEC §4.4).
+// Schema confirmado contra src/services/LoggerService.ts (interface SystemLog) na Fase 3
+// Task 11 — a versão original da spec (level/message/context/created_at) estava incompleta.
 export const systemLogs = pgTable('system_logs', {
   id: text('id').primaryKey(),
+  timestamp: timestamp('timestamp', { withTimezone: true, mode: 'string' }).notNull(),
   level: text('level').notNull(),
+  category: text('category').notNull(),
   message: text('message').notNull(),
-  context: jsonb('context'),
-  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  userId: text('user_id'),
+  userEmail: text('user_email'),
+  action: text('action'),
+  details: jsonb('details'),
+  stackTrace: text('stack_trace'),
+  source: text('source'),
 });
 
 export const migrationLogs = pgTable('migration_logs', {

@@ -130,6 +130,48 @@ dataRouter.post('/_claims/message', async (req, res) => {
   res.json({ claimed: !!row });
 });
 
+// Escrita atômica multi-operação (LoggerService.flush, MetricsService, BatchCoordinatorService
+// via leadAutomation.ts) — várias operações numa única transação real, com a mesma proteção de
+// isolamento de tenant das rotas genéricas (org injetada em "set", filtrada em "update"/"delete").
+type BatchOp = { type: 'set' | 'update' | 'delete'; entity: string; id: string; data?: Record<string, any> };
+
+dataRouter.post('/_batch', async (req: any, res) => {
+  const operations: BatchOp[] = req.body.operations ?? [];
+  const results = await getDb().transaction(async (tx) => {
+    const out: any[] = [];
+    for (const op of operations) {
+      const table = ENTITY_TABLE[op.entity];
+      if (!table) throw new Error(`_batch: entidade desconhecida "${op.entity}"`);
+      const pkProp = pkPropertyName(op.entity);
+      const data = { ...(op.data ?? {}) };
+
+      if (op.type === 'set') {
+        if (!req.userSuperadmin && ORG_SCOPED_ENTITIES.has(op.entity) && table.organizationId) {
+          data.organizationId = req.organizationId;
+        }
+        const [row] = await tx.insert(table).values({ ...data, [pkProp]: op.id })
+          .onConflictDoUpdate({ target: pkColumn(op.entity, table), set: data }).returning();
+        out.push(row);
+      } else if (op.type === 'update') {
+        const scope = orgScopeWhere(op.entity, table, req);
+        const idEq = eq(pkColumn(op.entity, table), op.id);
+        const [row] = await tx.update(table).set(data).where(scope ? and(idEq, scope) : idEq).returning();
+        out.push(row ?? null);
+      } else {
+        const scope = orgScopeWhere(op.entity, table, req);
+        const idEq = eq(pkColumn(op.entity, table), op.id);
+        await tx.delete(table).where(scope ? and(idEq, scope) : idEq);
+        out.push({ [pkProp]: op.id, deleted: true });
+      }
+    }
+    return out;
+  });
+  for (const [i, op] of operations.entries()) {
+    await emitDataChanged(op.entity, op.id, results[i]?.organizationId ?? null);
+  }
+  res.status(200).json(results);
+});
+
 dataRouter.get('/:entity/:id', async (req: any, res) => {
   const table = resolveTable(req.params.entity, res); if (!table) return;
   const scope = orgScopeWhere(req.params.entity, table, req);
