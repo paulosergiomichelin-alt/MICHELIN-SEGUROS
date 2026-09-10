@@ -7,7 +7,7 @@ import { ENTITY_TABLE, pkColumn, pkPropertyName } from './entityMap';
 import { buildWhere, buildOrderBy, buildStartAfter, getLimit } from './constraintsToSql';
 import { emitDataChanged } from '../lib/realtimeBus';
 import { normalizeTimestamps } from '../lib/normalizeTimestamps';
-import { leadStatusCounts, systemMetricsDashboard, organizations, users } from '../db/schema';
+import { leadStatusCounts, systemMetricsDashboard, organizations, users, processingLocks } from '../db/schema';
 
 export const dataRouter = Router();
 dataRouter.use(requireAuth);
@@ -83,6 +83,34 @@ dataRouter.post('/_metrics/total-leads', async (req, res) => {
   await getDb().update(systemMetricsDashboard)
     .set({ totalLeads: sql`${systemMetricsDashboard.totalLeads} + ${delta}` })
     .where(eq(systemMetricsDashboard.id, 'dashboard'));
+  res.status(204).end();
+});
+
+// Locks distribuídos (LockService.ts). Um SELECT seguido de INSERT/UPDATE, mesmo dentro de
+// uma transação, NÃO é atômico contra concorrência real: duas requisições simultâneas podem
+// ambas passar pelo SELECT antes de qualquer COMMIT, e uma delas quebra com violação de PK em
+// vez de retornar { acquired: false } — confirmado empiricamente ao testar duas aquisições
+// concorrentes do mesmo lock (uma delas lançava erro de chave duplicada). Corrigido com um
+// único INSERT ... ON CONFLICT DO UPDATE ... WHERE — atômico por natureza do Postgres: o WHERE
+// após DO UPDATE só aplica a atualização se o lock existente já expirou ou pertence ao mesmo
+// dono/instância; caso contrário a linha não é tocada e RETURNING não traz nada.
+dataRouter.post('/_locks/acquire', async (req, res) => {
+  const { id, ownerId, instanceId, ttlMs } = req.body;
+  const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+  const [row] = await getDb().insert(processingLocks)
+    .values({ id, resourceId: id, ownerId, instanceId, expiresAt })
+    .onConflictDoUpdate({
+      target: processingLocks.id,
+      set: { ownerId, instanceId, expiresAt },
+      where: sql`${processingLocks.expiresAt} <= now() or (${processingLocks.ownerId} = ${ownerId} and ${processingLocks.instanceId} = ${instanceId})`,
+    })
+    .returning();
+  res.json({ acquired: !!row });
+});
+
+dataRouter.post('/_locks/release', async (req, res) => {
+  const { id, ownerId } = req.body;
+  await getDb().delete(processingLocks).where(and(eq(processingLocks.id, id), eq(processingLocks.ownerId, ownerId)));
   res.status(204).end();
 });
 
