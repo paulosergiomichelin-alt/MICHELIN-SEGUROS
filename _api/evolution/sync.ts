@@ -1,4 +1,4 @@
-import { fsGet } from '../lib/adminFirebase.js';
+import { fsGet } from '../lib/pgData.js';
 import { syncSession } from '../lib/syncService.js';
 
 export default async function handler(req: any, res: any) {

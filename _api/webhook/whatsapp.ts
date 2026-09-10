@@ -1,4 +1,4 @@
-import { fsSet, fsUpdate, fsQuery } from '../lib/adminFirebase.js';
+import { fsSet, fsUpdate, fsQuery } from '../lib/pgData.js';
 import { MetaAPI } from '../lib/metaApi.js';
 import {
   setConversation, setMessage, getConversation,

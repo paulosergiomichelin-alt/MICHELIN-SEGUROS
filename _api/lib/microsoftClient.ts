@@ -1,4 +1,4 @@
-import { fsUpdate } from './adminFirebase.js';
+import { fsUpdate } from './pgData.js';
 import { encrypt, decrypt } from './emailEncryption.js';
 import { CachedEmail } from './emailCache.js';
 

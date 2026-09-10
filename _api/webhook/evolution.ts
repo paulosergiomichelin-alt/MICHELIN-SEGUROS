@@ -1,4 +1,4 @@
-import { fsUpdate, fsQuery, fsGet, fsSet } from '../lib/adminFirebase.js';
+import { fsUpdate, fsQuery, fsGet, fsSet } from '../lib/pgData.js';
 import { extractPhone, stripDDI, isGroup, isIgnoredJid, extractMessageContent, extractPhoneFromJid, mediaLabel } from '../lib/whatsappUtils.js';
 import { getSentEntry, clearSentById, trackForStatusUpdates, getOptimisticId } from '../lib/sentMessageIds.js';
 import { syncSession } from '../lib/syncService.js';

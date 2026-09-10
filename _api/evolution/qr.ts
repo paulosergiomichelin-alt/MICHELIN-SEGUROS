@@ -1,5 +1,5 @@
 import { EvolutionAPI } from '../lib/evolutionApi.js';
-import { fsUpdate } from '../lib/adminFirebase.js';
+import { fsUpdate } from '../lib/pgData.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') {

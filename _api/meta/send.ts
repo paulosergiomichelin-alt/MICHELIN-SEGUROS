@@ -1,5 +1,5 @@
 import { MetaAPI } from '../lib/metaApi.js';
-import { fsSet, fsQuery, fsUpdate } from '../lib/adminFirebase.js';
+import { fsSet, fsQuery, fsUpdate } from '../lib/pgData.js';
 import {
   setConversation, setMessage, getConversation,
   CachedConversation, CachedMessage,

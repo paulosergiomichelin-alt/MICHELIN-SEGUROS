@@ -1,4 +1,4 @@
-import { fsQueryFull } from '../lib/adminFirebase.js';
+import { fsQueryFull } from '../lib/pgData.js';
 import { getConversations, setConversation } from '../lib/conversationCache.js';
 import { META_SESSION_ID } from '../webhook/whatsapp.js';
 

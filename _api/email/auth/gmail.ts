@@ -1,4 +1,4 @@
-import { fsSet, fsQueryFull } from '../../lib/adminFirebase.js';
+import { fsSet, fsQueryFull } from '../../lib/pgData.js';
 import { encrypt } from '../../lib/emailEncryption.js';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';

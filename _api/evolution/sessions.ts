@@ -1,5 +1,5 @@
 import { EvolutionAPI } from '../lib/evolutionApi.js';
-import { fsSet, fsUpdate, fsDelete, fsQuery } from '../lib/adminFirebase.js';
+import { fsSet, fsUpdate, fsDelete, fsQuery } from '../lib/pgData.js';
 import { createLogger, errCtx } from '../lib/logger.js';
 
 const log = createLogger('evolution/sessions');

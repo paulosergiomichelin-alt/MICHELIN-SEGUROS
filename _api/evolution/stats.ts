@@ -1,4 +1,4 @@
-import { fsQueryFull } from '../lib/adminFirebase.js';
+import { fsQueryFull } from '../lib/pgData.js';
 import { getQueueStatus } from '../lib/messageQueue.js';
 import { getWebhookStats } from '../webhook/evolution.js';
 import { getReconcileStats } from './reconcile.js';

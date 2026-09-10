@@ -1,4 +1,4 @@
-import { fsSet, fsQueryFull } from '../../lib/adminFirebase.js';
+import { fsSet, fsQueryFull } from '../../lib/pgData.js';
 import { encrypt } from '../../lib/emailEncryption.js';
 
 const MS_AUTH_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';

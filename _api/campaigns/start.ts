@@ -1,4 +1,4 @@
-import { fsGet, fsSet, fsUpdate } from '../lib/adminFirebase.js';
+import { fsGet, fsSet, fsUpdate } from '../lib/pgData.js';
 import { EvolutionAPI } from '../lib/evolutionApi.js';
 
 // ── In-memory runner state ────────────────────────────────────────────────────

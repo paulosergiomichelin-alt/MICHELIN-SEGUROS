@@ -34,6 +34,8 @@ export const ENTITY_TABLE: Record<string, any> = {
   metrics_raw: schema.metricsRaw,
   metrics_users: schema.metricsUsers,
   metrics_daily: schema.metricsDaily,
+  email_accounts: schema.emailAccounts,
+  email_settings: schema.emailSettings,
 };
 
 // A maioria das tabelas usa `id` como PK — estas duas usam organization_id como PK
@@ -46,6 +48,7 @@ export const PK_COLUMN: Record<string, string> = {
   tenant_agent_configs: 'organizationId',
   tenant_onboarding_wizard_state: 'organizationId',
   metrics_daily: 'day',
+  email_settings: 'userId',
 };
 
 export function pkPropertyName(entity: string): string {

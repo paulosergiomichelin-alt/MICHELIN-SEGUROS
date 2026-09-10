@@ -1,4 +1,4 @@
-import { fsGet } from '../lib/adminFirebase.js';
+import { fsGet } from '../lib/pgData.js';
 import { getAllEmailsByFolder, CachedEmail } from '../lib/emailCache.js';
 import {
   getMessage as gmailGetMessage,

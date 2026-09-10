@@ -1,4 +1,4 @@
-import { pgTable, text, boolean, integer, jsonb, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, boolean, integer, bigint, jsonb, timestamp, index } from 'drizzle-orm/pg-core';
 import { organizations } from './core';
 import { leads } from './leads';
 
@@ -49,7 +49,13 @@ export const emailAccounts = pgTable('email_accounts', {
   status: text('status').notNull(),
   lastSync: timestamp('last_sync', { withTimezone: true, mode: 'string' }),
   syncError: text('sync_error'),
-  oauthTokens: jsonb('oauth_tokens').notNull(),
+  // accessToken/refreshToken/tokenExpiry são campos de nível superior (confirmado contra
+  // gmailClient.ts/microsoftClient.ts/email/auth/gmail.ts) — NÃO um blob oauthTokens
+  // aninhado como a spec original assumia (cópia indevida do padrão de outra entidade).
+  accessToken: text('access_token').notNull(),
+  refreshToken: text('refresh_token').notNull(),
+  tokenExpiry: bigint('token_expiry', { mode: 'number' }),
+  picture: text('picture'),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });

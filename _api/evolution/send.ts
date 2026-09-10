@@ -1,4 +1,4 @@
-import { fsGet } from '../lib/adminFirebase.js';
+import { fsGet } from '../lib/pgData.js';
 import { enqueueMessage, getQueueStatus } from '../lib/messageQueue.js';
 import { markSentByUs } from '../lib/sentMessageIds.js';
 import { setMessage, updateMessage, updateConversation, getConversation, CachedMessage } from '../lib/conversationCache.js';

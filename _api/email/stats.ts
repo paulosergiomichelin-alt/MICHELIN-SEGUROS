@@ -1,4 +1,4 @@
-import { fsQueryFull } from '../lib/adminFirebase.js';
+import { fsQueryFull } from '../lib/pgData.js';
 import {
   getAccountFolderCounts, getUnreadCount, cacheStats,
 } from '../lib/emailCache.js';

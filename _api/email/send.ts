@@ -1,4 +1,4 @@
-import { fsGet } from '../lib/adminFirebase.js';
+import { fsGet } from '../lib/pgData.js';
 import { setEmail, CachedEmail } from '../lib/emailCache.js';
 import { emitGlobal } from '../lib/socketRegistry.js';
 import {

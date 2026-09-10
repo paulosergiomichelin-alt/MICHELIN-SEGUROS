@@ -1,4 +1,4 @@
-import { fsGet, fsSet } from '../lib/adminFirebase.js';
+import { fsGet, fsSet } from '../lib/pgData.js';
 
 interface EmailSettings {
   userId: string;

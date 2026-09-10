@@ -1,4 +1,4 @@
-import { fsGet, fsQueryFull, fsUpdate } from './adminFirebase.js';
+import { fsGet, fsQueryFull, fsUpdate } from './pgData.js';
 import { decrypt } from './emailEncryption.js';
 import {
   setEmail, setSyncState, getSyncState, cacheStats,

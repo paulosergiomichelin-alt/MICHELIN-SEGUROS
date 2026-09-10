@@ -1,4 +1,4 @@
-import { fsGet } from '../lib/adminFirebase.js';
+import { fsGet } from '../lib/pgData.js';
 import { EvolutionAPI } from '../lib/evolutionApi.js';
 import { reconcileSession } from '../lib/syncService.js';
 import { getActiveSessions } from '../webhook/evolution.js';

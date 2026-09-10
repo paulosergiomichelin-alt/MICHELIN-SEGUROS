@@ -1,4 +1,4 @@
-import { fsUpdate } from '../lib/adminFirebase.js';
+import { fsUpdate } from '../lib/pgData.js';
 import { setCampaignRunnerState } from './start.js';
 
 export default async function handler(req: any, res: any) {

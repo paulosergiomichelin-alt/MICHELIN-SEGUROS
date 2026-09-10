@@ -1,4 +1,4 @@
-import { fsQueryFull, fsDelete, fsUpdate } from '../lib/adminFirebase.js';
+import { fsQueryFull, fsDelete, fsUpdate } from '../lib/pgData.js';
 import { clearAccount } from '../lib/emailCache.js';
 
 function stripTokens(account: Record<string, any>): Record<string, any> {

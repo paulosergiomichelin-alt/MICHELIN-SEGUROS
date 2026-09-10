@@ -1,4 +1,4 @@
-import { fsGet } from '../lib/adminFirebase.js';
+import { fsGet } from '../lib/pgData.js';
 import {
   getAllEmailsByFolder, setEmail, removeEmail, CachedEmail,
 } from '../lib/emailCache.js';
