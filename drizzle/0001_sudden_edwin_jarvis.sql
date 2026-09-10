@@ -1,0 +1,2 @@
+ALTER TABLE "clientes" ADD CONSTRAINT "clientes_lead_origem_id_leads_id_fk" FOREIGN KEY ("lead_origem_id") REFERENCES "public"."leads"("id") ON DELETE no action ON UPDATE no action DEFERRABLE INITIALLY DEFERRED;--> statement-breakpoint
+ALTER TABLE "leads" ADD CONSTRAINT "leads_cliente_id_clientes_id_fk" FOREIGN KEY ("cliente_id") REFERENCES "public"."clientes"("id") ON DELETE no action ON UPDATE no action DEFERRABLE INITIALLY DEFERRED;
