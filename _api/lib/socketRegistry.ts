@@ -13,6 +13,10 @@ export function setIo(io: IoLike): void {
   _io = io;
 }
 
+export function getIo(): IoLike | null {
+  return _io;
+}
+
 export function emitToSession(sessionId: string, event: string, data: any): void {
   _io?.to(`session:${sessionId}`).emit(event, data);
 }

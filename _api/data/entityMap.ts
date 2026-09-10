@@ -1,0 +1,28 @@
+import * as schema from '../db/schema';
+
+export const ENTITY_TABLE: Record<string, any> = {
+  leads: schema.leads, lead: schema.leads,
+  users: schema.users, user: schema.users,
+  access_profiles: schema.accessProfiles, access_profile: schema.accessProfiles,
+  audit_logs: schema.auditLogs, audit_log: schema.auditLogs,
+  system_logs: schema.systemLogs, system_log: schema.systemLogs,
+  notifications: schema.notifications, notification: schema.notifications,
+  messages: schema.messages, message: schema.messages,
+  follow_ups: schema.followUps, follow_up: schema.followUps,
+  flows: schema.flows, flow: schema.flows,
+  learning_memory: schema.learningMemory,
+  dead_letter_queue: schema.deadLetterQueue,
+  migration_logs: schema.migrationLogs,
+  processing_locks: schema.processingLocks,
+  empresas: schema.organizations, empresa: schema.organizations,
+  clientes: schema.clientes, cliente: schema.clientes,
+  cliente_relacionamentos: schema.clienteRelacionamentos, cliente_relacionamento: schema.clienteRelacionamentos,
+  seguradoras: schema.seguradoras, seguradora: schema.seguradoras,
+  whatsapp_sessions: schema.whatsappSessions, whatsapp_session: schema.whatsappSessions,
+  whatsapp_conversations: schema.whatsappConversations, whatsapp_conversation: schema.whatsappConversations,
+  whatsapp_messages: schema.whatsappMessages, whatsapp_message: schema.whatsappMessages,
+  campaigns: schema.campaigns, campaign: schema.campaigns,
+  campaign_log: schema.campaignLog,
+  settings: schema.settings,
+  config: schema.config,
+};

@@ -142,6 +142,11 @@ async function startServer() {
     }
   });
 
+  // ── API genérica de dados (Postgres/Neon) — migração gradual do Firestore ────
+  const { dataRouter } = await import('./_api/data/router.js');
+  app.use('/api/data', dataRouter);
+  log.info('API genérica de dados (Postgres) registrada em /api/data');
+
   // ── Meta / WhatsApp Cloud API routes ─────────────────────────────────────────
   const { handleVerify: metaVerify, handleEvent: metaEvent } = await import('./_api/webhook/whatsapp.js');
   const { default: metaSendHandler }          = await import('./_api/meta/send.js');
@@ -376,6 +381,9 @@ async function startServer() {
     });
     socket.on('leave_session', (sessionName: string) => {
       socket.leave(`session:${sessionName}`);
+    });
+    socket.on('join:org', (organizationId: string) => {
+      socket.join(`org:${organizationId}`);
     });
     socket.on('disconnect', reason => {
       log.info('Socket.IO client desconectado', { socketId: socket.id, reason });
