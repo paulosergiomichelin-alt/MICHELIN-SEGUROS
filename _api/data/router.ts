@@ -7,7 +7,7 @@ import { ENTITY_TABLE, pkColumn, pkPropertyName } from './entityMap';
 import { buildWhere, buildOrderBy, buildStartAfter, getLimit } from './constraintsToSql';
 import { emitDataChanged } from '../lib/realtimeBus';
 import { normalizeTimestamps } from '../lib/normalizeTimestamps';
-import { leadStatusCounts, systemMetricsDashboard, organizations, users, processingLocks } from '../db/schema';
+import { leadStatusCounts, systemMetricsDashboard, organizations, users, processingLocks, messages } from '../db/schema';
 
 export const dataRouter = Router();
 dataRouter.use(requireAuth);
@@ -112,6 +112,22 @@ dataRouter.post('/_locks/release', async (req, res) => {
   const { id, ownerId } = req.body;
   await getDb().delete(processingLocks).where(and(eq(processingLocks.id, id), eq(processingLocks.ownerId, ownerId)));
   res.status(204).end();
+});
+
+// Claim idempotente de mensagem (leadAutomation.ts) — equivalente ao runTransaction
+// original que lia messages/{id}.aiProcessed e só marcava se ainda não estivesse marcado.
+// Mesmo padrão atômico dos locks: UPDATE condicional + RETURNING, sem SELECT prévio, para
+// não reabrir a mesma janela de corrida (duas invocações do mesmo webhook em paralelo).
+dataRouter.post('/_claims/message', async (req, res) => {
+  const { messageId } = req.body;
+  const [row] = await getDb().update(messages)
+    .set({ aiProcessed: true, aiProcessingStartedAt: new Date().toISOString() })
+    .where(and(eq(messages.id, messageId), sql`(${messages.aiProcessed} is not true)`))
+    .returning();
+  // claimed=true → mensagem existe e não estava processada, agora está sob nossa responsabilidade.
+  // claimed=false → ou não existe, ou já tinha sido processada — nos dois casos, pular (mesma
+  // semântica do original: `if (!mSnap.exists()) return true;` tratava "não existe" como "já claimed").
+  res.json({ claimed: !!row });
 });
 
 dataRouter.get('/:entity/:id', async (req: any, res) => {

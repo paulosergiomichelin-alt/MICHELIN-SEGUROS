@@ -1,5 +1,4 @@
-import { doc, runTransaction } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { dataApiClient } from '../lib/dataApiClient';
 import { Lead, Message, AgentConfig } from '../types';
 import { DataService } from './DataService';
 import { metricsService } from './MetricsService';
@@ -32,30 +31,18 @@ export class LeadAutomationService {
 
   private async executeProcessing(msg: Message, agentConfig: AgentConfig) {
     const totalTimer = metricsService.startTimer();
-    const msgRef = doc(db, 'messages', msg.id);
     const orgId = msg.organizationId || 'default';
-    
+
     // Prevent re-processing in same instance
     if (this.localProcessing.has(msg.id)) return;
     this.localProcessing.add(msg.id);
 
     try {
-      // 1. TRANSACTIONAL LOCK (Firestore Side)
-      const isAlreadyClaimed = await runTransaction(db, async (transaction) => {
-        const mSnap = await transaction.get(msgRef);
-        if (!mSnap.exists()) return true; 
+      // 1. CLAIM ATÔMICO (Postgres side) — UPDATE condicional + RETURNING, sem SELECT
+      // prévio, para não reabrir a mesma janela de corrida entre invocações concorrentes.
+      const { claimed } = await dataApiClient.create('_claims/message' as any, { messageId: msg.id });
 
-        const mData = mSnap.data() as Message;
-        if (mData.aiProcessed) return true;
-        
-        transaction.update(msgRef, { 
-          aiProcessed: true, 
-          aiProcessingStartedAt: new Date().toISOString() 
-        });
-        return false;
-      });
-
-      if (isAlreadyClaimed) return;
+      if (!claimed) return;
 
       // 2. DISTRIBUTED LOCK (Orchestration Level)
       const hasLock = await LockService.getInstance().acquireLock(msg.leadId, 'orchestration', orgId);
