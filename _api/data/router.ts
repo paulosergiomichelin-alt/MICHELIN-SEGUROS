@@ -6,12 +6,29 @@ import { loadTenantContext, ORG_SCOPED_ENTITIES } from './tenantMiddleware';
 import { ENTITY_TABLE } from './entityMap';
 import { buildWhere, buildOrderBy, buildStartAfter, getLimit } from './constraintsToSql';
 import { emitDataChanged } from '../lib/realtimeBus';
-import { leadStatusCounts, systemMetricsDashboard } from '../db/schema';
+import { leadStatusCounts, systemMetricsDashboard, organizations, users } from '../db/schema';
 
 export const dataRouter = Router();
 dataRouter.use(requireAuth);
 
 dataRouter.get('/_whoami', (req: any, res) => res.json({ uid: req.userId }));
+
+// Bootstrap de onboarding — registrada ANTES de loadTenantContext de propósito: um usuário
+// recém-criado no Firebase Auth ainda não tem linha em `users`, então o middleware de tenant
+// (que exige perfil existente) bloquearia a própria criação desse perfil. É a única rota deste
+// router que não passa por isolamento de tenant, porque ainda não existe tenant a isolar.
+dataRouter.post('/_onboarding/empresa', async (req: any, res) => {
+  const { empresa, user } = req.body;
+  if (!empresa?.id || !user?.id) return res.status(400).json({ error: 'empresa.id e user.id são obrigatórios' });
+  if (user.id !== req.userId) return res.status(403).json({ error: 'user.id deve corresponder ao usuário autenticado' });
+  const [empresaRow] = await getDb().transaction(async (tx) => {
+    const [e] = await tx.insert(organizations).values(empresa)
+      .onConflictDoUpdate({ target: organizations.id, set: empresa }).returning();
+    await tx.insert(users).values(user).onConflictDoUpdate({ target: users.id, set: user });
+    return [e];
+  });
+  res.status(201).json(empresaRow);
+});
 
 // Tudo a partir daqui exige um perfil de usuário cadastrado (users) e é automaticamente
 // filtrado pela organização desse usuário quando a entidade é org-scoped — antes desta
@@ -25,7 +42,18 @@ function resolveTable(entity: string, res: any) {
 }
 
 function orgScopeWhere(entity: string, table: any, req: any) {
-  if (!ORG_SCOPED_ENTITIES.has(entity) || !table.organizationId) return undefined;
+  // Superadmins bypassam isolamento de tenant — mesma regra de DataPolicyService.applyVisibilityConstraints
+  // no cliente (ADR-6). Sem este bypass, telas de administração de plataforma (ex.: listar todas as
+  // empresas) ficariam presas à organização do próprio superadmin.
+  if (req.userSuperadmin) return undefined;
+  if (!ORG_SCOPED_ENTITIES.has(entity)) return undefined;
+  // Caso especial: `organizations` (empresas) não tem coluna organization_id — a própria
+  // linha É a organização. Sem este caso, o guard genérico abaixo (!table.organizationId)
+  // pulava a checagem inteira e qualquer usuário autenticado lia a empresa de qualquer
+  // outro tenant pela API genérica. Descoberto ao testar leitura cross-tenant após a troca
+  // de driver — não é uma regressão da troca, já existia desde a Fase 2 Task 1.
+  if (entity === 'empresas' || entity === 'empresa') return eq(table.id, req.organizationId);
+  if (!table.organizationId) return undefined;
   return eq(table.organizationId, req.organizationId);
 }
 
@@ -77,7 +105,7 @@ dataRouter.post('/:entity/query', async (req: any, res) => {
 
 dataRouter.post('/:entity', async (req: any, res) => {
   const table = resolveTable(req.params.entity, res); if (!table) return;
-  if (ORG_SCOPED_ENTITIES.has(req.params.entity) && table.organizationId) {
+  if (!req.userSuperadmin && ORG_SCOPED_ENTITIES.has(req.params.entity) && table.organizationId) {
     if (req.body.organizationId && req.body.organizationId !== req.organizationId) {
       return res.status(403).json({ error: 'organizationId do payload não corresponde ao usuário autenticado' });
     }
@@ -99,7 +127,7 @@ dataRouter.patch('/:entity/:id', async (req: any, res) => {
 
 dataRouter.put('/:entity/:id', async (req: any, res) => {
   const table = resolveTable(req.params.entity, res); if (!table) return;
-  if (ORG_SCOPED_ENTITIES.has(req.params.entity) && table.organizationId) {
+  if (!req.userSuperadmin && ORG_SCOPED_ENTITIES.has(req.params.entity) && table.organizationId) {
     if (req.body.organizationId && req.body.organizationId !== req.organizationId) {
       return res.status(403).json({ error: 'organizationId do payload não corresponde ao usuário autenticado' });
     }

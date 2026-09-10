@@ -1,20 +1,11 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  getDocs,
-  onSnapshot,
-} from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { createUserWithEmailAndPassword, updateProfile, getAuth, fetchSignInMethodsForEmail } from 'firebase/auth';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { db, storage } from '../lib/firebase';
+import { storage } from '../lib/firebase';
 import { generateId } from '../lib/utils';
+import { DataService } from './DataService';
+import { where } from '../lib/queryConstraints';
+import { dataApiClient } from '../lib/dataApiClient';
 import type { Empresa, EmpresaMetricas, PlanSaas, StatusEmpresa } from '../types';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -76,15 +67,13 @@ function slugify(text: string): string {
 
 async function gerarSlugUnico(nome: string): Promise<string> {
   const base = slugify(nome);
-  const empresasRef = collection(db, 'empresas');
 
   // Try the base slug first, then append random suffixes
-  const candidates = [base, ...Array.from({ length: 10 }, (_, i) => `${base}-${generateId(4 + i)}`)] ;
+  const candidates = [base, ...Array.from({ length: 10 }, (_, i) => `${base}-${generateId(4 + i)}`)];
 
   for (const candidate of candidates) {
-    const q = query(empresasRef, where('slug', '==', candidate));
-    const snap = await getDocs(q);
-    if (snap.empty) return candidate;
+    const matches = await DataService.list('empresas', [where('slug', '==', candidate)]);
+    if (matches.length === 0) return candidate;
   }
 
   // Fallback: slug + full random id (guaranteed unique enough)
@@ -102,8 +91,8 @@ export const EmpresaService = {
    * Full onboarding flow:
    * 1. Create Firebase Auth user
    * 2. Generate empresa ID
-   * 3. Write users/{uid} doc
-   * 4. Write empresas/{empresaId} doc
+   * 3. Write empresa + user profile via rota de bootstrap dedicada (usuário ainda não
+   *    tem perfil em `users`, então não pode passar pelo isolamento de tenant genérico)
    */
   async onboarding(data: {
     nomeRazaoSocial: string;
@@ -124,7 +113,7 @@ export const EmpresaService = {
     }
 
     // Step 0 — Pre-check: abort immediately if the email is already in Firebase Auth.
-    // This prevents creating an orphaned Auth user when the Firestore write would fail.
+    // This prevents creating an orphaned Auth user when the write would fail.
     const { firestoreDatabaseId: _ignored, ...standardConfig } = firebaseConfig as typeof firebaseConfig & { firestoreDatabaseId?: string };
     const checkApp  = initializeApp(standardConfig, `email-check-${Date.now()}`);
     const checkAuth = getAuth(checkApp);
@@ -184,9 +173,8 @@ export const EmpresaService = {
       atualizadoEm: now.toISOString(),
     };
 
-    // Step 5 — Write user doc
     const userDoc = {
-      uid,
+      id: uid,
       email: data.ownerEmail,
       name: data.ownerNome,
       phone: data.ownerTelefone ?? null,
@@ -206,19 +194,14 @@ export const EmpresaService = {
       updatedAt: now.toISOString(),
     };
 
-    // merge: true preserves existing fields (e.g. superadmin) on re-registration
-    await setDoc(doc(db, 'users', uid), userDoc, { merge: true });
-
-    // Step 6 — Write empresa doc
-    await setDoc(doc(db, 'empresas', empresaId), empresa, { merge: true });
+    // Step 5 — Write empresa + user profile atomicamente via rota de bootstrap
+    await dataApiClient.create('_onboarding/empresa' as any, { empresa, user: userDoc });
 
     return { empresa, uid };
   },
 
   async getEmpresa(id: string): Promise<Empresa | null> {
-    const snap = await getDoc(doc(db, 'empresas', id));
-    if (!snap.exists()) return null;
-    return snap.data() as Empresa;
+    return DataService.get('empresas', id);
   },
 
   async updateEmpresa(id: string, data: Partial<Empresa>): Promise<void> {
@@ -226,13 +209,13 @@ export const EmpresaService = {
       ...data,
       atualizadoEm: new Date().toISOString(),
     };
-    // Remove undefined values to avoid Firestore errors
+    // Remove undefined values antes de enviar
     Object.keys(updateData).forEach((k) => {
       if ((updateData as Record<string, unknown>)[k] === undefined) {
         delete (updateData as Record<string, unknown>)[k];
       }
     });
-    await updateDoc(doc(db, 'empresas', id), updateData);
+    await DataService.update('empresas', id, updateData);
   },
 
   async uploadLogo(empresaId: string, file: File): Promise<string> {
@@ -251,8 +234,8 @@ export const EmpresaService = {
     await uploadBytes(storageRef, file, { contentType: file.type });
     const url = await getDownloadURL(storageRef);
 
-    // Persist URL in empresa doc
-    await updateDoc(doc(db, 'empresas', empresaId), {
+    // Persist URL in empresa row
+    await DataService.update('empresas', empresaId, {
       logoUrl: url,
       atualizadoEm: new Date().toISOString(),
     });
@@ -261,8 +244,7 @@ export const EmpresaService = {
   },
 
   async listEmpresas(): Promise<Empresa[]> {
-    const snap = await getDocs(collection(db, 'empresas'));
-    return snap.docs.map((d) => d.data() as Empresa);
+    return DataService.list('empresas');
   },
 
   async getMetricas(empresaId: string): Promise<EmpresaMetricas> {
@@ -270,24 +252,19 @@ export const EmpresaService = {
     if (!empresa) throw new Error('Empresa não encontrada');
 
     // Count users in this org
-    const usersSnap = await getDocs(
-      query(collection(db, 'users'), where('organizationId', '==', empresaId))
-    );
-    const totalUsuarios = usersSnap.size;
+    const usersInOrg = await DataService.list('users', [where('organizationId', '==', empresaId)]);
+    const totalUsuarios = usersInOrg.length;
 
     // Count leads this calendar month
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    const leadsSnap = await getDocs(
-      query(
-        collection(db, 'leads'),
-        where('organizationId', '==', empresaId),
-        where('createdAt', '>=', startOfMonth.toISOString())
-      )
-    );
-    const totalLeadsMes = leadsSnap.size;
+    const leadsThisMonth = await DataService.list('leads', [
+      where('organizationId', '==', empresaId),
+      where('createdAt', '>=', startOfMonth.toISOString()),
+    ]);
+    const totalLeadsMes = leadsThisMonth.length;
 
     let diasRestantesTrial: number | undefined;
     if (empresa.status === 'trial' && empresa.trialExpiraEm) {
@@ -309,26 +286,22 @@ export const EmpresaService = {
   },
 
   subscribeEmpresa(id: string, callback: (e: Empresa | null) => void): () => void {
-    return onSnapshot(doc(db, 'empresas', id), (snap) => {
-      callback(snap.exists() ? (snap.data() as Empresa) : null);
-    });
+    return DataService.subscribe('empresas', id, callback);
   },
 
   async setStatus(id: string, status: StatusEmpresa): Promise<void> {
-    await updateDoc(doc(db, 'empresas', id), {
+    await DataService.update('empresas', id, {
       status,
       atualizadoEm: new Date().toISOString(),
     });
   },
 
   async deleteEmpresa(id: string): Promise<void> {
-    await deleteDoc(doc(db, 'empresas', id));
+    await DataService.delete('empresas', id);
   },
 
   async countUsuarios(organizationId: string): Promise<number> {
-    const snap = await getDocs(
-      query(collection(db, 'users'), where('organizationId', '==', organizationId))
-    );
-    return snap.size;
+    const usersInOrg = await DataService.list('users', [where('organizationId', '==', organizationId)]);
+    return usersInOrg.length;
   },
 };

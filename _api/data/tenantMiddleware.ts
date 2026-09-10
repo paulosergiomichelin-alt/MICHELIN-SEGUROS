@@ -8,6 +8,7 @@ export async function loadTenantContext(req: any, res: any, next: any) {
   req.organizationId = profile.organizationId;
   req.userRole = profile.role;
   req.userPermissions = profile.permissions;
+  req.userSuperadmin = profile.superadmin === true;
   next();
 }
 
