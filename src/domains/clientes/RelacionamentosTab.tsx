@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  collection, query, where, onSnapshot, writeBatch, doc, getDocs,
-} from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { DataService } from '../../services/DataService';
+import { where } from '../../lib/queryConstraints';
 import {
   Plus, Trash2, MessageCircle, ExternalLink, Search, X, Loader2, Users,
 } from 'lucide-react';
@@ -110,10 +108,12 @@ const AddRelacionamentoModal: React.FC<AddModalProps> = ({
     try {
       const now = new Date().toISOString();
       const inverseType = getInverseRelationship(tipo, cliente.sexo);
-      const batch = writeBatch(db);
 
-      const refA = doc(collection(db, 'cliente_relacionamentos'));
-      batch.set(refA, {
+      // Duas escritas sequenciais, não atômicas (decisão da Fase 3 Task 10 — perda de
+      // atomicidade aceita para esta tela; usar POST /api/data/_batch se algum dia isso
+      // se mostrar crítico, ex.: relacionamento unilateral ficando órfão em caso de falha
+      // entre as duas chamadas).
+      await DataService.create('cliente_relacionamentos', {
         clienteId: cliente.id,
         relatedClienteId: selected.id,
         relatedClienteNome: selected.nome,
@@ -126,8 +126,7 @@ const AddRelacionamentoModal: React.FC<AddModalProps> = ({
         updatedAt: now,
       });
 
-      const refB = doc(collection(db, 'cliente_relacionamentos'));
-      batch.set(refB, {
+      await DataService.create('cliente_relacionamentos', {
         clienteId: selected.id,
         relatedClienteId: cliente.id,
         relatedClienteNome: cliente.nome,
@@ -140,7 +139,6 @@ const AddRelacionamentoModal: React.FC<AddModalProps> = ({
         updatedAt: now,
       });
 
-      await batch.commit();
       onClose();
     } finally {
       setSaving(false);
@@ -282,17 +280,14 @@ export const RelacionamentosTab: React.FC<RelacionamentosTabProps> = ({
 
   useEffect(() => {
     if (!cliente.id || !organizationId) return;
-    const q = query(
-      collection(db, 'cliente_relacionamentos'),
+    const unsub = DataService.subscribeCollection('cliente_relacionamentos', [
       where('clienteId', '==', cliente.id),
       where('organizationId', '==', organizationId),
-    );
-    const unsub = onSnapshot(q, snap => {
-      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() } as ClienteRelacionamento));
-      docs.sort((a, b) => a.relatedClienteNome.localeCompare(b.relatedClienteNome, 'pt-BR'));
-      setRelacionamentos(docs);
+    ], (docs: ClienteRelacionamento[]) => {
+      const sorted = [...docs].sort((a, b) => a.relatedClienteNome.localeCompare(b.relatedClienteNome, 'pt-BR'));
+      setRelacionamentos(sorted);
       setLoading(false);
-    }, () => setLoading(false));
+    }, false, () => setLoading(false));
     return unsub;
   }, [cliente.id, organizationId]);
 
@@ -300,17 +295,13 @@ export const RelacionamentosTab: React.FC<RelacionamentosTabProps> = ({
     if (!window.confirm(`Remover relacionamento com ${rel.relatedClienteNome}?`)) return;
     setDeleting(rel.id);
     try {
-      const batch = writeBatch(db);
-      batch.delete(doc(db, 'cliente_relacionamentos', rel.id));
-      // Find and delete the inverse document
-      const inverseQ = query(
-        collection(db, 'cliente_relacionamentos'),
+      await DataService.delete('cliente_relacionamentos', rel.id);
+      // Find and delete the inverse document (mesma decisão de não-atomicidade da criação)
+      const inverse = await DataService.list('cliente_relacionamentos', [
         where('clienteId', '==', rel.relatedClienteId),
         where('relatedClienteId', '==', cliente.id),
-      );
-      const inverseSnap = await getDocs(inverseQ);
-      inverseSnap.docs.forEach(d => batch.delete(d.ref));
-      await batch.commit();
+      ]) as ClienteRelacionamento[];
+      await Promise.all(inverse.map((d) => DataService.delete('cliente_relacionamentos', d.id)));
     } finally {
       setDeleting(null);
     }
