@@ -56,6 +56,7 @@ async function startServer() {
   app.use(express.json({ limit: BODY_LIMIT }));
   app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
   log.info('Body parser configurado', { limit: BODY_LIMIT });
+  log.info('Feature flag USE_POSTGRES', { value: process.env.USE_POSTGRES === 'true' });
 
   // Atribui X-Request-ID a cada requisição e loga slow/error requests
   app.use((req: any, res, next) => {
