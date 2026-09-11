@@ -87,7 +87,6 @@ async function startServer() {
 
     let evolution = 'not_configured';
     let postgres = 'not_configured';
-    let redis = 'not_configured';
 
     if (evolutionUrl && evolutionKey) {
       try {
@@ -97,15 +96,20 @@ async function startServer() {
           headers: { apikey: evolutionKey },
           signal: ctrl.signal,
         }).finally(() => clearTimeout(id));
-        if (r.ok || r.status === 401) {
-          evolution = 'online';
-          postgres = 'online';
-          redis = 'online';
-        } else {
-          evolution = `error_${r.status}`;
-        }
+        evolution = (r.ok || r.status === 401) ? 'online' : `error_${r.status}`;
       } catch {
         evolution = 'offline';
+      }
+    }
+
+    if (process.env.DATABASE_URL) {
+      try {
+        const { getDb } = await import('./_api/lib/db.js');
+        const { sql } = await import('drizzle-orm');
+        await getDb().execute(sql`select 1`);
+        postgres = 'online';
+      } catch {
+        postgres = 'offline';
       }
     }
 
@@ -113,7 +117,7 @@ async function startServer() {
       status: 'ok',
       time: new Date().toISOString(),
       nodeEnv: process.env.NODE_ENV || 'development',
-      services: { evolution, postgres, redis },
+      services: { evolution, postgres },
     });
   });
 
