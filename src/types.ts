@@ -877,7 +877,7 @@ export interface FollowUp {
 export interface Campaign {
   id: string;
   name: string;
-  objective: string;
+  objective?: string;
   instructions?: string;
   messageTemplate?: string;
   sessionName?: string;
