@@ -8,7 +8,12 @@
  *
  * Uso:
  *   node scripts/deploy-vps.mjs
+ *
+ * Requer VPS_PASS no .env (nunca commitado) — senha rotacionada em 2026-09-11 após
+ * exposição do valor antigo em 3 commits do histórico git (repo público). VPS_HOST/
+ * VPS_PORT/VPS_USER têm defaults e podem ser sobrescritos pelo .env se necessário.
  */
+import 'dotenv/config';
 import { createWriteStream, readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -17,12 +22,17 @@ import { spawn } from 'child_process';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 
-const VPS_HOST = '143.95.211.30';
-const VPS_PORT = 22022;
-const VPS_USER = 'root';
-const VPS_PASS = 'Bw8ygomm@';
+const VPS_HOST = process.env.VPS_HOST || '143.95.211.30';
+const VPS_PORT = Number(process.env.VPS_PORT || 22022);
+const VPS_USER = process.env.VPS_USER || 'root';
+const VPS_PASS = process.env.VPS_PASS;
 const VPS_DIR  = '/opt/evolution-api';
 const IMAGE    = 'michelin-crm';
+
+if (!VPS_PASS) {
+  console.error('[deploy] VPS_PASS não definida. Defina no .env (nunca commitado) ou exporte antes de rodar:\n  VPS_PASS=\'...\' node scripts/deploy-vps.mjs');
+  process.exit(1);
+}
 
 // ── SSH helper ─────────────────────────────────────────────────────────────────
 
