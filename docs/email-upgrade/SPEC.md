@@ -13,27 +13,33 @@ Mapeamento completo feito antes deste documento (agente de exploração, 2026-09
 - **Resposta automática é um stub sem efeito**: a coluna `email_settings.autoReply` (jsonb) existe no banco, a UI (`EmailSettingsPage.tsx`) tem o formulário completo (toggle/assunto/corpo) e chama `saveSettings({autoReply: {...}})`, mas `_api/email/settings.ts` **nunca lê nem persiste esse campo** na lógica de merge do PUT. Não existe nenhum processo em lugar nenhum (sync, webhook, cron) que dispare uma resposta automática de fato.
 - **Cache de e-mail é 100% em memória de processo** (`_api/lib/emailCache.ts`, `Map` puro) — confirma o ADR-9 já registrado em `docs/db-migration/SPEC.md`: decisão explícita do usuário (2026-09-10) de manter WhatsApp e e-mail em memória, sem promover a tabelas Postgres, para evitar exaustão de quota (preocupação da era Firestore). **Essa decisão foi reconfirmada nesta sessão especificamente para e-mail** (2026-09-11): o conteúdo/corpo dos e-mails continua em memória — só a pasta perde tudo com reinício, não configuração.
 - **Sync é polling de 5 minutos**, não push/webhook (sem Gmail Pub/Sub watch, sem Graph subscriptions).
-- **Chave de criptografia de tokens tem fallback hardcoded** (`emailEncryption.ts`): se `EMAIL_ENCRYPTION_KEY` não estiver definida, usa uma string literal fixa no código — risco de segurança real, fora do escopo original mas fica registrado no risco 1 da seção 8.
+- **Chave de criptografia de tokens tem fallback hardcoded** (`emailEncryption.ts`): se `EMAIL_ENCRYPTION_KEY` não estiver definida, usa uma string literal fixa no código — risco de segurança real, fora do escopo original mas fica registrado no risco 1 da seção 6.
 - `docs/db-migration/SPEC.md` §4.10 está **desatualizado**: ainda descreve `oauth_tokens jsonb`, mas o schema real usa colunas de nível superior (`accessToken`/`refreshToken`/`tokenExpiry`). Não é bug de código, é a documentação da fase anterior que não foi atualizada — corrigir de passagem.
 
 ## 1. Escopo
 
-**Dentro do escopo** (pedido explícito do usuário: "colocar qualquer e-mail" + "pastas, regras, resposta automática e tudo mais"):
+**Dentro do escopo** (pedido explícito do usuário: "colocar qualquer e-mail" + "pastas, regras, resposta automática e tudo mais"; ampliado em 2026-09-11 pra paridade mais próxima do Outlook):
 
 1. Suporte a **qualquer provedor de e-mail via IMAP/SMTP genérico** — não travado em Gmail/Outlook.
 2. **Pastas reais**: customizadas, possivelmente aninhadas, substituindo as 6 fixas hardcoded.
 3. **Motor de regras/filtros**: condições sobre e-mail recebido → ações automáticas.
 4. **Resposta automática funcional** (terminar o que já existe pela metade).
-5. **Agendamento de envio** (mover de "fora do escopo" pra dentro, pedido pelo usuário em 2026-09-11).
-6. **Threading de conversa** (idem, agrupar mensagens por assunto/thread).
-7. Correção de bugs reais encontrados na revisão de 2026-09-11, já corrigidos nesta sessão (ver seção 8, "já corrigido"): responder a todos não incluía os destinatários originais do campo "Para"; anexos nunca eram enviados de fato (nem no composer, nem no builder MIME do Gmail, nem no payload do Graph); imagens embutidas (`cid:`) sempre viravam um gif transparente em branco, nunca resolviam pro dado real.
+5. **Agendamento de envio**.
+6. **Threading de conversa** (agrupar mensagens por assunto/thread).
+7. Correção de bugs reais encontrados na revisão de 2026-09-11, já corrigidos nesta sessão (ver seção 5.1, "já corrigido"): responder a todos não incluía os destinatários originais do campo "Para"; anexos nunca eram enviados de fato (nem no composer, nem no builder MIME do Gmail, nem no payload do Graph); imagens embutidas (`cid:`) sempre viravam um gif transparente em branco, nunca resolviam pro dado real.
+8. **Categorias/etiquetas coloridas**, múltiplas por mensagem, cor + nome livre (estilo Gmail labels).
+9. **Delegação de acesso** entre contas pessoais (um usuário concede acesso à própria caixa a outro usuário, com nível de permissão) — não é caixa compartilhada institucional.
+10. **Integração de calendário**: Google Calendar e Microsoft/Outlook Calendar para contas OAuth, calendário interno (Postgres, sem sincronização externa) para contas IMAP e eventos manuais; convites de reunião (`.ics`) ganham ações Aceitar/Recusar/Talvez na leitura do e-mail.
+11. **Notificação push mobile via Web Push/PWA** — o app ganha service worker + manifest; não existe app nativo hoje e não é criado nesta fase.
+12. **Modo "foco"**: separação heurística (sem ML) de e-mail importante vs. newsletter/promoção, com correção manual persistida por remetente.
+13. **Sync quase em tempo real**: Gmail (`users.watch`/Pub/Sub) e Microsoft (Graph subscriptions) via webhook, funcionando em qualquer modo de deploy; IMAP IDLE (conexão persistente) só no modo VPS (`server.ts`) — no modo serverless (`server.vercel.ts`), contas IMAP usam polling rápido (30–60s) em vez de IDLE.
 
-**Fora do escopo** (por decisão explícita do usuário, 2026-09-11):
+**Fora do escopo** (por decisão explícita do usuário):
 
-- **Conteúdo/corpo dos e-mails continua em memória** (`emailCache.ts`), não migra para Postgres. Only *configuração* (contas, pastas, regras) é persistida — ver ADR-7.
-- Caixas compartilhadas, integração de calendário, notificação push mobile — não pedidos, não incluídos.
-- Categorias/etiquetas coloridas e IMAP IDLE/push (ver seção 7) — continuam como backlog futuro, não pedidos explicitamente.
-- Anexos em rascunhos (`_api/email/draft.ts`) — tem a mesma lacuna de anexos que o envio tinha, mas não foi pedido; registrado como item de paridade futura na seção 7.
+- **Conteúdo/corpo dos e-mails continua em memória** (`emailCache.ts`), não migra para Postgres. Only *configuração* (contas, pastas, regras, categorias, delegações, eventos de calendário, inscrições push, overrides de foco) é persistida — ver ADR-7.
+- Caixa compartilhada **institucional** (múltiplos usuários numa conta corporativa tipo `contato@empresa.com` com papéis) — o que entrou no escopo foi delegação pessoal (item 9), não isso.
+- App mobile nativo — o item 11 cobre só web push via PWA.
+- Anexos em rascunhos (`_api/email/draft.ts`) — tem a mesma lacuna de anexos que o envio tinha, mas não foi pedido; registrado como item de paridade futura na seção 8.
 
 ## 2. Decisões de arquitetura (ADR)
 
@@ -45,10 +51,16 @@ Mapeamento completo feito antes deste documento (agente de exploração, 2026-09
 | ADR-4 | Pastas passam a ser uma entidade real e persistida: nova tabela **`email_folders`** (`id, accountId, name, parentFolderId nullable, type: 'system'\|'custom', providerFolderId nullable`). Pastas de sistema (inbox/sent/drafts/trash/spam/archive) são auto-criadas na primeira sincronização de cada conta, espelhando a estrutura real do provedor quando possível (Gmail: labels reais, não só as 6 fixas; Microsoft: `mailFolders` reais via Graph; IMAP: árvore real via `LIST`). Pastas customizadas: criar/renomear/apagar é uma operação por provedor (Gmail → cria label; Microsoft → `POST /me/mailFolders`; IMAP → comando `CREATE`), mas o modelo de dados e a UI são unificados. | É impossível ter pastas customizadas de verdade com o esquema hardcoded de 6 pastas atual — essa é a mudança estrutural que desbloqueia tudo o resto (inclusive regras, que precisam de "mover para pasta X" como ação). |
 | ADR-5 | Motor de regras roda **do lado da aplicação** (não depende de filtros nativos do Gmail/Outlook), nova tabela **`email_rules`** (`id, userId, accountId nullable (null = todas as contas do usuário), name, conditions jsonb, matchType: 'all'\|'any', actions jsonb, enabled, order`). Avaliado a cada sincronização (`emailSync.ts`), depois de importar mensagens novas: para cada mensagem nova, roda as regras habilitadas em ordem e aplica as ações que baterem. | Regras nativas de cada provedor (Gmail filters API, Outlook inbox rules via Graph) não existem pra IMAP genérico — um motor próprio dá comportamento uniforme pros 3 provedores, e reaproveita a mesma pipeline de sync que já existe. |
 | ADR-6 | Resposta automática: corrigir `_api/email/settings.ts` pra persistir `autoReply` de verdade, e implementar o disparo real dentro do loop de sync — depois de importar mensagens novas do INBOX, se `autoReply.enabled`, responde automaticamente (usando o caminho de envio do próprio provedor da conta) pra remetentes que ainda não receberam resposta dentro de uma janela de cooldown (evita loop infinito/spam). Dedup de cooldown fica em memória (`Map` simples, mesmo padrão do `emailCache.ts`), não em Postgres — consistente com ADR-7. | A UI e a coluna já existem; falta só a metade que faz a coisa funcionar. Cooldown em memória é aceitável (pior caso: um reinício do servidor dentro da janela de cooldown pode causar uma resposta automática duplicada — risco baixo, mesmo tipo de trade-off já aceito pro cache de e-mail inteiro). |
-| ADR-7 | **Conteúdo dos e-mails continua em memória** (`emailCache.ts`, inalterado). Só *configuração* — contas (`email_accounts`, já era Postgres), pastas (`email_folders`, nova) e regras (`email_rules`, nova) — é persistida no Postgres. | Decisão explícita do usuário (2026-09-11): manter em memória, só adicionar IMAP/pastas/regras por cima. Mas pasta e regra são *configuração do usuário*, não conteúdo de e-mail — perder isso a cada reinício do servidor seria uma regressão de UX inaceitável (equivalente a perder as configurações de conta hoje, que ninguém aceitaria). A linha divisória é: conteúdo/corpo/anexo de e-mail = efêmero (já é assim hoje); estrutura/config que o usuário criou = durável (já é assim hoje pra contas e settings). |
-| ADR-8 | `imapClient.ts` usa **conexão sob demanda** (abre, faz a operação, fecha) em vez de manter uma conexão IMAP persistente por conta — mais simples, evita gerenciar pool de conexões de longa duração num processo Node que já reinicia com frequência (deploys). IDLE (near-realtime) fica registrado como melhoria futura fora desta fase (ver seção 7). | Simplicidade > desempenho nesta primeira versão; o polling de 5 min já é o padrão atual pros outros 2 provedores, manter paridade. |
+| ADR-7 | **Conteúdo dos e-mails continua em memória** (`emailCache.ts`, inalterado). Só *configuração* — contas (`email_accounts`, já era Postgres), pastas (`email_folders`), regras (`email_rules`), categorias (`email_categories`/`email_message_categories`), delegações (`email_account_delegates`), eventos de calendário (`calendar_events`), inscrições push (`push_subscriptions`) e overrides de foco (`email_focus_overrides`) — é persistida no Postgres. | Decisão explícita do usuário (2026-09-11): manter conteúdo de e-mail em memória, só adicionar estrutura/configuração por cima. Pasta, regra, categoria, delegação, evento e override são *configuração do usuário*, não conteúdo de e-mail — perder isso a cada reinício do servidor seria uma regressão de UX inaceitável (equivalente a perder as configurações de conta hoje, que ninguém aceitaria). A linha divisória é: conteúdo/corpo/anexo de e-mail = efêmero (já é assim hoje); estrutura/config que o usuário criou = durável (já é assim hoje pra contas e settings). |
+| ADR-8 | `imapClient.ts` usa **conexão sob demanda** (abre, faz a operação, fecha) em vez de manter uma conexão IMAP persistente por conta, na Fase 1 (paridade funcional com polling, igual Gmail/Microsoft hoje). A conexão persistente com IDLE só entra na Fase 7 (ADR-16), e mesmo assim só no modo VPS. | Simplicidade > desempenho na primeira versão; entregar IMAP com paridade de polling primeiro, depois evoluir pra IDLE numa fase separada, isola o risco de cada mudança. |
 | ADR-9 | **Agendamento de envio**: nova tabela `email_scheduled_sends` (`id, accountId, userId, payload jsonb` — o mesmo shape de `SendEmailBody`, `sendAt timestamptz, status: 'pending'\|'sent'\|'failed'\|'cancelled', error`). Um job recorrente (reaproveita o mesmo `setInterval` já usado pelo `scheduleEmailSync`, ou um segundo timer próprio de 1 min) varre `pending` com `sendAt <= now()` e chama a mesma lógica de `_api/email/send.ts` (extraída pra uma função reaproveitável, não duplicada). Cancelável enquanto `status='pending'`. | Precisa ser Postgres (não em memória) — perder um e-mail agendado num reinício do servidor é inaceitável, diferente do trade-off aceito pro cache de conteúdo (ADR-7). É configuração/intenção do usuário, não conteúdo de caixa de entrada. |
 | ADR-10 | **Threading de conversa**: agrupamento feito **no cliente/frontend**, não no backend — usa o `threadId` que os 3 provedores já fornecem (Gmail: `threadId` nativo; Microsoft: `conversationId`; IMAP: sem equivalente nativo confiável, agrupar por `References`/`In-Reply-To` header + assunto normalizado como fallback). `EmailList.tsx` agrupa mensagens com o mesmo `threadId` numa única linha expansível (como Gmail), mantendo a lista de mensagens individuais como já existe hoje por baixo. | Threading é fundamentalmente uma questão de apresentação sobre dados que já existem (`threadId` já é capturado em `parseGmailMessage`/`parseMicrosoftMessage` hoje, só não é usado pra agrupar) — não precisa de mudança de schema nem de sync, só de UI. |
+| ADR-11 | **Categorias/etiquetas coloridas**: definição (nome + cor, por usuário) é configuração → tabela nova `email_categories`. Aplicação na mensagem usa o mecanismo nativo do provedor quando existe: Gmail → label real (cor via API de labels, reaproveitando a pipeline de labels do ADR-4 com uma flag `type: 'folder'\|'category'` pra não confundir os dois usos); Microsoft → campo `categories` nativo do Graph (paleta de cores fixa do Outlook); IMAP → sem equivalente nativo, associação persistida em `email_message_categories` (`accountId, messageId, categoryId`). Múltiplas categorias por mensagem. | Usar o recurso nativo onde ele existe evita reinventar o que Gmail/Outlook já fazem, e mantém a categoria visível mesmo se o usuário abrir o Gmail/Outlook direto fora do nosso sistema; IMAP precisa de tabela própria por não ter conceito nativo de categoria multi-valor com cor. |
+| ADR-12 | **Delegação de acesso**: nova tabela `email_account_delegates` (`accountId, delegateUserId, permission: 'read'\|'send'\|'full', createdAt`). Dono da conta concede acesso a outro usuário do sistema; o delegado passa a ver essa conta no seletor de contas dele, com ações limitadas pela permissão (`read` = só visualizar; `send` = também enviar/responder; `full` = também gerenciar pastas/regras/categorias da conta). Envio como delegado usa o mesmo caminho de envio do dono (From = endereço do dono) — é delegação **a nível de aplicação**, não a delegação nativa do Gmail/Exchange. | Delegação nativa do Gmail exige configuração dentro do próprio Gmail e a do Microsoft exige permissão de mailbox a nível de Exchange/tenant — ambas fora do nosso controle e possivelmente fora do acesso administrativo do usuário. Implementar a nível de aplicação dá o mesmo resultado prático sem essa dependência externa. |
+| ADR-13 | **Calendário**: nova tabela `calendar_events` (`id, userId, accountId nullable, provider: 'google'\|'microsoft'\|'internal', providerEventId nullable, title, description, location, startAt, endAt, allDay, attendees jsonb, recurrenceRule nullable, status, createdAt, updatedAt`). Contas Gmail/Microsoft sincronizam de verdade com Google Calendar API / Graph `/me/calendar` — exige adicionar escopo de calendário ao OAuth (`calendar` no Google, `Calendars.ReadWrite` no Graph) e **reautorizar contas já conectadas**, já que o token atual não tem esse escopo. Contas IMAP e eventos criados manualmente usam só o Postgres (`provider: 'internal'`), sem sync externo. Convites (`.ics`/`text/calendar` no corpo do e-mail) são parseados na leitura da mensagem e viram um evento pendente com ações Aceitar/Recusar/Talvez. | É o item mais próximo de um domínio novo dentro do módulo de e-mail, mas reaproveitar o OAuth já existente (com escopo adicional) é mais simples que uma segunda pipeline de autenticação; calendário interno cobre contas IMAP, que nunca teriam paridade real de calendário nativo de qualquer forma. |
+| ADR-14 | **Push mobile**: adiciona `public/manifest.json` + service worker ao app web (não existe hoje). Nova tabela `push_subscriptions` (`id, userId, endpoint, keysP256dh, keysAuth, createdAt`). Backend usa VAPID (pacote `web-push`) pra empurrar notificação quando o sync detecta mensagem nova na Inbox de uma conta do usuário. | Não existe app mobile nativo no projeto (confirmado por grep — zero React Native/Capacitor/service worker). Web Push via PWA dá notificação no celular sem publicar app em loja, ao custo de exigir que o usuário "instale" o site na tela inicial (limitação do iOS Safari, ver risco 9). |
+| ADR-15 | **Modo foco**: pontuação calculada no próprio ciclo de sync, no mesmo ponto onde regras/autoreply já rodam — sinais: já houve resposta anterior pro remetente (cruza com Enviados), remetente está nos contatos/CRM do sistema, presença do header `List-Unsubscribe`, palavras de marketing no assunto. Resultado (`focused`\|`other`) fica em memória junto da mensagem, recalculado a cada sync — sem schema novo (ADR-7). Correção manual do usuário ("sempre focado pra esse remetente") persiste em tabela pequena `email_focus_overrides` (`userId, senderEmail, classification, createdAt`), porque isso é configuração do usuário, não conteúdo de e-mail. | Heurística por regras é previsível, explicável e sem custo de API/latência de modelo de IA — adequado pro volume de e-mail de um sistema interno, sem justificar a complexidade extra de ML. |
+| ADR-16 | **Sync quase em tempo real**: Gmail via `users.watch` (Cloud Pub/Sub, renovação a cada 7 dias) e Microsoft via Graph subscriptions (renovação antes de ~3 dias) — ambos são só um endpoint HTTPS recebendo POST, funcionam igual em `server.ts` (VPS) ou `server.vercel.ts` (Vercel Functions). IMAP via `imapflow` IDLE **exige conexão persistente por conta**, incompatível com function serverless de vida curta — IDLE só é ativado quando o processo roda em modo VPS (`server.ts`); no modo Vercel, contas IMAP continuam em polling, só que mais rápido (30–60s em vez de 5 min). | Webhook nativo do Gmail/Microsoft é a forma correta de near-realtime e não tem restrição de infraestrutura; IMAP IDLE é o único dos três que teria regressão real se forçado em serverless (a conexão cairia a cada invocação) — a restrição precisa ficar explícita em vez de fingir paridade total entre os 3 provedores nesse ponto. |
 
 ## 3. Modelo de dados (Postgres/Drizzle)
 
@@ -134,6 +146,98 @@ export const emailScheduledSends = pgTable('email_scheduled_sends', {
 ]);
 ```
 
+### 3.6 `email_categories` — nova tabela
+
+```ts
+export const emailCategories = pgTable('email_categories', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  organizationId: text('organization_id').references(() => organizations.id),
+  name: text('name').notNull(),
+  color: text('color').notNull(), // hex, ou nome da paleta fixa do Outlook quando accountId aponta pra conta microsoft
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+});
+
+export const emailMessageCategories = pgTable('email_message_categories', {
+  id: text('id').primaryKey(),
+  accountId: text('account_id').notNull().references(() => emailAccounts.id), // só populado pra provider='imap'; gmail/microsoft usam o mecanismo nativo do provedor
+  messageId: text('message_id').notNull(), // id da mensagem no provedor, não FK (conteúdo é efêmero — ADR-7)
+  categoryId: text('category_id').notNull().references(() => emailCategories.id),
+}, (t) => [
+  index('idx_email_msg_categories_msg').on(t.accountId, t.messageId),
+]);
+```
+
+### 3.7 `email_account_delegates` — nova tabela
+
+```ts
+export const emailAccountDelegates = pgTable('email_account_delegates', {
+  id: text('id').primaryKey(),
+  accountId: text('account_id').notNull().references(() => emailAccounts.id),
+  delegateUserId: text('delegate_user_id').notNull(),
+  permission: text('permission').notNull(), // 'read' | 'send' | 'full'
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_email_delegates_account').on(t.accountId),
+  index('idx_email_delegates_user').on(t.delegateUserId),
+]);
+```
+
+### 3.8 `calendar_events` — nova tabela
+
+```ts
+export const calendarEvents = pgTable('calendar_events', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  organizationId: text('organization_id').references(() => organizations.id),
+  accountId: text('account_id').references(() => emailAccounts.id), // null quando provider='internal' e não veio de uma conta específica
+  provider: text('provider').notNull(), // 'google' | 'microsoft' | 'internal'
+  providerEventId: text('provider_event_id'), // null quando provider='internal'
+  title: text('title').notNull(),
+  description: text('description'),
+  location: text('location'),
+  startAt: timestamp('start_at', { withTimezone: true, mode: 'string' }).notNull(),
+  endAt: timestamp('end_at', { withTimezone: true, mode: 'string' }).notNull(),
+  allDay: boolean('all_day').notNull().default(false),
+  attendees: jsonb('attendees'), // [{ email, name, responseStatus: 'needsAction'|'accepted'|'declined'|'tentative' }]
+  recurrenceRule: text('recurrence_rule'), // RRULE, nullable
+  status: text('status').notNull().default('confirmed'), // 'confirmed' | 'cancelled'
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_calendar_events_user').on(t.userId, t.startAt),
+]);
+```
+
+### 3.9 `push_subscriptions` — nova tabela
+
+```ts
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  endpoint: text('endpoint').notNull(),
+  keysP256dh: text('keys_p256dh').notNull(),
+  keysAuth: text('keys_auth').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_push_subs_user').on(t.userId),
+]);
+```
+
+### 3.10 `email_focus_overrides` — nova tabela
+
+```ts
+export const emailFocusOverrides = pgTable('email_focus_overrides', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  senderEmail: text('sender_email').notNull(),
+  classification: text('classification').notNull(), // 'focused' | 'other'
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_email_focus_overrides_user').on(t.userId, t.senderEmail),
+]);
+```
+
 ## 4. Fluxo de nova conta IMAP (visão de UX)
 
 Espelha o "Configuração avançada" do Outlook desktop:
@@ -155,7 +259,7 @@ Encontrados investigando os relatos do usuário ("responder a todos", "anexos qu
 - **Anexos no envio**: três bugs em cadeia. (1) `EmailComposer.tsx` anexava arquivos na UI mas `handleSend` nunca os incluía na chamada de envio. (2) `EmailService.sendEmail()` tinha assinatura de tipo incompatível com o que o backend espera (`attachments?: string[]` em vez de `{filename,mimeType,data}[]`); `sendEmailWithFiles()` existia mas nunca era chamada por ninguém (código morto) e usava `multipart/form-data`, formato que o backend nunca soube processar. (3) mesmo se os dados chegassem certos, `buildMimeMessage()` (Gmail) e `buildMicrosoftPayload()` (Microsoft) nunca incluíam os anexos no MIME/payload — só marcavam `hasAttachments: true` no cache, cosmético. Corrigido: composer converte `File[]` pra base64 e envia no mesmo JSON; builder do Gmail agora monta `multipart/mixed` com uma parte por anexo; payload do Graph agora inclui `attachments: [{'@odata.type': 'fileAttachment', contentBytes, ...}]`.
 - **Imagens embutidas (`cid:`) sempre em branco**: `htmlSanitize.ts` trocava toda `src="cid:..."` por um gif transparente, sem nunca resolver pro dado real — o parser MIME do Gmail (`gmailClient.ts`) nunca capturava o header `Content-ID` de cada parte, e o parser do Graph (`microsoftClient.ts`) descartava `contentId`/`contentBytes` que a própria API já retorna. Corrigido: ambos os parsers agora resolvem `cid:X` pro `data:mimetype;base64,...` real antes de cachear a mensagem — o fallback pro gif transparente no sanitizador continua existindo, mas só age nos casos raros (imagem embutida grande, sem os bytes disponíveis na mesma resposta) que não são resolvidos nesta etapa.
 
-Anexos em **rascunhos** (`_api/email/draft.ts`) têm a mesma lacuna estrutural (nunca foram implementados), mas isso não foi reportado como quebrado — registrado como item de paridade futura na seção 7, não corrigido nesta sessão.
+Anexos em **rascunhos** (`_api/email/draft.ts`) têm a mesma lacuna estrutural (nunca foram implementados), mas isso não foi reportado como quebrado — registrado como item de paridade futura na seção 8, não corrigido nesta sessão.
 
 ## 6. Registro de riscos
 
@@ -166,12 +270,34 @@ Anexos em **rascunhos** (`_api/email/draft.ts`) têm a mesma lacuna estrutural (
 | 3 | Rodar o motor de regras a cada sync (5 min, todas as contas) pode ficar lento se o usuário tiver muitas regras ou muitas mensagens novas por ciclo. | Regras são avaliadas só sobre mensagens *novas* daquele ciclo de sync (não reprocessa a caixa toda), e a lista de regras por conta normalmente é pequena (dezenas, não milhares) — sem otimização especial nesta fase; registrar como ponto de atenção se o uso real mostrar lentidão. |
 | 4 | Resposta automática com dedup em memória: um reinício do servidor dentro da janela de cooldown pode enviar uma resposta duplicada pro mesmo remetente. | Aceito conscientemente (ADR-6) — mesmo trade-off já aceito pro cache de e-mail inteiro (ADR-9 do projeto de migração de banco). Cooldown sugerido de 24h torna a janela de risco pequena na prática. |
 | 5 | Widening de `provider` (união de 2 → 3 valores) toca em bastante código existente (`EmailService.ts`, `email.types.ts`, todo `_api/email/**`) — risco de regressão nos caminhos Gmail/Microsoft já funcionando. | Cada fase de execução testa explicitamente que Gmail/Microsoft continuam funcionando sem alteração de comportamento antes de considerar a fase concluída (mesmo padrão de verificação usado no projeto de migração de banco). |
+| 6 | Calendário exige reautorizar contas OAuth já conectadas pra adicionar escopo de calendário — usuário existente vai ver uma tela de consentimento de novo, pode causar confusão ("por que preciso logar de novo?"). | Copy explicativo na UI antes de redirecionar pro consentimento; reautorização é por conta, acontece uma vez só, e é opcional — quem não reautorizar mantém e-mail funcionando normalmente, só não ganha calendário sincronizado. |
+| 7 | Delegação de acesso é só a nível de aplicação, não a nível do provedor — se o delegado acessar o Gmail/Outlook diretamente fora do nosso sistema, não tem acesso nenhum, só dentro do nosso app. | Documentar isso claramente na UI de "conceder acesso" pra não criar expectativa errada no usuário (ver ADR-12). |
+| 8 | IMAP IDLE só funciona no modo VPS (`server.ts`) — se o ambiente de produção migrar pra Vercel serverless (`server.vercel.ts`) no futuro, a funcionalidade de near-realtime pra contas IMAP regride silenciosamente pra polling rápido. | Dependência de modo de deploy documentada explicitamente aqui (ADR-16) e um log de aviso no backend quando IDLE não pode ser ativado no ambiente atual. |
+| 9 | Web Push no iOS Safari só funciona se o usuário "instalar" o site na tela inicial — notificação nunca chega pro usuário que só usa o site pelo navegador normal, sem aviso. | Prompt de UX explicando o passo de instalação quando o usuário habilitar notificações num dispositivo iOS (ver ADR-14). |
+| 10 | Categorias aplicadas via Gmail label reaproveitam a mesma pipeline de pastas (ADR-4) — risco de um label ser tratado como pasta e categoria ao mesmo tempo se a distinção não for feita corretamente. | Flag explícita (`type: 'folder'\|'category'`) decidida na primeira sincronização de cada label, editável pelo usuário se a heurística inicial errar (ver ADR-11). |
 
-## 7. Fora do escopo desta fase, candidatos a fase futura
+## 7. Fases de execução
 
-Agendamento de envio e threading foram movidos pra dentro do escopo (ver seção 1, ADR-9, ADR-10). O que continua de fora, por não ter sido pedido:
+Ordem definida por dependência técnica e risco, não por prioridade de negócio — cada fase parte de uma base estável deixada pela anterior. Cada fase vira um plano executável próprio em `docs/superpowers/plans/2026-09-11-email-upgrade-NN-*.md`.
+
+- **Fase 0 — já concluída**: os 3 bugs corrigidos nesta sessão (responder a todos, anexos no envio, imagens `cid:` — seção 5.1). Base estável antes de qualquer mudança estrutural.
+- **Fase 1 — Fundação multi-provedor**: IMAP/SMTP genérico (ADR-1, ADR-2, ADR-3) + correção do fallback hardcoded de `EMAIL_ENCRYPTION_KEY` (risco 1). Tudo que vem depois precisa funcionar nos 3 provedores — fazer essa base primeiro evita retrabalho.
+- **Fase 2 — Pastas reais** (ADR-4): substitui as 6 pastas fixas. Pré-requisito direto da Fase 3 (regra "mover pra pasta X") e da Fase 4 (distinguir label-pasta de label-categoria no Gmail).
+- **Fase 3 — Regras + resposta automática + modo foco** (ADR-5, ADR-6, ADR-15): as três rodam no mesmo ponto do pipeline de sync (depois de importar mensagens novas) — implementar juntas evita reabrir o mesmo trecho de `emailSync.ts` três vezes.
+- **Fase 4 — Categorias/etiquetas coloridas** (ADR-11): depende da Fase 2 pra não confundir label-pasta com label-categoria no Gmail.
+- **Fase 5 — Agendamento de envio + threading de conversa** (ADR-9, ADR-10): baixo risco, independentes entre si e do resto — bom intervalo pra entregar valor visível rápido entre fases mais pesadas.
+- **Fase 6 — Delegação de acesso** (ADR-12): mexe em autorização; melhor com contas/permissões já estáveis das fases anteriores.
+- **Fase 7 — Sync quase em tempo real** (ADR-16): troca o gatilho de sync de polling pra webhook/IDLE. Fazer por último entre as mudanças de pipeline garante que regras/autoreply/foco/categorias (Fases 3-4) já foram validadas rodando sobre polling normal antes de mudar o que dispara o próprio sync — mais fácil isolar bug se algo quebrar.
+- **Fase 8 — Calendário** (ADR-13): a maior e mais isolada das fases — domínio novo, exige reautorização OAuth, tela nova inteira. Não bloqueia nem é bloqueada pelas fases anteriores; fica pro fim por ser a mais cara.
+- **Fase 9 — Notificação push mobile** (ADR-14): depende do sync já disparando de forma confiável (Fases 1-7) pra saber quando notificar. Menor valor incremental dos itens novos — última fase.
+
+Cada fase segue o mesmo fluxo: plano de implementação (writing-plans) → execução → verificação de que Gmail/Microsoft não regrediram (risco 5) → próxima fase.
+
+## 8. Fora do escopo desta fase, candidatos a fase futura
+
+Agendamento de envio, threading, categorias, delegação, calendário, push mobile, modo foco e sync near-realtime foram todos movidos pra dentro do escopo (ver seção 1, ADRs 9-16). O que continua de fora, por não ter sido pedido:
 
 - Anexos em rascunhos (`_api/email/draft.ts`) — mesma lacuna estrutural que o envio tinha, ver seção 5.1.
-- Categorias/etiquetas coloridas (além de pastas).
-- IMAP IDLE / Gmail Pub/Sub / Graph subscriptions — sync quase em tempo real em vez de polling de 5 min.
-- Modo "foco" (separar e-mail importante de newsletter/promo automaticamente).
+- Caixa compartilhada institucional e app mobile nativo — ver seção 1, "Fora do escopo".
+- Categorias/etiquetas coloridas **fora** de mensagem (ex: categorizar contatos ou eventos de calendário) — o escopo do ADR-11 cobre só categorias de e-mail.
+- IMAP IDLE / near-realtime quando o processo roda em modo Vercel serverless — ver risco 8.
