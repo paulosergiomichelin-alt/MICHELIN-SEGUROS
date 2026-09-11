@@ -36,9 +36,15 @@ function toDateOnly(v: any): string | null {
 // início de main() e usado por toda transform que lê organizationId.
 let DEFAULT_ORG_ID = 'default';
 
+// Ausência do campo organizationId (undefined) é tratada igual ao literal "default": só
+// existe uma organização real no sistema, e vários registros (messages, notifications,
+// flows, email_accounts, campaigns) nunca gravaram organizationId no Firestore — sem esse
+// fallback, orgScopeWhere() esconde esses registros de qualquer usuário não-superadmin
+// depois do cutover (confirmado em produção: 54/56 mensagens e 12/12 notificações
+// invisíveis). Ver docs/db-migration/SPEC.md §9.1.
 function resolveOrgId(raw: any): string | null {
-  if (raw === undefined || raw === null) return null;
-  return raw === 'default' ? DEFAULT_ORG_ID : raw;
+  if (raw === undefined || raw === null || raw === 'default') return DEFAULT_ORG_ID;
+  return raw;
 }
 
 async function resolveDefaultOrgId(): Promise<string> {
