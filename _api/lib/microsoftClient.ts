@@ -253,8 +253,22 @@ function msMessageToFolder(msg: any): string {
   return msg._folder ?? 'inbox';
 }
 
+// Graph já entrega contentId/contentBytes direto no attachment expandido (sem precisar
+// remontar árvore MIME como o Gmail) — sem isso, toda imagem embutida (assinatura, e-mail
+// de marketing) virava um gif transparente em branco no sanitizador do front.
+function resolveInlineImages(html: string, rawAttachments: any[]): string {
+  if (!html) return html;
+  const inline = rawAttachments.filter((att) => att.contentId && att.contentBytes);
+  if (inline.length === 0) return html;
+  return html.replace(/src\s*=\s*["']cid:([^"']+)["']/gi, (match, cid) => {
+    const att = inline.find((a) => a.contentId === cid || a.contentId === `<${cid}>`);
+    return att ? `src="data:${att.contentType ?? 'application/octet-stream'};base64,${att.contentBytes}"` : match;
+  });
+}
+
 export function parseMicrosoftMessage(msg: any, accountId: string, folder = 'inbox'): CachedEmail {
-  const attachments: CachedEmail['attachments'] = (msg.attachments ?? []).map((att: any) => ({
+  const rawAttachments: any[] = msg.attachments ?? [];
+  const attachments: CachedEmail['attachments'] = rawAttachments.map((att: any) => ({
     id: att.id,
     filename: att.name ?? 'attachment',
     mimeType: att.contentType ?? 'application/octet-stream',
@@ -283,7 +297,7 @@ export function parseMicrosoftMessage(msg: any, accountId: string, folder = 'inb
 
   const body = msg.body;
   if (body) {
-    if (body.contentType === 'html') email.bodyHtml = body.content;
+    if (body.contentType === 'html') email.bodyHtml = resolveInlineImages(body.content, rawAttachments);
     else email.bodyText = body.content;
   }
 

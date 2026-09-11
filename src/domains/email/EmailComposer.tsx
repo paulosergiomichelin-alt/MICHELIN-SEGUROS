@@ -23,7 +23,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { useEmail } from '../../contexts/EmailContext';
-import { EmailService, CachedEmail, EmailAddress } from '../../services/EmailService';
+import { EmailService, CachedEmail, EmailAddress, fileToAttachmentPayload } from '../../services/EmailService';
 
 // ─── Email Chip ───────────────────────────────────────────────────────────────
 
@@ -188,7 +188,12 @@ export const EmailComposer: React.FC = () => {
       setTo([msg.from ?? { email: '' }]);
       setSubject(msg.subject.startsWith('Re:') ? msg.subject : `Re: ${msg.subject}`);
     } else if (composerMode === 'replyAll') {
-      setTo([msg.from ?? { email: '' }, ...(msg.cc ?? []).filter(a => a.email !== accounts.find(ac => ac.id === selectedAccountId)?.email)]);
+      const myEmail = accounts.find(ac => ac.id === selectedAccountId)?.email;
+      const seen = new Set<string>();
+      const replyAllTo = [msg.from ?? { email: '' }, ...(msg.to ?? []), ...(msg.cc ?? [])]
+        .filter(a => a.email && a.email !== myEmail)
+        .filter(a => (seen.has(a.email) ? false : (seen.add(a.email), true)));
+      setTo(replyAllTo);
       setSubject(msg.subject.startsWith('Re:') ? msg.subject : `Re: ${msg.subject}`);
     } else if (composerMode === 'forward') {
       setTo([]);
@@ -261,6 +266,9 @@ export const EmailComposer: React.FC = () => {
     setSending(true);
     setError(null);
     try {
+      const attachmentPayloads = attachments.length > 0
+        ? await Promise.all(attachments.map(fileToAttachmentPayload))
+        : undefined;
       await EmailService.sendEmail({
         accountId: selectedAccountId,
         to,
@@ -268,6 +276,7 @@ export const EmailComposer: React.FC = () => {
         bcc: bcc.length > 0 ? bcc : undefined,
         subject,
         bodyHtml,
+        attachments: attachmentPayloads,
         replyToMessageId: composerReplyTo?.id,
         threadId: composerReplyTo?.threadId,
       });

@@ -234,6 +234,11 @@ interface ParsedMime {
   bodyHtml?: string;
   bodyText?: string;
   attachments: { id?: string; filename: string; mimeType: string; size: number }[];
+  // Imagens embutidas (Content-ID) cujo byte já veio na própria resposta do fetch (comum
+  // pra anexos pequenos — Gmail inlina o base64 direto em body.data sem precisar de uma
+  // chamada separada attachments.get). Usado só pra resolver src="cid:..." no HTML, não
+  // faz parte da lista de anexos exibida.
+  inlineImages: Record<string, { data: string; mimeType: string }>;
 }
 
 function parsePart(part: any, result: ParsedMime): void {
@@ -242,6 +247,8 @@ function parsePart(part: any, result: ParsedMime): void {
   const data: string | undefined = body.data;
   const attachmentId: string | undefined = body.attachmentId;
   const filename: string = part.filename ?? '';
+  const contentIdRaw = getHeader(part.headers ?? [], 'Content-ID');
+  const contentId = contentIdRaw ? contentIdRaw.replace(/^<|>$/g, '') : '';
 
   if (mimeType === 'text/html' && data && !result.bodyHtml) {
     result.bodyHtml = b64UrlDecode(data);
@@ -262,6 +269,9 @@ function parsePart(part: any, result: ParsedMime): void {
       mimeType,
       size,
     });
+    if (contentId && data) {
+      result.inlineImages[contentId] = { data: b64UrlDecodeBuffer(data).toString('base64'), mimeType };
+    }
     return;
   }
 
@@ -271,6 +281,16 @@ function parsePart(part: any, result: ParsedMime): void {
       parsePart(subPart, result);
     }
   }
+}
+
+// Substitui src="cid:X" pelo data URI já resolvido — sem isso, toda imagem embutida
+// (assinatura, e-mail de marketing) aparecia como um gif transparente em branco.
+function resolveInlineImages(html: string, inlineImages: Record<string, { data: string; mimeType: string }>): string {
+  if (!html || Object.keys(inlineImages).length === 0) return html;
+  return html.replace(/src\s*=\s*["']cid:([^"']+)["']/gi, (match, cid) => {
+    const img = inlineImages[cid];
+    return img ? `src="data:${img.mimeType};base64,${img.data}"` : match;
+  });
 }
 
 function getHeader(headers: Array<{ name: string; value: string }>, name: string): string {
@@ -326,10 +346,11 @@ export function parseGmailMessage(msg: any, accountId: string): CachedEmail {
   const cc = ccRaw ? parseAddressList(ccRaw) : undefined;
   const date = dateRaw ? new Date(dateRaw).toISOString() : new Date(Number(msg.internalDate)).toISOString();
 
-  const parsed: ParsedMime = { attachments: [] };
+  const parsed: ParsedMime = { attachments: [], inlineImages: {} };
   if (msg.payload) {
     parsePart(msg.payload, parsed);
   }
+  if (parsed.bodyHtml) parsed.bodyHtml = resolveInlineImages(parsed.bodyHtml, parsed.inlineImages);
 
   const folder = labelIdsToFolder(labelIds);
   const isRead = !labelIds.includes('UNREAD');

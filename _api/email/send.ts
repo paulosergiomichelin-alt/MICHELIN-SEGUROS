@@ -43,8 +43,15 @@ function formatAddress(recipient: Recipient): string {
   return recipient.email;
 }
 
+// Quebra em linhas de 76 chars — RFC 2045 exige isso para Content-Transfer-Encoding: base64.
+function wrapBase64(b64: string): string {
+  return b64.replace(/.{76}/g, '$&\r\n');
+}
+
 function buildMimeMessage(params: SendEmailBody, fromEmail: string): string {
-  const boundary = `boundary_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const altBoundary = `boundary_alt_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const mixedBoundary = `boundary_mixed_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const hasAttachments = Boolean(params.attachments?.length);
   const lines: string[] = [];
 
   lines.push(`From: ${fromEmail}`);
@@ -59,12 +66,17 @@ function buildMimeMessage(params: SendEmailBody, fromEmail: string): string {
 
   lines.push(`Subject: ${encodeHeader(params.subject)}`);
   lines.push(`MIME-Version: 1.0`);
-  lines.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
+  if (hasAttachments) {
+    lines.push(`Content-Type: multipart/mixed; boundary="${mixedBoundary}"`);
+    lines.push('');
+    lines.push(`--${mixedBoundary}`);
+  }
+  lines.push(`Content-Type: multipart/alternative; boundary="${altBoundary}"`);
   lines.push('');
 
   // Plain text part
   if (params.bodyText) {
-    lines.push(`--${boundary}`);
+    lines.push(`--${altBoundary}`);
     lines.push('Content-Type: text/plain; charset=UTF-8');
     lines.push('Content-Transfer-Encoding: quoted-printable');
     lines.push('');
@@ -73,14 +85,28 @@ function buildMimeMessage(params: SendEmailBody, fromEmail: string): string {
   }
 
   // HTML part
-  lines.push(`--${boundary}`);
+  lines.push(`--${altBoundary}`);
   lines.push('Content-Type: text/html; charset=UTF-8');
   lines.push('Content-Transfer-Encoding: base64');
   lines.push('');
-  lines.push(Buffer.from(params.bodyHtml, 'utf8').toString('base64'));
+  lines.push(wrapBase64(Buffer.from(params.bodyHtml, 'utf8').toString('base64')));
   lines.push('');
 
-  lines.push(`--${boundary}--`);
+  lines.push(`--${altBoundary}--`);
+
+  if (hasAttachments) {
+    for (const att of params.attachments!) {
+      lines.push('');
+      lines.push(`--${mixedBoundary}`);
+      lines.push(`Content-Type: ${att.mimeType || 'application/octet-stream'}; name="${att.filename}"`);
+      lines.push('Content-Transfer-Encoding: base64');
+      lines.push(`Content-Disposition: attachment; filename="${att.filename}"`);
+      lines.push('');
+      lines.push(wrapBase64(att.data));
+    }
+    lines.push('');
+    lines.push(`--${mixedBoundary}--`);
+  }
 
   const rawMessage = lines.join('\r\n');
   // Encode as base64url
@@ -108,6 +134,15 @@ function buildMicrosoftPayload(params: SendEmailBody): any {
     ccRecipients,
     bccRecipients,
   };
+
+  if (params.attachments && params.attachments.length > 0) {
+    message.attachments = params.attachments.map(att => ({
+      '@odata.type': '#microsoft.graph.fileAttachment',
+      name: att.filename,
+      contentType: att.mimeType || 'application/octet-stream',
+      contentBytes: att.data,
+    }));
+  }
 
   return { message, saveToSentItems: true };
 }

@@ -24,12 +24,16 @@ Mapeamento completo feito antes deste documento (agente de exploração, 2026-09
 2. **Pastas reais**: customizadas, possivelmente aninhadas, substituindo as 6 fixas hardcoded.
 3. **Motor de regras/filtros**: condições sobre e-mail recebido → ações automáticas.
 4. **Resposta automática funcional** (terminar o que já existe pela metade).
-5. Melhorias adicionais de paridade com Outlook, priorizadas depois do core (ver seção 7 — categorias, agendamento de envio, threading de conversa).
+5. **Agendamento de envio** (mover de "fora do escopo" pra dentro, pedido pelo usuário em 2026-09-11).
+6. **Threading de conversa** (idem, agrupar mensagens por assunto/thread).
+7. Correção de bugs reais encontrados na revisão de 2026-09-11, já corrigidos nesta sessão (ver seção 8, "já corrigido"): responder a todos não incluía os destinatários originais do campo "Para"; anexos nunca eram enviados de fato (nem no composer, nem no builder MIME do Gmail, nem no payload do Graph); imagens embutidas (`cid:`) sempre viravam um gif transparente em branco, nunca resolviam pro dado real.
 
 **Fora do escopo** (por decisão explícita do usuário, 2026-09-11):
 
 - **Conteúdo/corpo dos e-mails continua em memória** (`emailCache.ts`), não migra para Postgres. Only *configuração* (contas, pastas, regras) é persistida — ver ADR-7.
 - Caixas compartilhadas, integração de calendário, notificação push mobile — não pedidos, não incluídos.
+- Categorias/etiquetas coloridas e IMAP IDLE/push (ver seção 7) — continuam como backlog futuro, não pedidos explicitamente.
+- Anexos em rascunhos (`_api/email/draft.ts`) — tem a mesma lacuna de anexos que o envio tinha, mas não foi pedido; registrado como item de paridade futura na seção 7.
 
 ## 2. Decisões de arquitetura (ADR)
 
@@ -43,6 +47,8 @@ Mapeamento completo feito antes deste documento (agente de exploração, 2026-09
 | ADR-6 | Resposta automática: corrigir `_api/email/settings.ts` pra persistir `autoReply` de verdade, e implementar o disparo real dentro do loop de sync — depois de importar mensagens novas do INBOX, se `autoReply.enabled`, responde automaticamente (usando o caminho de envio do próprio provedor da conta) pra remetentes que ainda não receberam resposta dentro de uma janela de cooldown (evita loop infinito/spam). Dedup de cooldown fica em memória (`Map` simples, mesmo padrão do `emailCache.ts`), não em Postgres — consistente com ADR-7. | A UI e a coluna já existem; falta só a metade que faz a coisa funcionar. Cooldown em memória é aceitável (pior caso: um reinício do servidor dentro da janela de cooldown pode causar uma resposta automática duplicada — risco baixo, mesmo tipo de trade-off já aceito pro cache de e-mail inteiro). |
 | ADR-7 | **Conteúdo dos e-mails continua em memória** (`emailCache.ts`, inalterado). Só *configuração* — contas (`email_accounts`, já era Postgres), pastas (`email_folders`, nova) e regras (`email_rules`, nova) — é persistida no Postgres. | Decisão explícita do usuário (2026-09-11): manter em memória, só adicionar IMAP/pastas/regras por cima. Mas pasta e regra são *configuração do usuário*, não conteúdo de e-mail — perder isso a cada reinício do servidor seria uma regressão de UX inaceitável (equivalente a perder as configurações de conta hoje, que ninguém aceitaria). A linha divisória é: conteúdo/corpo/anexo de e-mail = efêmero (já é assim hoje); estrutura/config que o usuário criou = durável (já é assim hoje pra contas e settings). |
 | ADR-8 | `imapClient.ts` usa **conexão sob demanda** (abre, faz a operação, fecha) em vez de manter uma conexão IMAP persistente por conta — mais simples, evita gerenciar pool de conexões de longa duração num processo Node que já reinicia com frequência (deploys). IDLE (near-realtime) fica registrado como melhoria futura fora desta fase (ver seção 7). | Simplicidade > desempenho nesta primeira versão; o polling de 5 min já é o padrão atual pros outros 2 provedores, manter paridade. |
+| ADR-9 | **Agendamento de envio**: nova tabela `email_scheduled_sends` (`id, accountId, userId, payload jsonb` — o mesmo shape de `SendEmailBody`, `sendAt timestamptz, status: 'pending'\|'sent'\|'failed'\|'cancelled', error`). Um job recorrente (reaproveita o mesmo `setInterval` já usado pelo `scheduleEmailSync`, ou um segundo timer próprio de 1 min) varre `pending` com `sendAt <= now()` e chama a mesma lógica de `_api/email/send.ts` (extraída pra uma função reaproveitável, não duplicada). Cancelável enquanto `status='pending'`. | Precisa ser Postgres (não em memória) — perder um e-mail agendado num reinício do servidor é inaceitável, diferente do trade-off aceito pro cache de conteúdo (ADR-7). É configuração/intenção do usuário, não conteúdo de caixa de entrada. |
+| ADR-10 | **Threading de conversa**: agrupamento feito **no cliente/frontend**, não no backend — usa o `threadId` que os 3 provedores já fornecem (Gmail: `threadId` nativo; Microsoft: `conversationId`; IMAP: sem equivalente nativo confiável, agrupar por `References`/`In-Reply-To` header + assunto normalizado como fallback). `EmailList.tsx` agrupa mensagens com o mesmo `threadId` numa única linha expansível (como Gmail), mantendo a lista de mensagens individuais como já existe hoje por baixo. | Threading é fundamentalmente uma questão de apresentação sobre dados que já existem (`threadId` já é capturado em `parseGmailMessage`/`parseMicrosoftMessage` hoje, só não é usado pra agrupar) — não precisa de mudança de schema nem de sync, só de UI. |
 
 ## 3. Modelo de dados (Postgres/Drizzle)
 
@@ -110,6 +116,24 @@ export const emailRules = pgTable('email_rules', {
 
 A coluna já existe (`autoReply jsonb`). Mudança é 100% em `_api/email/settings.ts` (persistir o campo) e `_api/lib/emailSync.ts` (executar de fato).
 
+### 3.5 `email_scheduled_sends` — nova tabela
+
+```ts
+export const emailScheduledSends = pgTable('email_scheduled_sends', {
+  id: text('id').primaryKey(),
+  accountId: text('account_id').notNull().references(() => emailAccounts.id),
+  userId: text('user_id').notNull(),
+  organizationId: text('organization_id').references(() => organizations.id),
+  payload: jsonb('payload').notNull(), // shape de SendEmailBody (to/cc/bcc/subject/bodyHtml/attachments)
+  sendAt: timestamp('send_at', { withTimezone: true, mode: 'string' }).notNull(),
+  status: text('status').notNull().default('pending'), // 'pending' | 'sent' | 'failed' | 'cancelled'
+  error: text('error'),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_email_scheduled_pending').on(t.status, t.sendAt),
+]);
+```
+
 ## 4. Fluxo de nova conta IMAP (visão de UX)
 
 Espelha o "Configuração avançada" do Outlook desktop:
@@ -123,6 +147,16 @@ Espelha o "Configuração avançada" do Outlook desktop:
 
 Tela nova (`EmailRulesPage.tsx` ou aba dentro de `EmailSettingsPage.tsx`): lista de regras (nome, condição resumida, ação resumida, toggle habilitado/desabilitado, arrastar para reordenar), botão "Nova regra" abre um formulário: condições (campo + operador + valor, múltiplas com E/OU), ações (mover para pasta / marcar como lida / destacar / encaminhar para / apagar).
 
+## 5.1 Bugs reais já corrigidos (2026-09-11, antes de qualquer tarefa de IMAP/pastas/regras)
+
+Encontrados investigando os relatos do usuário ("responder a todos", "anexos que estava faltando", "imagens não estava abrindo direito") — corrigidos diretamente nesta sessão, fora da sequência de fases (são bugs do sistema atual, não features novas):
+
+- **Responder a todos** (`EmailComposer.tsx`): só incluía o remetente original + CC — nunca incluía os outros destinatários do campo "Para" original. Corrigido pra unir `from` + `to` + `cc` (menos o próprio usuário), sem duplicados.
+- **Anexos no envio**: três bugs em cadeia. (1) `EmailComposer.tsx` anexava arquivos na UI mas `handleSend` nunca os incluía na chamada de envio. (2) `EmailService.sendEmail()` tinha assinatura de tipo incompatível com o que o backend espera (`attachments?: string[]` em vez de `{filename,mimeType,data}[]`); `sendEmailWithFiles()` existia mas nunca era chamada por ninguém (código morto) e usava `multipart/form-data`, formato que o backend nunca soube processar. (3) mesmo se os dados chegassem certos, `buildMimeMessage()` (Gmail) e `buildMicrosoftPayload()` (Microsoft) nunca incluíam os anexos no MIME/payload — só marcavam `hasAttachments: true` no cache, cosmético. Corrigido: composer converte `File[]` pra base64 e envia no mesmo JSON; builder do Gmail agora monta `multipart/mixed` com uma parte por anexo; payload do Graph agora inclui `attachments: [{'@odata.type': 'fileAttachment', contentBytes, ...}]`.
+- **Imagens embutidas (`cid:`) sempre em branco**: `htmlSanitize.ts` trocava toda `src="cid:..."` por um gif transparente, sem nunca resolver pro dado real — o parser MIME do Gmail (`gmailClient.ts`) nunca capturava o header `Content-ID` de cada parte, e o parser do Graph (`microsoftClient.ts`) descartava `contentId`/`contentBytes` que a própria API já retorna. Corrigido: ambos os parsers agora resolvem `cid:X` pro `data:mimetype;base64,...` real antes de cachear a mensagem — o fallback pro gif transparente no sanitizador continua existindo, mas só age nos casos raros (imagem embutida grande, sem os bytes disponíveis na mesma resposta) que não são resolvidos nesta etapa.
+
+Anexos em **rascunhos** (`_api/email/draft.ts`) têm a mesma lacuna estrutural (nunca foram implementados), mas isso não foi reportado como quebrado — registrado como item de paridade futura na seção 7, não corrigido nesta sessão.
+
 ## 6. Registro de riscos
 
 | # | Risco | Mitigação |
@@ -133,12 +167,11 @@ Tela nova (`EmailRulesPage.tsx` ou aba dentro de `EmailSettingsPage.tsx`): lista
 | 4 | Resposta automática com dedup em memória: um reinício do servidor dentro da janela de cooldown pode enviar uma resposta duplicada pro mesmo remetente. | Aceito conscientemente (ADR-6) — mesmo trade-off já aceito pro cache de e-mail inteiro (ADR-9 do projeto de migração de banco). Cooldown sugerido de 24h torna a janela de risco pequena na prática. |
 | 5 | Widening de `provider` (união de 2 → 3 valores) toca em bastante código existente (`EmailService.ts`, `email.types.ts`, todo `_api/email/**`) — risco de regressão nos caminhos Gmail/Microsoft já funcionando. | Cada fase de execução testa explicitamente que Gmail/Microsoft continuam funcionando sem alteração de comportamento antes de considerar a fase concluída (mesmo padrão de verificação usado no projeto de migração de banco). |
 
-## 7. Fora do escopo desta fase, candidatos a fase futura ("e tudo mais")
+## 7. Fora do escopo desta fase, candidatos a fase futura
 
-Recursos adicionais de paridade com Outlook mencionados genericamente pelo usuário mas não detalhados — ficam registrados como backlog, a priorizar depois do core (IMAP + pastas + regras + resposta automática):
+Agendamento de envio e threading foram movidos pra dentro do escopo (ver seção 1, ADR-9, ADR-10). O que continua de fora, por não ter sido pedido:
 
-- Agendamento de envio (enviar às X horas).
-- Threading de conversa (agrupar mensagens por assunto/thread, como o Gmail faz nativamente e o Outlook faz por conversa).
+- Anexos em rascunhos (`_api/email/draft.ts`) — mesma lacuna estrutural que o envio tinha, ver seção 5.1.
 - Categorias/etiquetas coloridas (além de pastas).
 - IMAP IDLE / Gmail Pub/Sub / Graph subscriptions — sync quase em tempo real em vez de polling de 5 min.
 - Modo "foco" (separar e-mail importante de newsletter/promo automaticamente).

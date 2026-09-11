@@ -73,6 +73,12 @@ export interface EmailSettings {
   };
 }
 
+export interface EmailAttachmentPayload {
+  filename: string;
+  mimeType: string;
+  data: string; // base64, sem prefixo data:
+}
+
 export interface SendEmailPayload {
   accountId: string;
   to: EmailAddress[];
@@ -81,9 +87,22 @@ export interface SendEmailPayload {
   subject: string;
   bodyHtml: string;
   bodyText?: string;
-  attachments?: File[];
+  attachments?: EmailAttachmentPayload[];
   replyToMessageId?: string;
   threadId?: string;
+}
+
+export async function fileToAttachmentPayload(file: File): Promise<EmailAttachmentPayload> {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  // Monta a string em blocos — passar o array inteiro de uma vez pro
+  // String.fromCharCode/apply estoura a pilha em arquivos de alguns MB.
+  const CHUNK = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return { filename: file.name, mimeType: file.type || 'application/octet-stream', data: btoa(binary) };
 }
 
 export interface DraftPayload {
@@ -166,22 +185,15 @@ export const EmailService = {
     }).then(r => r.json()),
 
   // ── Envio ───────────────────────────────────────────────────────────────────
-  sendEmail: (data: Omit<SendEmailPayload, 'attachments'> & { attachments?: string[] }): Promise<{ success: boolean; messageId?: string }> =>
+  // Anexos vão como base64 no corpo JSON — é o formato que _api/email/send.ts já espera
+  // (SendEmailBody.attachments: {filename,mimeType,data}[]). Use fileToAttachmentPayload()
+  // para converter File[] do composer antes de chamar isto.
+  sendEmail: (data: SendEmailPayload): Promise<{ success: boolean; messageId?: string }> =>
     fetch('/api/email/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     }).then(r => r.json()),
-
-  sendEmailWithFiles: async (data: SendEmailPayload): Promise<{ success: boolean; messageId?: string }> => {
-    const formData = new FormData();
-    const { attachments, ...rest } = data;
-    formData.append('data', JSON.stringify(rest));
-    if (attachments) {
-      attachments.forEach(file => formData.append('attachments', file));
-    }
-    return fetch('/api/email/send', { method: 'POST', body: formData }).then(r => r.json());
-  },
 
   // ── Rascunhos ───────────────────────────────────────────────────────────────
   getDrafts: (accountId: string): Promise<CachedEmail[]> =>
