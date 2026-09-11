@@ -102,6 +102,18 @@ export class DataService {
     'campaigns': 'campaigns',
     'campaign': 'campaigns',
     'campaign_log': 'campaign_log',
+    'platform_agent_templates': 'platform_agent_templates',
+    'platform_guardrails': 'platform_guardrails',
+    'tenant_agent_configs': 'tenant_agent_configs',
+    'tenant_onboarding_wizard_state': 'tenant_onboarding_wizard_state',
+    'nfse_documents': 'nfse_documents',
+    'nfse_logs': 'nfse_logs',
+    'metrics_raw': 'metrics_raw',
+    'metrics_users': 'metrics_users',
+    'metrics_daily': 'metrics_daily',
+    'email_accounts': 'email_accounts',
+    'email_account': 'email_accounts',
+    'email_settings': 'email_settings',
   };
 
   private static _lastOrgId: string | null = null;

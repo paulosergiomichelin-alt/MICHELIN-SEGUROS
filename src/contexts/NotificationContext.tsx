@@ -1,15 +1,15 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { DataService } from '../services/DataService';
-import { orderBy, limit } from '../lib/queryConstraints';
+import { where, orderBy, limit } from '../lib/queryConstraints';
 
 interface Notification {
   id: string;
-  userId: string;
+  user_id: string;
   title: string;
   message: string;
   read: boolean;
-  createdAt: string;
+  created_at: string;
   type: 'info' | 'warning' | 'error' | 'success';
 }
 
@@ -32,7 +32,7 @@ export const NotificationProvider: React.FC<{ userId: string; children: React.Re
     // DataService already applies visibility constraints
     const unsub = DataService.subscribeCollection(
       'notifications',
-      [orderBy('createdAt', 'desc'), limit(50)],
+      [where('user_id', '==', userId), orderBy('created_at', 'desc'), limit(50)],
       (data) => {
         setNotifications(data);
       }
