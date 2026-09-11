@@ -3,7 +3,7 @@
 export interface CachedEmail {
   id: string;
   accountId: string;
-  provider: 'gmail' | 'microsoft';
+  provider: 'gmail' | 'microsoft' | 'imap';
   folder: string; // 'inbox' | 'sent' | 'drafts' | 'trash' | 'spam' | 'archive'
   threadId?: string;
   subject: string;

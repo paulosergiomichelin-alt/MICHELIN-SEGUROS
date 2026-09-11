@@ -52,10 +52,19 @@ export const emailAccounts = pgTable('email_accounts', {
   // accessToken/refreshToken/tokenExpiry são campos de nível superior (confirmado contra
   // gmailClient.ts/microsoftClient.ts/email/auth/gmail.ts) — NÃO um blob oauthTokens
   // aninhado como a spec original assumia (cópia indevida do padrão de outra entidade).
-  accessToken: text('access_token').notNull(),
-  refreshToken: text('refresh_token').notNull(),
+  accessToken: text('access_token'),        // era .notNull() — agora nullable (IMAP não usa OAuth)
+  refreshToken: text('refresh_token'),      // era .notNull() — agora nullable
   tokenExpiry: bigint('token_expiry', { mode: 'number' }),
   picture: text('picture'),
+  // Novas colunas — só preenchidas quando provider === 'imap':
+  imapHost: text('imap_host'),
+  imapPort: integer('imap_port'),
+  imapSecure: boolean('imap_secure').notNull().default(true),
+  smtpHost: text('smtp_host'),
+  smtpPort: integer('smtp_port'),
+  smtpSecure: boolean('smtp_secure').notNull().default(true),
+  username: text('username'),
+  passwordEncrypted: text('password_encrypted'),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });

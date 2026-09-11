@@ -16,7 +16,7 @@ export interface EmailAttachment {
 export interface CachedEmail {
   id: string;
   accountId: string;
-  provider: 'gmail' | 'microsoft';
+  provider: 'gmail' | 'microsoft' | 'imap';
   folder: string;
   threadId?: string;
   subject: string;
@@ -38,7 +38,7 @@ export interface CachedEmail {
 export interface EmailAccount {
   id: string;
   userId: string;
-  provider: 'gmail' | 'microsoft';
+  provider: 'gmail' | 'microsoft' | 'imap';
   email: string;
   displayName?: string;
   isDefault: boolean;

@@ -117,7 +117,7 @@ export default async function handler(req: any, res: any) {
       const cachedDraft: CachedEmail = {
         id: resultId,
         accountId: String(accountId),
-        provider: account.provider as 'gmail' | 'microsoft',
+        provider: account.provider as 'gmail' | 'microsoft' | 'imap',
         folder: 'drafts',
         subject: body.subject ?? '(sem assunto)',
         from: { email: account.email, name: account.displayName },

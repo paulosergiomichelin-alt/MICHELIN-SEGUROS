@@ -186,7 +186,7 @@ export default async function handler(req: any, res: any) {
     const cachedSent: CachedEmail = {
       id: optimisticId,
       accountId,
-      provider: account.provider as 'gmail' | 'microsoft',
+      provider: account.provider as 'gmail' | 'microsoft' | 'imap',
       folder: 'sent',
       subject,
       from: { email: account.email, name: account.displayName },

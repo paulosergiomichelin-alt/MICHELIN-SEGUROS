@@ -972,7 +972,7 @@ export interface EmpresaMetricas {
 
 // ─── Email Module ─────────────────────────────────────────────────────────────
 
-export type EmailProvider = 'gmail' | 'microsoft';
+export type EmailProvider = 'gmail' | 'microsoft' | 'imap';
 export type EmailFolder = 'inbox' | 'sent' | 'drafts' | 'trash' | 'spam' | 'archive';
 
 export interface EmailAddress {
