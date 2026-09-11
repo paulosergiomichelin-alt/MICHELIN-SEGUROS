@@ -800,3 +800,13 @@ Cada fase é reversível independentemente até a Fase 6 (cutover):
 - Fases 0-4: código novo convive com o código antigo via feature flag de ambiente (`USE_POSTGRES=true/false` lido no boot do `server.ts` e no bundle do frontend via `VITE_USE_POSTGRES`) — permite religar o caminho Firestore instantaneamente se algo falhar em produção.
 - Fase 5 (migração de dados): não apaga nada no Firestore; é só leitura lá + escrita no Postgres.
 - Fase 6 (cutover): decomissionamento do Firestore como fonte de dados só ocorre depois de um período de operação estável (sugestão: 2 semanas) com `USE_POSTGRES=true` em produção sem incidentes relacionados a dados.
+
+### 9.1 Execução real da Fase 6 (2026-09-11) — desvio registrado do plano original
+
+O plano original assumia cutover na mesma VPS (`143.95.211.30`) que já rodava o backend Firestore. Na prática:
+
+- O usuário decidiu não pagar mais essa VPS e não usá-la — ela ficou indisponível (senha de acesso não fazia mais login com as credenciais conhecidas), tornando `/api/*` e `/socket.io` de produção já inoperantes antes de qualquer ação desta fase.
+- **Novo backend**: `server.ts` + `_api/**` (Postgres/Neon) implantado no **Railway** (`michelin-crm-backend-production.up.railway.app`), não na VPS. Evolution API/WhatsApp deixados de fora deste deploy por decisão explícita do usuário — endpoints correspondentes retornam erro gracioso até serem configurados nesse novo ambiente.
+- `vercel.json` atualizado para apontar `/api/*`/`/socket.io` pro Railway em vez da VPS morta.
+- **Cutover completo sem período de observação de 2 semanas**: dado que a VPS antiga já estava fora do ar (ou seja, `_api/**` já não tinha caminho Firestore funcional em produção havia um tempo indeterminado) e os dados já estavam migrados e verificados (Fase 5, `VERIFY-OK` em todas as 33 coleções), o usuário optou por ativar `USE_POSTGRES=true` (Railway) e `VITE_USE_POSTGRES=true` (Vercel) imediatamente, em vez de esperar. Validado com smoke test real em produção: ciclo completo create/read/update/delete em `leads` via `https://michelin-seguros.vercel.app/api/data/*`, e conexão Socket.IO bem-sucedida pelo mesmo domínio.
+- **Firestore não foi apagado nem desativado** — Task 3/4 da Fase 6 (remover o caminho Firestore do código, `_api/lib/adminFirebase.ts`, etc.) não foi executada. O código antigo permanece no repositório; a "reversão" agora seria reverter as env vars (`USE_POSTGRES`/`VITE_USE_POSTGRES` de volta a `false`) mais religar um backend que sirva Firestore — o que não é mais possível sem uma VPS ou serviço equivalente no ar servindo esse caminho, já que a antiga foi abandonada.
