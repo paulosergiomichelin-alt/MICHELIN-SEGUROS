@@ -149,6 +149,29 @@ export const EmailService = {
       body: JSON.stringify(data),
     }).then(r => r.json()),
 
+  createImapAccount: (data: {
+    userId: string;
+    email: string;
+    username?: string;
+    password: string;
+    displayName?: string;
+    imapHost?: string;
+    imapPort?: number;
+    imapSecure?: boolean;
+    smtpHost?: string;
+    smtpPort?: number;
+    smtpSecure?: boolean;
+  }): Promise<{ success: boolean; accountId?: string; error?: string }> =>
+    fetch('/api/email/accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(async r => {
+      const json = await r.json();
+      if (!r.ok) return { success: false, error: json.error ?? 'Falha ao conectar' };
+      return { success: true, accountId: json.accountId };
+    }),
+
   // ── Auth ────────────────────────────────────────────────────────────────────
   getGmailAuthUrl: (userId: string, returnUrl: string): string =>
     `/api/email/auth/gmail/init?userId=${encodeURIComponent(userId)}&returnUrl=${encodeURIComponent(returnUrl)}`,

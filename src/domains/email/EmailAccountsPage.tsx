@@ -178,6 +178,31 @@ export const EmailAccountsPage: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
 
+  const [showImapModal, setShowImapModal] = useState(false);
+  const [imapForm, setImapForm] = useState({ email: '', password: '', displayName: '' });
+  const [imapError, setImapError] = useState<string | null>(null);
+  const [imapSubmitting, setImapSubmitting] = useState(false);
+
+  const handleCreateImapAccount = async () => {
+    if (!userProfile?.uid) return;
+    setImapSubmitting(true);
+    setImapError(null);
+    const result = await EmailService.createImapAccount({
+      userId: userProfile.uid,
+      email: imapForm.email,
+      password: imapForm.password,
+      displayName: imapForm.displayName || undefined,
+    });
+    setImapSubmitting(false);
+    if (!result.success) {
+      setImapError(result.error ?? 'Falha ao conectar a conta.');
+      return;
+    }
+    setShowImapModal(false);
+    setImapForm({ email: '', password: '', displayName: '' });
+    loadAccounts();
+  };
+
   const handleSync = async (account: EmailAccount) => {
     setSyncingId(account.id);
     setSyncError(null);
@@ -307,9 +332,85 @@ export const EmailAccountsPage: React.FC = () => {
                 <p className="text-xs text-white/30 group-hover:text-white/40">Microsoft 365 ou Outlook.com</p>
               </div>
             </a>
+
+            {/* Outro (IMAP) */}
+            <button
+              onClick={() => setShowImapModal(true)}
+              className="flex items-center gap-3 px-5 py-3 rounded-xl border border-white/10 hover:border-white/25 hover:bg-white/5 transition-all text-white/60 hover:text-white/90 group"
+            >
+              <Mail className="w-5 h-5 shrink-0 text-white/40" />
+              <div className="text-left">
+                <p className="font-medium text-sm">Outro (IMAP)</p>
+                <p className="text-xs text-white/30 group-hover:text-white/40">Qualquer provedor com IMAP/SMTP</p>
+              </div>
+            </button>
           </div>
         </div>
       </div>
+
+      {showImapModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-md">
+            <h3 className="text-white/90 font-semibold text-base mb-1">Conectar conta IMAP</h3>
+            <p className="text-white/40 text-xs mb-5">
+              Funciona com qualquer provedor de e-mail que ofereça IMAP/SMTP.
+            </p>
+
+            <label className="block text-white/50 text-xs mb-1.5">E-mail</label>
+            <input
+              type="email"
+              value={imapForm.email}
+              onChange={e => setImapForm(f => ({ ...f, email: e.target.value }))}
+              className="w-full mb-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/85 text-sm outline-none focus:border-white/25"
+              placeholder="voce@provedor.com"
+            />
+
+            <label className="block text-white/50 text-xs mb-1.5">Senha</label>
+            <input
+              type="password"
+              value={imapForm.password}
+              onChange={e => setImapForm(f => ({ ...f, password: e.target.value }))}
+              className="w-full mb-1.5 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/85 text-sm outline-none focus:border-white/25"
+              placeholder="Senha ou senha de app"
+            />
+            <p className="text-white/25 text-[11px] mb-3">
+              Provedores como Gmail e Yahoo exigem uma "senha de app" quando a verificação em duas etapas está ativa.
+            </p>
+
+            <label className="block text-white/50 text-xs mb-1.5">Nome de exibição (opcional)</label>
+            <input
+              type="text"
+              value={imapForm.displayName}
+              onChange={e => setImapForm(f => ({ ...f, displayName: e.target.value }))}
+              className="w-full mb-4 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/85 text-sm outline-none focus:border-white/25"
+              placeholder={imapForm.email || 'Como aparece pros destinatários'}
+            />
+
+            {imapError && (
+              <div className="mb-4 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+                {imapError}
+              </div>
+            )}
+
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => { setShowImapModal(false); setImapError(null); }}
+                className="px-4 py-2 rounded-lg text-sm text-white/50 hover:text-white/80 border border-white/8 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateImapAccount}
+                disabled={imapSubmitting || !imapForm.email || !imapForm.password}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm bg-gold-deep/15 text-gold-deep border border-gold-deep/25 hover:bg-gold-deep/25 transition-colors disabled:opacity-50"
+              >
+                {imapSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {imapSubmitting ? 'Testando conexão...' : 'Testar e conectar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
