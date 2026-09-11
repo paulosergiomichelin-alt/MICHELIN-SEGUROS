@@ -20,8 +20,13 @@ export const leads = pgTable('leads', {
   phone: text('phone').notNull(),
   email: text('email'),
   cpf: text('cpf').notNull(),
-  plate: text('plate').notNull(),
-  chassis: text('chassis').notNull(),
+  // Nulos em produção pra qualquer lead de seguro não-automotivo (residencial, moto,
+  // bicicleta elétrica etc.) — confirmado via migração real: chassis ausente em 100% dos
+  // 75 leads reais, plate ausente em 70/75. types.ts declara os dois como `string`
+  // obrigatório, mas isso nunca foi verdade na prática; NOT NULL aqui era mais estrito
+  // que o dado real e travava a migração da Fase 5.
+  plate: text('plate'),
+  chassis: text('chassis'),
   insurer: text('insurer'),
   insuranceType: text('insurance_type'),
   closedAt: timestamp('closed_at', { withTimezone: true, mode: 'string' }),
@@ -41,7 +46,11 @@ export const leads = pgTable('leads', {
 export const messages = pgTable('messages', {
   id: text('id').primaryKey(),
   organizationId: text('organization_id').references(() => organizations.id),
-  leadId: text('lead_id').notNull().references(() => leads.id),
+  // Sem .references() de propósito: mensagens de leads apagados (ex.: limpeza de leads de
+  // teste) sobrevivem como histórico — confirmado via migração real (54/56 mensagens
+  // apontavam pra leads já inexistentes). O Firestore nunca validou essa integridade;
+  // exigir FK aqui rejeitaria dado real que sempre existiu.
+  leadId: text('lead_id').notNull(),
   sender: text('sender').notNull(),
   text: text('text').notNull(),
   attachments: jsonb('attachments'),
@@ -62,7 +71,9 @@ export const notifications = pgTable('notifications', {
   id: text('id').primaryKey(),
   organizationId: text('organization_id').references(() => organizations.id),
   user_id: text('user_id').notNull(),
-  lead_id: text('lead_id').references(() => leads.id),
+  // Sem .references(): notificações órfãs de leads apagados sobrevivem como histórico (12/12
+  // notificações reais apontavam pra leads inexistentes na migração) — mesmo racional de messages acima.
+  lead_id: text('lead_id'),
   leadName: text('lead_name'),
   title: text('title').notNull(),
   message: text('message').notNull(),

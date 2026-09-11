@@ -4,7 +4,11 @@ import { organizations } from './core';
 export const auditLogs = pgTable('audit_logs', {
   id: text('id').primaryKey(),
   organizationId: text('organization_id').references(() => organizations.id),
-  timestamp: timestamp('timestamp', { withTimezone: true, mode: 'string' }).notNull(),
+  // timestamp/category/entity/origin relaxados pra nullable — confirmado via migração real
+  // que ~1-3% dos 782 logs reais vêm de uma versão mais antiga do logger, sem esses campos
+  // (usava resource/resourceId em vez de entity/entityId, e não gravava category/origin/
+  // timestamp). userId/action nunca faltam, continuam NOT NULL.
+  timestamp: timestamp('timestamp', { withTimezone: true, mode: 'string' }),
   userId: text('user_id').notNull(),
   userName: text('user_name'),
   ip: text('ip'),
@@ -14,12 +18,12 @@ export const auditLogs = pgTable('audit_logs', {
   os: text('os'),
   location: text('location'),
   action: text('action').notNull(),
-  category: text('category').notNull(),
-  entity: text('entity').notNull(),
+  category: text('category'),
+  entity: text('entity'),
   entityId: text('entity_id'),
   before: jsonb('before'),
   after: jsonb('after'),
-  origin: text('origin').notNull(),
+  origin: text('origin'),
   details: text('details'),
   status: text('status'),
   result: text('result'),

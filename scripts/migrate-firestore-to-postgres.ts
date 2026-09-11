@@ -29,6 +29,28 @@ function toDateOnly(v: any): string | null {
   return typeof v === 'string' && v.length >= 10 ? v.slice(0, 10) : null;
 }
 
+// Muitos registros reais (clientes, leads, cliente_relacionamentos) foram gravados com o
+// literal "default" em organizationId em vez do id real da organização (bug histórico, de
+// antes da organização real existir) — decisão do usuário (2026-09-10): remapear "default"
+// para o id real, já que só existe uma organização em todo o sistema. Resolvido uma vez no
+// início de main() e usado por toda transform que lê organizationId.
+let DEFAULT_ORG_ID = 'default';
+
+function resolveOrgId(raw: any): string | null {
+  if (raw === undefined || raw === null) return null;
+  return raw === 'default' ? DEFAULT_ORG_ID : raw;
+}
+
+async function resolveDefaultOrgId(): Promise<string> {
+  const orgs = await fsQueryFull('empresas', [], 100000);
+  if (orgs.length !== 1) {
+    console.warn(`[migrate] ${orgs.length} organizações encontradas (esperado exatamente 1) — mantendo organizationId="default" literal, que vai falhar a FK até isso ser resolvido manualmente.`);
+    return 'default';
+  }
+  console.log(`[migrate] organizationId="default" será remapeado para "${orgs[0].id}" (única organização real do sistema)`);
+  return orgs[0].id;
+}
+
 // Padrão oficial do Drizzle para upsert em lote: "set" precisa referenciar a pseudo-tabela
 // `excluded` (o valor que seria inserido), não a própria coluna (`set: { col: table.col }`
 // seria um UPDATE col = col, um no-op) — sem isso, reexecutar o script depois de editar um
@@ -62,14 +84,26 @@ async function insertRows(name: string, table: any, rows: Record<string, any>[],
   if (rows.length === 0) return;
   const pkProp = resolvePkProp(name);
   const target = resolvePkColumn(name, table);
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    const chunk = rows.slice(i, i + CHUNK);
+  // Migração roda contra o Firestore de produção AINDA EM USO (sem freeze de escrita) —
+  // uma coleção sendo escrita entre duas leituras pode fazer a mesma PK aparecer 2x no
+  // resultado (confirmado ao vivo em `settings`, cujo conteúdo mudou entre duas inspeções
+  // de segundos de diferença). Um único INSERT com a mesma PK duas vezes no VALUES quebra
+  // com "ON CONFLICT DO UPDATE command cannot affect row a second time" — dedupe mantendo
+  // a última ocorrência (leitura mais recente) antes de montar os lotes.
+  const deduped = new Map<any, Record<string, any>>();
+  for (const row of rows) deduped.set(row[pkProp], row);
+  const uniqueRows = [...deduped.values()];
+  if (uniqueRows.length < rows.length) {
+    console.warn(`[migrate] ${name}: ${rows.length - uniqueRows.length} linha(s) com PK duplicada dentro do lote (escrita concorrente em produção durante a leitura) — mantendo a última ocorrência de cada.`);
+  }
+  for (let i = 0; i < uniqueRows.length; i += CHUNK) {
+    const chunk = uniqueRows.slice(i, i + CHUNK);
     const updateColumns = Object.keys(chunk[0]).filter((k) => k !== pkProp);
     await db.insert(table).values(chunk).onConflictDoUpdate({
       target,
       set: buildConflictUpdateColumns(table, updateColumns),
     });
-    console.log(`[migrate] ${name}: ${Math.min(i + CHUNK, rows.length)}/${rows.length}`);
+    console.log(`[migrate] ${name}: ${Math.min(i + CHUNK, uniqueRows.length)}/${uniqueRows.length}`);
   }
 }
 
@@ -106,11 +140,11 @@ function transformLead(d: any): Record<string, any> {
   for (const [k, v] of Object.entries(d)) if (!LEAD_PROMOTED_FIELDS.has(k)) data[k] = v;
   const createdAt = isoStr(d.createdAt) ?? new Date().toISOString();
   return {
-    id: d.id, organizationId: d.organizationId, status: d.status, temperature: d.temperature ?? null,
+    id: d.id, organizationId: resolveOrgId(d.organizationId), status: d.status, temperature: d.temperature ?? null,
     score: d.score ?? null, vendedorId: d.vendedorId ?? null, ownerId: d.ownerId ?? null,
     responsibleAgentId: d.responsibleAgentId ?? null, responsibleAgentType: d.responsibleAgentType ?? null,
     clienteId: d.clienteId ?? null, origin: d.origin, isTest: !!d.isTest, iaActive: d.iaActive ?? null,
-    name: d.name, phone: d.phone, email: d.email ?? null, cpf: d.cpf, plate: d.plate, chassis: d.chassis,
+    name: d.name, phone: d.phone, email: d.email ?? null, cpf: d.cpf, plate: d.plate ?? null, chassis: d.chassis ?? null,
     insurer: d.insurer ?? null, insuranceType: d.insuranceType ?? null, closedAt: isoStr(d.closedAt),
     lastInteraction: isoStr(d.lastInteraction), nextReturnAt: isoStr(d.nextReturnAt ?? d.proximoRetorno),
     stuckSince: isoStr(d.stuckSince), version: d.version ?? 1, data,
@@ -137,14 +171,51 @@ const MIGRATIONS: Migration[] = [
   },
   {
     name: 'seguradoras', table: schema.seguradoras,
-    fetch: () => fsQueryFull('seguradoras', [], 100000),
+    // A coleção Firestore 'seguradoras' está vazia em produção — nunca foi formalmente
+    // cadastrada. `clientes.seguradoraAtualId`/`cliente_apolices.seguradoraId` guardam
+    // slugs de texto livre (ex.: "allianz", "hdi") como se fossem FK pra ela. Sem isso, o
+    // insert de clientes/apólices falha com FK violation. Cria um registro sintético
+    // (id=nome=slug) pra cada seguradora realmente referenciada, preservando o dado
+    // original (o slug) em vez de descartá-lo ou inventar um nome bonito que não existe.
+    fetch: async () => {
+      const real = await fsQueryFull('seguradoras', [], 100000);
+      const realIds = new Set(real.map((d) => d.id));
+      const usedIds = new Set<string>();
+      const clientesDocs = await fsQueryFull('clientes', [], 100000);
+      for (const c of clientesDocs) {
+        if (c.seguradoraAtualId) usedIds.add(c.seguradoraAtualId);
+        const apolices = await fsQueryFullSubcollection('clientes', c.id, 'apolices');
+        for (const a of apolices) if (a.seguradoraId) usedIds.add(a.seguradoraId);
+      }
+      const synthetic = [...usedIds].filter((id) => !realIds.has(id)).map((id) => ({ id, nome: id }));
+      if (synthetic.length > 0) {
+        console.warn(`[migrate] seguradoras: ${synthetic.length} seguradora(s) referenciadas por clientes/apólices sem cadastro real no Firestore — criando registro sintético pra satisfazer a FK: ${synthetic.map((s) => s.id).join(', ')}`);
+      }
+      return [...real, ...synthetic];
+    },
     transform: (d) => ({ id: d.id, nome: d.nome ?? d.name ?? d.id }),
   },
   {
     name: 'users', table: schema.users,
-    fetch: () => fsQueryFull('users', [], 100000),
+    // 2 dos 3 docs reais em produção estão corrompidos/incompletos: um é um duplicado
+    // obsoleto sem email com organizationId="default" (não existe organização com esse
+    // id), o outro é um doc-lixo cujo id literal é ".fieldPaths=superadmin" (artefato de
+    // algum chamada antiga de fsUpdate('users', <id vazio/undefined>, {...}) — o id vazio
+    // vira parte da querystring da URL, que o Firestore aceitou como nome de documento).
+    // Nenhum dos dois é um usuário real (sem email, não dá pra logar) — pular com aviso em
+    // vez de inventar um email ou deixar a constraint NOT NULL travar a migração inteira.
+    fetch: async () => {
+      const docs = await fsQueryFull('users', [], 100000);
+      return docs.filter((d) => {
+        if (!d.email) {
+          console.warn(`[migrate] users: pulando doc "${d.id}" sem email (dado corrompido/incompleto no Firestore) — name=${d.name ?? '(vazio)'}, organizationId=${d.organizationId ?? '(vazio)'}`);
+          return false;
+        }
+        return true;
+      });
+    },
     transform: (d) => ({
-      id: d.id ?? d.uid, organizationId: d.organizationId ?? null, email: d.email, name: d.name, phone: d.phone ?? null,
+      id: d.id ?? d.uid, organizationId: resolveOrgId(d.organizationId), email: d.email, name: d.name, phone: d.phone ?? null,
       role: d.role, userType: d.userType, profileId: d.profileId ?? null, permissions: d.permissions ?? [], cargo: d.cargo ?? null,
       photoURL: d.photoURL ?? null, status: d.status, onboardingCompleted: d.onboardingCompleted ?? null, metrics: d.metrics ?? null,
       activity: d.activity ?? null, theme: d.theme ?? null, chatPreferences: d.chatPreferences ?? null, superadmin: !!d.superadmin,
@@ -171,7 +242,7 @@ const MIGRATIONS: Migration[] = [
     name: 'clientes', table: schema.clientes,
     fetch: () => fsQueryFull('clientes', [], 100000),
     transform: (d) => ({
-      id: d.id, organizationId: d.organizationId ?? null, nome: d.nome, cpf: d.cpf, rg: d.rg ?? null,
+      id: d.id, organizationId: resolveOrgId(d.organizationId), nome: d.nome, cpf: d.cpf, rg: d.rg ?? null,
       rgDataExpedicao: d.rgDataExpedicao ?? null, rgOrgaoEmissor: d.rgOrgaoEmissor ?? null,
       dataNascimento: toDateOnly(d.dataNascimento), estadoCivil: d.estadoCivil ?? null,
       profissao: d.profissao ?? null, sexo: d.sexo ?? null, telefone: d.telefone, whatsapp: d.whatsapp ?? null,
@@ -191,7 +262,7 @@ const MIGRATIONS: Migration[] = [
       id: d.id, clienteId: d.clienteId, relatedClienteId: d.relatedClienteId,
       relatedClienteNome: d.relatedClienteNome, relatedClienteTelefone: d.relatedClienteTelefone ?? null,
       relatedClienteWhatsapp: d.relatedClienteWhatsapp ?? null, relatedClienteCPF: d.relatedClienteCPF ?? null,
-      tipoRelacionamento: d.tipoRelacionamento, organizationId: d.organizationId ?? null,
+      tipoRelacionamento: d.tipoRelacionamento, organizationId: resolveOrgId(d.organizationId),
       createdAt: isoStr(d.createdAt) ?? new Date().toISOString(),
       updatedAt: isoStr(d.updatedAt) ?? isoStr(d.createdAt) ?? new Date().toISOString(),
     }),
@@ -200,7 +271,7 @@ const MIGRATIONS: Migration[] = [
     name: 'messages', table: schema.messages,
     fetch: () => fsQueryFull('messages', [], 100000),
     transform: (d) => ({
-      id: d.id, organizationId: d.organizationId ?? null, leadId: d.leadId, sender: d.sender, text: d.text,
+      id: d.id, organizationId: resolveOrgId(d.organizationId), leadId: d.leadId, sender: d.sender, text: d.text,
       attachments: d.attachments ?? null, isTest: !!d.isTest, aiProcessed: d.aiProcessed ?? null,
       aiProcessingStartedAt: isoStr(d.aiProcessingStartedAt),
       timestamp: isoStr(d.timestamp) ?? isoStr(d.createdAt) ?? new Date().toISOString(),
@@ -211,7 +282,7 @@ const MIGRATIONS: Migration[] = [
     name: 'notifications', table: schema.notifications,
     fetch: () => fsQueryFull('notifications', [], 100000),
     transform: (d) => ({
-      id: d.id, organizationId: d.organizationId ?? null, user_id: d.user_id, lead_id: d.lead_id ?? null,
+      id: d.id, organizationId: resolveOrgId(d.organizationId), user_id: d.user_id, lead_id: d.lead_id ?? null,
       leadName: d.leadName ?? null, title: d.title, message: d.message, type: d.type, priority: d.priority,
       read: !!d.read, created_by: d.created_by, created_at: isoStr(d.created_at) ?? new Date().toISOString(),
     }),
@@ -220,7 +291,7 @@ const MIGRATIONS: Migration[] = [
     name: 'follow_ups', table: schema.followUps,
     fetch: () => fsQueryFull('follow_ups', [], 100000),
     transform: (d) => ({
-      id: d.id, organizationId: d.organizationId ?? null, leadId: d.leadId,
+      id: d.id, organizationId: resolveOrgId(d.organizationId), leadId: d.leadId,
       scheduledAt: isoStr(d.scheduledAt) ?? new Date().toISOString(), status: d.status, origin: d.origin,
       contextSummary: d.contextSummary ?? null, executedAt: isoStr(d.executedAt),
       createdAt: isoStr(d.createdAt) ?? new Date().toISOString(),
@@ -231,7 +302,7 @@ const MIGRATIONS: Migration[] = [
     name: 'flows', table: schema.flows,
     fetch: () => fsQueryFull('flows', [], 100000),
     transform: (d) => ({
-      id: d.id, organizationId: d.organizationId ?? null, name: d.name, description: d.description,
+      id: d.id, organizationId: resolveOrgId(d.organizationId), name: d.name, description: d.description,
       priority: d.priority, isActive: d.isActive ?? true, layer: d.layer ?? null,
       activationScore: d.activationScore ?? null, compressedDescription: d.compressedDescription ?? null,
       applicableStatus: d.applicableStatus ?? null,
@@ -243,7 +314,7 @@ const MIGRATIONS: Migration[] = [
     name: 'learning_memory', table: schema.learningMemory,
     fetch: () => fsQueryFull('learning_memory', [], 100000),
     transform: (d) => ({
-      id: d.id, organizationId: d.organizationId ?? null, status: d.status ?? null, temperature: d.temperature ?? null,
+      id: d.id, organizationId: resolveOrgId(d.organizationId), status: d.status ?? null, temperature: d.temperature ?? null,
       profile: d.profile ?? null, objectionType: d.objectionType ?? null, argumentUsed: d.argumentUsed ?? null,
       step: d.step ?? null, outcome: d.outcome, timestamp: isoStr(d.timestamp) ?? new Date().toISOString(),
     }),
@@ -252,11 +323,14 @@ const MIGRATIONS: Migration[] = [
     name: 'audit_logs', table: schema.auditLogs,
     fetch: () => fsQueryFull('audit_logs', [], 100000),
     transform: (d) => ({
-      id: d.id, organizationId: d.organizationId ?? null, timestamp: isoStr(d.timestamp) ?? new Date().toISOString(),
+      // Logs antigos usavam resource/resourceId em vez de entity/entityId, e às vezes não
+      // tinham timestamp/category/origin — preservar o que existir, sem fabricar valores.
+      id: d.id, organizationId: resolveOrgId(d.organizationId), timestamp: isoStr(d.timestamp) ?? isoStr(d.createdAt),
       userId: d.userId, userName: d.userName ?? null, ip: d.ip ?? null, userAgent: d.userAgent ?? null,
       deviceType: d.deviceType ?? null, browser: d.browser ?? null, os: d.os ?? null, location: d.location ?? null,
-      action: d.action, category: d.category, entity: d.entity, entityId: d.entityId ?? null,
-      before: d.before ?? null, after: d.after ?? null, origin: d.origin, details: d.details ?? null,
+      action: d.action, category: d.category ?? null, entity: d.entity ?? d.resource ?? null,
+      entityId: d.entityId ?? d.resourceId ?? null,
+      before: d.before ?? null, after: d.after ?? null, origin: d.origin ?? null, details: d.details ?? null,
       status: d.status ?? null, result: d.result ?? null, context: d.context ?? null, metadata: d.metadata ?? null,
     }),
   },
@@ -287,7 +361,7 @@ const MIGRATIONS: Migration[] = [
     name: 'campaigns', table: schema.campaigns,
     fetch: () => fsQueryFull('campaigns', [], 100000),
     transform: (d) => ({
-      id: d.id, organizationId: d.organizationId ?? null, name: d.name, objective: d.objective ?? null,
+      id: d.id, organizationId: resolveOrgId(d.organizationId), name: d.name, objective: d.objective ?? null,
       instructions: d.instructions ?? null, messageTemplate: d.messageTemplate ?? null,
       sessionName: d.sessionName ?? null, imageUrl: d.imageUrl ?? null, imageOrder: d.imageOrder ?? null,
       targetLeads: d.targetLeads ?? null, status: d.status, totalLeads: d.totalLeads ?? 0,
@@ -309,7 +383,7 @@ const MIGRATIONS: Migration[] = [
     name: 'email_accounts', table: schema.emailAccounts,
     fetch: () => fsQueryFull('email_accounts', [], 100000),
     transform: (d) => ({
-      id: d.id, organizationId: d.organizationId ?? null, userId: d.userId, provider: d.provider, email: d.email,
+      id: d.id, organizationId: resolveOrgId(d.organizationId), userId: d.userId, provider: d.provider, email: d.email,
       displayName: d.displayName ?? null, isDefault: !!d.isDefault, status: d.status, lastSync: isoStr(d.lastSync),
       syncError: d.syncError ?? null, accessToken: d.accessToken, refreshToken: d.refreshToken,
       tokenExpiry: d.tokenExpiry ?? null, picture: d.picture ?? null,
@@ -352,7 +426,7 @@ const MIGRATIONS: Migration[] = [
     name: 'whatsapp_sessions', table: schema.whatsappSessions,
     fetch: () => fsQueryFull('whatsapp_sessions', [], 100000),
     transform: (d) => ({
-      id: d.id, organizationId: d.organizationId ?? null, userId: d.userId, sessionName: d.sessionName,
+      id: d.id, organizationId: resolveOrgId(d.organizationId), userId: d.userId, sessionName: d.sessionName,
       phoneNumber: d.phoneNumber ?? null, profileName: d.profileName ?? null, profilePicture: d.profilePicture ?? null,
       status: d.status, qrBase64: d.qrBase64 ?? null, qrCode: d.qrCode ?? null,
       createdAt: isoStr(d.createdAt) ?? new Date().toISOString(),
@@ -362,17 +436,36 @@ const MIGRATIONS: Migration[] = [
   {
     name: 'metrics_raw', table: schema.metricsRaw,
     fetch: () => fsQueryFull('metrics_raw', [], 100000),
-    transform: (d) => ({ id: d.id, event: d.event, createdAt: isoStr(d.createdAt) ?? new Date().toISOString() }),
+    // 100% dos docs reais são de uma versão antiga do código que gravava os campos soltos
+    // (name/value/tags/timestamp/userId) em vez de aninhados em `event` — o código atual
+    // (MetricsService.ts) já grava certo. Envolve o doc legado inteiro sem perder nada.
+    transform: (d) => ({ id: d.id, event: d.event ?? d, createdAt: isoStr(d.createdAt) ?? new Date().toISOString() }),
   },
   {
     name: 'metrics_users', table: schema.metricsUsers,
     fetch: () => fsQueryFull('metrics_users', [], 100000),
-    transform: (d) => ({ id: d.id, userId: d.userId, day: d.day, data: d.data ?? {} }),
+    // Doc real não tem campo `day` nem `data` — id é literalmente "{uid}_{YYYY-MM-DD}"
+    // (uids do Firebase Auth não têm underscore, então o primeiro "_" sempre separa os
+    // dois) e os valores em si vêm como chaves de nível superior com ponto literal no
+    // nome (ex.: "values.db_write_attempt" — Firestore aceita field paths com ponto como
+    // nome de campo real, não como map aninhado). Deriva day do id e junta o resto em data.
+    transform: (d) => {
+      const day = d.id.slice(d.id.indexOf('_') + 1);
+      const data: Record<string, any> = {};
+      for (const [k, v] of Object.entries(d)) if (k !== 'id' && k !== 'userId') data[k] = v;
+      return { id: d.id, userId: d.userId, day, data };
+    },
   },
   {
     name: 'metrics_daily', table: schema.metricsDaily,
     fetch: () => fsQueryFull('metrics_daily', [], 100000),
-    transform: (d) => ({ day: d.day ?? d.id, data: d.data ?? {} }),
+    // Mesmo padrão de metrics_users: id É o day (formato "YYYY-MM-DD"), sem campo `data`
+    // aninhado — valores vêm soltos com nome de campo contendo ponto literal.
+    transform: (d) => {
+      const data: Record<string, any> = {};
+      for (const [k, v] of Object.entries(d)) if (k !== 'id') data[k] = v;
+      return { day: d.id, data };
+    },
   },
   {
     name: 'settings', table: schema.settings,
@@ -632,6 +725,8 @@ const FULL_ORDER = [
 ];
 
 async function main() {
+  DEFAULT_ORG_ID = await resolveDefaultOrgId();
+
   const results: Array<{ name: string; count: number }> = [];
 
   if (ONLY) {

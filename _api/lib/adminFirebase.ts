@@ -187,8 +187,13 @@ export async function fsQueryFull(
   return rows
     .filter((r: any) => r.document?.name)
     .map((r: any) => ({
-      id: r.document.name.split('/').pop() as string,
+      // `id` precisa vir DEPOIS do spread: se o próprio documento tiver um campo chamado
+      // "id" (confirmado em produção — settings/config guardam a própria chave como campo
+      // "id"), a ordem antiga deixava esse valor interno sobrescrever o id real derivado
+      // do path, colapsando documentos genuinamente distintos (ex.: "default::foo" e
+      // "org123::foo") no mesmo id — descoberto ao migrar settings/config na Fase 5.
       ...fromFirestoreFields(r.document.fields ?? {}),
+      id: r.document.name.split('/').pop() as string,
     }));
 }
 
@@ -205,7 +210,8 @@ export async function fsQueryFullSubcollection(
   if (!res.ok) throw new Error(`fsQueryFullSubcollection ${parentCollection}/${parentId}/${subcollection}: ${await res.text()}`);
   const body: any = await res.json();
   return (body.documents ?? []).map((doc: any) => ({
-    id: doc.name.split('/').pop() as string,
+    // Mesmo cuidado de ordem de spread do fsQueryFull acima — id do path sempre por último.
     ...fromFirestoreFields(doc.fields ?? {}),
+    id: doc.name.split('/').pop() as string,
   }));
 }
