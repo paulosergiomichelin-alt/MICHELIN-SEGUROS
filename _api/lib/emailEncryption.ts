@@ -1,12 +1,16 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 
 const ALGORITHM = 'aes-256-cbc';
-const FALLBACK_KEY = 'michelin-seguros-email-key-32chr';
 
 function getKey(): Buffer {
-  const raw = process.env.EMAIL_ENCRYPTION_KEY ?? FALLBACK_KEY;
+  const raw = process.env.EMAIL_ENCRYPTION_KEY;
+  if (!raw) {
+    throw new Error(
+      'EMAIL_ENCRYPTION_KEY não definida. Defina no .env (nunca commitado) — sem ela, ' +
+      'tokens/senhas de contas de e-mail não podem ser criptografados nem descriptografados.',
+    );
+  }
   const buf = Buffer.from(raw, 'utf8');
-  // pad or truncate to exactly 32 bytes
   const key = Buffer.alloc(32);
   buf.copy(key, 0, 0, Math.min(buf.length, 32));
   return key;
