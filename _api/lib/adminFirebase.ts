@@ -140,10 +140,18 @@ function buildStructuredQuery(
       value: { stringValue: f.value },
     },
   });
-  const where = filters.length === 1
+  const where = filters.length === 0
+    ? undefined
+    : filters.length === 1
     ? mkFilter(filters[0])
     : { compositeFilter: { op: 'AND', filters: filters.map(mkFilter) } };
-  return { structuredQuery: { from: [{ collectionId: collection }], where, limit: limitN } };
+  return {
+    structuredQuery: {
+      from: [{ collectionId: collection }],
+      ...(where ? { where } : {}),
+      limit: limitN,
+    },
+  };
 }
 
 export async function fsQuery(
@@ -182,4 +190,22 @@ export async function fsQueryFull(
       id: r.document.name.split('/').pop() as string,
       ...fromFirestoreFields(r.document.fields ?? {}),
     }));
+}
+
+export async function fsQueryFullSubcollection(
+  parentCollection: string,
+  parentId: string,
+  subcollection: string,
+): Promise<Array<Record<string, any> & { id: string }>> {
+  const token = await getToken();
+  const res = await fetch(`${FS_BASE}/documents/${parentCollection}/${parentId}/${subcollection}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 404) return [];
+  if (!res.ok) throw new Error(`fsQueryFullSubcollection ${parentCollection}/${parentId}/${subcollection}: ${await res.text()}`);
+  const body: any = await res.json();
+  return (body.documents ?? []).map((doc: any) => ({
+    id: doc.name.split('/').pop() as string,
+    ...fromFirestoreFields(doc.fields ?? {}),
+  }));
 }
