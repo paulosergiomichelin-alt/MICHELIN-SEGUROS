@@ -86,6 +86,11 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
         const profile = {
           ...userData,
+          // Documentos antigos no Firestore guardavam um campo `uid` redundante com o
+          // próprio ID do documento; o schema Postgres só tem `id` — sem este fallback,
+          // profile.uid fica undefined e qualquer query/comparação que dependa dele
+          // (leads do vendedor, mensagens do usuário etc.) não bate com nada.
+          uid: userData.uid ?? userData.id ?? user.uid,
           organizationId: userData.organizationId || 'default'
         } as UserProfile;
 
