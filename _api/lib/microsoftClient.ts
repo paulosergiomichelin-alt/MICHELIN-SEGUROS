@@ -209,6 +209,56 @@ export async function listFolders(account: MicrosoftAccount): Promise<MsFolderNo
   return out;
 }
 
+export async function createFolder(
+  account: MicrosoftAccount,
+  name: string,
+  parentId: string | null,
+): Promise<{ id: string; name: string }> {
+  // Graph aceita tanto o id real quanto o nome well-known ("inbox" etc.) no lugar do
+  // id de pasta em qualquer endpoint — por isso um parentId fixo funciona direto aqui.
+  const path = parentId
+    ? `me/mailFolders/${encodeURIComponent(parentId)}/childFolders`
+    : 'me/mailFolders';
+  const data = await graphRequest(account, path, {
+    method: 'POST',
+    body: JSON.stringify({ displayName: name }),
+  });
+  return { id: data.id, name: data.displayName };
+}
+
+export async function renameFolder(account: MicrosoftAccount, folderId: string, name: string): Promise<void> {
+  await graphRequest(account, `me/mailFolders/${encodeURIComponent(folderId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ displayName: name }),
+  });
+}
+
+export async function deleteFolder(account: MicrosoftAccount, folderId: string): Promise<void> {
+  await graphRequest(account, `me/mailFolders/${encodeURIComponent(folderId)}`, { method: 'DELETE' });
+}
+
+/**
+ * Lista TODOS os ids de mensagem de uma pasta, paginando via $skip — usado por
+ * esvaziar pasta / marcar pasta como lida (ADR-17). Usa $select=id (não o
+ * MESSAGE_SELECT completo de listMessages) porque essas mensagens nunca são
+ * exibidas, só apagadas/movidas/marcadas.
+ */
+export async function listAllMessageIds(account: MicrosoftAccount, folder: string): Promise<string[]> {
+  const folderPath = FOLDER_MAP[folder] ?? folder;
+  const ids: string[] = [];
+  const top = 100;
+  let skip = 0;
+  for (;;) {
+    const params = new URLSearchParams({ $select: 'id', $top: String(top), $skip: String(skip) });
+    const data = await graphRequest(account, `me/mailFolders/${folderPath}/messages?${params}`);
+    const page: any[] = data?.value ?? [];
+    ids.push(...page.map(m => m.id));
+    if (page.length < top) break;
+    skip += top;
+  }
+  return ids;
+}
+
 // ── Messages ──────────────────────────────────────────────────────────────────
 
 const MESSAGE_SELECT = [
