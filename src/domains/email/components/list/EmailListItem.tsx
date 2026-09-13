@@ -1,27 +1,63 @@
-import React from 'react';
-import { Star, Paperclip } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Star, Paperclip, MoreVertical, Mail, MailOpen, FolderInput, ShieldOff } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../../../../lib/utils';
-import type { CachedEmail } from '../../types/email.types';
+import type { CachedEmail, EmailFolderNode } from '../../types/email.types';
 import { SenderAvatar } from '../shared/SenderAvatar';
 import { addrDisplay } from '../../utils/addressFormat';
 import { fmtDate } from '../../utils/dateFormat';
+import { FIXED_FOLDERS } from '../../constants/folders';
 
 interface Props {
   message: CachedEmail;
   isSelected: boolean;
   isChecked?: boolean;
+  folders: EmailFolderNode[];
   onClick: () => void;
   onCheck?: (checked: boolean) => void;
+  onToggleRead: () => void;
+  onMoveTo: (targetFolderId: string) => void;
+  onNotSpam: () => void;
 }
 
-export const EmailListItem: React.FC<Props> = ({ message, isSelected, isChecked, onClick, onCheck }) => {
+export const EmailListItem: React.FC<Props> = ({
+  message, isSelected, isChecked, folders, onClick, onCheck, onToggleRead, onMoveTo, onNotSpam,
+}) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [menuOpen]);
+
+  // O backend/provedores usam 'archive' internamente, mas a pasta fixa aqui é 'archived'
+  // (FIXED_FOLDERS) — sem essa normalização, uma mensagem arquivada mostraria
+  // "Arquivados" na própria lista de destinos de "Mover para".
+  const normalizedCurrentFolder = message.folder === 'archive' ? 'archived' : message.folder;
+  const moveTargets = [
+    ...FIXED_FOLDERS.filter(f => f.id !== normalizedCurrentFolder).map(f => ({ id: f.id, name: f.label })),
+    ...folders.filter(f => f.id !== message.folder),
+  ];
+
   return (
-    <motion.button
+    <motion.div
       layout="position"
+      role="button"
+      tabIndex={0}
+      draggable
+      // motion.div reaproveita onDragStart/onDrag/onDragEnd pro próprio sistema de
+      // gesto de arrastar (assinatura (event, info) => void), diferente do evento
+      // nativo do HTML5 drag-and-drop — precisa do cast pra acessar dataTransfer.
+      onDragStart={e => (e as unknown as React.DragEvent<HTMLDivElement>).dataTransfer.setData('text/plain', message.id)}
       onClick={onClick}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}
       className={cn(
-        'w-full text-left flex items-start gap-3 px-4 py-3 border-b border-white/5 transition-colors group',
+        'w-full text-left flex items-start gap-3 px-4 py-3 border-b border-white/5 transition-colors group cursor-pointer relative',
         isSelected
           ? 'bg-[#2d2d2d] border-l-2 border-l-blue-500'
           : 'hover:bg-[#252525]',
@@ -72,6 +108,56 @@ export const EmailListItem: React.FC<Props> = ({ message, isSelected, isChecked,
           </div>
         </div>
       </div>
-    </motion.button>
+
+      {/* Ações rápidas (aparecem no hover) */}
+      <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          type="button"
+          title={message.isRead ? 'Marcar como não lida' : 'Marcar como lida'}
+          onClick={e => { e.stopPropagation(); onToggleRead(); }}
+          className="p-1.5 rounded-md text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
+        >
+          {message.isRead ? <Mail className="w-3.5 h-3.5" /> : <MailOpen className="w-3.5 h-3.5" />}
+        </button>
+        <button
+          type="button"
+          title="Mais ações"
+          onClick={e => { e.stopPropagation(); setMenuOpen(o => !o); }}
+          className="p-1.5 rounded-md text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
+        >
+          <MoreVertical className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {menuOpen && (
+        <div
+          ref={menuRef}
+          onClick={e => e.stopPropagation()}
+          className="absolute right-2 top-10 z-30 w-52 max-h-72 overflow-y-auto bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl py-1"
+        >
+          {message.folder === 'spam' && (
+            <button
+              onClick={() => { setMenuOpen(false); onNotSpam(); }}
+              className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors"
+            >
+              <ShieldOff className="w-3.5 h-3.5" />
+              Não é lixo eletrônico
+            </button>
+          )}
+          <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide text-white/30 flex items-center gap-1.5">
+            <FolderInput className="w-3 h-3" /> Mover para
+          </div>
+          {moveTargets.map(target => (
+            <button
+              key={target.id}
+              onClick={() => { setMenuOpen(false); onMoveTo(target.id); }}
+              className="w-full text-left px-3 py-2 text-xs text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors truncate"
+            >
+              {target.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </motion.div>
   );
 };

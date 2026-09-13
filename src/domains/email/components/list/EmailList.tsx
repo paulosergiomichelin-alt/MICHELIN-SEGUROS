@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEmail } from '../../../../contexts/EmailContext';
+import { useEmailFolders } from '../../hooks/useEmailFolders';
 import { EmailListItem } from './EmailListItem';
 import { EmailListEmpty } from './EmailListEmpty';
 import { EmailListFilters } from './EmailListFilters';
@@ -15,7 +16,7 @@ const HEADER_HEIGHT = 30;
 const MESSAGE_HEIGHT = 72;
 
 export const EmailList: React.FC = () => {
-  const { state, openMessage, loadMoreMessages, search, clearSearch } = useEmail();
+  const { state, openMessage, loadMoreMessages, search, clearSearch, doAction, moveMessage } = useEmail();
   const {
     messages, selectedMessage, messagesLoading, currentFolderLabel,
     searchQuery, searchResults, isSearching, hasMore, accounts,
@@ -28,6 +29,7 @@ export const EmailList: React.FC = () => {
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const folderLabel = currentFolderLabel;
+  const { folders: realFolders } = useEmailFolders(state.selectedAccountId);
 
   const displayMessages = searchQuery
     ? searchResults
@@ -139,7 +141,11 @@ export const EmailList: React.FC = () => {
                     <EmailListItem
                       message={row.message}
                       isSelected={selectedMessage?.id === row.message.id}
+                      folders={realFolders}
                       onClick={() => openMessage(row.message)}
+                      onToggleRead={() => doAction(row.message.id, row.message.isRead ? 'unread' : 'read')}
+                      onMoveTo={targetFolderId => moveMessage(row.message.id, targetFolderId)}
+                      onNotSpam={() => doAction(row.message.id, 'notspam')}
                     />
                   )}
                 </div>
