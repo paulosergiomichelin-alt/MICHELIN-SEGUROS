@@ -16,8 +16,7 @@ import {
   MicrosoftAccount,
 } from './microsoftClient.js';
 import {
-  listMessages as imapListMessages,
-  getMessage as imapGetMessage,
+  fetchRecentMessages as imapFetchRecentMessages,
   parseImapMessage,
   ImapAccount,
 } from './imapClient.js';
@@ -100,17 +99,24 @@ async function syncImapAccount(
   let imported = 0;
   const errors: string[] = [];
 
+  // Uma conexão IMAP por PASTA (3 por ciclo), não uma por mensagem: o padrão
+  // anterior (listMessages + getMessage por uid) abria ~150 conexões completas a
+  // cada sync de 5 min por conta — risco real de throttling/ban em provedores
+  // reais. fetchRecentMessages faz um único fetch em lote com {source: true}.
   for (const folder of SYNC_FOLDERS) {
     try {
-      const { messages } = await imapListMessages(account, folder, MESSAGES_PER_FOLDER);
-      for (const msgRef of messages) {
+      const fetched = await imapFetchRecentMessages(account, folder, MESSAGES_PER_FOLDER);
+      for (const item of fetched) {
+        if (!item.parsed) {
+          errors.push(`imap msg ${item.uid} em ${folder}: ${item.error ?? 'falha ao ler mensagem'}`);
+          continue;
+        }
         try {
-          const full = await imapGetMessage(account, folder, msgRef.id);
-          const cached = parseImapMessage(full, account.id, folder);
+          const cached = parseImapMessage(item.parsed, account.id, folder);
           setEmail(cached);
           imported++;
         } catch (err: any) {
-          errors.push(`imap msg ${msgRef.id}: ${err.message}`);
+          errors.push(`imap msg ${item.uid} em ${folder}: ${err.message}`);
         }
       }
     } catch (err: any) {
@@ -177,7 +183,9 @@ export async function syncAccount(
     result.errors.push(`syncAccount failed: ${err.message}`);
 
     // Update account status to error
-    await fsUpdate('email_accounts', accountId, { status: 'error', lastError: err.message }).catch(() => {});
+    // `syncError` é o nome real da coluna (schema/campaigns-email.ts:51) —
+    // escrever `lastError` virava no-op silencioso (engolido pelo .catch()).
+    await fsUpdate('email_accounts', accountId, { status: 'error', syncError: err.message }).catch(() => {});
   }
 
   return result;

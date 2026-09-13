@@ -17,6 +17,8 @@ import {
   modifyMessage as imapModify,
   moveMessage as imapMove,
   deleteMessage as imapDelete,
+  imapUid,
+  imapCacheFolder,
   ImapAccount,
 } from '../lib/imapClient.js';
 
@@ -118,39 +120,51 @@ async function applyMicrosoftAction(
   }
 }
 
+// Ações IMAP que movem a mensagem para outra pasta. O MOVE atribui um UID NOVO
+// no destino, então a entrada de cache antiga (UID velho + pasta nova) passa a
+// apontar para outra mensagem real — por isso ela é REMOVIDA do cache (I1) em
+// vez de re-etiquetada, deixando o próximo sync reimportar com o UID correto.
+const IMAP_MOVE_ACTIONS: ReadonlySet<EmailAction> = new Set<EmailAction>([
+  'archive', 'trash', 'spam', 'restore',
+]);
+
 async function applyImapAction(
   account: ImapAccount,
   messageId: string,
   action: EmailAction,
   currentFolder: string,
 ): Promise<void> {
+  // `messageId` aqui é o cache id namespaceado (`${folder}:${uid}`); as funções
+  // do imapClient recebem (account, folder, UID PURO).
+  const uid = imapUid(messageId);
+
   switch (action) {
     case 'read':
-      await imapModify(account, currentFolder, messageId, ['\\Seen'], []);
+      await imapModify(account, currentFolder, uid, ['\\Seen'], []);
       break;
     case 'unread':
-      await imapModify(account, currentFolder, messageId, [], ['\\Seen']);
+      await imapModify(account, currentFolder, uid, [], ['\\Seen']);
       break;
     case 'star':
-      await imapModify(account, currentFolder, messageId, ['\\Flagged'], []);
+      await imapModify(account, currentFolder, uid, ['\\Flagged'], []);
       break;
     case 'unstar':
-      await imapModify(account, currentFolder, messageId, [], ['\\Flagged']);
+      await imapModify(account, currentFolder, uid, [], ['\\Flagged']);
       break;
     case 'archive':
-      await imapMove(account, currentFolder, messageId, 'archive');
+      await imapMove(account, currentFolder, uid, 'archive');
       break;
     case 'trash':
-      await imapMove(account, currentFolder, messageId, 'trash');
+      await imapMove(account, currentFolder, uid, 'trash');
       break;
     case 'spam':
-      await imapMove(account, currentFolder, messageId, 'spam');
+      await imapMove(account, currentFolder, uid, 'spam');
       break;
     case 'restore':
-      await imapMove(account, currentFolder, messageId, 'inbox');
+      await imapMove(account, currentFolder, uid, 'inbox');
       break;
     case 'delete':
-      await imapDelete(account, currentFolder, messageId);
+      await imapDelete(account, currentFolder, uid);
       break;
     default:
       throw new Error(`Unknown action: ${action}`);
@@ -161,9 +175,18 @@ function applyLocalCacheUpdate(
   accountId: string,
   messageId: string,
   action: EmailAction,
+  provider: string,
 ): void {
   const email = getEmail(accountId, messageId);
   if (!email) return;
+
+  // IMAP: o MOVE gera um UID novo no destino, logo manter a entrada viva com o
+  // UID antigo faria a próxima ação bater em outra mensagem real. Remove e
+  // deixa o sync reimportar. Gmail/Microsoft usam ids estáveis — inalterados.
+  if (provider === 'imap' && IMAP_MOVE_ACTIONS.has(action)) {
+    removeEmail(accountId, messageId);
+    return;
+  }
 
   switch (action) {
     case 'read':
@@ -219,7 +242,11 @@ export default async function handler(req: any, res: any) {
     if (!account) return res.status(404).json({ error: 'Conta não encontrada' });
 
     const cachedForFolder = getEmail(String(accountId), String(messageId));
-    const currentFolder = cachedForFolder?.folder ?? 'inbox';
+    // Para IMAP o próprio id já carrega a pasta (`${folder}:${uid}`), então a
+    // ação continua indo para a pasta certa mesmo com cache miss (ex.: após
+    // restart do servidor), em vez de cair silenciosamente em 'inbox'.
+    const currentFolder =
+      cachedForFolder?.folder ?? imapCacheFolder(String(messageId)) ?? 'inbox';
 
     if (account.provider === 'gmail') {
       await applyGmailAction(account as GmailAccount, String(messageId), action as EmailAction);
@@ -232,7 +259,12 @@ export default async function handler(req: any, res: any) {
     }
 
     // Update local cache
-    applyLocalCacheUpdate(String(accountId), String(messageId), action as EmailAction);
+    applyLocalCacheUpdate(
+      String(accountId),
+      String(messageId),
+      action as EmailAction,
+      String(account.provider),
+    );
 
     // Emit socket event
     emitGlobal('email:update', {

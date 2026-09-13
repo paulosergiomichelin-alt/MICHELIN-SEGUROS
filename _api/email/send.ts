@@ -9,7 +9,12 @@ import {
   sendMessage as msSend,
   MicrosoftAccount,
 } from '../lib/microsoftClient.js';
-import { sendMessage as smtpSend, SmtpAccount } from '../lib/smtpClient.js';
+import {
+  sendMessage as smtpSend,
+  SmtpAccount,
+  SmtpSendPayload,
+} from '../lib/smtpClient.js';
+import { appendToSent as imapAppendToSent, ImapAccount } from '../lib/imapClient.js';
 
 interface Recipient {
   name?: string;
@@ -114,6 +119,40 @@ function buildMimeMessage(params: SendEmailBody, fromEmail: string): string {
   return Buffer.from(rawMessage).toString('base64url');
 }
 
+// ── Payload estruturado para SMTP (nodemailer compõe o MIME) ─────────────────
+// NÃO reusa buildMimeMessage: no caminho SMTP o nodemailer precisa do payload
+// estruturado para derivar o envelope (MAIL FROM / RCPT TO). Com `{ raw }` o
+// envelope sai vazio (`{from: false, to: []}`) e todo servidor SMTP real
+// rejeita com "No recipients defined" — além de transmitir o header `Bcc:`
+// literal (vazamento de BCC) e não gerar `Date:`/`Message-ID:`.
+function buildSmtpPayload(params: SendEmailBody, fromEmail: string, fromName?: string): SmtpSendPayload {
+  const payload: SmtpSendPayload = {
+    // accounts.ts grava displayName = displayName || email, então evita produzir
+    // um From redundante do tipo "x@y.com <x@y.com>".
+    from: { name: fromName && fromName !== fromEmail ? fromName : undefined, email: fromEmail },
+    to: params.to.map(r => ({ name: r.name, email: r.email })),
+    subject: params.subject,
+    html: params.bodyHtml,
+  };
+
+  if (params.cc && params.cc.length > 0) {
+    payload.cc = params.cc.map(r => ({ name: r.name, email: r.email }));
+  }
+  if (params.bcc && params.bcc.length > 0) {
+    payload.bcc = params.bcc.map(r => ({ name: r.name, email: r.email }));
+  }
+  if (params.bodyText) payload.text = params.bodyText;
+  if (params.attachments && params.attachments.length > 0) {
+    payload.attachments = params.attachments.map(att => ({
+      filename: att.filename,
+      content: Buffer.from(att.data, 'base64'),
+      contentType: att.mimeType || 'application/octet-stream',
+    }));
+  }
+
+  return payload;
+}
+
 function buildMicrosoftPayload(params: SendEmailBody): any {
   const toRecipients = params.to.map(r => ({
     emailAddress: { address: r.email, name: r.name ?? r.email },
@@ -177,9 +216,19 @@ export default async function handler(req: any, res: any) {
       const payload = buildMicrosoftPayload(body);
       await msSend(account as MicrosoftAccount, payload);
     } else if (account.provider === 'imap') {
-      const rawBuffer = Buffer.from(buildMimeMessage(body, account.email), 'base64url').toString('utf8');
-      const result = await smtpSend(account as SmtpAccount, rawBuffer);
-      sentMessageId = result?.id;
+      const smtpPayload = buildSmtpPayload(body, account.email, account.displayName);
+      const result = await smtpSend(account as SmtpAccount, smtpPayload);
+
+      // `sentMessageId` fica undefined de propósito (igual ao branch Microsoft):
+      // o Message-ID SMTP não é um identificador de mensagem IMAP, então o
+      // fallback `optimisticId` abaixo é quem nomeia a entrada de cache local.
+      // A entrada real (com o UID correto da pasta Sent) chega no próximo sync.
+
+      // SMTP puro não grava cópia em "Enviados" (Gmail/Graph gravam sozinhos) —
+      // o APPEND abaixo faz isso. Falha aqui não invalida o envio, que já ocorreu.
+      await imapAppendToSent(account as ImapAccount, result.raw).catch((err: any) => {
+        console.error('[email/send] APPEND na pasta Enviados falhou:', err?.message);
+      });
     } else {
       return res.status(400).json({ error: `Provider desconhecido: ${account.provider}` });
     }

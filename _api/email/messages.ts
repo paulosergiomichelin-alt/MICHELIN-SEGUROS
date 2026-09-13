@@ -19,10 +19,24 @@ import {
   getMessage as imapGetMessage,
   parseImapMessage,
   modifyMessage as imapModifyMessage,
+  imapUid,
+  imapCacheFolder,
   ImapAccount,
 } from '../lib/imapClient.js';
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+// O id vem de `req.url` (que é a URL crua, não decodificada) — e ids de cache
+// IMAP são namespaceados como `${folder}:${uid}`, cujo ":" o frontend manda
+// percent-encoded via encodeURIComponent. Sem decodificar, o id chegaria como
+// "inbox%3A12" e nunca casaria com o cache.
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
 
 async function loadAccount(accountId: string): Promise<Record<string, any>> {
   const account = await fsGet('email_accounts', accountId);
@@ -43,7 +57,9 @@ export default async function handler(req: any, res: any) {
     // Detect if there is an ID in path params or query
     const pathParts = url.split('?')[0].split('/').filter(Boolean);
     const lastPart = pathParts[pathParts.length - 1];
-    const messageId = query.id ?? (lastPart !== 'messages' ? lastPart : undefined);
+    const messageId = query.id
+      ?? req.params?.id
+      ?? (lastPart !== 'messages' ? safeDecode(lastPart) : undefined);
 
     if (messageId && messageId !== 'messages') {
       const { accountId } = query;
@@ -60,8 +76,15 @@ export default async function handler(req: any, res: any) {
             await gmailModifyMessage(account as GmailAccount, String(messageId), [], ['UNREAD'])
               .catch(() => {});
           } else if (account.provider === 'imap') {
-            await imapModifyMessage(account as ImapAccount, cached.folder, String(messageId), ['\\Seen'], [])
-              .catch(() => {});
+            // imapModifyMessage recebe (account, folder, UID PURO) — o id de
+            // cache é namespaceado (`${folder}:${uid}`), daí o imapUid().
+            await imapModifyMessage(
+              account as ImapAccount,
+              cached.folder,
+              imapUid(String(messageId)),
+              ['\\Seen'],
+              [],
+            ).catch(() => {});
           } else {
             await msUpdateMessage(account as MicrosoftAccount, String(messageId), { isRead: true })
               .catch(() => {});
@@ -82,10 +105,14 @@ export default async function handler(req: any, res: any) {
           .catch(() => {});
         fullEmail.isRead = true;
       } else if (account.provider === 'imap') {
-        const folder = cached?.folder ?? 'inbox';
-        const full = await imapGetMessage(account as ImapAccount, folder, String(messageId));
+        // Cache miss: a pasta vem do próprio id namespaceado (`${folder}:${uid}`),
+        // não de um 'inbox' assumido — buscar no INBOX um UID de outra pasta
+        // retornaria a mensagem errada.
+        const folder = cached?.folder ?? imapCacheFolder(String(messageId)) ?? 'inbox';
+        const uid = imapUid(String(messageId));
+        const full = await imapGetMessage(account as ImapAccount, folder, uid);
         fullEmail = parseImapMessage(full, String(accountId), folder);
-        await imapModifyMessage(account as ImapAccount, folder, String(messageId), ['\\Seen'], [])
+        await imapModifyMessage(account as ImapAccount, folder, uid, ['\\Seen'], [])
           .catch(() => {});
         fullEmail.isRead = true;
       } else {

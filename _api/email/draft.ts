@@ -35,7 +35,23 @@ interface DraftBody {
   draftId?: string; // if provided, update existing draft
 }
 
+// O id de rascunho IMAP é namespaceado (`drafts:<uid>`) e o ":" chega
+// percent-encoded na URL; `req.url` não é decodificado.
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 // ── Build Gmail RFC 2822 raw message ─────────────────────────────────────────
+
+// Quebra em linhas de 76 chars — RFC 2045 exige isso para
+// Content-Transfer-Encoding: base64 (mesma regra de send.ts::wrapBase64).
+function wrapBase64(b64: string): string {
+  return b64.replace(/.{76}/g, '$&\r\n');
+}
 
 function buildGmailDraftRaw(params: DraftBody, fromEmail: string): string {
   const lines: string[] = [];
@@ -47,7 +63,7 @@ function buildGmailDraftRaw(params: DraftBody, fromEmail: string): string {
   lines.push('Content-Type: text/html; charset=UTF-8');
   lines.push('Content-Transfer-Encoding: base64');
   lines.push('');
-  lines.push(Buffer.from(params.bodyHtml ?? '', 'utf8').toString('base64'));
+  lines.push(wrapBase64(Buffer.from(params.bodyHtml ?? '', 'utf8').toString('base64')));
 
   return Buffer.from(lines.join('\r\n')).toString('base64url');
 }
@@ -120,6 +136,10 @@ export default async function handler(req: any, res: any) {
         if (draftId) {
           const result = await imapUpdateDraft(account as ImapAccount, draftId, rawMime);
           resultId = result.id;
+          // imapUpdateDraft é delete-then-APPEND: o UID muda, então o id antigo
+          // ficaria "fantasma" no cache (aparecendo na UI e estourando erro ao
+          // abrir, já que o UID foi expurgado). Remove a entrada antiga.
+          if (resultId !== draftId) removeEmail(String(accountId), draftId);
         } else {
           const result = await imapCreateDraft(account as ImapAccount, rawMime);
           resultId = result.id;
@@ -159,7 +179,7 @@ export default async function handler(req: any, res: any) {
 
       // Extract draft ID from path
       const pathParts = url.split('?')[0].split('/').filter(Boolean);
-      const draftId = pathParts[pathParts.length - 1];
+      const draftId = req.params?.id ?? safeDecode(pathParts[pathParts.length - 1] ?? '');
 
       if (!draftId || draftId === 'draft') {
         return res.status(400).json({ error: 'draftId é obrigatório na URL' });
