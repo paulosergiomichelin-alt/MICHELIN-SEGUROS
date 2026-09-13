@@ -308,6 +308,7 @@ async function startServer() {
   const { default: emailGmailAuthHandler }        = await import('./_api/email/auth/gmail.js');
   const { default: emailMicrosoftAuthHandler }    = await import('./_api/email/auth/microsoft.js');
   const { default: emailMessagesHandler }         = await import('./_api/email/messages.js');
+  const { default: emailFoldersHandler }          = await import('./_api/email/folders.js');
   const { default: emailSendHandler }             = await import('./_api/email/send.js');
   const { default: emailActionHandler }           = await import('./_api/email/action.js');
   const { default: emailDraftHandler }            = await import('./_api/email/draft.js');
@@ -324,6 +325,7 @@ async function startServer() {
   app.all('/api/email/auth/microsoft/callback', emailMicrosoftAuthHandler);
   app.all('/api/email/messages',            emailMessagesHandler);
   app.all('/api/email/messages/:id',        emailMessagesHandler);
+  app.all('/api/email/folders',             emailFoldersHandler);
   app.all('/api/email/send',                emailSendHandler);
   app.all('/api/email/action',              emailActionHandler);
   app.all('/api/email/drafts',              emailDraftHandler);

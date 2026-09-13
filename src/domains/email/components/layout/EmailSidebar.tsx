@@ -26,6 +26,7 @@ export const EmailSidebar: React.FC<Props> = ({ onOpenSettings }) => {
         currentFolder={currentFolder}
         unreadByFolder={unreadByFolder}
         onChangeFolder={changeFolder}
+        accountId={selectedAccountId}
       />
 
       <div className="p-2 border-t border-white/5 flex gap-1">

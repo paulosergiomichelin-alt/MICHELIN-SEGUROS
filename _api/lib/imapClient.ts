@@ -63,9 +63,12 @@ function fallbackFolderPath(folder: string): string {
  * Traduz a chave interna de pasta ('sent', 'drafts', …) para o caminho real da
  * mailbox no servidor, usando a special-use flag (RFC 6154) exposta pelo LIST.
  * Só cai no palpite hardcoded de FOLDER_PATH_MAP se o servidor não anunciar a flag.
+ * Se `folder` não é uma das 6 chaves fixas, é o path real de uma pasta descoberta via
+ * listFoldersTree — usado diretamente, sem resolução alguma.
  */
 async function resolveFolderPath(client: ImapFlow, folder: string): Promise<string> {
   if (folder === 'inbox') return 'INBOX';
+  if (!(FOLDER_KEYS as readonly string[]).includes(folder)) return folder;
 
   const specialUse = FOLDER_SPECIAL_USE[folder];
   if (!specialUse) return fallbackFolderPath(folder);
@@ -143,6 +146,52 @@ export async function testImapConnection(account: ImapAccount): Promise<{ ok: bo
     return { ok: false, error: err.message };
   } finally {
     await client?.logout().catch(() => {});
+  }
+}
+
+// ── Pastas reais (árvore aninhada) ────────────────────────────────────────────
+
+export interface ImapFolderNode {
+  id: string; // path real da mailbox no servidor — único, usado como parâmetro `folder`
+  name: string;
+  parentId: string | null; // chave fixa ('inbox' etc.) OU path real de outra pasta
+  unreadCount: number;
+}
+
+const SPECIAL_USE_TO_KEY: Record<string, string> = {
+  '\\Sent': 'sent', '\\Drafts': 'drafts', '\\Trash': 'trash',
+  '\\Junk': 'spam', '\\Archive': 'archive',
+};
+
+export async function listFoldersTree(account: ImapAccount): Promise<ImapFolderNode[]> {
+  const client = await connect(account);
+  try {
+    const boxes = await client.list();
+    // path -> chave fixa, pra pastas conhecidas (INBOX ou com special-use) — usado só
+    // pra decidir o parentId de quem está diretamente dentro delas.
+    const knownPathToKey = new Map<string, string>();
+    for (const box of boxes) {
+      if (box.path.toUpperCase() === 'INBOX') knownPathToKey.set(box.path, 'inbox');
+      else if (box.specialUse && SPECIAL_USE_TO_KEY[box.specialUse]) {
+        knownPathToKey.set(box.path, SPECIAL_USE_TO_KEY[box.specialUse]);
+      }
+    }
+
+    const out: ImapFolderNode[] = [];
+    for (const box of boxes) {
+      if (knownPathToKey.has(box.path)) continue; // já é uma das 6 fixas, não duplica
+      const parentPath = box.parentPath || null;
+      const parentId = parentPath ? (knownPathToKey.get(parentPath) ?? parentPath) : null;
+      out.push({
+        id: box.path,
+        name: box.name,
+        parentId,
+        unreadCount: 0, // custaria um STATUS por mailbox — fora de escopo por ora
+      });
+    }
+    return out;
+  } finally {
+    await client.logout().catch(() => {});
   }
 }
 

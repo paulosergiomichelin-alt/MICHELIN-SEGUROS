@@ -108,6 +108,82 @@ export async function graphRequest(
   return res.json();
 }
 
+// ── Pastas reais (árvore aninhada) ────────────────────────────────────────────
+
+export interface MsFolderNode {
+  id: string;
+  name: string;
+  // null = raiz da caixa; uma das 6 chaves fixas de FOLDER_MAP ('inbox'/'sent'/'drafts'/
+  // 'trash'/'spam'/'archive') = dentro de uma pasta padrão (ex.: subpasta dentro de
+  // Inbox); qualquer outro valor = id real de outra pasta customizada (subpasta de
+  // subpasta).
+  parentId: string | null;
+  unreadCount: number;
+  totalCount: number;
+}
+
+const WELL_KNOWN_BY_NAME: Record<string, string> = {
+  inbox: 'inbox', sentitems: 'sent', drafts: 'drafts',
+  deleteditems: 'trash', junkemail: 'spam', archive: 'archive',
+};
+
+// Well-known folders (Inbox, Sent Items, Drafts, Deleted Items, Junk Email, Archive) já
+// aparecem fixos no FolderNav (com tradução PT-BR e ícone específico) e não são
+// duplicados aqui — mas suas SUBPASTAS reais (ex.: uma pasta criada dentro de Inbox) são
+// descobertas e devolvidas com parentId apontando pra chave fixa correspondente, pra que
+// o frontend consiga aninhá-las sob a linha certa mesmo sem re-listar o pai.
+async function fetchChildFolders(
+  account: MicrosoftAccount,
+  realParentId: string,
+  mappedParentId: MsFolderNode['parentId'],
+): Promise<MsFolderNode[]> {
+  const data = await graphRequest(
+    account,
+    `me/mailFolders/${encodeURIComponent(realParentId)}/childFolders?$top=100`,
+  );
+  const children: any[] = data?.value ?? [];
+  const out: MsFolderNode[] = [];
+  for (const f of children) {
+    out.push({
+      id: f.id,
+      name: f.displayName,
+      parentId: mappedParentId,
+      unreadCount: f.unreadItemCount ?? 0,
+      totalCount: f.totalItemCount ?? 0,
+    });
+    if (f.childFolderCount > 0) {
+      // A partir daqui o pai já é uma pasta customizada de verdade — usa o id real dela,
+      // não mais uma chave fixa (só o primeiro nível abaixo de um well-known usa a chave).
+      out.push(...(await fetchChildFolders(account, f.id, f.id)));
+    }
+  }
+  return out;
+}
+
+export async function listFolders(account: MicrosoftAccount): Promise<MsFolderNode[]> {
+  const data = await graphRequest(account, 'me/mailFolders?$top=100');
+  const topLevel: any[] = data?.value ?? [];
+  const out: MsFolderNode[] = [];
+  for (const f of topLevel) {
+    const nameKey = String(f.displayName).toLowerCase().replace(/\s/g, '');
+    const wellKnownKey = WELL_KNOWN_BY_NAME[nameKey];
+    if (!wellKnownKey) {
+      // Pasta customizada de nível raiz (fora de Inbox) — também é uma pasta real que
+      // hoje não aparece em lugar nenhum da árvore fixa.
+      out.push({
+        id: f.id, name: f.displayName, parentId: null,
+        unreadCount: f.unreadItemCount ?? 0, totalCount: f.totalItemCount ?? 0,
+      });
+    }
+    if (f.childFolderCount > 0) {
+      // Se for um well-known (ex.: Inbox), os filhos entram com parentId = chave fixa
+      // ('inbox'); senão, com o id real da pasta customizada de nível raiz.
+      out.push(...(await fetchChildFolders(account, f.id, wellKnownKey ?? f.id)));
+    }
+  }
+  return out;
+}
+
 // ── Messages ──────────────────────────────────────────────────────────────────
 
 const MESSAGE_SELECT = [
@@ -122,7 +198,9 @@ export async function listMessages(
   top = 50,
   skip = 0,
 ): Promise<{ messages: any[]; nextLink?: string }> {
-  const folderPath = FOLDER_MAP[folder] ?? 'inbox';
+  // Se `folder` não é uma das 6 chaves fixas, é o id real de uma pasta descoberta via
+  // listFolders (Graph aceita o id real diretamente no mesmo lugar do nome well-known).
+  const folderPath = FOLDER_MAP[folder] ?? folder;
   const params = new URLSearchParams({
     $select: MESSAGE_SELECT,
     $top: String(top),

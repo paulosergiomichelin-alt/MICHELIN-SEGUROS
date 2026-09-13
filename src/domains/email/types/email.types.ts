@@ -9,6 +9,7 @@ export type {
   DraftPayload,
   MessageListResponse,
   SearchResponse,
+  EmailFolderNode,
 } from '../../../services/EmailService';
 
 export type EmailComposerMode = 'new' | 'reply' | 'replyAll' | 'forward';

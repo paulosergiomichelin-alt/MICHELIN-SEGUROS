@@ -24,6 +24,15 @@ import {
 const SYNC_FOLDERS = ['inbox', 'sent', 'drafts'];
 const MESSAGES_PER_FOLDER = 50;
 
+// O sync periódico só cobre as 3 pastas padrão — navegar numa pasta descoberta via
+// listFolders/listLabels/listFoldersTree (subpasta real, label customizado etc.) nunca
+// seria populada por ele. `extraFolder` permite que messages.ts peça, sob demanda, que
+// essa chamada específica de sync também busque a pasta que o usuário está olhando.
+function foldersToSync(extraFolder?: string): string[] {
+  if (!extraFolder || SYNC_FOLDERS.includes(extraFolder)) return SYNC_FOLDERS;
+  return [...SYNC_FOLDERS, extraFolder];
+}
+
 // ── Decrypt account tokens ────────────────────────────────────────────────────
 
 function decryptAccount(account: Record<string, any>): GmailAccount | MicrosoftAccount | ImapAccount {
@@ -38,11 +47,12 @@ function decryptAccount(account: Record<string, any>): GmailAccount | MicrosoftA
 
 async function syncGmailAccount(
   account: GmailAccount,
+  extraFolder?: string,
 ): Promise<{ imported: number; errors: string[] }> {
   let imported = 0;
   const errors: string[] = [];
 
-  for (const folder of SYNC_FOLDERS) {
+  for (const folder of foldersToSync(extraFolder)) {
     try {
       const { messages } = await gmailListMessages(account, folder, MESSAGES_PER_FOLDER);
       for (const msgRef of messages) {
@@ -67,11 +77,12 @@ async function syncGmailAccount(
 
 async function syncMicrosoftAccount(
   account: MicrosoftAccount,
+  extraFolder?: string,
 ): Promise<{ imported: number; errors: string[] }> {
   let imported = 0;
   const errors: string[] = [];
 
-  for (const folder of SYNC_FOLDERS) {
+  for (const folder of foldersToSync(extraFolder)) {
     try {
       const { messages } = await msListMessages(account, folder, MESSAGES_PER_FOLDER);
       for (const msg of messages) {
@@ -95,15 +106,16 @@ async function syncMicrosoftAccount(
 
 async function syncImapAccount(
   account: ImapAccount,
+  extraFolder?: string,
 ): Promise<{ imported: number; errors: string[] }> {
   let imported = 0;
   const errors: string[] = [];
 
-  // Uma conexão IMAP por PASTA (3 por ciclo), não uma por mensagem: o padrão
+  // Uma conexão IMAP por PASTA (3 ou 4 por ciclo), não uma por mensagem: o padrão
   // anterior (listMessages + getMessage por uid) abria ~150 conexões completas a
   // cada sync de 5 min por conta — risco real de throttling/ban em provedores
   // reais. fetchRecentMessages faz um único fetch em lote com {source: true}.
-  for (const folder of SYNC_FOLDERS) {
+  for (const folder of foldersToSync(extraFolder)) {
     try {
       const fetched = await imapFetchRecentMessages(account, folder, MESSAGES_PER_FOLDER);
       for (const item of fetched) {
@@ -131,6 +143,7 @@ async function syncImapAccount(
 
 export async function syncAccount(
   accountId: string,
+  extraFolder?: string,
 ): Promise<{ imported: number; errors: string[] }> {
   // Load account from Firestore
   const rawAccount = await fsGet('email_accounts', accountId);
@@ -154,11 +167,11 @@ export async function syncAccount(
     const account = decryptAccount(rawAccount);
 
     if (rawAccount.provider === 'gmail') {
-      result = await syncGmailAccount(account as GmailAccount);
+      result = await syncGmailAccount(account as GmailAccount, extraFolder);
     } else if (rawAccount.provider === 'microsoft') {
-      result = await syncMicrosoftAccount(account as MicrosoftAccount);
+      result = await syncMicrosoftAccount(account as MicrosoftAccount, extraFolder);
     } else if (rawAccount.provider === 'imap') {
-      result = await syncImapAccount(account as ImapAccount);
+      result = await syncImapAccount(account as ImapAccount, extraFolder);
     } else {
       result.errors.push(`Unknown provider: ${rawAccount.provider}`);
     }

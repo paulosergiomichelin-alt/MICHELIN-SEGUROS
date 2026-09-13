@@ -153,13 +153,15 @@ export default async function handler(req: any, res: any) {
     );
 
     if (total === 0 || cacheAge > CACHE_TTL_MS) {
-      // Trigger async sync but don't wait if we have cached data
+      // `folder` passado como extraFolder: o sync periódico só cobre inbox/sent/drafts,
+      // então uma pasta descoberta via listFolders/listLabels/listFoldersTree (subpasta
+      // real, label customizado etc.) nunca seria populada sem isso.
       if (total === 0) {
         // No cache — wait for sync
-        await syncAccount(String(accountId)).catch(() => {});
+        await syncAccount(String(accountId), String(folder)).catch(() => {});
       } else {
         // Stale cache — refresh in background
-        syncAccount(String(accountId)).catch(() => {});
+        syncAccount(String(accountId), String(folder)).catch(() => {});
       }
     }
 

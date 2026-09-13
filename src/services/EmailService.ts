@@ -35,6 +35,13 @@ export interface CachedEmail {
   labels?: string[];
 }
 
+export interface EmailFolderNode {
+  id: string;
+  name: string;
+  parentId: string | null;
+  unreadCount: number;
+}
+
 export interface EmailAccount {
   id: string;
   userId: string;
@@ -178,6 +185,12 @@ export const EmailService = {
 
   getMicrosoftAuthUrl: (userId: string, returnUrl: string): string =>
     `/api/email/auth/microsoft/init?userId=${encodeURIComponent(userId)}&returnUrl=${encodeURIComponent(returnUrl)}`,
+
+  // ── Pastas reais ────────────────────────────────────────────────────────────
+  getFolders: (accountId: string): Promise<EmailFolderNode[]> =>
+    fetch(`/api/email/folders?accountId=${encodeURIComponent(accountId)}`)
+      .then(r => r.json())
+      .then(data => data?.folders ?? []),
 
   // ── Mensagens ───────────────────────────────────────────────────────────────
   getMessages: (

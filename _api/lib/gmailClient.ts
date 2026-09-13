@@ -104,6 +104,42 @@ const FOLDER_LABEL_MAP: Record<string, string[]> = {
   archive: [], // no INBOX, no TRASH — just no special label
 };
 
+// ── Pastas reais (labels aninhados) ───────────────────────────────────────────
+
+export interface GmailFolderNode {
+  id: string;
+  name: string;
+  // null = raiz; "inbox" (chave fixa) nunca aparece aqui — Gmail não tem conceito de
+  // "subpasta de Inbox" via label, labels aninhados são sempre independentes da Inbox.
+  parentId: string | null;
+  unreadCount: number;
+}
+
+const SYSTEM_LABEL_IDS = new Set([
+  'INBOX', 'SENT', 'DRAFT', 'TRASH', 'SPAM', 'UNREAD', 'STARRED', 'IMPORTANT',
+  'CATEGORY_PERSONAL', 'CATEGORY_SOCIAL', 'CATEGORY_PROMOTIONS',
+  'CATEGORY_UPDATES', 'CATEGORY_FORUMS', 'CHAT',
+]);
+
+// Gmail representa aninhamento de labels via "/" no nome (ex.: "Projetos/ClienteX" é
+// filho de "Projetos") — não existe um parentId nativo na API, então a árvore é
+// reconstruída aqui a partir do próprio nome.
+export async function listLabels(account: GmailAccount): Promise<GmailFolderNode[]> {
+  const data = await gmailRequest(account, '/users/me/labels');
+  const labels: any[] = (data?.labels ?? []).filter((l: any) => !SYSTEM_LABEL_IDS.has(l.id));
+  const idByName = new Map(labels.map((l: any) => [l.name as string, l.id as string]));
+  return labels.map((l: any) => {
+    const segments = String(l.name).split('/');
+    const parentName = segments.length > 1 ? segments.slice(0, -1).join('/') : null;
+    return {
+      id: l.id,
+      name: segments[segments.length - 1],
+      parentId: parentName ? idByName.get(parentName) ?? null : null,
+      unreadCount: l.messagesUnread ?? 0,
+    };
+  });
+}
+
 // ── Messages ──────────────────────────────────────────────────────────────────
 
 export async function listMessages(
@@ -112,7 +148,9 @@ export async function listMessages(
   maxResults = 50,
   pageToken?: string,
 ): Promise<{ messages: Array<{ id: string; threadId: string }>; nextPageToken?: string }> {
-  const labelIds = FOLDER_LABEL_MAP[folder] ?? ['INBOX'];
+  // Se `folder` não é uma das 6 chaves fixas, é o id real de um label descoberto via
+  // listLabels — usado diretamente como labelId na busca.
+  const labelIds = FOLDER_LABEL_MAP[folder] ?? [folder];
 
   const params = new URLSearchParams({ maxResults: String(maxResults) });
   if (labelIds.length > 0) {
