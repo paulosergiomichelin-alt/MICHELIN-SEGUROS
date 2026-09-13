@@ -5,6 +5,7 @@ import {
   modifyMessage as gmailModify,
   trashMessage as gmailTrash,
   untrashMessage as gmailUntrash,
+  FOLDER_LABEL_MAP as GMAIL_FOLDER_LABEL_MAP,
   GmailAccount,
 } from '../lib/gmailClient.js';
 import {
@@ -31,7 +32,9 @@ type EmailAction =
   | 'trash'
   | 'spam'
   | 'restore'
-  | 'delete';
+  | 'delete'
+  | 'move'
+  | 'notspam';
 
 const MS_FOLDER_IDS: Record<string, string> = {
   inbox: 'inbox',
@@ -42,10 +45,19 @@ const MS_FOLDER_IDS: Record<string, string> = {
   drafts: 'drafts',
 };
 
+// O frontend usa 'archived' como chave fixa, mas os clients de provedor usam 'archive'
+// internamente (mesmo alias já usado em _api/email/folders.ts) — normaliza só o
+// sourceFolderId recebido do frontend antes de consultar GMAIL_FOLDER_LABEL_MAP.
+const FOLDER_KEY_ALIASES: Record<string, string> = { archived: 'archive' };
+function normalizeFolderKey(id: string): string {
+  return FOLDER_KEY_ALIASES[id] ?? id;
+}
+
 async function applyGmailAction(
   account: GmailAccount,
   messageId: string,
   action: EmailAction,
+  opts: { targetFolderId?: string; sourceFolderId?: string } = {},
 ): Promise<void> {
   switch (action) {
     case 'read':
@@ -77,6 +89,18 @@ async function applyGmailAction(
       // Permanent delete: must already be in trash
       await gmailTrash(account, messageId);
       break;
+    case 'notspam':
+      // Diferente de 'restore' (que só desfaz TRASH via untrash) — sair do Spam
+      // precisa remover SPAM e adicionar INBOX explicitamente.
+      await gmailModify(account, messageId, ['INBOX'], ['SPAM']);
+      break;
+    case 'move': {
+      if (!opts.targetFolderId) throw new Error('targetFolderId é obrigatório pra action "move"');
+      const source = opts.sourceFolderId ? normalizeFolderKey(opts.sourceFolderId) : undefined;
+      const removeLabelIds = source ? (GMAIL_FOLDER_LABEL_MAP[source] ?? [source]) : [];
+      await gmailModify(account, messageId, [opts.targetFolderId], removeLabelIds);
+      break;
+    }
     default:
       throw new Error(`Unknown action: ${action}`);
   }
@@ -86,6 +110,7 @@ async function applyMicrosoftAction(
   account: MicrosoftAccount,
   messageId: string,
   action: EmailAction,
+  opts: { targetFolderId?: string } = {},
 ): Promise<void> {
   switch (action) {
     case 'read':
@@ -110,10 +135,15 @@ async function applyMicrosoftAction(
       await msMove(account, messageId, MS_FOLDER_IDS.spam);
       break;
     case 'restore':
+    case 'notspam':
       await msMove(account, messageId, MS_FOLDER_IDS.inbox);
       break;
     case 'delete':
       await msDelete(account, messageId);
+      break;
+    case 'move':
+      if (!opts.targetFolderId) throw new Error('targetFolderId é obrigatório pra action "move"');
+      await msMove(account, messageId, opts.targetFolderId);
       break;
     default:
       throw new Error(`Unknown action: ${action}`);
@@ -125,7 +155,7 @@ async function applyMicrosoftAction(
 // apontar para outra mensagem real — por isso ela é REMOVIDA do cache (I1) em
 // vez de re-etiquetada, deixando o próximo sync reimportar com o UID correto.
 const IMAP_MOVE_ACTIONS: ReadonlySet<EmailAction> = new Set<EmailAction>([
-  'archive', 'trash', 'spam', 'restore',
+  'archive', 'trash', 'spam', 'restore', 'move', 'notspam',
 ]);
 
 async function applyImapAction(
@@ -133,6 +163,7 @@ async function applyImapAction(
   messageId: string,
   action: EmailAction,
   currentFolder: string,
+  opts: { targetFolderId?: string } = {},
 ): Promise<void> {
   // `messageId` aqui é o cache id namespaceado (`${folder}:${uid}`); as funções
   // do imapClient recebem (account, folder, UID PURO).
@@ -161,10 +192,15 @@ async function applyImapAction(
       await imapMove(account, currentFolder, uid, 'spam');
       break;
     case 'restore':
+    case 'notspam':
       await imapMove(account, currentFolder, uid, 'inbox');
       break;
     case 'delete':
       await imapDelete(account, currentFolder, uid);
+      break;
+    case 'move':
+      if (!opts.targetFolderId) throw new Error('targetFolderId é obrigatório pra action "move"');
+      await imapMove(account, currentFolder, uid, opts.targetFolderId);
       break;
     default:
       throw new Error(`Unknown action: ${action}`);
@@ -176,6 +212,7 @@ function applyLocalCacheUpdate(
   messageId: string,
   action: EmailAction,
   provider: string,
+  targetFolderId?: string,
 ): void {
   const email = getEmail(accountId, messageId);
   if (!email) return;
@@ -211,10 +248,14 @@ function applyLocalCacheUpdate(
       updateEmail(accountId, messageId, { folder: 'spam' });
       break;
     case 'restore':
+    case 'notspam':
       updateEmail(accountId, messageId, { folder: 'inbox' });
       break;
     case 'delete':
       removeEmail(accountId, messageId);
+      break;
+    case 'move':
+      if (targetFolderId) updateEmail(accountId, messageId, { folder: targetFolderId });
       break;
   }
 }
@@ -225,17 +266,20 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { accountId, messageId, action } = req.body ?? {};
+    const { accountId, messageId, action, targetFolderId, sourceFolderId } = req.body ?? {};
 
     if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
     if (!messageId) return res.status(400).json({ error: 'messageId é obrigatório' });
     if (!action) return res.status(400).json({ error: 'action é obrigatório' });
 
     const validActions: EmailAction[] = [
-      'read', 'unread', 'star', 'unstar', 'archive', 'trash', 'spam', 'restore', 'delete',
+      'read', 'unread', 'star', 'unstar', 'archive', 'trash', 'spam', 'restore', 'delete', 'move', 'notspam',
     ];
     if (!validActions.includes(action as EmailAction)) {
       return res.status(400).json({ error: `action inválida: ${action}` });
+    }
+    if (action === 'move' && !targetFolderId) {
+      return res.status(400).json({ error: 'targetFolderId é obrigatório pra action "move"' });
     }
 
     const account = await fsGet('email_accounts', String(accountId));
@@ -249,11 +293,13 @@ export default async function handler(req: any, res: any) {
       cachedForFolder?.folder ?? imapCacheFolder(String(messageId)) ?? 'inbox';
 
     if (account.provider === 'gmail') {
-      await applyGmailAction(account as GmailAccount, String(messageId), action as EmailAction);
+      await applyGmailAction(account as GmailAccount, String(messageId), action as EmailAction, {
+        targetFolderId, sourceFolderId: sourceFolderId ?? currentFolder,
+      });
     } else if (account.provider === 'microsoft') {
-      await applyMicrosoftAction(account as MicrosoftAccount, String(messageId), action as EmailAction);
+      await applyMicrosoftAction(account as MicrosoftAccount, String(messageId), action as EmailAction, { targetFolderId });
     } else if (account.provider === 'imap') {
-      await applyImapAction(account as ImapAccount, String(messageId), action as EmailAction, currentFolder);
+      await applyImapAction(account as ImapAccount, String(messageId), action as EmailAction, currentFolder, { targetFolderId });
     } else {
       return res.status(400).json({ error: `Provider desconhecido: ${account.provider}` });
     }
@@ -264,6 +310,7 @@ export default async function handler(req: any, res: any) {
       String(messageId),
       action as EmailAction,
       String(account.provider),
+      targetFolderId,
     );
 
     // Emit socket event
