@@ -1,21 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Inbox, Send, Archive, Trash2, AlertCircle, FileText, Folder, ChevronRight } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { ChevronRight, Folder } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
 import { UnreadBadge } from '../shared/UnreadBadge';
-import { EmailService } from '../../../../services/EmailService';
+import { useEmailFolders } from '../../hooks/useEmailFolders';
+import { FIXED_FOLDERS } from '../../constants/folders';
 import type { EmailFolderNode } from '../../types/email.types';
 
-const FOLDERS = [
-  { id: 'inbox', label: 'Caixa de Entrada', icon: Inbox },
-  { id: 'sent', label: 'Enviados', icon: Send },
-  { id: 'drafts', label: 'Rascunhos', icon: FileText },
-  { id: 'archived', label: 'Arquivados', icon: Archive },
-  { id: 'spam', label: 'Spam', icon: AlertCircle },
-  { id: 'trash', label: 'Lixeira', icon: Trash2 },
-];
-
-// "archived" é a chave usada na navegação fixa hoje, mas os provedores/backend usam
-// "archive" pra essa mesma pasta — mapeamento só pra casar o parentId vindo da API.
 const FIXED_KEY_ALIAS: Record<string, string> = { archive: 'archived' };
 
 interface TreeNode extends EmailFolderNode {
@@ -28,32 +18,40 @@ function buildTree(folders: EmailFolderNode[], parentId: string | null): TreeNod
     .map(f => ({ ...f, children: buildTree(folders, f.id) }));
 }
 
+interface ContextMenuState {
+  folderId: string;
+  folderLabel: string;
+  isSystem: boolean;
+  x: number;
+  y: number;
+}
+
 interface Props {
   currentFolder: string;
   unreadByFolder: Record<string, number>;
   onChangeFolder: (f: string, label?: string) => void;
   accountId: string | null;
+  onCreateFolder: (name: string, parentId: string | null) => Promise<boolean>;
+  onRenameFolder: (folderId: string, name: string) => Promise<boolean>;
+  onDeleteFolder: (folderId: string) => Promise<boolean>;
+  onEmptyFolder: (folderId: string) => Promise<boolean>;
+  onMarkFolderRead: (folderId: string) => Promise<boolean>;
+  onMoveMessage: (messageId: string, targetFolderId: string) => void;
 }
 
-export const FolderNav: React.FC<Props> = ({ currentFolder, unreadByFolder, onChangeFolder, accountId }) => {
-  const [realFolders, setRealFolders] = useState<EmailFolderNode[]>([]);
+export const FolderNav: React.FC<Props> = ({
+  currentFolder, unreadByFolder, onChangeFolder, accountId,
+  onCreateFolder, onRenameFolder, onDeleteFolder, onEmptyFolder, onMarkFolderRead, onMoveMessage,
+}) => {
+  const { folders: realFolders, refetch } = useEmailFolders(accountId);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (!accountId) { setRealFolders([]); return; }
-    let cancelled = false;
-    EmailService.getFolders(accountId)
-      .then(folders => { if (!cancelled) setRealFolders(folders); })
-      .catch(() => { if (!cancelled) setRealFolders([]); });
-    return () => { cancelled = true; };
-  }, [accountId]);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   const rootCustomFolders = useMemo(() => buildTree(realFolders, null), [realFolders]);
   const childrenByFixedKey = useMemo(() => {
     const map = new Map<string, TreeNode[]>();
-    for (const folder of FOLDERS) {
-      // FOLDERS usa "archived" mas os provedores/backend usam "archive" como chave —
-      // acha a chave real do provedor pra essa linha fixa antes de casar o parentId.
+    for (const folder of FIXED_FOLDERS) {
       const providerKey = Object.entries(FIXED_KEY_ALIAS).find(([, alias]) => alias === folder.id)?.[0] ?? folder.id;
       map.set(folder.id, buildTree(realFolders, providerKey));
     }
@@ -68,6 +66,50 @@ export const FolderNav: React.FC<Props> = ({ currentFolder, unreadByFolder, onCh
     });
   };
 
+  const openContextMenu = (e: React.MouseEvent, folderId: string, folderLabel: string, isSystem: boolean) => {
+    e.preventDefault();
+    setContextMenu({ folderId, folderLabel, isSystem, x: e.clientX, y: e.clientY });
+  };
+
+  const handleDrop = (e: React.DragEvent, folderId: string) => {
+    e.preventDefault();
+    setDragOverId(null);
+    const messageId = e.dataTransfer.getData('text/plain');
+    if (messageId) onMoveMessage(messageId, folderId);
+  };
+
+  const handleContextAction = async (kind: 'new' | 'rename' | 'delete' | 'empty' | 'readall') => {
+    if (!contextMenu) return;
+    const { folderId, folderLabel } = contextMenu;
+    setContextMenu(null);
+
+    if (kind === 'new') {
+      const name = window.prompt('Nome da nova subpasta:');
+      if (!name || !name.trim()) return;
+      const ok = await onCreateFolder(name.trim(), folderId);
+      if (ok) refetch(); else window.alert('Não foi possível criar a pasta.');
+    } else if (kind === 'rename') {
+      const name = window.prompt('Novo nome da pasta:', folderLabel);
+      if (!name || !name.trim() || name.trim() === folderLabel) return;
+      const ok = await onRenameFolder(folderId, name.trim());
+      if (ok) refetch(); else window.alert('Não foi possível renomear a pasta.');
+    } else if (kind === 'delete') {
+      if (!window.confirm(`Excluir a pasta "${folderLabel}"? As mensagens dela também são excluídas no provedor.`)) return;
+      const ok = await onDeleteFolder(folderId);
+      if (ok) refetch(); else window.alert('Não foi possível excluir a pasta.');
+    } else if (kind === 'empty') {
+      const permanent = folderId === 'trash' || folderId === 'spam';
+      const msg = permanent
+        ? `Esvaziar "${folderLabel}"? As mensagens serão excluídas definitivamente.`
+        : `Esvaziar "${folderLabel}"? As mensagens serão movidas para a Lixeira.`;
+      if (!window.confirm(msg)) return;
+      const ok = await onEmptyFolder(folderId);
+      if (!ok) window.alert('Não foi possível esvaziar a pasta.');
+    } else if (kind === 'readall') {
+      await onMarkFolderRead(folderId);
+    }
+  };
+
   const renderTreeNode = (node: TreeNode, depth: number) => {
     const isActive = currentFolder === node.id;
     const hasChildren = node.children.length > 0;
@@ -76,18 +118,19 @@ export const FolderNav: React.FC<Props> = ({ currentFolder, unreadByFolder, onCh
       <div key={node.id}>
         <button
           onClick={() => onChangeFolder(node.id, node.name)}
+          onContextMenu={e => openContextMenu(e, node.id, node.name, false)}
+          onDragOver={e => { e.preventDefault(); setDragOverId(node.id); }}
+          onDragLeave={() => setDragOverId(prev => (prev === node.id ? null : prev))}
+          onDrop={e => handleDrop(e, node.id)}
           className={cn(
             'w-full flex items-center gap-1.5 py-1.5 rounded-lg text-sm transition-all group',
             isActive ? 'bg-blue-600/20 text-blue-300 font-medium' : 'text-white/45 hover:bg-white/5 hover:text-white/75',
+            dragOverId === node.id && 'ring-1 ring-blue-400/60 bg-blue-500/10',
           )}
           style={{ paddingLeft: 10 + depth * 16, paddingRight: 10 }}
         >
           {hasChildren ? (
-            <span
-              role="button"
-              onClick={e => { e.stopPropagation(); toggleExpanded(node.id); }}
-              className="shrink-0 -ml-1"
-            >
+            <span role="button" onClick={e => { e.stopPropagation(); toggleExpanded(node.id); }} className="shrink-0 -ml-1">
               <ChevronRight className={cn('w-3.5 h-3.5 transition-transform', isExpanded && 'rotate-90')} />
             </span>
           ) : (
@@ -104,7 +147,7 @@ export const FolderNav: React.FC<Props> = ({ currentFolder, unreadByFolder, onCh
 
   return (
     <nav className="flex-1 overflow-y-auto px-2 space-y-0.5 py-1">
-      {FOLDERS.map(folder => {
+      {FIXED_FOLDERS.map(folder => {
         const Icon = folder.icon;
         const unread = unreadByFolder[folder.id] ?? 0;
         const isActive = currentFolder === folder.id;
@@ -115,19 +158,20 @@ export const FolderNav: React.FC<Props> = ({ currentFolder, unreadByFolder, onCh
           <div key={folder.id}>
             <button
               onClick={() => onChangeFolder(folder.id, folder.label)}
+              onContextMenu={e => openContextMenu(e, folder.id, folder.label, true)}
+              onDragOver={e => { e.preventDefault(); setDragOverId(folder.id); }}
+              onDragLeave={() => setDragOverId(prev => (prev === folder.id ? null : prev))}
+              onDrop={e => handleDrop(e, folder.id)}
               className={cn(
                 'w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition-all group',
                 isActive
                   ? 'bg-blue-600/20 text-blue-300 font-medium'
                   : 'text-white/50 hover:bg-white/5 hover:text-white/80',
+                dragOverId === folder.id && 'ring-1 ring-blue-400/60 bg-blue-500/10',
               )}
             >
               {hasChildren ? (
-                <span
-                  role="button"
-                  onClick={e => { e.stopPropagation(); toggleExpanded(folder.id); }}
-                  className="shrink-0 -ml-1"
-                >
+                <span role="button" onClick={e => { e.stopPropagation(); toggleExpanded(folder.id); }} className="shrink-0 -ml-1">
                   <ChevronRight className={cn('w-3.5 h-3.5 transition-transform', isExpanded && 'rotate-90')} />
                 </span>
               ) : (
@@ -146,6 +190,52 @@ export const FolderNav: React.FC<Props> = ({ currentFolder, unreadByFolder, onCh
         <div className="pt-2 mt-2 border-t border-white/5">
           {rootCustomFolders.map(node => renderTreeNode(node, 0))}
         </div>
+      )}
+
+      {contextMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
+          <div
+            className="fixed z-50 w-52 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl overflow-hidden py-1"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <button
+              onClick={() => handleContextAction('new')}
+              className="w-full text-left px-3 py-2 text-xs text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors"
+            >
+              Nova subpasta
+            </button>
+            {!contextMenu.isSystem && (
+              <>
+                <button
+                  onClick={() => handleContextAction('rename')}
+                  className="w-full text-left px-3 py-2 text-xs text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors"
+                >
+                  Renomear
+                </button>
+                <button
+                  onClick={() => handleContextAction('delete')}
+                  className="w-full text-left px-3 py-2 text-xs text-red-400/80 hover:bg-white/5 hover:text-red-400 transition-colors"
+                >
+                  Excluir
+                </button>
+              </>
+            )}
+            <div className="border-t border-white/5 my-1" />
+            <button
+              onClick={() => handleContextAction('empty')}
+              className="w-full text-left px-3 py-2 text-xs text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors"
+            >
+              Esvaziar pasta
+            </button>
+            <button
+              onClick={() => handleContextAction('readall')}
+              className="w-full text-left px-3 py-2 text-xs text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors"
+            >
+              Marcar tudo como lido
+            </button>
+          </div>
+        </>
       )}
     </nav>
   );

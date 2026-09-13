@@ -11,7 +11,10 @@ interface Props {
 
 export const EmailSidebar: React.FC<Props> = ({ onOpenSettings }) => {
   const navigate = useNavigate();
-  const { state, changeFolder, selectAccount } = useEmail();
+  const {
+    state, changeFolder, selectAccount,
+    createFolder, renameFolder, deleteFolder, emptyFolder, markFolderRead, moveMessage,
+  } = useEmail();
   const { currentFolder, accounts, selectedAccountId, unreadByFolder } = state;
 
   return (
@@ -27,6 +30,12 @@ export const EmailSidebar: React.FC<Props> = ({ onOpenSettings }) => {
         unreadByFolder={unreadByFolder}
         onChangeFolder={changeFolder}
         accountId={selectedAccountId}
+        onCreateFolder={createFolder}
+        onRenameFolder={renameFolder}
+        onDeleteFolder={deleteFolder}
+        onEmptyFolder={emptyFolder}
+        onMarkFolderRead={markFolderRead}
+        onMoveMessage={moveMessage}
       />
 
       <div className="p-2 border-t border-white/5 flex gap-1">
