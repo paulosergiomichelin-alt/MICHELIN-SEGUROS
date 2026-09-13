@@ -11,6 +11,12 @@ import {
   parseMicrosoftMessage,
   MicrosoftAccount,
 } from '../lib/microsoftClient.js';
+import {
+  listMessages as imapListMessages,
+  getMessage as imapGetMessage,
+  parseImapMessage,
+  ImapAccount,
+} from '../lib/imapClient.js';
 
 const MAX_RESULTS = 20;
 
@@ -96,6 +102,38 @@ async function searchMicrosoft(
   return msgs.map((msg: any) => parseMicrosoftMessage(msg, account.id, folderPath));
 }
 
+async function searchImap(
+  account: ImapAccount,
+  q: string,
+  folder?: string,
+): Promise<CachedEmail[]> {
+  const folders = folder && folder !== 'all' ? [folder] : ['inbox'];
+  const lowerQ = q.toLowerCase();
+  const results: CachedEmail[] = [];
+
+  for (const f of folders) {
+    const { messages } = await imapListMessages(account, f, MAX_RESULTS);
+    for (const ref of messages) {
+      if (results.length >= MAX_RESULTS) break;
+      try {
+        const full = await imapGetMessage(account, f, ref.id);
+        const parsed = parseImapMessage(full, account.id, f);
+        if (
+          parsed.subject.toLowerCase().includes(lowerQ) ||
+          parsed.from.email.toLowerCase().includes(lowerQ) ||
+          parsed.snippet.toLowerCase().includes(lowerQ)
+        ) {
+          results.push(parsed);
+        }
+      } catch {
+        // skip individual failures, igual searchGmail/searchMicrosoft
+      }
+    }
+  }
+
+  return results;
+}
+
 function searchCache(
   accountId: string,
   q: string,
@@ -165,6 +203,12 @@ export default async function handler(req: any, res: any) {
       } else if (account.provider === 'microsoft') {
         apiResults = await searchMicrosoft(
           account as MicrosoftAccount,
+          String(q),
+          folder ? String(folder) : undefined,
+        );
+      } else if (account.provider === 'imap') {
+        apiResults = await searchImap(
+          account as ImapAccount,
           String(q),
           folder ? String(folder) : undefined,
         );
