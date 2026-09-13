@@ -192,6 +192,39 @@ export const EmailService = {
       .then(r => r.json())
       .then(data => data?.folders ?? []),
 
+  createFolder: (accountId: string, name: string, parentId: string | null): Promise<{ folder: { id: string; name: string } }> =>
+    fetch('/api/email/folders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId, name, parentId }),
+    }).then(r => r.json()),
+
+  renameFolder: (accountId: string, folderId: string, name: string): Promise<{ success: boolean }> =>
+    fetch(`/api/email/folders/${encodeURIComponent(folderId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId, name }),
+    }).then(r => r.json()),
+
+  deleteFolder: (accountId: string, folderId: string): Promise<{ success: boolean }> =>
+    fetch(`/api/email/folders/${encodeURIComponent(folderId)}?accountId=${encodeURIComponent(accountId)}`, {
+      method: 'DELETE',
+    }).then(r => r.json()),
+
+  emptyFolder: (accountId: string, folderId: string): Promise<{ success: boolean }> =>
+    fetch(`/api/email/folders/${encodeURIComponent(folderId)}/empty`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId }),
+    }).then(r => r.json()),
+
+  markFolderRead: (accountId: string, folderId: string): Promise<{ success: boolean }> =>
+    fetch(`/api/email/folders/${encodeURIComponent(folderId)}/read-all`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId }),
+    }).then(r => r.json()),
+
   // ── Mensagens ───────────────────────────────────────────────────────────────
   getMessages: (
     accountId: string,
@@ -222,6 +255,18 @@ export const EmailService = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId, messageId, action }),
+    }).then(r => r.json()),
+
+  moveMessage: (
+    accountId: string,
+    messageId: string,
+    sourceFolderId: string,
+    targetFolderId: string,
+  ): Promise<{ success: boolean }> =>
+    fetch('/api/email/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId, messageId, action: 'move', sourceFolderId, targetFolderId }),
     }).then(r => r.json()),
 
   // ── Envio ───────────────────────────────────────────────────────────────────
