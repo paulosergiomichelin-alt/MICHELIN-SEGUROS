@@ -9,10 +9,10 @@ import { useEmail } from '../../../../contexts/EmailContext';
 
 // ─── Building blocks ────────────────────────────────────────────────────────
 
-const RibbonDivider: React.FC = () => <div className="w-px self-stretch bg-white/8 mx-2.5 shrink-0" />;
+const RibbonDivider: React.FC = () => <div className="w-px h-14 self-center bg-white/8 mx-2.5 shrink-0" />;
 
 const RibbonGroup: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div className="flex flex-col items-center px-3 h-full justify-between py-1.5 shrink-0">
+  <div className="flex flex-col items-center px-3 py-1.5 shrink-0">
     <div className="flex items-end gap-2 flex-1">{children}</div>
     <span className="text-[9.5px] text-white/25 uppercase tracking-wide mt-1.5 whitespace-nowrap">{label}</span>
   </div>
@@ -156,8 +156,8 @@ export const EmailRibbon: React.FC = () => {
   };
 
   return (
-    <div className="shrink-0 w-full border-b border-white/5 bg-[#141414] overflow-x-auto">
-      <div className="flex items-stretch h-[84px] px-3 min-w-max">
+    <div className="shrink-0 w-full border-b border-white/5 bg-[#141414]">
+      <div className="flex flex-wrap items-stretch px-3 py-1">
         {/* Novo */}
         <RibbonGroup label="Novo">
           <RibbonButtonBig
