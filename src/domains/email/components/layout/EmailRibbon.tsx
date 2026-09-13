@@ -9,12 +9,12 @@ import { useEmail } from '../../../../contexts/EmailContext';
 
 // ─── Building blocks ────────────────────────────────────────────────────────
 
-const RibbonDivider: React.FC = () => <div className="w-px self-stretch bg-white/8 mx-1" />;
+const RibbonDivider: React.FC = () => <div className="w-px self-stretch bg-white/8 mx-2.5 shrink-0" />;
 
 const RibbonGroup: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div className="flex flex-col items-center px-2 h-full justify-between py-1">
-    <div className="flex items-end gap-0.5 flex-1">{children}</div>
-    <span className="text-[9px] text-white/25 uppercase tracking-wide mt-1 whitespace-nowrap">{label}</span>
+  <div className="flex flex-col items-center px-3 h-full justify-between py-1.5 shrink-0">
+    <div className="flex items-end gap-2 flex-1">{children}</div>
+    <span className="text-[9.5px] text-white/25 uppercase tracking-wide mt-1.5 whitespace-nowrap">{label}</span>
   </div>
 );
 
@@ -30,7 +30,7 @@ const RibbonButtonBig: React.FC<{
     disabled={disabled}
     title={disabled ? `${label} (em breve)` : label}
     className={cn(
-      'flex flex-col items-center justify-center gap-1 px-3 py-1.5 rounded-lg transition-colors w-[72px] h-[64px]',
+      'flex flex-col items-center justify-center gap-1.5 px-3 py-2 rounded-lg transition-colors min-w-[88px] h-[70px] shrink-0',
       disabled
         ? 'text-white/15 cursor-not-allowed'
         : primary
@@ -39,7 +39,7 @@ const RibbonButtonBig: React.FC<{
     )}
   >
     {icon}
-    <span className="text-[9px] leading-tight text-center">{label}</span>
+    <span className="text-[10px] leading-tight text-center px-1">{label}</span>
   </button>
 );
 
@@ -55,7 +55,7 @@ const RibbonButtonSmall: React.FC<{
     disabled={disabled}
     title={disabled ? `${label} (em breve)` : label}
     className={cn(
-      'flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors text-[11px] whitespace-nowrap',
+      'flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-[11px] whitespace-nowrap',
       disabled
         ? 'text-white/15 cursor-not-allowed'
         : active
@@ -79,12 +79,12 @@ const RibbonButtonSmallStack: React.FC<{
     disabled={disabled}
     title={disabled ? `${label} (em breve)` : label}
     className={cn(
-      'flex flex-col items-center justify-center gap-0.5 px-2 py-1 rounded-md transition-colors w-[52px]',
+      'flex flex-col items-center justify-center gap-1 px-2.5 py-1.5 rounded-md transition-colors min-w-[68px] shrink-0',
       disabled ? 'text-white/15 cursor-not-allowed' : 'text-white/55 hover:text-white/90 hover:bg-white/5',
     )}
   >
     {icon}
-    <span className="text-[9px] leading-tight text-center">{label}</span>
+    <span className="text-[9.5px] leading-tight text-center px-0.5">{label}</span>
   </button>
 );
 
@@ -157,7 +157,7 @@ export const EmailRibbon: React.FC = () => {
 
   return (
     <div className="shrink-0 w-full border-b border-white/5 bg-[#141414] overflow-x-auto">
-      <div className="flex items-stretch h-[76px] px-2 min-w-max">
+      <div className="flex items-stretch h-[84px] px-3 min-w-max">
         {/* Novo */}
         <RibbonGroup label="Novo">
           <RibbonButtonBig
@@ -214,7 +214,7 @@ export const EmailRibbon: React.FC = () => {
 
         {/* Etapas Rápidas — sem funcionalidade correspondente ainda */}
         <RibbonGroup label="Etapas Rápidas">
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-1.5">
             <RibbonButtonSmall icon={<Users2 className="w-3.5 h-3.5" />} label="Para o Gerente" disabled />
             <RibbonButtonSmall icon={<MailPlus className="w-3.5 h-3.5" />} label="E-mail de Equipe" disabled />
           </div>
@@ -246,8 +246,8 @@ export const EmailRibbon: React.FC = () => {
 
         {/* Localizar */}
         <RibbonGroup label="Localizar">
-          <div className="flex items-center gap-1">
-            <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 w-40">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 w-44">
               <Search className="w-3.5 h-3.5 text-white/30 shrink-0" />
               <input
                 value={searchValue}
