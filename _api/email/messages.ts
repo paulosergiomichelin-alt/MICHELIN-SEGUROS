@@ -15,6 +15,12 @@ import {
   updateMessage as msUpdateMessage,
   MicrosoftAccount,
 } from '../lib/microsoftClient.js';
+import {
+  getMessage as imapGetMessage,
+  parseImapMessage,
+  modifyMessage as imapModifyMessage,
+  ImapAccount,
+} from '../lib/imapClient.js';
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -53,6 +59,9 @@ export default async function handler(req: any, res: any) {
           if (account.provider === 'gmail') {
             await gmailModifyMessage(account as GmailAccount, String(messageId), [], ['UNREAD'])
               .catch(() => {});
+          } else if (account.provider === 'imap') {
+            await imapModifyMessage(account as ImapAccount, cached.folder, String(messageId), ['\\Seen'], [])
+              .catch(() => {});
           } else {
             await msUpdateMessage(account as MicrosoftAccount, String(messageId), { isRead: true })
               .catch(() => {});
@@ -70,6 +79,13 @@ export default async function handler(req: any, res: any) {
 
         // Mark as read
         await gmailModifyMessage(account as GmailAccount, String(messageId), [], ['UNREAD'])
+          .catch(() => {});
+        fullEmail.isRead = true;
+      } else if (account.provider === 'imap') {
+        const folder = cached?.folder ?? 'inbox';
+        const full = await imapGetMessage(account as ImapAccount, folder, String(messageId));
+        fullEmail = parseImapMessage(full, String(accountId), folder);
+        await imapModifyMessage(account as ImapAccount, folder, String(messageId), ['\\Seen'], [])
           .catch(() => {});
         fullEmail.isRead = true;
       } else {

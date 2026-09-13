@@ -13,6 +13,12 @@ import {
   deleteMessage as msDelete,
   MicrosoftAccount,
 } from '../lib/microsoftClient.js';
+import {
+  modifyMessage as imapModify,
+  moveMessage as imapMove,
+  deleteMessage as imapDelete,
+  ImapAccount,
+} from '../lib/imapClient.js';
 
 type EmailAction =
   | 'read'
@@ -112,6 +118,45 @@ async function applyMicrosoftAction(
   }
 }
 
+async function applyImapAction(
+  account: ImapAccount,
+  messageId: string,
+  action: EmailAction,
+  currentFolder: string,
+): Promise<void> {
+  switch (action) {
+    case 'read':
+      await imapModify(account, currentFolder, messageId, ['\\Seen'], []);
+      break;
+    case 'unread':
+      await imapModify(account, currentFolder, messageId, [], ['\\Seen']);
+      break;
+    case 'star':
+      await imapModify(account, currentFolder, messageId, ['\\Flagged'], []);
+      break;
+    case 'unstar':
+      await imapModify(account, currentFolder, messageId, [], ['\\Flagged']);
+      break;
+    case 'archive':
+      await imapMove(account, currentFolder, messageId, 'archive');
+      break;
+    case 'trash':
+      await imapMove(account, currentFolder, messageId, 'trash');
+      break;
+    case 'spam':
+      await imapMove(account, currentFolder, messageId, 'spam');
+      break;
+    case 'restore':
+      await imapMove(account, currentFolder, messageId, 'inbox');
+      break;
+    case 'delete':
+      await imapDelete(account, currentFolder, messageId);
+      break;
+    default:
+      throw new Error(`Unknown action: ${action}`);
+  }
+}
+
 function applyLocalCacheUpdate(
   accountId: string,
   messageId: string,
@@ -173,10 +218,15 @@ export default async function handler(req: any, res: any) {
     const account = await fsGet('email_accounts', String(accountId));
     if (!account) return res.status(404).json({ error: 'Conta não encontrada' });
 
+    const cachedForFolder = getEmail(String(accountId), String(messageId));
+    const currentFolder = cachedForFolder?.folder ?? 'inbox';
+
     if (account.provider === 'gmail') {
       await applyGmailAction(account as GmailAccount, String(messageId), action as EmailAction);
     } else if (account.provider === 'microsoft') {
       await applyMicrosoftAction(account as MicrosoftAccount, String(messageId), action as EmailAction);
+    } else if (account.provider === 'imap') {
+      await applyImapAction(account as ImapAccount, String(messageId), action as EmailAction, currentFolder);
     } else {
       return res.status(400).json({ error: `Provider desconhecido: ${account.provider}` });
     }
