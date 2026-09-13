@@ -31,7 +31,7 @@ function buildTree(folders: EmailFolderNode[], parentId: string | null): TreeNod
 interface Props {
   currentFolder: string;
   unreadByFolder: Record<string, number>;
-  onChangeFolder: (f: string) => void;
+  onChangeFolder: (f: string, label?: string) => void;
   accountId: string | null;
 }
 
@@ -75,9 +75,9 @@ export const FolderNav: React.FC<Props> = ({ currentFolder, unreadByFolder, onCh
     return (
       <div key={node.id}>
         <button
-          onClick={() => onChangeFolder(node.id)}
+          onClick={() => onChangeFolder(node.id, node.name)}
           className={cn(
-            'w-full flex items-center gap-1.5 py-1.5 rounded-lg text-xs transition-all group',
+            'w-full flex items-center gap-1.5 py-1.5 rounded-lg text-sm transition-all group',
             isActive ? 'bg-blue-600/20 text-blue-300 font-medium' : 'text-white/45 hover:bg-white/5 hover:text-white/75',
           )}
           style={{ paddingLeft: 10 + depth * 16, paddingRight: 10 }}
@@ -88,12 +88,12 @@ export const FolderNav: React.FC<Props> = ({ currentFolder, unreadByFolder, onCh
               onClick={e => { e.stopPropagation(); toggleExpanded(node.id); }}
               className="shrink-0 -ml-1"
             >
-              <ChevronRight className={cn('w-3 h-3 transition-transform', isExpanded && 'rotate-90')} />
+              <ChevronRight className={cn('w-3.5 h-3.5 transition-transform', isExpanded && 'rotate-90')} />
             </span>
           ) : (
-            <span className="w-3 h-3 shrink-0" />
+            <span className="w-3.5 h-3.5 shrink-0" />
           )}
-          <Folder className={cn('w-3.5 h-3.5 shrink-0', isActive ? 'text-blue-400' : 'text-white/30 group-hover:text-white/60')} />
+          <Folder className={cn('w-4 h-4 shrink-0', isActive ? 'text-blue-400' : 'text-white/30 group-hover:text-white/60')} />
           <span className="flex-1 text-left truncate">{node.name}</span>
           <UnreadBadge count={node.unreadCount} active={isActive} />
         </button>
@@ -114,9 +114,9 @@ export const FolderNav: React.FC<Props> = ({ currentFolder, unreadByFolder, onCh
         return (
           <div key={folder.id}>
             <button
-              onClick={() => onChangeFolder(folder.id)}
+              onClick={() => onChangeFolder(folder.id, folder.label)}
               className={cn(
-                'w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs transition-all group',
+                'w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition-all group',
                 isActive
                   ? 'bg-blue-600/20 text-blue-300 font-medium'
                   : 'text-white/50 hover:bg-white/5 hover:text-white/80',
@@ -128,12 +128,12 @@ export const FolderNav: React.FC<Props> = ({ currentFolder, unreadByFolder, onCh
                   onClick={e => { e.stopPropagation(); toggleExpanded(folder.id); }}
                   className="shrink-0 -ml-1"
                 >
-                  <ChevronRight className={cn('w-3 h-3 transition-transform', isExpanded && 'rotate-90')} />
+                  <ChevronRight className={cn('w-3.5 h-3.5 transition-transform', isExpanded && 'rotate-90')} />
                 </span>
               ) : (
-                <span className="w-3 h-3 shrink-0" />
+                <span className="w-3.5 h-3.5 shrink-0" />
               )}
-              <Icon className={cn('w-3.5 h-3.5 shrink-0', isActive ? 'text-blue-400' : 'group-hover:text-white/70')} />
+              <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-blue-400' : 'group-hover:text-white/70')} />
               <span className="flex-1 text-left truncate">{folder.label}</span>
               <UnreadBadge count={unread} active={isActive} />
             </button>

@@ -14,19 +14,10 @@ type ListRow =
 const HEADER_HEIGHT = 30;
 const MESSAGE_HEIGHT = 72;
 
-const FOLDERS_LABEL: Record<string, string> = {
-  inbox: 'Caixa de Entrada',
-  sent: 'Enviados',
-  drafts: 'Rascunhos',
-  archived: 'Arquivados',
-  spam: 'Spam',
-  trash: 'Lixeira',
-};
-
 export const EmailList: React.FC = () => {
   const { state, openMessage, loadMoreMessages, search, clearSearch } = useEmail();
   const {
-    messages, selectedMessage, messagesLoading, currentFolder,
+    messages, selectedMessage, messagesLoading, currentFolderLabel,
     searchQuery, searchResults, isSearching, hasMore, accounts,
   } = state;
 
@@ -36,7 +27,7 @@ export const EmailList: React.FC = () => {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const folderLabel = FOLDERS_LABEL[currentFolder] ?? currentFolder;
+  const folderLabel = currentFolderLabel;
 
   const displayMessages = searchQuery
     ? searchResults

@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Mail, Trash2, Archive, Reply, ReplyAll, Forward, Users2, MailPlus,
-  FolderInput, ChevronDown, Tag, Gavel, Flag, Search, BookUser, Filter,
-  Volume2, PackagePlus, RefreshCw, MailOpen,
+  Mail, Trash2, Archive, Reply, ReplyAll, Forward,
+  FolderInput, Search, RefreshCw, MailOpen,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
 import { useEmail } from '../../../../contexts/EmailContext';
@@ -40,31 +39,6 @@ const RibbonButtonBig: React.FC<{
   >
     {icon}
     <span className="text-[10px] leading-tight text-center px-1">{label}</span>
-  </button>
-);
-
-const RibbonButtonSmall: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  onClick?: () => void;
-  disabled?: boolean;
-  active?: boolean;
-}> = ({ icon, label, onClick, disabled, active }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    title={disabled ? `${label} (em breve)` : label}
-    className={cn(
-      'flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-[11px] whitespace-nowrap',
-      disabled
-        ? 'text-white/15 cursor-not-allowed'
-        : active
-          ? 'text-gold-deep bg-gold-deep/10'
-          : 'text-white/55 hover:text-white/90 hover:bg-white/5',
-    )}
-  >
-    {icon}
-    <span>{label}</span>
   </button>
 );
 
@@ -212,67 +186,36 @@ export const EmailRibbon: React.FC = () => {
 
         <RibbonDivider />
 
-        {/* Etapas Rápidas — sem funcionalidade correspondente ainda */}
-        <RibbonGroup label="Etapas Rápidas">
-          <div className="flex flex-col gap-1.5">
-            <RibbonButtonSmall icon={<Users2 className="w-3.5 h-3.5" />} label="Para o Gerente" disabled />
-            <RibbonButtonSmall icon={<MailPlus className="w-3.5 h-3.5" />} label="E-mail de Equipe" disabled />
-          </div>
-        </RibbonGroup>
-
-        <RibbonDivider />
-
         {/* Mover */}
         <RibbonGroup label="Mover">
           <MoveDropdown disabled={!hasSelection} onMove={handleAction} />
-          <RibbonButtonSmallStack icon={<Gavel className="w-4 h-4" />} label="Regras ▾" disabled />
         </RibbonGroup>
 
         <RibbonDivider />
 
         {/* Marcas */}
         <RibbonGroup label="Marcas">
-          <RibbonButtonSmallStack icon={<Tag className="w-4 h-4" />} label="Categorizar ▾" disabled />
           <RibbonButtonSmallStack
             icon={selectedMessage?.isRead ? <MailOpen className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
             label={selectedMessage?.isRead ? 'Não Lido' : 'Lido'}
             disabled={!hasSelection}
             onClick={() => handleAction(selectedMessage?.isRead ? 'unread' : 'read')}
           />
-          <RibbonButtonSmallStack icon={<Flag className="w-4 h-4" />} label="Acompanhamento ▾" disabled />
         </RibbonGroup>
 
         <RibbonDivider />
 
         {/* Localizar */}
         <RibbonGroup label="Localizar">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 w-44">
-              <Search className="w-3.5 h-3.5 text-white/30 shrink-0" />
-              <input
-                value={searchValue}
-                onChange={e => handleSearchChange(e.target.value)}
-                placeholder="Pesquisar E-mail"
-                className="bg-transparent text-[11px] text-white/70 placeholder:text-white/25 outline-none w-full"
-              />
-            </div>
-            <RibbonButtonSmallStack icon={<BookUser className="w-4 h-4" />} label="Catálogo de Endereços" disabled />
-            <RibbonButtonSmallStack icon={<Filter className="w-4 h-4" />} label="Filtrar E-mail ▾" disabled />
+          <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 w-44">
+            <Search className="w-3.5 h-3.5 text-white/30 shrink-0" />
+            <input
+              value={searchValue}
+              onChange={e => handleSearchChange(e.target.value)}
+              placeholder="Pesquisar E-mail"
+              className="bg-transparent text-[11px] text-white/70 placeholder:text-white/25 outline-none w-full"
+            />
           </div>
-        </RibbonGroup>
-
-        <RibbonDivider />
-
-        {/* Fala */}
-        <RibbonGroup label="Fala">
-          <RibbonButtonBig icon={<Volume2 className="w-5 h-5" />} label="Ler em Voz Alta" disabled />
-        </RibbonGroup>
-
-        <RibbonDivider />
-
-        {/* Suplementos */}
-        <RibbonGroup label="Suplementos">
-          <RibbonButtonBig icon={<PackagePlus className="w-5 h-5" />} label="Obter Suplementos" disabled />
         </RibbonGroup>
 
         <RibbonDivider />

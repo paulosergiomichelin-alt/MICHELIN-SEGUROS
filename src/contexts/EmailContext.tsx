@@ -22,6 +22,7 @@ interface EmailState {
   accounts: EmailAccount[];
   selectedAccountId: string | null;
   currentFolder: string;
+  currentFolderLabel: string;
   messages: CachedEmail[];
   selectedMessage: CachedEmail | null;
   loading: boolean;
@@ -56,6 +57,7 @@ const initialState: EmailState = {
   accounts: [],
   selectedAccountId: null,
   currentFolder: 'inbox',
+  currentFolderLabel: 'Caixa de Entrada',
   messages: [],
   selectedMessage: null,
   loading: true,
@@ -82,7 +84,7 @@ type EmailAction =
   | { type: 'SET_MESSAGES_LOADING'; payload: boolean }
   | { type: 'SET_ACCOUNTS'; payload: EmailAccount[] }
   | { type: 'SET_SELECTED_ACCOUNT'; payload: string | null }
-  | { type: 'SET_FOLDER'; payload: string }
+  | { type: 'SET_FOLDER'; payload: { folder: string; label: string } }
   | { type: 'SET_MESSAGES'; payload: { messages: CachedEmail[]; page: number; hasMore: boolean } }
   | { type: 'APPEND_MESSAGES'; payload: { messages: CachedEmail[]; page: number; hasMore: boolean } }
   | { type: 'SET_SELECTED_MESSAGE'; payload: CachedEmail | null }
@@ -113,7 +115,12 @@ function emailReducer(state: EmailState, action: EmailAction): EmailState {
     case 'SET_SELECTED_ACCOUNT':
       return { ...state, selectedAccountId: action.payload };
     case 'SET_FOLDER':
-      return { ...state, currentFolder: action.payload, messages: [], page: 1, hasMore: false, selectedMessage: null, searchQuery: '', searchResults: [] };
+      return {
+        ...state,
+        currentFolder: action.payload.folder,
+        currentFolderLabel: action.payload.label,
+        messages: [], page: 1, hasMore: false, selectedMessage: null, searchQuery: '', searchResults: [],
+      };
     case 'SET_MESSAGES': {
       const seen = new Set<string>();
       const deduped = action.payload.messages.filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true; });
@@ -207,7 +214,7 @@ interface EmailContextType {
   state: EmailState;
   loadAccounts: () => Promise<void>;
   selectAccount: (accountId: string) => void;
-  changeFolder: (folder: string) => void;
+  changeFolder: (folder: string, label?: string) => void;
   loadMessages: (reset?: boolean) => Promise<void>;
   loadMoreMessages: () => Promise<void>;
   openMessage: (message: CachedEmail) => Promise<void>;
@@ -348,11 +355,11 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const selectAccount = useCallback((accountId: string) => {
     dispatch({ type: 'SET_SELECTED_ACCOUNT', payload: accountId });
-    dispatch({ type: 'SET_FOLDER', payload: 'inbox' });
+    dispatch({ type: 'SET_FOLDER', payload: { folder: 'inbox', label: 'Caixa de Entrada' } });
   }, []);
 
-  const changeFolder = useCallback((folder: string) => {
-    dispatch({ type: 'SET_FOLDER', payload: folder });
+  const changeFolder = useCallback((folder: string, label?: string) => {
+    dispatch({ type: 'SET_FOLDER', payload: { folder, label: label ?? folder } });
   }, []);
 
   const loadMessages = useCallback(async (_reset = true) => {
