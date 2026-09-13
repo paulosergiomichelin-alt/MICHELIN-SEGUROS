@@ -122,10 +122,32 @@ export interface MsFolderNode {
   totalCount: number;
 }
 
-const WELL_KNOWN_BY_NAME: Record<string, string> = {
-  inbox: 'inbox', sentitems: 'sent', drafts: 'drafts',
-  deleteditems: 'trash', junkemail: 'spam', archive: 'archive',
+// Nomes estáveis (well-known folder names) que o Graph aceita em /me/mailFolders/{nome}
+// independente do idioma da caixa — NUNCA comparar por displayName: numa conta em
+// PT-BR, displayName vem "Caixa de Entrada"/"Itens Enviados"/"Itens Excluídos"/"Lixo
+// Eletrônico", não "Inbox"/"Sent Items"/etc. (confirmado em produção, 2026-09-13 —
+// era exatamente por isso que a pasta padrão vinha duplicada como "customizada" e a
+// subpasta real não aninhava sob a linha fixa certa).
+const WELL_KNOWN_GRAPH_NAMES: Record<string, string> = {
+  inbox: 'inbox', sent: 'sentitems', drafts: 'drafts',
+  trash: 'deleteditems', spam: 'junkemail', archive: 'archive',
 };
+
+// Busca o id REAL de cada well-known folder (uma vez por chamada) via o nome estável,
+// pra poder reconhecer essas pastas na árvore de /me/mailFolders sem depender de
+// displayName. Falhas individuais (ex.: conta sem pasta "archive") são ignoradas.
+async function resolveWellKnownIds(account: MicrosoftAccount): Promise<Map<string, string>> {
+  const idToKey = new Map<string, string>();
+  await Promise.all(Object.entries(WELL_KNOWN_GRAPH_NAMES).map(async ([key, graphName]) => {
+    try {
+      const folder = await graphRequest(account, `me/mailFolders/${graphName}`);
+      if (folder?.id) idToKey.set(folder.id, key);
+    } catch {
+      // Pasta well-known ausente nesta conta — segue sem ela.
+    }
+  }));
+  return idToKey;
+}
 
 // Well-known folders (Inbox, Sent Items, Drafts, Deleted Items, Junk Email, Archive) já
 // aparecem fixos no FolderNav (com tradução PT-BR e ícone específico) e não são
@@ -161,12 +183,14 @@ async function fetchChildFolders(
 }
 
 export async function listFolders(account: MicrosoftAccount): Promise<MsFolderNode[]> {
-  const data = await graphRequest(account, 'me/mailFolders?$top=100');
+  const [data, wellKnownIds] = await Promise.all([
+    graphRequest(account, 'me/mailFolders?$top=100'),
+    resolveWellKnownIds(account),
+  ]);
   const topLevel: any[] = data?.value ?? [];
   const out: MsFolderNode[] = [];
   for (const f of topLevel) {
-    const nameKey = String(f.displayName).toLowerCase().replace(/\s/g, '');
-    const wellKnownKey = WELL_KNOWN_BY_NAME[nameKey];
+    const wellKnownKey = wellKnownIds.get(f.id);
     if (!wellKnownKey) {
       // Pasta customizada de nível raiz (fora de Inbox) — também é uma pasta real que
       // hoje não aparece em lugar nenhum da árvore fixa.
@@ -176,8 +200,9 @@ export async function listFolders(account: MicrosoftAccount): Promise<MsFolderNo
       });
     }
     if (f.childFolderCount > 0) {
-      // Se for um well-known (ex.: Inbox), os filhos entram com parentId = chave fixa
-      // ('inbox'); senão, com o id real da pasta customizada de nível raiz.
+      // Se for um well-known (ex.: Inbox, id resolvido via nome estável), os filhos
+      // entram com parentId = chave fixa ('inbox'); senão, com o id real da pasta
+      // customizada de nível raiz.
       out.push(...(await fetchChildFolders(account, f.id, wellKnownKey ?? f.id)));
     }
   }
