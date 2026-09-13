@@ -61,6 +61,7 @@ Mapeamento completo feito antes deste documento (agente de exploração, 2026-09
 | ADR-14 | **Push mobile**: adiciona `public/manifest.json` + service worker ao app web (não existe hoje). Nova tabela `push_subscriptions` (`id, userId, endpoint, keysP256dh, keysAuth, createdAt`). Backend usa VAPID (pacote `web-push`) pra empurrar notificação quando o sync detecta mensagem nova na Inbox de uma conta do usuário. | Não existe app mobile nativo no projeto (confirmado por grep — zero React Native/Capacitor/service worker). Web Push via PWA dá notificação no celular sem publicar app em loja, ao custo de exigir que o usuário "instale" o site na tela inicial (limitação do iOS Safari, ver risco 9). |
 | ADR-15 | **Modo foco**: pontuação calculada no próprio ciclo de sync, no mesmo ponto onde regras/autoreply já rodam — sinais: já houve resposta anterior pro remetente (cruza com Enviados), remetente está nos contatos/CRM do sistema, presença do header `List-Unsubscribe`, palavras de marketing no assunto. Resultado (`focused`\|`other`) fica em memória junto da mensagem, recalculado a cada sync — sem schema novo (ADR-7). Correção manual do usuário ("sempre focado pra esse remetente") persiste em tabela pequena `email_focus_overrides` (`userId, senderEmail, classification, createdAt`), porque isso é configuração do usuário, não conteúdo de e-mail. | Heurística por regras é previsível, explicável e sem custo de API/latência de modelo de IA — adequado pro volume de e-mail de um sistema interno, sem justificar a complexidade extra de ML. |
 | ADR-16 | **Sync quase em tempo real**: Gmail via `users.watch` (Cloud Pub/Sub, renovação a cada 7 dias) e Microsoft via Graph subscriptions (renovação antes de ~3 dias) — ambos são só um endpoint HTTPS recebendo POST, funcionam igual em `server.ts` (VPS) ou `server.vercel.ts` (Vercel Functions). IMAP via `imapflow` IDLE **exige conexão persistente por conta**, incompatível com function serverless de vida curta — IDLE só é ativado quando o processo roda em modo VPS (`server.ts`); no modo Vercel, contas IMAP continuam em polling, só que mais rápido (30–60s em vez de 5 min). | Webhook nativo do Gmail/Microsoft é a forma correta de near-realtime e não tem restrição de infraestrutura; IMAP IDLE é o único dos três que teria regressão real se forçado em serverless (a conexão cairia a cada invocação) — a restrição precisa ficar explícita em vez de fingir paridade total entre os 3 provedores nesse ponto. |
+| ADR-17 | **Revisão da Fase 2 (2026-09-13)**: a árvore de pastas **não ganha a tabela `email_folders` da ADR-4 nesta etapa** — continua sendo buscada ao vivo do provedor a cada troca de conta (`GET /api/email/folders`, já implementado: `listLabels` no Gmail, `listFolders` no Microsoft, `listFoldersTree` no IMAP), sem persistência no Postgres. Sobre essa base, ganham operações novas, todas batendo direto no provedor: criar/renomear/excluir pasta (Gmail → `POST`/`PATCH`/`DELETE /users/me/labels`; Microsoft → `POST`/`PATCH`/`DELETE /me/mailFolders`; IMAP → `CREATE`/`RENAME`/`DELETE`), mover mensagem pra pasta arbitrária (nova ação `move` em `_api/email/action.ts`, com `targetFolderId` — Microsoft e IMAP já tinham `moveMessage(id/uid, destino)` genérico; Gmail ganha um helper que troca o label de pasta via `modifyMessage`), "não é lixo eletrônico" (ação `notjunk`, mesma mecânica de `restore` hoje, com rótulo próprio na UI), esvaziar pasta e marcar pasta inteira como lida (loop paginado sobre `listMessages` aplicando a ação por mensagem nos 3 provedores; IMAP usa `STORE`/`EXPUNGE` em lote quando possível, mais eficiente que loop por UID), e drag-and-drop na UI (cada linha de `EmailList` vira `draggable`, cada pasta em `FolderNav` vira drop target, chamando a ação `move`). | Implementar a tabela persistida da ADR-4 agora adicionaria uma camada inteira de sincronização/reconciliação (Postgres ↔ provedor) sem nenhum consumidor que precise de ID de pasta estável — a Fase 3 (regras com ação "mover pra pasta X") é o primeiro caso de uso real pra isso, e só nesse ponto vale decidir se a tabela é necessária ou se referenciar o ID do provedor direto nas regras já resolve. YAGNI: entregar o que foi pedido (CRUD de pasta, mover, esvaziar, marcar lida, drag-and-drop, não é lixo eletrônico) sem essa complexidade extra agora. O backend roda hoje em processo contínuo (Railway, `server.ts`), não em função serverless — por isso o loop de esvaziar/marcar-lida pode processar uma pasta inteira numa única requisição, sem risco de timeout tipo Vercel Function. |
 
 ## 3. Modelo de dados (Postgres/Drizzle)
 
@@ -261,6 +262,32 @@ Encontrados investigando os relatos do usuário ("responder a todos", "anexos qu
 
 Anexos em **rascunhos** (`_api/email/draft.ts`) têm a mesma lacuna estrutural (nunca foram implementados), mas isso não foi reportado como quebrado — registrado como item de paridade futura na seção 8, não corrigido nesta sessão.
 
+## 5.2 Ações de pasta e mensagem (complemento à Fase 2 — ADR-17)
+
+Pedido do usuário em 2026-09-13: criar/renomear/excluir pasta, mover e-mail entre pastas (inclusive por drag-and-drop), esvaziar pasta, marcar todos os itens de uma pasta como lidos, marcar mensagem individual como lida/não lida, e marcar mensagem como "não é lixo eletrônico".
+
+**API (`_api/email/folders.ts` e `_api/email/action.ts`)**
+
+| Endpoint | Body | Efeito |
+|---|---|---|
+| `POST /api/email/folders` | `{accountId, name, parentId?}` | Cria pasta customizada (Gmail: label; Microsoft: `mailFolders`; IMAP: `CREATE`) |
+| `PATCH /api/email/folders/:id` | `{accountId, name}` | Renomeia — só permitido em pastas `type: 'custom'` (pastas de sistema não podem ser renomeadas) |
+| `DELETE /api/email/folders/:id` | `{accountId}` (query) | Exclui — só em pastas customizadas |
+| `POST /api/email/folders/:id/empty` | `{accountId}` | Esvazia (regra abaixo) |
+| `POST /api/email/folders/:id/read-all` | `{accountId}` | Marca todas as mensagens da pasta como lidas |
+| `POST /api/email/action` (existente) | `{accountId, messageId, action: 'move', targetFolderId}` | Move mensagem pra qualquer pasta (fixa ou customizada) |
+| `POST /api/email/action` (existente) | `{accountId, messageId, action: 'notjunk'}` | "Não é lixo eletrônico" — mesma mecânica de `restore` (move pra Inbox), rótulo próprio na UI, só oferecido dentro da pasta Spam |
+
+**Regra de esvaziar pasta** (confirmada com o usuário): esvaziar a Lixeira ou o Spam **exclui definitivamente** as mensagens (com confirmação na UI antes de executar); esvaziar qualquer outra pasta **move** todas as mensagens pra Lixeira.
+
+**Restrições de pasta de sistema**: Inbox/Enviados/Rascunhos/Lixeira/Spam/Arquivados podem ser esvaziadas e ter "marcar tudo como lido", mas não podem ser renomeadas nem excluídas — mesma regra do Outlook/Gmail/outlook.com.
+
+**Frontend**
+
+- `FolderNav.tsx`: menu de contexto (clique direito) por pasta — "Nova subpasta" (sempre disponível), "Renomear"/"Excluir" (só pastas customizadas), "Esvaziar pasta"/"Marcar tudo como lido" (todas as pastas).
+- `EmailListItem.tsx`: alterna lido/não lido por item (ícone ao passar o mouse, sem precisar abrir a mensagem — hoje só existe via seleção + botão do ribbon); menu de contexto ganha "Mover para..." (submenu com a árvore de pastas) e, só dentro da pasta Spam, "Não é lixo eletrônico".
+- Drag-and-drop: cada linha de `EmailList` fica `draggable`; cada pasta em `FolderNav` é um drop target (`onDragOver`/`onDrop`) que dispara a ação `move` pro id da pasta; feedback visual (destaque da pasta) enquanto o item é arrastado por cima.
+
 ## 6. Registro de riscos
 
 | # | Risco | Mitigação |
@@ -275,6 +302,7 @@ Anexos em **rascunhos** (`_api/email/draft.ts`) têm a mesma lacuna estrutural (
 | 8 | IMAP IDLE só funciona no modo VPS (`server.ts`) — se o ambiente de produção migrar pra Vercel serverless (`server.vercel.ts`) no futuro, a funcionalidade de near-realtime pra contas IMAP regride silenciosamente pra polling rápido. | Dependência de modo de deploy documentada explicitamente aqui (ADR-16) e um log de aviso no backend quando IDLE não pode ser ativado no ambiente atual. |
 | 9 | Web Push no iOS Safari só funciona se o usuário "instalar" o site na tela inicial — notificação nunca chega pro usuário que só usa o site pelo navegador normal, sem aviso. | Prompt de UX explicando o passo de instalação quando o usuário habilitar notificações num dispositivo iOS (ver ADR-14). |
 | 10 | Categorias aplicadas via Gmail label reaproveitam a mesma pipeline de pastas (ADR-4) — risco de um label ser tratado como pasta e categoria ao mesmo tempo se a distinção não for feita corretamente. | Flag explícita (`type: 'folder'\|'category'`) decidida na primeira sincronização de cada label, editável pelo usuário se a heurística inicial errar (ver ADR-11). |
+| 11 | Esvaziar/marcar-tudo-como-lido (ADR-17) processa mensagem por mensagem em loop, sem tabela local com IDs — uma pasta muito grande (milhares de mensagens) gera muitas chamadas sequenciais ao provedor, sujeitas a rate limit (Gmail/Graph) mesmo sem timeout de execução. | IMAP usa operação nativa em lote (`STORE`/`EXPUNGE`) em vez de loop por UID. Gmail/Microsoft ficam sujeitos ao rate limit normal da API (mesmo já aceito hoje no sync); se isso se mostrar um problema real de uso, é o gatilho concreto pra revisitar a persistência da ADR-4 com paginação/retry, não uma otimização especulativa agora. |
 
 ## 7. Fases de execução
 
@@ -282,7 +310,7 @@ Ordem definida por dependência técnica e risco, não por prioridade de negóci
 
 - **Fase 0 — já concluída**: os 3 bugs corrigidos nesta sessão (responder a todos, anexos no envio, imagens `cid:` — seção 5.1). Base estável antes de qualquer mudança estrutural.
 - **Fase 1 — Fundação multi-provedor**: IMAP/SMTP genérico (ADR-1, ADR-2, ADR-3) + correção do fallback hardcoded de `EMAIL_ENCRYPTION_KEY` (risco 1). Tudo que vem depois precisa funcionar nos 3 provedores — fazer essa base primeiro evita retrabalho.
-- **Fase 2 — Pastas reais** (ADR-4): substitui as 6 pastas fixas. Pré-requisito direto da Fase 3 (regra "mover pra pasta X") e da Fase 4 (distinguir label-pasta de label-categoria no Gmail).
+- **Fase 2 — Pastas reais** (ADR-4, revisada pela ADR-17): substitui as 6 pastas fixas por descoberta ao vivo do provedor (sem tabela `email_folders` nesta etapa — ver ADR-17) e adiciona CRUD de pasta, mover mensagem, esvaziar, marcar pasta como lida, marcar mensagem lida/não lida por item e drag-and-drop (seção 5.2). Pré-requisito direto da Fase 3 (regra "mover pra pasta X") e da Fase 4 (distinguir label-pasta de label-categoria no Gmail).
 - **Fase 3 — Regras + resposta automática + modo foco** (ADR-5, ADR-6, ADR-15): as três rodam no mesmo ponto do pipeline de sync (depois de importar mensagens novas) — implementar juntas evita reabrir o mesmo trecho de `emailSync.ts` três vezes.
 - **Fase 4 — Categorias/etiquetas coloridas** (ADR-11): depende da Fase 2 pra não confundir label-pasta com label-categoria no Gmail.
 - **Fase 5 — Agendamento de envio + threading de conversa** (ADR-9, ADR-10): baixo risco, independentes entre si e do resto — bom intervalo pra entregar valor visível rápido entre fases mais pesadas.
