@@ -1,5 +1,5 @@
 {
-  "id": "01445693-10f3-417d-b1fd-6c936d6e46f0",
+  "id": "f58e53d1-d728-4c64-94ab-9d2d512e966c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -24,7 +24,7 @@
           "name": "timestamp",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "user_id": {
           "name": "user_id",
@@ -84,13 +84,13 @@
           "name": "category",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "entity": {
           "name": "entity",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "entity_id": {
           "name": "entity_id",
@@ -114,7 +114,7 @@
           "name": "origin",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "details": {
           "name": "details",
@@ -342,8 +342,20 @@
           "primaryKey": true,
           "notNull": true
         },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
         "level": {
           "name": "level",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category": {
+          "name": "category",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -354,18 +366,41 @@
           "primaryKey": false,
           "notNull": true
         },
-        "context": {
-          "name": "context",
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_email": {
+          "name": "user_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "details": {
+          "name": "details",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
+        "stack_trace": {
+          "name": "stack_trace",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
+          "notNull": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -698,11 +733,79 @@
           "primaryKey": false,
           "notNull": false
         },
-        "oauth_tokens": {
-          "name": "oauth_tokens",
-          "type": "jsonb",
+        "access_token": {
+          "name": "access_token",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "refresh_token": {
+          "name": "refresh_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "token_expiry": {
+          "name": "token_expiry",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "picture": {
+          "name": "picture",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "imap_host": {
+          "name": "imap_host",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "imap_port": {
+          "name": "imap_port",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "imap_secure": {
+          "name": "imap_secure",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "smtp_host": {
+          "name": "smtp_host",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "smtp_port": {
+          "name": "smtp_port",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "smtp_secure": {
+          "name": "smtp_secure",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "username": {
+          "name": "username",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "password_encrypted": {
+          "name": "password_encrypted",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -906,6 +1009,12 @@
         "documento_file_name": {
           "name": "documento_file_name",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "documento_uploaded_at": {
+          "name": "documento_uploaded_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -1411,6 +1520,19 @@
           "tableTo": "organizations",
           "columnsFrom": [
             "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "clientes_lead_origem_id_leads_id_fk": {
+          "name": "clientes_lead_origem_id_leads_id_fk",
+          "tableFrom": "clientes",
+          "tableTo": "leads",
+          "columnsFrom": [
+            "lead_origem_id"
           ],
           "columnsTo": [
             "id"
@@ -2212,13 +2334,13 @@
           "name": "plate",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "chassis": {
           "name": "chassis",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "insurer": {
           "name": "insurer",
@@ -2351,6 +2473,19 @@
           "tableTo": "organizations",
           "columnsFrom": [
             "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "leads_cliente_id_clientes_id_fk": {
+          "name": "leads_cliente_id_clientes_id_fk",
+          "tableFrom": "leads",
+          "tableTo": "clientes",
+          "columnsFrom": [
+            "cliente_id"
           ],
           "columnsTo": [
             "id"
@@ -2561,19 +2696,6 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "messages_lead_id_leads_id_fk": {
-          "name": "messages_lead_id_leads_id_fk",
-          "tableFrom": "messages",
-          "tableTo": "leads",
-          "columnsFrom": [
-            "lead_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2697,19 +2819,6 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "notifications_lead_id_leads_id_fk": {
-          "name": "notifications_lead_id_leads_id_fk",
-          "tableFrom": "notifications",
-          "tableTo": "leads",
-          "columnsFrom": [
-            "lead_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2775,7 +2884,7 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "bigserial",
+          "type": "text",
           "primaryKey": true,
           "notNull": true
         },
@@ -2805,6 +2914,12 @@
       "name": "metrics_users",
       "schema": "",
       "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
         "user_id": {
           "name": "user_id",
           "type": "text",
@@ -2826,15 +2941,7 @@
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "metrics_users_user_id_day_pk": {
-          "name": "metrics_users_user_id_day_pk",
-          "columns": [
-            "user_id",
-            "day"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -3414,9 +3521,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "valor_servico_centavos": {
-          "name": "valor_servico_centavos",
-          "type": "integer",
+        "valor_servico": {
+          "name": "valor_servico",
+          "type": "numeric",
           "primaryKey": false,
           "notNull": true
         },
@@ -3426,15 +3533,15 @@
           "primaryKey": false,
           "notNull": true
         },
-        "desconto_centavos": {
-          "name": "desconto_centavos",
-          "type": "integer",
+        "desconto": {
+          "name": "desconto",
+          "type": "numeric",
           "primaryKey": false,
           "notNull": false
         },
-        "valor_iss_centavos": {
-          "name": "valor_iss_centavos",
-          "type": "integer",
+        "valor_iss": {
+          "name": "valor_iss",
+          "type": "numeric",
           "primaryKey": false,
           "notNull": false
         },

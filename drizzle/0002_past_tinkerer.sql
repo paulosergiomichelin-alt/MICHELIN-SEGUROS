@@ -1,1 +1,0 @@
-ALTER TABLE "cliente_apolices" ADD COLUMN "documento_uploaded_at" timestamp with time zone;

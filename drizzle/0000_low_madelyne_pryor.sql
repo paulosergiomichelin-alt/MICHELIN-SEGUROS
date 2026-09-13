@@ -1,7 +1,7 @@
 CREATE TABLE "audit_logs" (
 	"id" text PRIMARY KEY NOT NULL,
 	"organization_id" text,
-	"timestamp" timestamp with time zone NOT NULL,
+	"timestamp" timestamp with time zone,
 	"user_id" text NOT NULL,
 	"user_name" text,
 	"ip" text,
@@ -11,12 +11,12 @@ CREATE TABLE "audit_logs" (
 	"os" text,
 	"location" text,
 	"action" text NOT NULL,
-	"category" text NOT NULL,
-	"entity" text NOT NULL,
+	"category" text,
+	"entity" text,
 	"entity_id" text,
 	"before" jsonb,
 	"after" jsonb,
-	"origin" text NOT NULL,
+	"origin" text,
 	"details" text,
 	"status" text,
 	"result" text,
@@ -48,10 +48,16 @@ CREATE TABLE "processing_locks" (
 --> statement-breakpoint
 CREATE TABLE "system_logs" (
 	"id" text PRIMARY KEY NOT NULL,
+	"timestamp" timestamp with time zone NOT NULL,
 	"level" text NOT NULL,
+	"category" text NOT NULL,
 	"message" text NOT NULL,
-	"context" jsonb,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"user_id" text,
+	"user_email" text,
+	"action" text,
+	"details" jsonb,
+	"stack_trace" text,
+	"source" text
 );
 --> statement-breakpoint
 CREATE TABLE "campaign_log" (
@@ -99,7 +105,18 @@ CREATE TABLE "email_accounts" (
 	"status" text NOT NULL,
 	"last_sync" timestamp with time zone,
 	"sync_error" text,
-	"oauth_tokens" jsonb NOT NULL,
+	"access_token" text,
+	"refresh_token" text,
+	"token_expiry" bigint,
+	"picture" text,
+	"imap_host" text,
+	"imap_port" integer,
+	"imap_secure" boolean DEFAULT true NOT NULL,
+	"smtp_host" text,
+	"smtp_port" integer,
+	"smtp_secure" boolean DEFAULT true NOT NULL,
+	"username" text,
+	"password_encrypted" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -133,6 +150,7 @@ CREATE TABLE "cliente_apolices" (
 	"documento_url" text,
 	"documento_path" text,
 	"documento_file_name" text,
+	"documento_uploaded_at" timestamp with time zone,
 	"anexos" jsonb,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
@@ -312,8 +330,8 @@ CREATE TABLE "leads" (
 	"phone" text NOT NULL,
 	"email" text,
 	"cpf" text NOT NULL,
-	"plate" text NOT NULL,
-	"chassis" text NOT NULL,
+	"plate" text,
+	"chassis" text,
 	"insurer" text,
 	"insurance_type" text,
 	"closed_at" timestamp with time zone,
@@ -379,16 +397,16 @@ CREATE TABLE "metrics_daily" (
 );
 --> statement-breakpoint
 CREATE TABLE "metrics_raw" (
-	"id" bigserial PRIMARY KEY NOT NULL,
+	"id" text PRIMARY KEY NOT NULL,
 	"event" jsonb NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "metrics_users" (
+	"id" text PRIMARY KEY NOT NULL,
 	"user_id" text NOT NULL,
 	"day" date NOT NULL,
-	"data" jsonb NOT NULL,
-	CONSTRAINT "metrics_users_user_id_day_pk" PRIMARY KEY("user_id","day")
+	"data" jsonb NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "system_metrics_dashboard" (
@@ -466,10 +484,10 @@ CREATE TABLE "nfse_documents" (
 	"cliente_endereco" jsonb,
 	"servico_id" text,
 	"descricao_servico" text NOT NULL,
-	"valor_servico_centavos" integer NOT NULL,
+	"valor_servico" numeric NOT NULL,
 	"quantidade" integer NOT NULL,
-	"desconto_centavos" integer,
-	"valor_iss_centavos" integer,
+	"desconto" numeric,
+	"valor_iss" numeric,
 	"aliquota_iss" numeric NOT NULL,
 	"iss_retido" boolean DEFAULT false NOT NULL,
 	"natureza_operacao" text,
@@ -584,17 +602,17 @@ ALTER TABLE "cliente_relacionamentos" ADD CONSTRAINT "cliente_relacionamentos_cl
 ALTER TABLE "cliente_relacionamentos" ADD CONSTRAINT "cliente_relacionamentos_related_cliente_id_clientes_id_fk" FOREIGN KEY ("related_cliente_id") REFERENCES "public"."clientes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "cliente_relacionamentos" ADD CONSTRAINT "cliente_relacionamentos_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "clientes" ADD CONSTRAINT "clientes_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "clientes" ADD CONSTRAINT "clientes_lead_origem_id_leads_id_fk" FOREIGN KEY ("lead_origem_id") REFERENCES "public"."leads"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "clientes" ADD CONSTRAINT "clientes_seguradora_atual_id_seguradoras_id_fk" FOREIGN KEY ("seguradora_atual_id") REFERENCES "public"."seguradoras"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "flows" ADD CONSTRAINT "flows_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "follow_ups" ADD CONSTRAINT "follow_ups_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "follow_ups" ADD CONSTRAINT "follow_ups_lead_id_leads_id_fk" FOREIGN KEY ("lead_id") REFERENCES "public"."leads"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "leads" ADD CONSTRAINT "leads_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "leads" ADD CONSTRAINT "leads_cliente_id_clientes_id_fk" FOREIGN KEY ("cliente_id") REFERENCES "public"."clientes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "learning_memory" ADD CONSTRAINT "learning_memory_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "messages" ADD CONSTRAINT "messages_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "messages" ADD CONSTRAINT "messages_lead_id_leads_id_fk" FOREIGN KEY ("lead_id") REFERENCES "public"."leads"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "notifications" ADD CONSTRAINT "notifications_lead_id_leads_id_fk" FOREIGN KEY ("lead_id") REFERENCES "public"."leads"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "whatsapp_conversations" ADD CONSTRAINT "whatsapp_conversations_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "whatsapp_conversations" ADD CONSTRAINT "whatsapp_conversations_session_id_whatsapp_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."whatsapp_sessions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "whatsapp_conversations" ADD CONSTRAINT "whatsapp_conversations_lead_id_leads_id_fk" FOREIGN KEY ("lead_id") REFERENCES "public"."leads"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
