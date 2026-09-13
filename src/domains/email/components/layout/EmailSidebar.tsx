@@ -1,5 +1,6 @@
 import React from 'react';
-import { Plus, RefreshCw, Cog } from 'lucide-react';
+import { Plus, RefreshCw, Cog, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '../../../../lib/utils';
 import { useEmail } from '../../../../contexts/EmailContext';
 import { FolderNav } from '../sidebar/FolderNav';
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export const EmailSidebar: React.FC<Props> = ({ onOpenSettings }) => {
+  const navigate = useNavigate();
   const { state, changeFolder, selectAccount, triggerSync, openComposer } = useEmail();
   const { currentFolder, accounts, selectedAccountId, syncing, unreadByFolder } = state;
 
@@ -45,6 +47,13 @@ export const EmailSidebar: React.FC<Props> = ({ onOpenSettings }) => {
         >
           <RefreshCw className={cn('w-3 h-3', syncing && 'animate-spin')} />
           {syncing ? 'Sincronizando...' : 'Sincronizar'}
+        </button>
+        <button
+          onClick={() => navigate('/email/contas')}
+          title="Contas de e-mail"
+          className="flex items-center justify-center p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/5 transition-all"
+        >
+          <Users className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={onOpenSettings}
