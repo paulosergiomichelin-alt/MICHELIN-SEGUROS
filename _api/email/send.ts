@@ -9,6 +9,7 @@ import {
   sendMessage as msSend,
   MicrosoftAccount,
 } from '../lib/microsoftClient.js';
+import { sendMessage as smtpSend, SmtpAccount } from '../lib/smtpClient.js';
 
 interface Recipient {
   name?: string;
@@ -175,6 +176,10 @@ export default async function handler(req: any, res: any) {
     } else if (account.provider === 'microsoft') {
       const payload = buildMicrosoftPayload(body);
       await msSend(account as MicrosoftAccount, payload);
+    } else if (account.provider === 'imap') {
+      const rawBuffer = Buffer.from(buildMimeMessage(body, account.email), 'base64url').toString('utf8');
+      const result = await smtpSend(account as SmtpAccount, rawBuffer);
+      sentMessageId = result?.id;
     } else {
       return res.status(400).json({ error: `Provider desconhecido: ${account.provider}` });
     }

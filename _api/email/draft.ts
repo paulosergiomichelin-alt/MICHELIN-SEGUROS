@@ -14,6 +14,12 @@ import {
   deleteDraft as msDeleteDraft,
   MicrosoftAccount,
 } from '../lib/microsoftClient.js';
+import {
+  createDraft as imapCreateDraft,
+  updateDraft as imapUpdateDraft,
+  deleteDraft as imapDeleteDraft,
+  ImapAccount,
+} from '../lib/imapClient.js';
 
 interface Recipient {
   name?: string;
@@ -108,6 +114,16 @@ export default async function handler(req: any, res: any) {
           const result = await msCreateDraft(account as MicrosoftAccount, payload);
           resultId = result?.id ?? `draft_${Date.now()}`;
         }
+      } else if (account.provider === 'imap') {
+        const rawB64 = buildGmailDraftRaw(body, account.email);
+        const rawMime = Buffer.from(rawB64, 'base64url').toString('utf8');
+        if (draftId) {
+          const result = await imapUpdateDraft(account as ImapAccount, draftId, rawMime);
+          resultId = result.id;
+        } else {
+          const result = await imapCreateDraft(account as ImapAccount, rawMime);
+          resultId = result.id;
+        }
       } else {
         return res.status(400).json({ error: `Provider desconhecido: ${account.provider}` });
       }
@@ -156,6 +172,8 @@ export default async function handler(req: any, res: any) {
         await gmailDeleteDraft(account as GmailAccount, draftId);
       } else if (account.provider === 'microsoft') {
         await msDeleteDraft(account as MicrosoftAccount, draftId);
+      } else if (account.provider === 'imap') {
+        await imapDeleteDraft(account as ImapAccount, draftId);
       } else {
         return res.status(400).json({ error: `Provider desconhecido: ${account.provider}` });
       }
