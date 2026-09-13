@@ -187,20 +187,25 @@ export const EmailAccountsPage: React.FC = () => {
     if (!userProfile?.uid) return;
     setImapSubmitting(true);
     setImapError(null);
-    const result = await EmailService.createImapAccount({
-      userId: userProfile.uid,
-      email: imapForm.email,
-      password: imapForm.password,
-      displayName: imapForm.displayName || undefined,
-    });
-    setImapSubmitting(false);
-    if (!result.success) {
-      setImapError(result.error ?? 'Falha ao conectar a conta.');
-      return;
+    try {
+      const result = await EmailService.createImapAccount({
+        userId: userProfile.uid,
+        email: imapForm.email,
+        password: imapForm.password,
+        displayName: imapForm.displayName || undefined,
+      });
+      if (!result.success) {
+        setImapError(result.error ?? 'Falha ao conectar a conta.');
+        return;
+      }
+      setShowImapModal(false);
+      setImapForm({ email: '', password: '', displayName: '' });
+      loadAccounts();
+    } catch {
+      setImapError('Falha ao conectar. Verifique sua conexão e tente novamente.');
+    } finally {
+      setImapSubmitting(false);
     }
-    setShowImapModal(false);
-    setImapForm({ email: '', password: '', displayName: '' });
-    loadAccounts();
   };
 
   const handleSync = async (account: EmailAccount) => {
