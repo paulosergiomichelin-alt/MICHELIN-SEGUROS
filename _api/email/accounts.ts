@@ -9,8 +9,11 @@ function generateId(): string {
   return `imap_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
+// Remove TUDO que é credencial antes de devolver a conta em qualquer resposta.
+// `passwordEncrypted` (ciphertext da senha IMAP/SMTP) e `username` são novos da
+// Fase 1 e vazavam no GET /api/email/accounts.
 function stripTokens(account: Record<string, any>): Record<string, any> {
-  const { accessToken, refreshToken, ...safe } = account;
+  const { accessToken, refreshToken, passwordEncrypted, username, ...safe } = account;
   return safe;
 }
 
@@ -73,10 +76,18 @@ export default async function handler(req: any, res: any) {
 
       const imapHost = req.body.imapHost || detected.imapHost;
       const imapPort = Number(req.body.imapPort || detected.imapPort);
-      const imapSecure = req.body.imapSecure ?? detected.imapSecure;
+      // Coerção explícita: um JSON `"false"` (string) é truthy e ligaria TLS
+      // sem querer — só `true`/`"true"` contam como true.
+      const asBool = (value: any, fallback: boolean): boolean => {
+        if (value === undefined || value === null) return fallback;
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'string') return value.toLowerCase() === 'true';
+        return Boolean(value);
+      };
+      const imapSecure = asBool(req.body.imapSecure, detected.imapSecure);
       const smtpHost = req.body.smtpHost || detected.smtpHost;
       const smtpPort = Number(req.body.smtpPort || detected.smtpPort);
-      const smtpSecure = req.body.smtpSecure ?? detected.smtpSecure;
+      const smtpSecure = asBool(req.body.smtpSecure, detected.smtpSecure);
       const finalUsername = username || email;
 
       const passwordEncrypted = encrypt(String(password));

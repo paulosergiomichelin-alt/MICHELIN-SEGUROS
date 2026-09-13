@@ -107,7 +107,11 @@ const AccountCard: React.FC<{
             Sync: {fmtSync(account.lastSync)}
           </span>
           <span className="text-xs text-white/25 capitalize">
-            {account.provider === 'gmail' ? 'Gmail' : 'Outlook / Microsoft'}
+            {account.provider === 'gmail'
+              ? 'Gmail'
+              : account.provider === 'microsoft'
+                ? 'Outlook / Microsoft'
+                : 'IMAP'}
           </span>
         </div>
         {account.errorMessage && (
