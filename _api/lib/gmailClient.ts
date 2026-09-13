@@ -95,7 +95,7 @@ export async function gmailRequest(
 
 // ── Folder → labelId mapping ──────────────────────────────────────────────────
 
-const FOLDER_LABEL_MAP: Record<string, string[]> = {
+export const FOLDER_LABEL_MAP: Record<string, string[]> = {
   inbox: ['INBOX'],
   sent: ['SENT'],
   drafts: ['DRAFT'],
@@ -138,6 +138,65 @@ export async function listLabels(account: GmailAccount): Promise<GmailFolderNode
       unreadCount: l.messagesUnread ?? 0,
     };
   });
+}
+
+export async function createLabel(
+  account: GmailAccount,
+  name: string,
+  parentId: string | null,
+): Promise<{ id: string; name: string }> {
+  let fullName = name;
+  if (parentId) {
+    // Gmail aninha por "/" no NOME do label, não por um parentId nativo — precisa
+    // buscar o nome completo do pai antes de montar "Pai/Filho".
+    const parent = await gmailRequest(account, `/users/me/labels/${encodeURIComponent(parentId)}`);
+    fullName = `${parent.name}/${name}`;
+  }
+  const data = await gmailRequest(account, '/users/me/labels', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: fullName,
+      labelListVisibility: 'labelShow',
+      messageListVisibility: 'show',
+    }),
+  });
+  return { id: data.id, name };
+}
+
+export async function renameLabel(account: GmailAccount, labelId: string, name: string): Promise<void> {
+  // Troca só o último segmento do nome, preservando o prefixo do pai (ex.:
+  // "Projetos/ClienteX" -> "Projetos/ClienteY").
+  const current = await gmailRequest(account, `/users/me/labels/${encodeURIComponent(labelId)}`);
+  const segments = String(current.name).split('/');
+  segments[segments.length - 1] = name;
+  await gmailRequest(account, `/users/me/labels/${encodeURIComponent(labelId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name: segments.join('/') }),
+  });
+}
+
+export async function deleteLabel(account: GmailAccount, labelId: string): Promise<void> {
+  await gmailRequest(account, `/users/me/labels/${encodeURIComponent(labelId)}`, { method: 'DELETE' });
+}
+
+export async function deleteMessagePermanently(account: GmailAccount, id: string): Promise<void> {
+  await gmailRequest(account, `/users/me/messages/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+/**
+ * Lista TODOS os ids de mensagem de uma pasta, paginando até esgotar — usado por
+ * esvaziar pasta / marcar pasta como lida (ADR-17), que precisam da caixa inteira,
+ * não só da primeira página de 50 que o sync normal usa.
+ */
+export async function listAllMessageIds(account: GmailAccount, folder: string): Promise<string[]> {
+  const ids: string[] = [];
+  let pageToken: string | undefined;
+  do {
+    const { messages, nextPageToken } = await listMessages(account, folder, 100, pageToken);
+    ids.push(...messages.map(m => m.id));
+    pageToken = nextPageToken;
+  } while (pageToken);
+  return ids;
 }
 
 // ── Messages ──────────────────────────────────────────────────────────────────
