@@ -15,13 +15,19 @@ import {
   parseMicrosoftMessage,
   MicrosoftAccount,
 } from './microsoftClient.js';
+import {
+  listMessages as imapListMessages,
+  getMessage as imapGetMessage,
+  parseImapMessage,
+  ImapAccount,
+} from './imapClient.js';
 
 const SYNC_FOLDERS = ['inbox', 'sent', 'drafts'];
 const MESSAGES_PER_FOLDER = 50;
 
 // ── Decrypt account tokens ────────────────────────────────────────────────────
 
-function decryptAccount(account: Record<string, any>): GmailAccount | MicrosoftAccount {
+function decryptAccount(account: Record<string, any>): GmailAccount | MicrosoftAccount | ImapAccount {
   return {
     ...account,
     accessToken: account.accessToken,   // keep encrypted — clients decrypt on demand
@@ -86,6 +92,35 @@ async function syncMicrosoftAccount(
   return { imported, errors };
 }
 
+// ── Sync single IMAP account ────────────────────────────────────────────────
+
+async function syncImapAccount(
+  account: ImapAccount,
+): Promise<{ imported: number; errors: string[] }> {
+  let imported = 0;
+  const errors: string[] = [];
+
+  for (const folder of SYNC_FOLDERS) {
+    try {
+      const { messages } = await imapListMessages(account, folder, MESSAGES_PER_FOLDER);
+      for (const msgRef of messages) {
+        try {
+          const full = await imapGetMessage(account, folder, msgRef.id);
+          const cached = parseImapMessage(full, account.id, folder);
+          setEmail(cached);
+          imported++;
+        } catch (err: any) {
+          errors.push(`imap msg ${msgRef.id}: ${err.message}`);
+        }
+      }
+    } catch (err: any) {
+      errors.push(`imap folder ${folder}: ${err.message}`);
+    }
+  }
+
+  return { imported, errors };
+}
+
 // ── Public: sync single account ───────────────────────────────────────────────
 
 export async function syncAccount(
@@ -116,6 +151,8 @@ export async function syncAccount(
       result = await syncGmailAccount(account as GmailAccount);
     } else if (rawAccount.provider === 'microsoft') {
       result = await syncMicrosoftAccount(account as MicrosoftAccount);
+    } else if (rawAccount.provider === 'imap') {
+      result = await syncImapAccount(account as ImapAccount);
     } else {
       result.errors.push(`Unknown provider: ${rawAccount.provider}`);
     }
