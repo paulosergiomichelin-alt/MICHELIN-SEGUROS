@@ -1,10 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEmail } from '../../../../contexts/EmailContext';
 import { EmailListItem } from './EmailListItem';
 import { EmailListEmpty } from './EmailListEmpty';
 import { EmailListFilters } from './EmailListFilters';
-import type { EmailFilter } from '../../types/email.types';
+import { groupLabelForDate } from '../../utils/dateFormat';
+import type { CachedEmail, EmailFilter } from '../../types/email.types';
+
+type ListRow =
+  | { type: 'header'; label: string }
+  | { type: 'message'; message: CachedEmail };
+
+const HEADER_HEIGHT = 30;
+const MESSAGE_HEIGHT = 72;
 
 const FOLDERS_LABEL: Record<string, string> = {
   inbox: 'Caixa de Entrada',
@@ -38,10 +46,27 @@ export const EmailList: React.FC = () => {
         return true;
       });
 
+  // Agrupamento por data ao estilo Outlook ("Semana Passada" etc.) — só faz sentido
+  // navegando a pasta normalmente; resultado de busca fica em lista simples.
+  const rows = useMemo<ListRow[]>(() => {
+    if (searchQuery) return displayMessages.map(message => ({ type: 'message', message }));
+    const out: ListRow[] = [];
+    let lastLabel: string | null = null;
+    for (const message of displayMessages) {
+      const label = groupLabelForDate(message.date);
+      if (label !== lastLabel) {
+        out.push({ type: 'header', label });
+        lastLabel = label;
+      }
+      out.push({ type: 'message', message });
+    }
+    return out;
+  }, [displayMessages, searchQuery]);
+
   const virtualizer = useVirtualizer({
-    count: displayMessages.length,
+    count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 72,
+    estimateSize: (index) => (rows[index]?.type === 'header' ? HEADER_HEIGHT : MESSAGE_HEIGHT),
     overscan: 5,
   });
 
@@ -101,7 +126,7 @@ export const EmailList: React.FC = () => {
         ) : (
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
             {virtualizer.getVirtualItems().map(virtualItem => {
-              const msg = displayMessages[virtualItem.index];
+              const row = rows[virtualItem.index];
               return (
                 <div
                   key={virtualItem.key}
@@ -113,11 +138,19 @@ export const EmailList: React.FC = () => {
                     transform: `translateY(${virtualItem.start}px)`,
                   }}
                 >
-                  <EmailListItem
-                    message={msg}
-                    isSelected={selectedMessage?.id === msg.id}
-                    onClick={() => openMessage(msg)}
-                  />
+                  {row.type === 'header' ? (
+                    <div className="flex items-center px-4 h-[30px] bg-[#141414]">
+                      <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">
+                        {row.label}
+                      </span>
+                    </div>
+                  ) : (
+                    <EmailListItem
+                      message={row.message}
+                      isSelected={selectedMessage?.id === row.message.id}
+                      onClick={() => openMessage(row.message)}
+                    />
+                  )}
                 </div>
               );
             })}
