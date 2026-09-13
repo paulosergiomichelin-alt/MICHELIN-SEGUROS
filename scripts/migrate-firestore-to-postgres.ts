@@ -523,8 +523,12 @@ function transformApolice(clienteId: string, d: any): Record<string, any> {
     id: d.id, clienteId, produto: d.produto, seguradoraId: d.seguradoraId ?? null,
     numeroApolice: d.numeroApolice, inicioVigencia: toDateOnly(d.inicioVigencia),
     fimVigencia: toDateOnly(d.fimVigencia), dataRenovacao: toDateOnly(d.dataRenovacao),
-    premioLiquidoCentavos: d.premioLiquidoCentavos ?? 0, valorTotalCentavos: d.valorTotalCentavos ?? 0,
-    comissaoCentavos: d.comissaoCentavos ?? 0, comissaoPct: d.comissaoPct ?? null,
+    // Firestore guarda esses 3 campos SEM o sufixo "Centavos" (premioLiquido/valorTotal/
+    // comissao) mas já em centavos — confirmado lendo o documento original. Ler
+    // d.premioLiquidoCentavos (nome que nunca existiu no Firestore) zerava os 3 campos
+    // silenciosamente via `?? 0` (achado 2026-09-13, 7/7 apólices migradas com valor zerado).
+    premioLiquidoCentavos: d.premioLiquido ?? 0, valorTotalCentavos: d.valorTotal ?? 0,
+    comissaoCentavos: d.comissao ?? 0, comissaoPct: d.comissaoPct ?? null,
     corretoraOrigem: d.corretoraOrigem ?? null, observacoes: d.observacoes ?? null, status: d.status,
     documentoUrl: d.documentoUrl ?? null, documentoPath: d.documentoPath ?? null,
     documentoFileName: d.documentoFileName ?? null, documentoUploadedAt: isoStr(d.documentoUploadedAt),
