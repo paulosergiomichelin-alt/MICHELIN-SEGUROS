@@ -195,6 +195,106 @@ export async function listFoldersTree(account: ImapAccount): Promise<ImapFolderN
   }
 }
 
+export async function createFolder(
+  account: ImapAccount,
+  name: string,
+  parentId: string | null,
+): Promise<{ id: string; name: string }> {
+  const client = await connect(account);
+  try {
+    const parentPath = parentId
+      ? ((FOLDER_KEYS as readonly string[]).includes(parentId) ? await resolveFolderPath(client, parentId) : parentId)
+      : null;
+    // Passar [pai, nome] deixa o próprio imapflow juntar com o delimitador certo do
+    // servidor (ex.: "." no Dovecot, "/" no Gmail) — evita ter que descobrir isso aqui.
+    const info = await client.mailboxCreate(parentPath ? [parentPath, name] : name);
+    return { id: info.path, name };
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
+export async function renameFolder(account: ImapAccount, folderPath: string, newName: string): Promise<{ id: string }> {
+  const client = await connect(account);
+  try {
+    // Preserva o prefixo do pai (ex.: "Projetos/ClienteX" -> "Projetos/ClienteY") —
+    // sem isso, renomear uma pasta aninhada a moveria pra raiz.
+    const boxes = await listMailboxes(client);
+    const box = boxes.find(b => b.path === folderPath);
+    const newPath = box?.parentPath ? [box.parentPath, newName] : newName;
+    const info = await client.mailboxRename(folderPath, newPath);
+    return { id: info.newPath };
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
+export async function deleteFolder(account: ImapAccount, folderPath: string): Promise<void> {
+  const client = await connect(account);
+  try {
+    await client.mailboxDelete(folderPath);
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
+function mailboxHasMessages(client: ImapFlow): boolean {
+  return Boolean(client.mailbox && typeof client.mailbox === 'object' && ((client.mailbox as any).exists ?? 0) > 0);
+}
+
+/** Marca TODAS as mensagens da pasta como lidas — um único STORE em lote, não um loop por UID. */
+export async function markAllRead(account: ImapAccount, folder: string): Promise<void> {
+  const client = await connect(account);
+  try {
+    const path = await resolveFolderPath(client, folder);
+    const lock = await client.getMailboxLock(path);
+    try {
+      if (!mailboxHasMessages(client)) return;
+      await client.messageFlagsAdd('1:*', ['\\Seen']);
+    } finally {
+      lock.release();
+    }
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
+/** Move TODAS as mensagens de uma pasta pra outra — um único comando MOVE em lote. */
+export async function moveAllMessages(account: ImapAccount, folder: string, destFolder: string): Promise<void> {
+  const client = await connect(account);
+  try {
+    const sourcePath = await resolveFolderPath(client, folder);
+    const destPath = await resolveFolderPath(client, destFolder);
+    const lock = await client.getMailboxLock(sourcePath);
+    try {
+      if (!mailboxHasMessages(client)) return;
+      await client.messageMove('1:*', destPath);
+    } finally {
+      lock.release();
+    }
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
+/** Apaga definitivamente TODAS as mensagens de uma pasta — usado só pra esvaziar Lixeira/Spam. */
+export async function deleteAllMessages(account: ImapAccount, folder: string): Promise<void> {
+  const client = await connect(account);
+  try {
+    const path = await resolveFolderPath(client, folder);
+    const lock = await client.getMailboxLock(path);
+    try {
+      if (!mailboxHasMessages(client)) return;
+      await client.messageFlagsAdd('1:*', ['\\Deleted']);
+      await client.messageDelete('1:*');
+    } finally {
+      lock.release();
+    }
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
 // ── Messages ──────────────────────────────────────────────────────────────────
 
 export async function listMessages(
