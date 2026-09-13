@@ -15,6 +15,7 @@ import {
   EmailStats,
   EmailSettings,
 } from '../services/EmailService';
+import { FIXED_FOLDER_MOVE_ACTION } from '../domains/email/constants/folders';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -229,6 +230,12 @@ interface EmailContextType {
   saveSettings: (settings: Partial<EmailSettings>) => Promise<void>;
   deleteAccount: (accountId: string) => Promise<void>;
   setDefaultAccount: (accountId: string) => Promise<void>;
+  createFolder: (name: string, parentId: string | null) => Promise<boolean>;
+  renameFolder: (folderId: string, name: string) => Promise<boolean>;
+  deleteFolder: (folderId: string) => Promise<boolean>;
+  emptyFolder: (folderId: string) => Promise<boolean>;
+  markFolderRead: (folderId: string) => Promise<boolean>;
+  moveMessage: (messageId: string, targetFolderId: string) => Promise<void>;
 }
 
 // Valor padrão garante que useEmail() nunca lança mesmo se o provider ainda
@@ -255,6 +262,12 @@ const DEFAULT_EMAIL_CTX: EmailContextType = {
   saveSettings: noop,
   deleteAccount: noop,
   setDefaultAccount: noop,
+  createFolder: async () => false,
+  renameFolder: async () => false,
+  deleteFolder: async () => false,
+  emptyFolder: async () => false,
+  markFolderRead: async () => false,
+  moveMessage: noop,
 };
 
 const EmailContext = createContext<EmailContextType>(DEFAULT_EMAIL_CTX);
@@ -451,7 +464,7 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     else if (action === 'unread') dispatch({ type: 'UPDATE_MESSAGE', payload: { id: messageId, isRead: false } });
     else if (action === 'star') dispatch({ type: 'UPDATE_MESSAGE', payload: { id: messageId, isStarred: true } });
     else if (action === 'unstar') dispatch({ type: 'UPDATE_MESSAGE', payload: { id: messageId, isStarred: false } });
-    else if (action === 'archive' || action === 'trash' || action === 'spam') {
+    else if (action === 'archive' || action === 'trash' || action === 'spam' || action === 'notspam') {
       dispatch({ type: 'REMOVE_MESSAGE', payload: messageId });
     }
 
@@ -463,6 +476,89 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const createFolder = useCallback(async (name: string, parentId: string | null): Promise<boolean> => {
+    const { selectedAccountId } = stateRef.current;
+    if (!selectedAccountId) return false;
+    try {
+      await EmailService.createFolder(selectedAccountId, name, parentId);
+      return true;
+    } catch {
+      dispatch({ type: 'SET_ERROR', payload: 'Falha ao criar pasta.' });
+      return false;
+    }
+  }, []);
+
+  const renameFolder = useCallback(async (folderId: string, name: string): Promise<boolean> => {
+    const { selectedAccountId } = stateRef.current;
+    if (!selectedAccountId) return false;
+    try {
+      await EmailService.renameFolder(selectedAccountId, folderId, name);
+      return true;
+    } catch {
+      dispatch({ type: 'SET_ERROR', payload: 'Falha ao renomear pasta.' });
+      return false;
+    }
+  }, []);
+
+  const deleteFolder = useCallback(async (folderId: string): Promise<boolean> => {
+    const { selectedAccountId } = stateRef.current;
+    if (!selectedAccountId) return false;
+    try {
+      await EmailService.deleteFolder(selectedAccountId, folderId);
+      return true;
+    } catch {
+      dispatch({ type: 'SET_ERROR', payload: 'Falha ao excluir pasta.' });
+      return false;
+    }
+  }, []);
+
+  const emptyFolder = useCallback(async (folderId: string): Promise<boolean> => {
+    const { selectedAccountId, currentFolder } = stateRef.current;
+    if (!selectedAccountId) return false;
+    try {
+      await EmailService.emptyFolder(selectedAccountId, folderId);
+      if (currentFolder === folderId) dispatch({ type: 'SET_NEEDS_REFRESH', payload: true });
+      return true;
+    } catch {
+      dispatch({ type: 'SET_ERROR', payload: 'Falha ao esvaziar pasta.' });
+      return false;
+    }
+  }, []);
+
+  const markFolderRead = useCallback(async (folderId: string): Promise<boolean> => {
+    const { selectedAccountId, currentFolder } = stateRef.current;
+    if (!selectedAccountId) return false;
+    try {
+      await EmailService.markFolderRead(selectedAccountId, folderId);
+      if (currentFolder === folderId) dispatch({ type: 'SET_NEEDS_REFRESH', payload: true });
+      return true;
+    } catch {
+      dispatch({ type: 'SET_ERROR', payload: 'Falha ao marcar pasta como lida.' });
+      return false;
+    }
+  }, []);
+
+  const moveMessage = useCallback(async (messageId: string, targetFolderId: string): Promise<void> => {
+    // Único ponto de decisão "pasta fixa vs pasta customizada" pro app inteiro — tanto
+    // o drop na sidebar (FolderNav) quanto o menu "Mover para" do item da lista
+    // (EmailListItem) chamam moveMessage direto e caem aqui.
+    const fixedAction = FIXED_FOLDER_MOVE_ACTION[targetFolderId];
+    if (fixedAction) {
+      await doAction(messageId, fixedAction);
+      return;
+    }
+
+    const { selectedAccountId, currentFolder } = stateRef.current;
+    if (!selectedAccountId) return;
+    // Otimista: a mensagem sai da pasta atual imediatamente, igual archive/trash/spam em doAction.
+    dispatch({ type: 'REMOVE_MESSAGE', payload: messageId });
+    try {
+      await EmailService.moveMessage(selectedAccountId, messageId, currentFolder, targetFolderId);
+    } catch {
+      dispatch({ type: 'SET_NEEDS_REFRESH', payload: true });
+    }
+  }, [doAction]);
 
   const openComposer = useCallback((
     mode: EmailState['composerMode'] = 'new',
@@ -611,6 +707,12 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         saveSettings,
         deleteAccount,
         setDefaultAccount,
+        createFolder,
+        renameFolder,
+        deleteFolder,
+        emptyFolder,
+        markFolderRead,
+        moveMessage,
       }}
     >
       {children}
