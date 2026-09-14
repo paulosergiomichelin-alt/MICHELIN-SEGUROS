@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CalendarPlus } from 'lucide-react';
 import { useAgenda } from '../../contexts/AgendaContext';
 import { useEmail } from '../../contexts/EmailContext';
@@ -8,7 +8,10 @@ import { ViewSwitcher } from './components/ViewSwitcher';
 import { MiniCalendar } from './components/MiniCalendar';
 import { TimeGrid } from './components/TimeGrid';
 import { MonthGrid } from './components/MonthGrid';
+import { EventPopover } from './components/EventPopover';
+import { EventEditorModal } from './components/EventEditorModal';
 import type { EmailAccount } from '../../services/EmailService';
+import type { CalendarEvent } from '../../services/AgendaService';
 
 const INTERNAL_ACCOUNT: EmailAccount = {
   id: 'internal', userId: '', provider: 'imap', email: 'Calendário local',
@@ -32,8 +35,15 @@ function daysForView(view: string, currentDate: string): Date[] {
 }
 
 export const AgendaPage: React.FC = () => {
-  const { state, selectAccount, setView, navigate, goToDate, createEvent, updateEvent } = useAgenda();
+  const { state, selectAccount, setView, navigate, goToDate, createEvent, updateEvent, deleteEvent } = useAgenda();
   const { state: emailState } = useEmail();
+
+  const [popover, setPopover] = useState<{ event: CalendarEvent; rect: { top: number; left: number; bottom: number } } | null>(null);
+  const [editorState, setEditorState] = useState<
+    | { mode: 'create'; startAt: Date; endAt: Date }
+    | { mode: 'edit'; event: CalendarEvent }
+    | null
+  >(null);
 
   // Só contas Gmail/Microsoft/IMAP fazem sentido na Agenda — mais o item sintético
   // "Calendário local" pra eventos que não pertencem a nenhuma conta específica.
@@ -83,17 +93,11 @@ export const AgendaPage: React.FC = () => {
             <MonthGrid
               referenceDate={new Date(state.currentDate)}
               events={state.events}
-              onClickEvent={event => {
-                // eslint-disable-next-line no-alert
-                window.alert(`${event.title}\n${new Date(event.startAt).toLocaleString('pt-BR')}`);
-              }}
+              onClickEvent={event => setPopover({ event, rect: { top: 200, left: 200, bottom: 220 } })}
               onCreateOnDay={day => {
-                // eslint-disable-next-line no-alert
-                const title = window.prompt('Título do evento:');
-                if (!title || !title.trim()) return;
                 const start = new Date(day); start.setHours(9, 0, 0, 0);
                 const end = new Date(day); end.setHours(10, 0, 0, 0);
-                createEvent({ title: title.trim(), startAt: start.toISOString(), endAt: end.toISOString(), allDay: false });
+                setEditorState({ mode: 'create', startAt: start, endAt: end });
               }}
               onMoveEventToDay={(event, day) => {
                 const start = new Date(event.startAt);
@@ -111,12 +115,7 @@ export const AgendaPage: React.FC = () => {
             <TimeGrid
               days={daysForView(state.view, state.currentDate)}
               events={state.events}
-              onCreateRange={(startAt, endAt) => {
-                // eslint-disable-next-line no-alert
-                const title = window.prompt('Título do evento:');
-                if (!title || !title.trim()) return;
-                createEvent({ title: title.trim(), startAt: startAt.toISOString(), endAt: endAt.toISOString(), allDay: false });
-              }}
+              onCreateRange={(startAt, endAt) => setEditorState({ mode: 'create', startAt, endAt })}
               onMoveEvent={(event, newStartAt) => {
                 const durationMs = new Date(event.endAt).getTime() - new Date(event.startAt).getTime();
                 updateEvent(event.id, {
@@ -125,12 +124,36 @@ export const AgendaPage: React.FC = () => {
                 });
               }}
               onResizeEvent={(event, newEndAt) => updateEvent(event.id, { endAt: newEndAt.toISOString() })}
-              onClickEvent={(event) => {
-                // eslint-disable-next-line no-alert
-                window.alert(`${event.title}\n${new Date(event.startAt).toLocaleString('pt-BR')}`);
+              onClickEvent={(event, anchorEl) => {
+                const rect = anchorEl.getBoundingClientRect();
+                setPopover({ event, rect: { top: rect.top, left: rect.left, bottom: rect.bottom } });
               }}
             />
           )
+        )}
+
+        {popover && (
+          <EventPopover
+            event={popover.event}
+            anchorRect={popover.rect}
+            onClose={() => setPopover(null)}
+            onEdit={() => { setEditorState({ mode: 'edit', event: popover.event }); setPopover(null); }}
+            onDelete={() => { deleteEvent(popover.event.id); setPopover(null); }}
+          />
+        )}
+
+        {editorState && (
+          <EventEditorModal
+            initial={editorState.mode === 'edit' ? editorState.event : undefined}
+            defaultStartAt={editorState.mode === 'create' ? editorState.startAt : undefined}
+            defaultEndAt={editorState.mode === 'create' ? editorState.endAt : undefined}
+            onClose={() => setEditorState(null)}
+            onSave={payload => {
+              if (editorState.mode === 'edit') updateEvent(editorState.event.id, payload);
+              else createEvent(payload);
+              setEditorState(null);
+            }}
+          />
         )}
       </div>
     </div>
