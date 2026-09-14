@@ -29,18 +29,23 @@ interface EventBody {
 }
 
 async function loadEventsFromProvider(account: Record<string, any>, from: string, to: string): Promise<void> {
+  // Roda em toda visualização de calendário (Task 5) — gravar um evento de cada vez,
+  // esperando cada um terminar antes do próximo, faz esse passo escalar linearmente
+  // com o número de eventos no período (visto em produção: 1.8-2.7s pra poucas
+  // dezenas de eventos). Os upserts são independentes entre si (ids diferentes), então
+  // rodar em paralelo é seguro e reduz isso ao tempo do upsert mais lento, não a soma.
   if (account.provider === 'gmail') {
     const events = await googleListEvents(account as any, from, to);
-    for (const event of events) {
+    await Promise.all(events.map(event => {
       const parsed = parseGoogleEvent(event, account.id, account.userId);
-      await fsSet('calendar_events', `google_${parsed.providerEventId}`, parsed);
-    }
+      return fsSet('calendar_events', `google_${parsed.providerEventId}`, parsed);
+    }));
   } else if (account.provider === 'microsoft') {
     const events = await msListEvents(account as any, from, to);
-    for (const event of events) {
+    await Promise.all(events.map(event => {
       const parsed = parseMicrosoftEvent(event, account.id, account.userId);
-      await fsSet('calendar_events', `microsoft_${parsed.providerEventId}`, parsed);
-    }
+      return fsSet('calendar_events', `microsoft_${parsed.providerEventId}`, parsed);
+    }));
   }
 }
 
