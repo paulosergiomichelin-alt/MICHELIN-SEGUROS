@@ -62,6 +62,7 @@ Mapeamento completo feito antes deste documento (agente de exploração, 2026-09
 | ADR-15 | **Modo foco**: pontuação calculada no próprio ciclo de sync, no mesmo ponto onde regras/autoreply já rodam — sinais: já houve resposta anterior pro remetente (cruza com Enviados), remetente está nos contatos/CRM do sistema, presença do header `List-Unsubscribe`, palavras de marketing no assunto. Resultado (`focused`\|`other`) fica em memória junto da mensagem, recalculado a cada sync — sem schema novo (ADR-7). Correção manual do usuário ("sempre focado pra esse remetente") persiste em tabela pequena `email_focus_overrides` (`userId, senderEmail, classification, createdAt`), porque isso é configuração do usuário, não conteúdo de e-mail. | Heurística por regras é previsível, explicável e sem custo de API/latência de modelo de IA — adequado pro volume de e-mail de um sistema interno, sem justificar a complexidade extra de ML. |
 | ADR-16 | **Sync quase em tempo real**: Gmail via `users.watch` (Cloud Pub/Sub, renovação a cada 7 dias) e Microsoft via Graph subscriptions (renovação antes de ~3 dias) — ambos são só um endpoint HTTPS recebendo POST, funcionam igual em `server.ts` (VPS) ou `server.vercel.ts` (Vercel Functions). IMAP via `imapflow` IDLE **exige conexão persistente por conta**, incompatível com function serverless de vida curta — IDLE só é ativado quando o processo roda em modo VPS (`server.ts`); no modo Vercel, contas IMAP continuam em polling, só que mais rápido (30–60s em vez de 5 min). | Webhook nativo do Gmail/Microsoft é a forma correta de near-realtime e não tem restrição de infraestrutura; IMAP IDLE é o único dos três que teria regressão real se forçado em serverless (a conexão cairia a cada invocação) — a restrição precisa ficar explícita em vez de fingir paridade total entre os 3 provedores nesse ponto. |
 | ADR-17 | **Revisão da Fase 2 (2026-09-13)**: a árvore de pastas **não ganha a tabela `email_folders` da ADR-4 nesta etapa** — continua sendo buscada ao vivo do provedor a cada troca de conta (`GET /api/email/folders`, já implementado: `listLabels` no Gmail, `listFolders` no Microsoft, `listFoldersTree` no IMAP), sem persistência no Postgres. Sobre essa base, ganham operações novas, todas batendo direto no provedor: criar/renomear/excluir pasta (Gmail → `POST`/`PATCH`/`DELETE /users/me/labels`; Microsoft → `POST`/`PATCH`/`DELETE /me/mailFolders`; IMAP → `CREATE`/`RENAME`/`DELETE`), mover mensagem pra pasta arbitrária (nova ação `move` em `_api/email/action.ts`, com `targetFolderId` — Microsoft e IMAP já tinham `moveMessage(id/uid, destino)` genérico; Gmail ganha um helper que troca o label de pasta via `modifyMessage`), "não é lixo eletrônico" (ação `notjunk`, mesma mecânica de `restore` hoje, com rótulo próprio na UI), esvaziar pasta e marcar pasta inteira como lida (loop paginado sobre `listMessages` aplicando a ação por mensagem nos 3 provedores; IMAP usa `STORE`/`EXPUNGE` em lote quando possível, mais eficiente que loop por UID), e drag-and-drop na UI (cada linha de `EmailList` vira `draggable`, cada pasta em `FolderNav` vira drop target, chamando a ação `move`). | Implementar a tabela persistida da ADR-4 agora adicionaria uma camada inteira de sincronização/reconciliação (Postgres ↔ provedor) sem nenhum consumidor que precise de ID de pasta estável — a Fase 3 (regras com ação "mover pra pasta X") é o primeiro caso de uso real pra isso, e só nesse ponto vale decidir se a tabela é necessária ou se referenciar o ID do provedor direto nas regras já resolve. YAGNI: entregar o que foi pedido (CRUD de pasta, mover, esvaziar, marcar lida, drag-and-drop, não é lixo eletrônico) sem essa complexidade extra agora. O backend roda hoje em processo contínuo (Railway, `server.ts`), não em função serverless — por isso o loop de esvaziar/marcar-lida pode processar uma pasta inteira numa única requisição, sem risco de timeout tipo Vercel Function. |
+| ADR-18 | **Revisão da Fase 8 / Agenda (2026-09-13)**: expande a ADR-13 original com o desenho final. **Reautorização sob demanda**: cada conta Gmail/Microsoft ganha a coluna `calendarScopeGranted` (seção 3.1); abrir `/agenda` numa conta sem esse escopo mostra um botão "Conectar calendário desta conta" que dispara um fluxo OAuth novo (`_api/email/auth/{gmail,microsoft}/calendar-init`) — reaproveita o `state`/callback já existentes, só adiciona o escopo de calendário (`https://www.googleapis.com/auth/calendar` no Google, `Calendars.ReadWrite` no Graph) e marca a coluna como `true` no callback, sem criar uma segunda conta. **Uma conta por vez**: a tela de agenda mostra o calendário de UMA conta selecionada (mesmo padrão do seletor de contas do e-mail) — sobrepor todas as contas na mesma grade fica pra uma iteração futura. **4 visões**: Dia, Semana de Trabalho (seg-sex), Semana (dom-sáb) e Mês, com navegação Hoje/anterior/próximo e um mini-calendário lateral — espelha o Outlook real. **Interação por arraste implementada do zero** (mousedown/mousemove/mouseup calculando deltas de tempo a partir de deltas de pixel), sem biblioteca de calendário/drag externa (`react-big-calendar`, `dnd-kit` etc.) — consistente com o resto do sistema, que não usa biblioteca de UI pronta pra nenhum componente. **Recorrência**: modelo mestre+exceção detalhado na seção 3.8, biblioteca `rrule` só pra expandir ocorrências na hora de renderizar (nunca persiste ocorrência individual de uma série sem exceção). **Convites**: `.ics` na leitura do e-mail (`ical.js` pra parsear) vira um card com Aceitar/Recusar/Talvez; a resposta grava em `calendar_events` E responde de verdade no provedor (Google: `events.patch` com `sendUpdates`; Graph: `POST /me/events/{id}/accept\|decline\|tentativelyAccept`) pra o organizador ver o RSVP real. **Dividido em 2 planos de execução**: Fase 8a (schema, reautorização, sync, CRUD, as 4 visões, eventos avulsos) e Fase 8b (recorrência + convites), detalhado na seção 5.3. | Reautorização lazy evita interromper quem só usa e-mail e nunca abre a agenda. Uma conta por vez reduz a primeira entrega ao mesmo padrão já validado no módulo de e-mail, sem inventar um novo modelo de seleção múltipla de contas de uma vez. Drag do zero evita puxar uma biblioteca de calendário pronta que teria que ser inteiramente re-estilizada pro tema escuro do sistema de qualquer forma. Dividir em 8a/8b isola o risco: recorrência e parsing de convite são, cada um, praticamente um sub-projeto à parte, e a fundação (CRUD + 4 visões) já é entregável e testável sozinha. |
 
 ## 3. Modelo de dados (Postgres/Drizzle)
 
@@ -82,6 +83,10 @@ smtpPort: integer('smtp_port'),
 smtpSecure: boolean('smtp_secure').notNull().default(true),
 username: text('username'),               // login IMAP/SMTP, pode diferir do campo `email`
 passwordEncrypted: text('password_encrypted'), // criptografado via emailEncryption.ts, mesmo padrão de accessToken hoje
+
+// Nova coluna (ADR-18): diz se essa conta já reautorizou com o escopo de calendário —
+// evita ter que fazer uma chamada de teste na API do provedor só pra descobrir isso.
+calendarScopeGranted: boolean('calendar_scope_granted').notNull().default(false),
 ```
 
 ### 3.2 `email_folders` — nova tabela
@@ -184,7 +189,7 @@ export const emailAccountDelegates = pgTable('email_account_delegates', {
 ]);
 ```
 
-### 3.8 `calendar_events` — nova tabela
+### 3.8 `calendar_events` — nova tabela (revisada pela ADR-18)
 
 ```ts
 export const calendarEvents = pgTable('calendar_events', {
@@ -200,15 +205,27 @@ export const calendarEvents = pgTable('calendar_events', {
   startAt: timestamp('start_at', { withTimezone: true, mode: 'string' }).notNull(),
   endAt: timestamp('end_at', { withTimezone: true, mode: 'string' }).notNull(),
   allDay: boolean('all_day').notNull().default(false),
+  timezone: text('timezone').notNull().default('America/Sao_Paulo'),
+  organizerEmail: text('organizer_email'),
   attendees: jsonb('attendees'), // [{ email, name, responseStatus: 'needsAction'|'accepted'|'declined'|'tentative' }]
-  recurrenceRule: text('recurrence_rule'), // RRULE, nullable
-  status: text('status').notNull().default('confirmed'), // 'confirmed' | 'cancelled'
+  reminderMinutesBefore: integer('reminder_minutes_before').default(15),
+  status: text('status').notNull().default('confirmed'), // 'confirmed' | 'cancelled' | 'tentative'
+
+  // — Recorrência (ADR-18) —
+  recurrenceRule: text('recurrence_rule'), // RRULE (RFC 5545), nullable — só no evento mestre
+  excludedDates: jsonb('excluded_dates'), // string[] de datas ISO removidas da expansão (equivalente a EXDATE) — só no mestre
+  masterEventId: text('master_event_id'), // preenchido só em linhas de EXCEÇÃO — aponta pro evento mestre (auto-referência, sem FK formal)
+  originalStartAt: timestamp('original_start_at', { withTimezone: true, mode: 'string' }), // preenchido só em exceções — identifica QUAL ocorrência da série esta linha substitui
+
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 }, (t) => [
   index('idx_calendar_events_user').on(t.userId, t.startAt),
+  index('idx_calendar_events_master').on(t.masterEventId),
 ]);
 ```
+
+Uma linha é **evento avulso** (sem `recurrenceRule` nem `masterEventId`), **evento mestre** de uma série (`recurrenceRule` preenchido, `masterEventId` null), ou **exceção** de uma série (`masterEventId` aponta pro mestre, `originalStartAt` diz qual ocorrência ela substitui, campos como `title`/`startAt`/`endAt` sobrescrevem os da ocorrência original). Renderizar a agenda num intervalo = expandir o `recurrenceRule` de cada mestre (biblioteca `rrule`) descontando `excludedDates`, e trocar qualquer ocorrência que tenha uma exceção correspondente (`originalStartAt` bate) pela linha de exceção.
 
 ### 3.9 `push_subscriptions` — nova tabela
 
@@ -288,6 +305,52 @@ Pedido do usuário em 2026-09-13: criar/renomear/excluir pasta, mover e-mail ent
 - `EmailListItem.tsx`: alterna lido/não lido por item (ícone ao passar o mouse, sem precisar abrir a mensagem — hoje só existe via seleção + botão do ribbon); menu de contexto ganha "Mover para..." (submenu com a árvore de pastas) e, só dentro da pasta Spam, "Não é lixo eletrônico".
 - Drag-and-drop: cada linha de `EmailList` fica `draggable`; cada pasta em `FolderNav` é um drop target (`onDragOver`/`onDrop`) que dispara a ação `move` pro id da pasta; feedback visual (destaque da pasta) enquanto o item é arrastado por cima.
 
+## 5.3 Agenda/Calendário (Fase 8 — ADR-13/ADR-18)
+
+Pedido do usuário em 2026-09-13: implementar a agenda completa — visualizar, criar, editar e excluir eventos sincronizados de verdade com Google Calendar/Microsoft Graph (contas IMAP e eventos manuais só no Postgres), 4 visões estilo Outlook (Dia/Semana de Trabalho/Semana/Mês) com clicar-arrastar pra criar e arrastar pra mover/redimensionar, eventos recorrentes, e convites de reunião (`.ics`) com Aceitar/Recusar/Talvez. Dividido em dois planos de execução (seção 7): **Fase 8a** (fundação) e **Fase 8b** (recorrência + convites, depende da 8a).
+
+### Reautorização OAuth sob demanda
+
+- Nova rota `_api/email/auth/gmail/calendar-init` e `_api/email/auth/microsoft/calendar-init`: mesmo fluxo OAuth já existente (`state` com o `accountId`, callback grava token), mas com o escopo de calendário adicionado à lista de `SCOPES` só nessa rota (não na de conectar e-mail, pra não forçar todo mundo a conceder acesso de calendário só pra usar e-mail). No callback, além de salvar `accessToken`/`refreshToken` novos (o Google/Microsoft reemite os dois cobrindo a união de escopos), marca `calendarScopeGranted = true` na conta existente — não cria conta nova.
+- Frontend: ao abrir `/agenda` e selecionar uma conta Gmail/Microsoft com `calendarScopeGranted = false`, mostra uma tela de estado vazio com "Conectar calendário desta conta" (redireciona pro `calendar-init`) em vez da grade de calendário.
+- Contas IMAP e a opção "Calendário local" nunca pedem reautorização — usam só o Postgres.
+
+### API de eventos (`_api/calendar/events.ts`, novo arquivo)
+
+| Endpoint | Body/Query | Efeito |
+|---|---|---|
+| `GET /api/calendar/events` | `?accountId&from&to` (ou `?internal=true&userId` pra eventos locais) | Lista eventos no intervalo — busca do provedor (se `calendarScopeGranted`), faz upsert no Postgres, e devolve o que está no Postgres pro intervalo (Postgres é o cache de leitura, igual o padrão já usado pro e-mail, mas aqui persistente) |
+| `POST /api/calendar/events` | `{accountId?, title, description?, location?, startAt, endAt, allDay, attendees?, recurrenceRule?}` | Cria evento — se `accountId` aponta pra conta sincronizada, cria no provedor primeiro (Google `events.insert` / Graph `POST /me/events`) e grava o `providerEventId` retornado; senão cria só no Postgres (`provider: 'internal'`) |
+| `PATCH /api/calendar/events/:id` | `{..., editScope?: 'this' \| 'following' \| 'all'}` | Edita — `editScope` só relevante quando o evento pertence a uma série (ver "Edição de recorrência" abaixo); sincronizado com o provedor quando aplicável |
+| `DELETE /api/calendar/events/:id` | `{editScope?: 'this' \| 'following' \| 'all'}` (query) | Exclui — mesma lógica de escopo |
+
+### Frontend — `src/domains/agenda/` (novo domínio, paralelo a `src/domains/email/`)
+
+- Rota nova `/agenda` (`AgendaPage.tsx`), reaproveitando o seletor de contas no mesmo padrão do e-mail (uma conta por vez).
+- `ViewSwitcher`: botões Dia / Semana de Trabalho / Semana / Mês + Hoje + setas anterior/próximo, igual à faixa superior do Outlook.
+- `MiniCalendar`: calendário pequeno na lateral pra pular direto pra uma data (também usado como date-picker no formulário de evento).
+- `TimeGrid`: grade de horários (Dia/Semana de Trabalho/Semana) — faixa de "dia inteiro" fixa no topo, colunas por dia, eventos sobrepostos dividem a largura. Implementado com posicionamento absoluto calculado a partir da hora (sem biblioteca de calendário).
+- `MonthGrid`: grade de semanas × 7 dias, cada célula com até N eventos visíveis + "+N mais".
+- `EventBlock`: bloco do evento dentro do `TimeGrid`/`MonthGrid` — arrastável (mousedown/mousemove/mouseup calculando novo horário a partir do delta de pixels) e com alça de redimensionar na borda inferior.
+- Criar por arraste: mousedown numa célula vazia do `TimeGrid` e arrastar define o intervalo inicial, ao soltar abre o `EventEditorModal` já preenchido.
+- `EventPopover`: clique num evento existente abre um popover rápido (título, horário, botões Editar/Excluir) — mesma ideia do popover de "Mover para" do `EmailListItem` (`createPortal` em `document.body`, posicionado a partir do retângulo do elemento clicado, pra não cair na mesma armadilha de stacking context de elementos com `transform` ancestral).
+- `EventEditorModal`: formulário completo (título, local, descrição, início/fim, dia inteiro, participantes, lembrete, recorrência — recorrência só habilitada na Fase 8b).
+
+### Edição de recorrência (Fase 8b)
+
+Ao editar ou excluir um evento que faz parte de uma série (`recurrenceRule` no mestre, ou é uma ocorrência expandida dele), a UI pergunta "Só este evento" / "Este e os seguintes" / "Toda a série" (`editScope`), igual ao Outlook:
+
+- **`this`**: cria (ou atualiza, se já existir) uma linha de exceção (`masterEventId` + `originalStartAt` = data da ocorrência clicada) com os campos novos. Excluir com `this` grava a exceção com `status: 'cancelled'` em vez de apagar a linha (mantém o registro de "essa ocorrência foi cancelada").
+- **`following`**: adiciona `UNTIL=<data da ocorrência anterior>` ao `recurrenceRule` do mestre atual (encerra a série ali) e cria um novo evento mestre começando na ocorrência clicada, com o `recurrenceRule` restante (mesma regra, sem `UNTIL`) e os campos novos.
+- **`all`**: edita os campos do mestre diretamente; excluir com `all` marca o mestre como `status: 'cancelled'` (mantém pra auditoria/undo, a UI filtra eventos cancelados).
+- Pra contas sincronizadas, cada caso acima chama o mecanismo nativo de exceção do provedor (Google: `recurringEventId` + `events.patch` na instância; Graph: `seriesMasterId` + `PATCH /me/events/{instanceId}`) em vez de reinventar a semântica de recorrência do zero na API deles.
+
+### Convites de reunião (Fase 8b)
+
+- `_api/lib/gmailClient.ts`/`microsoftClient.ts`/`imapClient.ts`: ao montar o `CachedEmail` em `parse*Message`, se algum anexo tem `mimeType === 'text/calendar'` ou nome terminado em `.ics`, parseia o conteúdo com `ical.js` e preenche um campo novo `meetingInvite?: { title, organizerEmail, startAt, endAt, location? }` no `CachedEmail`.
+- `EmailReader` (frontend): quando `message.meetingInvite` existe, mostra um card acima do corpo do e-mail com os dados do convite e 3 botões (Aceitar/Recusar/Talvez).
+- `POST /api/calendar/invite-response` `{accountId, messageId, response: 'accepted'\|'declined'\|'tentative'}`: cria (ou atualiza, se já existir um evento com o mesmo `providerEventId` do convite) a linha em `calendar_events` com o `attendees` do usuário atualizado; se a conta é sincronizada, chama a resposta nativa do provedor (Google: `events.patch` no attendee com `sendUpdates: 'all'`; Graph: `POST /me/events/{id}/accept\|decline\|tentativelyAccept`) pra o organizador receber o RSVP de verdade, não só uma anotação local.
+
 ## 6. Registro de riscos
 
 | # | Risco | Mitigação |
@@ -303,6 +366,9 @@ Pedido do usuário em 2026-09-13: criar/renomear/excluir pasta, mover e-mail ent
 | 9 | Web Push no iOS Safari só funciona se o usuário "instalar" o site na tela inicial — notificação nunca chega pro usuário que só usa o site pelo navegador normal, sem aviso. | Prompt de UX explicando o passo de instalação quando o usuário habilitar notificações num dispositivo iOS (ver ADR-14). |
 | 10 | Categorias aplicadas via Gmail label reaproveitam a mesma pipeline de pastas (ADR-4) — risco de um label ser tratado como pasta e categoria ao mesmo tempo se a distinção não for feita corretamente. | Flag explícita (`type: 'folder'\|'category'`) decidida na primeira sincronização de cada label, editável pelo usuário se a heurística inicial errar (ver ADR-11). |
 | 11 | Esvaziar/marcar-tudo-como-lido (ADR-17) processa mensagem por mensagem em loop, sem tabela local com IDs — uma pasta muito grande (milhares de mensagens) gera muitas chamadas sequenciais ao provedor, sujeitas a rate limit (Gmail/Graph) mesmo sem timeout de execução. | IMAP usa operação nativa em lote (`STORE`/`EXPUNGE`) em vez de loop por UID. Gmail/Microsoft ficam sujeitos ao rate limit normal da API (mesmo já aceito hoje no sync); se isso se mostrar um problema real de uso, é o gatilho concreto pra revisitar a persistência da ADR-4 com paginação/retry, não uma otimização especulativa agora. |
+| 12 | Drag-and-drop de eventos implementado do zero (ADR-18) tem mais superfície de bug do que usar uma biblioteca pronta (cálculo de posição/tempo a partir de pixel, scroll da grade durante o arraste, snap pro intervalo de 15/30min). | Testar manualmente contra os 3 cenários principais (criar por arraste, mover, redimensionar) em cada visão (Dia/Semana/Semana de Trabalho) antes de considerar a Fase 8a concluída; Mês não tem redimensionar (só mover entre dias), reduzindo a superfície ali. |
+| 13 | Editar/excluir com `editScope: 'following'` (ADR-18) dá **UNTIL** ao mestre atual e cria um mestre novo — se o usuário repetir isso várias vezes na mesma série, acumula vários mestres encadeados; providerEventId de cada um precisa ficar consistente com o que o Google/Graph também fizeram (eles têm sua própria forma de dividir séries), senão a sincronização diverge. | Ao criar o novo mestre pra uma conta sincronizada, usar o `providerEventId` que o próprio Google/Graph retornar pra essa operação de split (ambas as APIs já lidam com "editar esta e as seguintes" nativamente) em vez de gerar a divisão só no nosso lado e tentar replicar depois — nosso Postgres reflete o resultado que o provedor confirmar, não o inverso. |
+| 14 | Parsing de `.ics` (`ical.js`) pode falhar silenciosamente em convites malformados ou com timezone exótico, gerando um card de convite com dados errados ou quebrado. | `meetingInvite` só é preenchido se o parse suceder E os campos obrigatórios (title, startAt, endAt) existirem — parse malsucedido não quebra a leitura do e-mail, só deixa de mostrar o card, tratado como fallback seguro. |
 
 ## 7. Fases de execução
 
@@ -316,8 +382,11 @@ Ordem definida por dependência técnica e risco, não por prioridade de negóci
 - **Fase 5 — Agendamento de envio + threading de conversa** (ADR-9, ADR-10): baixo risco, independentes entre si e do resto — bom intervalo pra entregar valor visível rápido entre fases mais pesadas.
 - **Fase 6 — Delegação de acesso** (ADR-12): mexe em autorização; melhor com contas/permissões já estáveis das fases anteriores.
 - **Fase 7 — Sync quase em tempo real** (ADR-16): troca o gatilho de sync de polling pra webhook/IDLE. Fazer por último entre as mudanças de pipeline garante que regras/autoreply/foco/categorias (Fases 3-4) já foram validadas rodando sobre polling normal antes de mudar o que dispara o próprio sync — mais fácil isolar bug se algo quebrar.
-- **Fase 8 — Calendário** (ADR-13): a maior e mais isolada das fases — domínio novo, exige reautorização OAuth, tela nova inteira. Não bloqueia nem é bloqueada pelas fases anteriores; fica pro fim por ser a mais cara.
+- **Fase 8a — Calendário: fundação** (ADR-13/ADR-18): schema (`calendar_events`, coluna `calendarScopeGranted`), reautorização OAuth sob demanda, sync real com Google Calendar/Microsoft Graph, CRUD de evento avulso, as 4 visões (Dia/Semana de Trabalho/Semana/Mês) com clicar-arrastar. Entregável e testável sozinha, sem depender de recorrência ou convites.
+- **Fase 8b — Calendário: recorrência + convites** (ADR-18): eventos recorrentes (RRULE + modelo mestre/exceção, edição "só este/seguintes/todos") e convites de reunião `.ics` com Aceitar/Recusar/Talvez. Depende da Fase 8a já estar de pé (schema, CRUD e telas prontos).
 - **Fase 9 — Notificação push mobile** (ADR-14): depende do sync já disparando de forma confiável (Fases 1-7) pra saber quando notificar. Menor valor incremental dos itens novos — última fase.
+
+**Nota (2026-09-13)**: a Fase 8 foi adiantada a pedido do usuário, fora da ordem de dependência técnica acima (que originalmente a deixava por último) — Fases 3, 4, 5, 6 e 7 continuam pendentes e não foram puladas de vez, só adiadas. A Fase 8 não depende de nenhuma delas (calendário é um domínio novo, isolado do motor de regras/categorias/delegação/sync near-realtime), então adiantá-la não quebra a ordem de dependência real, só a de prioridade original.
 
 Cada fase segue o mesmo fluxo: plano de implementação (writing-plans) → execução → verificação de que Gmail/Microsoft não regrediram (risco 5) → próxima fase.
 
