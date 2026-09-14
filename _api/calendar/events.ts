@@ -126,7 +126,14 @@ export default async function handler(req: any, res: any) {
         }
       }
 
-      const id = generateId();
+      // Quando o evento é criado num provedor real, usa o MESMO esquema de id que
+      // loadEventsFromProvider usa pra sincronizar (`google_<id>`/`microsoft_<id>`) —
+      // senão o próximo GET (que sempre resincroniza do provedor quando
+      // calendarScopeGranted) cria uma SEGUNDA linha pro mesmo evento, duplicando-o
+      // na grade da Agenda.
+      const id = providerEventId
+        ? `${provider === 'google' ? 'google' : 'microsoft'}_${providerEventId}`
+        : generateId();
       await fsSet('calendar_events', id, {
         userId: String(userId),
         accountId: account ? String(accountId) : null,

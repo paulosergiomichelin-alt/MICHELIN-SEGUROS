@@ -141,6 +141,26 @@ describe('_api/calendar/events handler', () => {
     }));
   });
 
+  it('POST num provedor usa o MESMO esquema de id que a sincronização do GET (evita duplicar a linha)', async () => {
+    (fsGet as any).mockResolvedValue({ id: 'acc1', provider: 'microsoft', calendarScopeGranted: true, userId: 'u1' });
+    (ms.createEvent as any).mockResolvedValue({ id: 'mscal1' });
+    const req = {
+      method: 'POST',
+      body: { userId: 'u1', accountId: 'acc1', title: 'Reunião', startAt: '2026-01-10T10:00:00', endAt: '2026-01-10T11:00:00', allDay: false },
+    };
+    const res = makeRes();
+
+    await handler(req, res);
+
+    // loadEventsFromProvider (chamado no próximo GET) faz fsSet('calendar_events',
+    // `microsoft_${providerEventId}`, ...) — o POST precisa gravar sob o MESMO id,
+    // senão o GET seguinte cria uma segunda linha pro mesmo evento.
+    expect(fsSet).toHaveBeenCalledWith('calendar_events', 'microsoft_mscal1', expect.objectContaining({
+      provider: 'microsoft', providerEventId: 'mscal1',
+    }));
+    expect(res.json).toHaveBeenCalledWith({ id: 'microsoft_mscal1', success: true });
+  });
+
   it('PATCH edita evento existente no provedor e no Postgres', async () => {
     (fsGet as any).mockResolvedValue({ id: 'ev1', accountId: 'acc1', providerEventId: 'gcal1' });
     (fsGet as any).mockImplementation((collection: string, id: string) => {
