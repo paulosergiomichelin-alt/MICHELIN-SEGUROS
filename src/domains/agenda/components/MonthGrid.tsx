@@ -73,6 +73,7 @@ export const MonthGrid: React.FC<Props> = ({ referenceDate, events, onClickEvent
                   draggable
                   onDragStart={e => e.dataTransfer.setData('text/plain', event.id)}
                   onClick={() => onClickEvent(event)}
+                  onDoubleClick={e => e.stopPropagation()}
                   className="text-left text-[10px] px-1 py-0.5 rounded bg-blue-600/60 hover:bg-blue-600/80 text-white truncate transition-colors"
                 >
                   {event.allDay ? '' : `${new Date(event.startAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} `}
