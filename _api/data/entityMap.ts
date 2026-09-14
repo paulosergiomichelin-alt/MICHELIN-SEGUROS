@@ -36,6 +36,7 @@ export const ENTITY_TABLE: Record<string, any> = {
   metrics_daily: schema.metricsDaily,
   email_accounts: schema.emailAccounts,
   email_settings: schema.emailSettings,
+  calendar_events: schema.calendarEvents,
 };
 
 // A maioria das tabelas usa `id` como PK — estas duas usam organization_id como PK
