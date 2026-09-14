@@ -348,6 +348,12 @@ async function startServer() {
   scheduleEmailSync(5 * 60 * 1000);
   log.info('Email Module routes registradas');
 
+  // ── Calendar Module routes ───────────────────────────────────────────────────
+  const { default: calendarEventsHandler } = await import('./_api/calendar/events.js');
+  app.all('/api/calendar/events',     calendarEventsHandler);
+  app.all('/api/calendar/events/:id', calendarEventsHandler);
+  log.info('Calendar Module routes registradas');
+
   if (process.env.NODE_ENV === 'production' && process.env.SERVE_STATIC !== 'false') {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
