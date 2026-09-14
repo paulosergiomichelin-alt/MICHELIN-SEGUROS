@@ -62,10 +62,29 @@ export async function listEvents(
   return data?.items ?? [];
 }
 
+// `iso` é sempre um instante UTC (ex.: new Date().toISOString() vindo do frontend) —
+// pegar `.slice(0, 10)` direto pega a data em UTC, não a data local na `timezone`, o
+// que dá errado em qualquer fuso onde a data em UTC diverge da data local naquele
+// instante (ex.: fusos positivos como Asia/Tokyo). Mesmo cálculo que
+// microsoftCalendarClient.ts's toGraphDateTime, só que aqui só precisamos da data.
+function localDateInTimezone(iso: string, timezone: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date(iso));
+  const get = (t: string) => parts.find(p => p.type === t)!.value;
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
 // Um evento de dia inteira usa {date: "YYYY-MM-DD"} no Google (sem hora nem timezone);
 // um evento com hora usa {dateTime, timeZone}. As duas formas nunca se misturam no mesmo campo.
-function toDateOrDateTime(iso: string, timezone: string, allDay: boolean): { date: string } | { dateTime: string; timeZone: string } {
-  if (allDay) return { date: iso.slice(0, 10) };
+// O `end.date` do Google é EXCLUSIVO (o dia SEGUINTE ao último dia do evento) — por isso,
+// quando `isEnd` e `allDay` são true, soma um dia antes de extrair a data local.
+function toDateOrDateTime(iso: string, timezone: string, allDay: boolean, isEnd: boolean): { date: string } | { dateTime: string; timeZone: string } {
+  if (allDay) {
+    const d = new Date(iso);
+    if (isEnd) d.setUTCDate(d.getUTCDate() + 1);
+    return { date: localDateInTimezone(d.toISOString(), timezone) };
+  }
   return { dateTime: iso, timeZone: timezone };
 }
 
@@ -74,8 +93,8 @@ export async function createEvent(account: GmailAccount, input: CalendarEventInp
     summary: input.title,
     description: input.description,
     location: input.location,
-    start: toDateOrDateTime(input.startAt, input.timezone, input.allDay),
-    end: toDateOrDateTime(input.endAt, input.timezone, input.allDay),
+    start: toDateOrDateTime(input.startAt, input.timezone, input.allDay, false),
+    end: toDateOrDateTime(input.endAt, input.timezone, input.allDay, true),
   };
   if (input.attendees?.length) {
     payload.attendees = input.attendees.map(a => ({ email: a.email, displayName: a.name }));
@@ -96,10 +115,10 @@ export async function updateEvent(
   if (input.description !== undefined) payload.description = input.description;
   if (input.location !== undefined) payload.location = input.location;
   if (input.startAt !== undefined && input.allDay !== undefined && input.timezone !== undefined) {
-    payload.start = toDateOrDateTime(input.startAt, input.timezone, input.allDay);
+    payload.start = toDateOrDateTime(input.startAt, input.timezone, input.allDay, false);
   }
   if (input.endAt !== undefined && input.allDay !== undefined && input.timezone !== undefined) {
-    payload.end = toDateOrDateTime(input.endAt, input.timezone, input.allDay);
+    payload.end = toDateOrDateTime(input.endAt, input.timezone, input.allDay, true);
   }
   if (input.attendees !== undefined) {
     payload.attendees = input.attendees.map(a => ({ email: a.email, displayName: a.name }));

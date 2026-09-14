@@ -176,6 +176,23 @@ describe('_api/calendar/events handler', () => {
     expect(fsUpdate).toHaveBeenCalledWith('calendar_events', 'ev1', expect.objectContaining({ title: 'Novo título' }));
   });
 
+  it('PATCH sem allDay/timezone no body usa o valor existente como fallback pro provedor', async () => {
+    (fsGet as any).mockImplementation((collection: string) => {
+      if (collection === 'calendar_events') {
+        return Promise.resolve({ id: 'ev1', accountId: 'acc1', providerEventId: 'gcal1', allDay: true, timezone: 'America/Sao_Paulo' });
+      }
+      return Promise.resolve({ id: 'acc1', provider: 'gmail', calendarScopeGranted: true });
+    });
+    const req = { method: 'PATCH', params: { id: 'ev1' }, body: { startAt: '2026-01-10T03:00:00.000Z' } };
+    const res = makeRes();
+
+    await handler(req, res);
+
+    expect(google.updateEvent).toHaveBeenCalledWith(expect.anything(), 'gcal1', expect.objectContaining({
+      startAt: '2026-01-10T03:00:00.000Z', allDay: true, timezone: 'America/Sao_Paulo',
+    }));
+  });
+
   it('DELETE remove do provedor e do Postgres', async () => {
     (fsGet as any).mockImplementation((collection: string) => {
       if (collection === 'calendar_events') return Promise.resolve({ id: 'ev1', accountId: 'acc1', providerEventId: 'gcal1' });

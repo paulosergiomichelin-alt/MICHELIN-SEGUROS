@@ -53,7 +53,7 @@ describe('googleCalendarClient', () => {
     });
   });
 
-  it('createEvent monta payload com date quando é dia inteiro', async () => {
+  it('createEvent monta payload com date quando é dia inteiro (end.date exclusivo, um dia depois do start)', async () => {
     global.fetch = vi.fn(async (url: any, opts: any) => {
       const body = JSON.parse(opts.body);
       expect(body.start).toEqual({ date: '2026-01-10' });
@@ -61,9 +61,28 @@ describe('googleCalendarClient', () => {
       return { ok: true, status: 200, json: async () => ({ id: 'ev3' }) };
     }) as any;
 
+    // EventEditorModal manda startAt === endAt (mesma data de calendário) pra um evento
+    // de dia inteiro de um dia só — cabe ao client somar o dia extra que o Google exige
+    // em end.date. '...T03:00:00.000Z' é meia-noite local em America/Sao_Paulo (UTC-3).
     await createEvent(makeAccount(), {
-      title: 'Feriado', startAt: '2026-01-10T00:00:00', endAt: '2026-01-11T00:00:00',
+      title: 'Feriado', startAt: '2026-01-10T03:00:00.000Z', endAt: '2026-01-10T03:00:00.000Z',
       allDay: true, timezone: 'America/Sao_Paulo',
+    });
+  });
+
+  it('createEvent de dia inteiro em fuso positivo usa a data LOCAL, não a data UTC', async () => {
+    global.fetch = vi.fn(async (url: any, opts: any) => {
+      const body = JSON.parse(opts.body);
+      // '2026-01-09T15:00:00.000Z' é 00:00 do dia 10 em Asia/Tokyo (UTC+9) — a data em
+      // UTC (9) e a data local (10) divergem, exatamente o caso que .slice(0, 10) errava.
+      expect(body.start).toEqual({ date: '2026-01-10' });
+      expect(body.end).toEqual({ date: '2026-01-11' });
+      return { ok: true, status: 200, json: async () => ({ id: 'ev4' }) };
+    }) as any;
+
+    await createEvent(makeAccount(), {
+      title: 'Feriado JP', startAt: '2026-01-09T15:00:00.000Z', endAt: '2026-01-09T15:00:00.000Z',
+      allDay: true, timezone: 'Asia/Tokyo',
     });
   });
 

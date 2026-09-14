@@ -52,7 +52,7 @@ export const MonthGrid: React.FC<Props> = ({ referenceDate, events, onClickEvent
               setDragOverDay(null);
               const eventId = e.dataTransfer.getData('text/plain');
               const dragged = events.find(ev => ev.id === eventId);
-              if (dragged) onMoveEventToDay(dragged, day);
+              if (dragged && !isSameDay(new Date(dragged.startAt), day)) onMoveEventToDay(dragged, day);
             }}
             className={cn(
               'bg-[#141414] p-1.5 overflow-hidden flex flex-col gap-0.5',

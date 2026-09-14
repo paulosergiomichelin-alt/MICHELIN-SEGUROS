@@ -53,22 +53,26 @@ export const EventBlock: React.FC<Props> = ({
     e.stopPropagation();
     const startY = e.clientY;
     const initialHeight = durationToHeight(startAt, endAt);
+    const resizeDragging = { current: false };
 
     const onMouseMove = (moveEvt: MouseEvent) => {
+      resizeDragging.current = true;
       const deltaY = moveEvt.clientY - startY;
       setResizingHeight(Math.max(HOUR_HEIGHT / 4, initialHeight + deltaY));
     };
     const onMouseUp = (upEvt: MouseEvent) => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
-      const deltaY = upEvt.clientY - startY;
-      const newHeightMinutes = ((initialHeight + deltaY) / HOUR_HEIGHT) * 60;
-      const snappedMinutes = Math.max(15, Math.round(newHeightMinutes / 15) * 15);
-      const newEnd = new Date(startAt.getTime() + snappedMinutes * 60000);
-      onResize(event, newEnd);
+      if (resizeDragging.current) {
+        const deltaY = upEvt.clientY - startY;
+        const newHeightMinutes = ((initialHeight + deltaY) / HOUR_HEIGHT) * 60;
+        const snappedMinutes = Math.max(15, Math.round(newHeightMinutes / 15) * 15);
+        const newEnd = new Date(startAt.getTime() + snappedMinutes * 60000);
+        onResize(event, newEnd);
+        justDraggedRef.current = true;
+        setTimeout(() => { justDraggedRef.current = false; }, 0);
+      }
       setResizingHeight(null);
-      justDraggedRef.current = true;
-      setTimeout(() => { justDraggedRef.current = false; }, 0);
     };
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
