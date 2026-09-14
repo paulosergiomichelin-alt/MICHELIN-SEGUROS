@@ -307,6 +307,8 @@ async function startServer() {
   const { default: emailAccountsHandler }        = await import('./_api/email/accounts.js');
   const { default: emailGmailAuthHandler }        = await import('./_api/email/auth/gmail.js');
   const { default: emailMicrosoftAuthHandler }    = await import('./_api/email/auth/microsoft.js');
+  const { default: emailGmailCalendarAuthHandler }     = await import('./_api/email/auth/gmail-calendar.js');
+  const { default: emailMicrosoftCalendarAuthHandler } = await import('./_api/email/auth/microsoft-calendar.js');
   const { default: emailMessagesHandler }         = await import('./_api/email/messages.js');
   const { default: emailFoldersHandler }          = await import('./_api/email/folders.js');
   const { default: emailSendHandler }             = await import('./_api/email/send.js');
@@ -323,6 +325,10 @@ async function startServer() {
   app.all('/api/email/auth/gmail/callback', emailGmailAuthHandler);
   app.all('/api/email/auth/microsoft/init',     emailMicrosoftAuthHandler);
   app.all('/api/email/auth/microsoft/callback', emailMicrosoftAuthHandler);
+  app.all('/api/email/auth/gmail/calendar-init',         emailGmailCalendarAuthHandler);
+  app.all('/api/email/auth/gmail/calendar-callback',     emailGmailCalendarAuthHandler);
+  app.all('/api/email/auth/microsoft/calendar-init',     emailMicrosoftCalendarAuthHandler);
+  app.all('/api/email/auth/microsoft/calendar-callback', emailMicrosoftCalendarAuthHandler);
   app.all('/api/email/messages',            emailMessagesHandler);
   app.all('/api/email/messages/:id',        emailMessagesHandler);
   app.all('/api/email/folders',             emailFoldersHandler);
