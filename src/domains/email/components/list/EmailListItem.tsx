@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Star, Paperclip, MoreVertical, Mail, MailOpen, FolderInput, ShieldOff } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../../../../lib/utils';
@@ -24,7 +25,9 @@ export const EmailListItem: React.FC<Props> = ({
   message, isSelected, isChecked, folders, onClick, onCheck, onToggleRead, onMoveTo, onNotSpam,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -34,6 +37,21 @@ export const EmailListItem: React.FC<Props> = ({
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [menuOpen]);
+
+  // A linha da lista é posicionada pelo virtualizer via `transform: translateY(...)`
+  // (e o próprio motion.div aplica outro transform pra animação de layout) — CSS cria
+  // um novo "stacking context" (e um novo containing block pra position:fixed) em
+  // qualquer ancestral com transform. Sem portal, o menu ficava preso dentro desse
+  // contexto e a linha de baixo (depois no DOM, mesmo nível de z-index) pintava por
+  // cima do menu, cobrindo-o — exatamente o "fica sobrescrito pelo fundo" relatado.
+  // Renderizar no document.body via portal, com posição calculada a partir do botão,
+  // escapa de qualquer transform ancestral.
+  const openMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const rect = menuButtonRef.current?.getBoundingClientRect();
+    if (rect) setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    setMenuOpen(o => !o);
+  };
 
   // O backend/provedores usam 'archive' internamente, mas a pasta fixa aqui é 'archived'
   // (FIXED_FOLDERS) — sem essa normalização, uma mensagem arquivada mostraria
@@ -120,20 +138,22 @@ export const EmailListItem: React.FC<Props> = ({
           {message.isRead ? <Mail className="w-3.5 h-3.5" /> : <MailOpen className="w-3.5 h-3.5" />}
         </button>
         <button
+          ref={menuButtonRef}
           type="button"
           title="Mais ações"
-          onClick={e => { e.stopPropagation(); setMenuOpen(o => !o); }}
+          onClick={openMenu}
           className="p-1.5 rounded-md text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
         >
           <MoreVertical className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      {menuOpen && (
+      {menuOpen && menuPos && createPortal(
         <div
           ref={menuRef}
           onClick={e => e.stopPropagation()}
-          className="absolute right-2 top-10 z-30 w-52 max-h-72 overflow-y-auto bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl py-1"
+          className="fixed z-50 w-52 max-h-72 overflow-y-auto bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl py-1"
+          style={{ top: menuPos.top, right: menuPos.right }}
         >
           {message.folder === 'spam' && (
             <button
@@ -156,7 +176,8 @@ export const EmailListItem: React.FC<Props> = ({
               {target.name}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </motion.div>
   );
