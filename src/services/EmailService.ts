@@ -52,6 +52,7 @@ export interface EmailAccount {
   status: 'connected' | 'disconnected' | 'error';
   lastSync?: string;
   errorMessage?: string;
+  calendarScopeGranted?: boolean;
 }
 
 export interface EmailStats {
