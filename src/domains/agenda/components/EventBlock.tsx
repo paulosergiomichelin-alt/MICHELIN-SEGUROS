@@ -22,6 +22,7 @@ export const EventBlock: React.FC<Props> = ({
   const top = timeToY(startAt) + dragOffsetY;
   const height = resizingHeight ?? durationToHeight(startAt, endAt);
   const dragging = useRef(false);
+  const justDraggedRef = useRef(false);
 
   const handleMoveStart = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -39,6 +40,8 @@ export const EventBlock: React.FC<Props> = ({
         const deltaY = upEvt.clientY - startY;
         const newStart = yToTime(timeToY(startAt) + deltaY, dayDate);
         onMove(event, newStart);
+        justDraggedRef.current = true;
+        setTimeout(() => { justDraggedRef.current = false; }, 0);
       }
       setDragOffsetY(0);
     };
@@ -64,6 +67,8 @@ export const EventBlock: React.FC<Props> = ({
       const newEnd = new Date(startAt.getTime() + snappedMinutes * 60000);
       onResize(event, newEnd);
       setResizingHeight(null);
+      justDraggedRef.current = true;
+      setTimeout(() => { justDraggedRef.current = false; }, 0);
     };
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
@@ -71,7 +76,13 @@ export const EventBlock: React.FC<Props> = ({
 
   return (
     <div
-      onClick={onClick}
+      onClick={e => {
+        if (justDraggedRef.current) {
+          e.stopPropagation();
+          return;
+        }
+        onClick(e);
+      }}
       onMouseDown={handleMoveStart}
       className="absolute rounded-md bg-blue-600/70 hover:bg-blue-600/85 border border-blue-400/40 text-white text-[11px] px-2 py-1 overflow-hidden cursor-pointer select-none transition-colors"
       style={{
