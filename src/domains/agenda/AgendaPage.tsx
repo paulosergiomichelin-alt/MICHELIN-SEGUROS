@@ -7,6 +7,7 @@ import { AccountSelector } from '../email/components/sidebar/AccountSelector';
 import { ViewSwitcher } from './components/ViewSwitcher';
 import { MiniCalendar } from './components/MiniCalendar';
 import { TimeGrid } from './components/TimeGrid';
+import { MonthGrid } from './components/MonthGrid';
 import type { EmailAccount } from '../../services/EmailService';
 
 const INTERNAL_ACCOUNT: EmailAccount = {
@@ -79,9 +80,33 @@ export const AgendaPage: React.FC = () => {
           </div>
         ) : (
           state.view === 'month' ? (
-            <div className="flex-1 flex items-center justify-center text-white/30 text-sm">
-              Visão Mês — Task 11
-            </div>
+            <MonthGrid
+              referenceDate={new Date(state.currentDate)}
+              events={state.events}
+              onClickEvent={event => {
+                // eslint-disable-next-line no-alert
+                window.alert(`${event.title}\n${new Date(event.startAt).toLocaleString('pt-BR')}`);
+              }}
+              onCreateOnDay={day => {
+                // eslint-disable-next-line no-alert
+                const title = window.prompt('Título do evento:');
+                if (!title || !title.trim()) return;
+                const start = new Date(day); start.setHours(9, 0, 0, 0);
+                const end = new Date(day); end.setHours(10, 0, 0, 0);
+                createEvent({ title: title.trim(), startAt: start.toISOString(), endAt: end.toISOString(), allDay: false });
+              }}
+              onMoveEventToDay={(event, day) => {
+                const start = new Date(event.startAt);
+                const end = new Date(event.endAt);
+                const durationMs = end.getTime() - start.getTime();
+                const newStart = new Date(day);
+                newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
+                updateEvent(event.id, {
+                  startAt: newStart.toISOString(),
+                  endAt: new Date(newStart.getTime() + durationMs).toISOString(),
+                });
+              }}
+            />
           ) : (
             <TimeGrid
               days={daysForView(state.view, state.currentDate)}
