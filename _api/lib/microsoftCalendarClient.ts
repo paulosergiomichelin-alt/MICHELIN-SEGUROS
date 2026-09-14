@@ -62,13 +62,33 @@ export async function listEvents(
   return data?.value ?? [];
 }
 
+// O Graph exige que `dateTime` seja a hora de parede NA timeZone informada, sem
+// sufixo UTC ("Z") — nossos startAt/endAt internos são instantes UTC. Mandar o "Z"
+// junto com timeZone faz o Graph interpretar os dígitos literalmente como hora local,
+// ignorando o "Z" (ex.: meia-noite de São Paulo em UTC vira "03:00:00Z", que o Graph lê
+// como 03:00 local — não meia-noite). Pra evento de dia inteiro isso é rejeitado
+// explicitamente ("Event.Start property for an all-day event needs to be set to
+// midnight"); pra evento com hora, silenciosamente desloca o horário.
+function toGraphDateTime(iso: string, timezone: string, allDay: boolean): string {
+  const date = new Date(iso);
+  const opts: Intl.DateTimeFormatOptions = {
+    timeZone: timezone, hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  };
+  const parts = new Intl.DateTimeFormat('en-CA', opts).formatToParts(date);
+  const get = (t: string) => parts.find(p => p.type === t)!.value;
+  if (allDay) return `${get('year')}-${get('month')}-${get('day')}T00:00:00.0000000`;
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}.0000000`;
+}
+
 export async function createEvent(account: MicrosoftAccount, input: CalendarEventInput): Promise<MsCalendarEvent> {
   const payload: any = {
     subject: input.title,
     body: { contentType: 'text', content: input.description ?? '' },
     isAllDay: input.allDay,
-    start: { dateTime: input.startAt, timeZone: input.timezone },
-    end: { dateTime: input.endAt, timeZone: input.timezone },
+    start: { dateTime: toGraphDateTime(input.startAt, input.timezone, input.allDay), timeZone: input.timezone },
+    end: { dateTime: toGraphDateTime(input.endAt, input.timezone, input.allDay), timeZone: input.timezone },
   };
   if (input.location) payload.location = { displayName: input.location };
   if (input.attendees?.length) {
@@ -91,10 +111,10 @@ export async function updateEvent(
   if (input.location !== undefined) payload.location = { displayName: input.location };
   if (input.allDay !== undefined) payload.isAllDay = input.allDay;
   if (input.startAt !== undefined && input.timezone !== undefined) {
-    payload.start = { dateTime: input.startAt, timeZone: input.timezone };
+    payload.start = { dateTime: toGraphDateTime(input.startAt, input.timezone, Boolean(input.allDay)), timeZone: input.timezone };
   }
   if (input.endAt !== undefined && input.timezone !== undefined) {
-    payload.end = { dateTime: input.endAt, timeZone: input.timezone };
+    payload.end = { dateTime: toGraphDateTime(input.endAt, input.timezone, Boolean(input.allDay)), timeZone: input.timezone };
   }
   if (input.attendees !== undefined) {
     payload.attendees = input.attendees.map(a => ({ emailAddress: { address: a.email, name: a.name } }));

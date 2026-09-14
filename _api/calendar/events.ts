@@ -155,10 +155,19 @@ export default async function handler(req: any, res: any) {
 
       if (existing.accountId && existing.providerEventId) {
         const account = await fsGet('email_accounts', existing.accountId);
+        // Um PATCH parcial (ex.: arrastar um evento só manda startAt/endAt) não
+        // necessariamente inclui allDay/timezone — sem isso, o cliente do provedor não
+        // sabe se deve formatar a data como dia inteiro (meia-noite, sem hora) ou como
+        // horário com fuso, podendo mandar um formato inválido pro evento existente.
+        const providerInput = {
+          ...body,
+          allDay: body.allDay !== undefined ? body.allDay : existing.allDay,
+          timezone: body.timezone !== undefined ? body.timezone : existing.timezone,
+        };
         if (account?.provider === 'gmail') {
-          await googleUpdateEvent(account as any, existing.providerEventId, body as Partial<GoogleEventInput>);
+          await googleUpdateEvent(account as any, existing.providerEventId, providerInput as Partial<GoogleEventInput>);
         } else if (account?.provider === 'microsoft') {
-          await msUpdateEvent(account as any, existing.providerEventId, body as Partial<MsEventInput>);
+          await msUpdateEvent(account as any, existing.providerEventId, providerInput as Partial<MsEventInput>);
         }
       }
 

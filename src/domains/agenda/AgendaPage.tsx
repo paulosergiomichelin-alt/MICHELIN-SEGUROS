@@ -55,8 +55,11 @@ export const AgendaPage: React.FC = () => {
 
   const handleConnect = () => {
     if (selectedAccount.provider !== 'gmail' && selectedAccount.provider !== 'microsoft') return;
+    // Precisa da origin completa — o backend (Railway) faz o redirect final de volta
+    // pra cá após o OAuth, e um path relativo resolveria contra o PRÓPRIO host do
+    // backend (sem rota /agenda), não o do frontend. Mesmo padrão do EmailPage.tsx.
     window.location.href = AgendaService.getCalendarConnectUrl(
-      selectedAccount.provider, selectedAccount.id, window.location.pathname,
+      selectedAccount.provider, selectedAccount.id, `${window.location.origin}${window.location.pathname}`,
     );
   };
 
