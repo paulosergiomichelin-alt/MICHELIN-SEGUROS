@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Smartphone,
   Mail,
+  CalendarDays,
   BarChart3,
   Receipt,
 } from 'lucide-react';
@@ -137,6 +138,7 @@ export const Sidebar = React.memo(({
           { id: 'chat',             label: 'WhatsApp IA',   icon: MessageSquare, permission: permissions.canReadAllLeads },
           { id: 'whatsapp',         label: 'WA Pessoal',    icon: Smartphone,    permission: permissions.canReadAllLeads, badge: waBadge },
           { id: 'email',            label: 'E-mails',       icon: Mail,          permission: permissions.canReadAllLeads, badge: emailUnreadBadge },
+          { id: 'agenda',           label: 'Agenda',        icon: CalendarDays,  permission: permissions.canReadAllLeads },
           { id: 'users',       label: 'Equipe',        icon: ShieldAlert,   permission: permissions.canManageUsers },
           { id: 'empresas',    label: 'Empresas',      icon: Building2,     permission: userProfile?.superadmin === true },
           { id: '_sep_fin',    label: 'FINANCEIRO',    icon: null as any,   permission: permissions.canReadAllLeads, type: 'section' as const },
