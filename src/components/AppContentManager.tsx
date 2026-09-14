@@ -26,6 +26,7 @@ const SessionsPage       = lazy(() => import('../domains/whatsapp/SessionsPage')
 const EmailPage          = lazy(() => import('../domains/email/EmailPage').then(m => ({ default: m.EmailPage })));
 const EmailAccountsPage  = lazy(() => import('../domains/email/EmailAccountsPage').then(m => ({ default: m.EmailAccountsPage })));
 const EmailSettingsPage  = lazy(() => import('../domains/email/EmailSettingsPage').then(m => ({ default: m.EmailSettingsPage })));
+const AgendaPage         = lazy(() => import('../domains/agenda/AgendaPage').then(m => ({ default: m.AgendaPage })));
 const RelatoriosPage     = lazy(() => import('../domains/relatorios/RelatoriosPage').then(m => ({ default: m.RelatoriosPage })));
 const NfseListPage       = lazy(() => import('../domains/nfse/pages/NfseListPage').then(m => ({ default: m.NfseListPage })));
 const NfseDashboard      = lazy(() => import('../domains/nfse/pages/NfseDashboard').then(m => ({ default: m.NfseDashboard })));
@@ -113,6 +114,7 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
           <Route path="/email" element={<EmailPage />} />
           <Route path="/email/contas" element={<EmailAccountsPage />} />
           <Route path="/email/configuracoes" element={<EmailSettingsPage />} />
+          <Route path="/agenda" element={<AgendaPage />} />
 
           <Route
             path="/chat"
