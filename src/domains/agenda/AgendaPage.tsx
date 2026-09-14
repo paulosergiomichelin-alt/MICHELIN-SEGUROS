@@ -6,6 +6,7 @@ import { AgendaService } from '../../services/AgendaService';
 import { AccountSelector } from '../email/components/sidebar/AccountSelector';
 import { ViewSwitcher } from './components/ViewSwitcher';
 import { MiniCalendar } from './components/MiniCalendar';
+import { TimeGrid } from './components/TimeGrid';
 import type { EmailAccount } from '../../services/EmailService';
 
 const INTERNAL_ACCOUNT: EmailAccount = {
@@ -13,8 +14,24 @@ const INTERNAL_ACCOUNT: EmailAccount = {
   isDefault: false, status: 'connected',
 };
 
+function daysForView(view: string, currentDate: string): Date[] {
+  const base = new Date(currentDate);
+  if (view === 'day') return [base];
+  const day = base.getDay();
+  const count = view === 'workweek' ? 5 : view === 'week' ? 7 : 0;
+  if (count === 0) return [];
+  const startOffset = view === 'workweek' ? 1 - day : -day;
+  const start = new Date(base);
+  start.setDate(start.getDate() + startOffset);
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+}
+
 export const AgendaPage: React.FC = () => {
-  const { state, selectAccount, setView, navigate, goToDate } = useAgenda();
+  const { state, selectAccount, setView, navigate, goToDate, createEvent, updateEvent } = useAgenda();
   const { state: emailState } = useEmail();
 
   // Só contas Gmail/Microsoft/IMAP fazem sentido na Agenda — mais o item sintético
@@ -61,10 +78,34 @@ export const AgendaPage: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div className="flex-1 overflow-auto p-4 text-white/40 text-sm">
-            {/* TimeGrid (Dia/Semana de Trabalho/Semana) e MonthGrid (Mês) — Tasks 9 e 10 */}
-            {state.loading ? 'Carregando...' : `${state.events.length} evento(s) no período`}
-          </div>
+          state.view === 'month' ? (
+            <div className="flex-1 flex items-center justify-center text-white/30 text-sm">
+              Visão Mês — Task 11
+            </div>
+          ) : (
+            <TimeGrid
+              days={daysForView(state.view, state.currentDate)}
+              events={state.events}
+              onCreateRange={(startAt, endAt) => {
+                // eslint-disable-next-line no-alert
+                const title = window.prompt('Título do evento:');
+                if (!title || !title.trim()) return;
+                createEvent({ title: title.trim(), startAt: startAt.toISOString(), endAt: endAt.toISOString(), allDay: false });
+              }}
+              onMoveEvent={(event, newStartAt) => {
+                const durationMs = new Date(event.endAt).getTime() - new Date(event.startAt).getTime();
+                updateEvent(event.id, {
+                  startAt: newStartAt.toISOString(),
+                  endAt: new Date(newStartAt.getTime() + durationMs).toISOString(),
+                });
+              }}
+              onResizeEvent={(event, newEndAt) => updateEvent(event.id, { endAt: newEndAt.toISOString() })}
+              onClickEvent={(event) => {
+                // eslint-disable-next-line no-alert
+                window.alert(`${event.title}\n${new Date(event.startAt).toLocaleString('pt-BR')}`);
+              }}
+            />
+          )
         )}
       </div>
     </div>
