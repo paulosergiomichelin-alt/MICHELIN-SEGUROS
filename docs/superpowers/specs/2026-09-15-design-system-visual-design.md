@@ -100,6 +100,19 @@ Escala fixa de tamanhos (tokens `--text-*`, todos em `rem` com `font-family: var
 
 Essa escala já está em uso informal no `MulticalculoPage.tsx` (reescrito na sessão anterior) — este sub-projeto a formaliza em tokens CSS e a torna a referência oficial para todo componente novo.
 
+## Layout padrão de página (PageShell)
+
+Hoje cada tela reimplementa sua própria estrutura de wrapper — padding, largura, espaçamento entre seções variam arquivo por arquivo (ex: `MulticalculoPage.tsx` usa `p-4 md:p-6 max-w-[1600px] mx-auto space-y-5`, enquanto `RenovacoesPage.tsx` usa `p-4 md:p-6 space-y-6` sem limite de largura). Isso é o mesmo problema de inconsistência que os componentes atômicos resolvem, só que em nível de estrutura de página.
+
+Decisão validada visualmente com o usuário: **largura sempre total** (opção "B" — sem `max-width` central), para aproveitar 100% do espaço disponível mesmo em monitores ultra-wide.
+
+Estrutura padrão, encapsulada no componente `PageShell` (ver lista de componentes abaixo):
+- Padding externo consistente: `p-4 md:p-6` em todas as telas de conteúdo único.
+- Espaçamento vertical entre seções: `space-y-5`.
+- `PageHeader` sempre como primeiro filho dentro do `PageShell`, nunca desenhado à mão pela tela.
+- Sem `max-width`/`mx-auto` — o conteúdo ocupa toda a largura disponível da área de conteúdo (a área à direita da sidebar).
+- **Exceção**: telas de 2 painéis fixos com navegação própria (WhatsApp, E-mail) não usam `PageShell` — já têm sua própria estrutura de colunas full-height/full-width e ficam fora deste padrão por natureza, não por exceção arbitrária.
+
 ## Componentes base (`src/components/ui/`)
 
 Cada componente é um arquivo próprio, tipado, sem lógica de negócio — apenas apresentação usando os tokens acima. Lista completa aprovada:
@@ -112,9 +125,10 @@ Cada componente é um arquivo próprio, tipado, sem lógica de negócio — apen
 6. **`Checkbox.tsx`** — caixa customizada usando `--color-primary` quando marcada, label ao lado.
 7. **`Badge.tsx`** — variantes `success`/`warning`/`danger`/`neutral`, usando os pares `--color-*`/`--color-*-bg`. Usado para status (lead fechado/pendente/perdido, NFS-e emitida/cancelada etc.).
 8. **`PageHeader.tsx`** — título (`--text-page-title`) + subtítulo opcional (`--text-body-sm`, `--text-muted`) + slot de ações à direita (botões). Padroniza o cabeçalho que hoje cada tela desenha à mão.
-9. **`Modal.tsx`** — substitui `src/components/Modal.tsx` atual: overlay `--bg-overlay`, painel `--bg-primary` com `--border-subtle`, cabeçalho com título + botão fechar, footer opcional de ações. (Nota: os modais que o sub-projeto 3 vai converter em rotas primeiro migram para este componente no sub-projeto 2, e são removidos/simplificados no sub-projeto 3 — não é retrabalho, é o caminho de menor risco.)
-10. **`EmptyState.tsx`** — ícone + título + descrição + ação opcional, para listas vazias (nenhum lead, nenhuma cotação etc.).
-11. **`Skeleton.tsx`** — já existe em `src/components/Skeleton.tsx`; este sub-projeto só ajusta suas cores para os novos tokens, sem mudar a API.
+9. **`PageShell.tsx`** — wrapper de página: aplica o padding/espaçamento padrão descritos na seção "Layout padrão de página" acima e recebe `title`/`subtitle`/`actions` (repassados ao `PageHeader` interno) + `children` para o conteúdo. Toda tela de conteúdo único passa a abrir com `<PageShell title="..." actions={...}>`.
+10. **`Modal.tsx`** — substitui `src/components/Modal.tsx` atual: overlay `--bg-overlay`, painel `--bg-primary` com `--border-subtle`, cabeçalho com título + botão fechar, footer opcional de ações. (Nota: os modais que o sub-projeto 3 vai converter em rotas primeiro migram para este componente no sub-projeto 2, e são removidos/simplificados no sub-projeto 3 — não é retrabalho, é o caminho de menor risco.)
+11. **`EmptyState.tsx`** — ícone + título + descrição + ação opcional, para listas vazias (nenhum lead, nenhuma cotação etc.).
+12. **`Skeleton.tsx`** — já existe em `src/components/Skeleton.tsx`; este sub-projeto só ajusta suas cores para os novos tokens, sem mudar a API.
 
 Cada componente exporta seus tipos de props e é usado como `import { Button, Card } from '../../components/ui'` via um `index.ts` barrel em `src/components/ui/`.
 
@@ -135,7 +149,7 @@ Cada componente exporta seus tipos de props e é usado como `import { Button, Ca
 
 ## Critérios de sucesso
 
-- `src/components/ui/` existe com os 11 componentes listados, cada um tipado e exportado via barrel.
+- `src/components/ui/` existe com os 12 componentes listados, cada um tipado e exportado via barrel.
 - `npx tsc --noEmit` e `npm run build` passam sem erros.
-- Uma tela de exemplo (a decidir no plano — candidata: `DashboardPage`, por ser pequena e muito visível) é migrada para os novos componentes como prova de conceito, validando visualmente a paleta e tipografia em uso real antes do Sub-projeto 2 começar a migração em massa.
+- Uma tela de exemplo (a decidir no plano — candidata: `DashboardPage`, por ser pequena e muito visível) é migrada para os novos componentes, incluindo o `PageShell`, como prova de conceito — validando visualmente paleta, tipografia e o novo layout full-width em uso real antes do Sub-projeto 2 começar a migração em massa.
 - `src/index.css` reflete a nova paleta nos tokens `:root`/`.light`/`.sidebar-main`, sem quebrar nenhuma tela ainda não migrada (os overrides `!important` continuam funcionando, só com cores atualizadas).
