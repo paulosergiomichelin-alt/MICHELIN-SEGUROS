@@ -11,7 +11,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { PDFViewer } from '../../components/PDFViewer';
 import { useViewport } from '../../hooks/useAppContexts';
-import { Lead, LeadStatus, LeadTemperature, AgentConfig, UserProfile, LeadDocument, DocumentProcessingStage } from '../../types';
+import { Lead, LeadStatus, LeadTemperature, AgentConfig, UserProfile, LeadDocument, DocumentProcessingStage, PRODUTOS_SEGURO } from '../../types';
 import type { DadosEmpresa, LeadPessoaJuridica } from '../../types';
 import { agentService } from '../../services/agentService';
 import { validateLead } from '../../lib/validation';
@@ -1095,6 +1095,9 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
     [formData.insuranceExpiry, (formData as any).fimVigencia, nowTick]
   );
   const possuiSeguro = !!(formData.possuiSeguro ?? formData.hasInsurance);
+  // Sem produto definido (leads antigos) tratamos como Automóvel, pra não sumir
+  // com dados de veículo já preenchidos.
+  const isAutoProduct = !formData.insuranceType || formData.insuranceType === 'Automóvel';
 
 
   const renderQuotesList = useMemo(() => {
@@ -1396,6 +1399,20 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
           {/* Section 1: Contato e Condutor — layout premium horizontal compacto */}
           <PremiumSection title="Informações de Contato e Condutor" icon={UserIcon} subtitle="Identificação e localização do segurado">
             <div className="space-y-4">
+              {/* Linha 0: Produto — define quais seções de veículo aparecem abaixo */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <PremiumSelect
+                  label="Produto"
+                  name="insuranceType"
+                  value={formData.insuranceType || ''}
+                  onChange={handleChange}
+                  icon={ShieldCheck}
+                  options={[
+                    { value: '', label: 'Selecionar...' },
+                    ...PRODUTOS_SEGURO.map(p => ({ value: p, label: p })),
+                  ]}
+                />
+              </div>
               {/* Linha 1: Nome + Telefone */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <PremiumInput label={formData.tipoPessoa === 'juridica' ? 'Nome do Responsável' : 'Nome Completo'} name="name" value={formData.name || ''} onChange={handleChange} required placeholder="Digite o nome completo" icon={UserIcon} />
@@ -1495,67 +1512,73 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                     ]}
                   />
                 )}
-                <div className="relative group">
-                  <PremiumInput
-                    label="CEP Pernoite"
-                    name="cepPernoite"
-                    value={formData.cepPernoite || formData.zipCodeOvernight || ''}
-                    onChange={handleChange}
-                    placeholder="00000-000"
-                    icon={MapPin}
-                  />
-                  {loadingCep && <Loader2 className="absolute right-3 top-[34px] w-3.5 h-3.5 animate-spin text-[#D4A854]" />}
-                </div>
+                {isAutoProduct && (
+                  <div className="relative group">
+                    <PremiumInput
+                      label="CEP Pernoite"
+                      name="cepPernoite"
+                      value={formData.cepPernoite || formData.zipCodeOvernight || ''}
+                      onChange={handleChange}
+                      placeholder="00000-000"
+                      icon={MapPin}
+                    />
+                    {loadingCep && <Loader2 className="absolute right-3 top-[34px] w-3.5 h-3.5 animate-spin text-[#D4A854]" />}
+                  </div>
+                )}
               </div>
 
-              {/* Linha 4: Endereço desmembrado (pernoite do veículo — distinto do endereço da empresa, abaixo) */}
-              <div className="flex items-center gap-1.5 pt-1">
-                <Car className="w-3 h-3 text-[#D4A854]/60" />
-                <span className="text-[8.5px] font-bold uppercase tracking-[0.18em] text-[#D4A854]/60">
-                  Endereço de Pernoite do Veículo
-                </span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4">
-                <PremiumInput
-                  label="Logradouro"
-                  name="logradouroPernoite"
-                  value={formData.logradouroPernoite || ''}
-                  onChange={handleChange}
-                  placeholder="Rua / Av. / Alameda..."
-                  icon={MapPin}
-                />
-                <PremiumInput
-                  label="Número"
-                  name="numeroPernoite"
-                  value={formData.numeroPernoite || formData.numberOvernight || ''}
-                  onChange={handleChange}
-                  placeholder="S/N"
-                  className="w-28"
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <PremiumInput
-                  label="Bairro"
-                  name="bairroPernoite"
-                  value={formData.bairroPernoite || ''}
-                  onChange={handleChange}
-                  placeholder="Bairro"
-                />
-                <PremiumInput
-                  label="Cidade"
-                  name="cidadePernoite"
-                  value={formData.cidadePernoite || ''}
-                  onChange={handleChange}
-                  placeholder="Cidade"
-                />
-                <PremiumInput
-                  label="Estado (UF)"
-                  name="estadoPernoite"
-                  value={formData.estadoPernoite || ''}
-                  onChange={handleChange}
-                  placeholder="SP"
-                />
-              </div>
+              {isAutoProduct && (
+                <>
+                  {/* Linha 4: Endereço desmembrado (pernoite do veículo — distinto do endereço da empresa, abaixo) */}
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <Car className="w-3 h-3 text-[#D4A854]/60" />
+                    <span className="text-[8.5px] font-bold uppercase tracking-[0.18em] text-[#D4A854]/60">
+                      Endereço de Pernoite do Veículo
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4">
+                    <PremiumInput
+                      label="Logradouro"
+                      name="logradouroPernoite"
+                      value={formData.logradouroPernoite || ''}
+                      onChange={handleChange}
+                      placeholder="Rua / Av. / Alameda..."
+                      icon={MapPin}
+                    />
+                    <PremiumInput
+                      label="Número"
+                      name="numeroPernoite"
+                      value={formData.numeroPernoite || formData.numberOvernight || ''}
+                      onChange={handleChange}
+                      placeholder="S/N"
+                      className="w-28"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <PremiumInput
+                      label="Bairro"
+                      name="bairroPernoite"
+                      value={formData.bairroPernoite || ''}
+                      onChange={handleChange}
+                      placeholder="Bairro"
+                    />
+                    <PremiumInput
+                      label="Cidade"
+                      name="cidadePernoite"
+                      value={formData.cidadePernoite || ''}
+                      onChange={handleChange}
+                      placeholder="Cidade"
+                    />
+                    <PremiumInput
+                      label="Estado (UF)"
+                      name="estadoPernoite"
+                      value={formData.estadoPernoite || ''}
+                      onChange={handleChange}
+                      placeholder="SP"
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </PremiumSection>
 
@@ -1683,11 +1706,17 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
 
 
           {/* Veículo e Seguro */}
-          <PremiumSection title="Veículo e Seguro" icon={ShieldCheck} subtitle="Dados técnicos do bem segurado">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <PremiumInput label="Placa" name="plate" value={formData.plate || ''} onChange={handleChange} placeholder="ABC1D23" icon={Car} />
-              <PremiumInput label="Chassi" name="chassi" value={formData.chassi || formData.chassis || ''} onChange={handleChange} placeholder="17 caracteres alfanuméricos" />
-            </div>
+          <PremiumSection
+            title={isAutoProduct ? 'Veículo e Seguro' : 'Seguro'}
+            icon={ShieldCheck}
+            subtitle={isAutoProduct ? 'Dados técnicos do bem segurado' : 'Informações sobre apólice vigente, se houver'}
+          >
+            {isAutoProduct && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <PremiumInput label="Placa" name="plate" value={formData.plate || ''} onChange={handleChange} placeholder="ABC1D23" icon={Car} />
+                <PremiumInput label="Chassi" name="chassi" value={formData.chassi || formData.chassis || ''} onChange={handleChange} placeholder="17 caracteres alfanuméricos" />
+              </div>
+            )}
 
             <div className="mt-5 flex items-center justify-between p-3.5 bg-white/[0.02] border border-white/5 rounded-2xl transition-colors hover:border-[#D4A85420]">
               <div className="flex items-center gap-3">
@@ -1774,7 +1803,8 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
             </AnimatePresence>
           </PremiumSection>
 
-          {/* Perfil de Uso */}
+          {/* Perfil de Uso — só faz sentido quando o produto é Automóvel */}
+          {isAutoProduct && (
           <PremiumSection title="Perfil de Uso" icon={TrendingUp} subtitle="Hábito de utilização do veículo">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <PremiumCardToggle 
@@ -1823,6 +1853,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
               )}
             </AnimatePresence>
           </PremiumSection>
+          )}
 
           {/* Agenda e Responsável */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
