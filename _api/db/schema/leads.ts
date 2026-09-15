@@ -131,7 +131,7 @@ export const learningMemory = pgTable('learning_memory', {
 });
 
 export const leadPessoaJuridica = pgTable('lead_pessoa_juridica', {
-  leadId: text('lead_id').primaryKey().references(() => leads.id),
+  leadId: text('lead_id').primaryKey().references(() => leads.id, { onDelete: 'cascade' }),
   organizationId: text('organization_id').references(() => organizations.id),
   cnpj: text('cnpj').notNull(),
   razaoSocial: text('razao_social').notNull(),
