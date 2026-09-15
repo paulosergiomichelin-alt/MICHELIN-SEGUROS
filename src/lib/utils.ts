@@ -117,6 +117,14 @@ export function formatCpfCnpjProgressive(value: string): string {
   return r;
 }
 
+export function formatPhone(value: string) {
+  const clean = value.replace(/\D/g, '').slice(0, 11);
+  if (clean.length <= 2) return clean;
+  if (clean.length <= 6) return `(${clean.slice(0, 2)}) ${clean.slice(2)}`;
+  if (clean.length <= 10) return `(${clean.slice(0, 2)}) ${clean.slice(2, 6)}-${clean.slice(6)}`;
+  return `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
+}
+
 export function maskPhone(phone: string) {
   if (!phone) return '---';
   const clean = phone.replace(/\D/g, '');

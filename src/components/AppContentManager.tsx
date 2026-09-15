@@ -28,6 +28,7 @@ const EmailAccountsPage  = lazy(() => import('../domains/email/EmailAccountsPage
 const EmailSettingsPage  = lazy(() => import('../domains/email/EmailSettingsPage').then(m => ({ default: m.EmailSettingsPage })));
 const AgendaPage         = lazy(() => import('../domains/agenda/AgendaPage').then(m => ({ default: m.AgendaPage })));
 const RelatoriosPage     = lazy(() => import('../domains/relatorios/RelatoriosPage').then(m => ({ default: m.RelatoriosPage })));
+const MulticalculoPage   = lazy(() => import('../domains/multicalculo/MulticalculoPage').then(m => ({ default: m.MulticalculoPage })));
 const NfseListPage       = lazy(() => import('../domains/nfse/pages/NfseListPage').then(m => ({ default: m.NfseListPage })));
 const NfseDashboard      = lazy(() => import('../domains/nfse/pages/NfseDashboard').then(m => ({ default: m.NfseDashboard })));
 
@@ -107,6 +108,7 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
           <Route path="/clientes/:id" element={<ClienteDetailPage />} />
           <Route path="/renovacoes" element={<RenovacoesPage />} />
           <Route path="/relatorios" element={<RelatoriosPage />} />
+          <Route path="/multicalculo" element={<MulticalculoPage />} />
 
           <Route path="/whatsapp" element={<WhatsAppInboxPage />} />
           <Route path="/whatsapp/sessoes" element={<SessionsPage />} />
