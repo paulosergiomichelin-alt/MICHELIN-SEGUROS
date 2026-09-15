@@ -38,21 +38,21 @@ export const MiniCalendar: React.FC<Props> = ({ currentDate, onSelectDate }) => 
     a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
   return (
-    <div className="p-3 border-b border-white/5">
+    <div className="p-3 border-b border-slate-200">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[11px] text-white/50 capitalize">{monthLabel}</span>
+        <span className="text-[11px] text-slate-500 capitalize">{monthLabel}</span>
         <div className="flex items-center gap-0.5">
-          <button onClick={() => changeMonth(-1)} className="p-1 rounded text-white/40 hover:text-white/80 hover:bg-white/5">
+          <button onClick={() => changeMonth(-1)} className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100">
             <ChevronLeft className="w-3 h-3" />
           </button>
-          <button onClick={() => changeMonth(1)} className="p-1 rounded text-white/40 hover:text-white/80 hover:bg-white/5">
+          <button onClick={() => changeMonth(1)} className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100">
             <ChevronRight className="w-3 h-3" />
           </button>
         </div>
       </div>
       <div className="grid grid-cols-7 gap-0.5 text-center">
         {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
-          <span key={i} className="text-[9px] text-white/25 py-1">{d}</span>
+          <span key={i} className="text-[9px] text-slate-300 py-1">{d}</span>
         ))}
         {days.map((day, i) => (
           <button
@@ -60,10 +60,10 @@ export const MiniCalendar: React.FC<Props> = ({ currentDate, onSelectDate }) => 
             onClick={() => onSelectDate(day.toISOString())}
             className={cn(
               'text-[10px] py-1 rounded transition-colors',
-              day.getMonth() !== visibleMonth.getMonth() ? 'text-white/15' : 'text-white/60',
-              isSameDay(day, selected) && 'bg-blue-600/30 text-blue-300',
-              isSameDay(day, today) && !isSameDay(day, selected) && 'text-blue-400 font-semibold',
-              'hover:bg-white/10',
+              day.getMonth() !== visibleMonth.getMonth() ? 'text-slate-300' : 'text-slate-600',
+              isSameDay(day, selected) && 'bg-[#1B4D8F]/10 text-[#1B4D8F] font-bold',
+              isSameDay(day, today) && !isSameDay(day, selected) && 'text-[#1B4D8F] font-semibold',
+              'hover:bg-slate-100',
             )}
           >
             {day.getDate()}

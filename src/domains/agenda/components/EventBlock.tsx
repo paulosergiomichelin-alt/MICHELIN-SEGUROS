@@ -88,7 +88,7 @@ export const EventBlock: React.FC<Props> = ({
         onClick(e);
       }}
       onMouseDown={handleMoveStart}
-      className="absolute rounded-md bg-blue-600/70 hover:bg-blue-600/85 border border-blue-400/40 text-white text-[11px] px-2 py-1 overflow-hidden cursor-pointer select-none transition-colors"
+      className="absolute rounded-md bg-[#1B4D8F]/85 hover:bg-[#1B4D8F] border border-[#1B4D8F]/60 text-white text-[11px] px-2 py-1 overflow-hidden cursor-pointer select-none transition-colors"
       style={{
         top, height, left: `${columnOffsetPercent}%`, width: `${columnWidthPercent}%`,
       }}

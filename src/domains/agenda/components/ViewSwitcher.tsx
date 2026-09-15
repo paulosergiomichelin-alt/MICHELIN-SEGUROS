@@ -21,30 +21,30 @@ export const ViewSwitcher: React.FC<Props> = ({ view, currentDate, onSetView, on
   const label = new Date(currentDate).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#141414]">
+    <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white">
       <div className="flex items-center gap-2">
         <button
           onClick={() => onNavigate('today')}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium text-white/70 hover:bg-white/5 border border-white/10 transition-colors"
+          className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors"
         >
           Hoje
         </button>
-        <button onClick={() => onNavigate('prev')} className="p-1.5 rounded-lg text-white/50 hover:bg-white/5 hover:text-white/80 transition-colors">
+        <button onClick={() => onNavigate('prev')} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors">
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <button onClick={() => onNavigate('next')} className="p-1.5 rounded-lg text-white/50 hover:bg-white/5 hover:text-white/80 transition-colors">
+        <button onClick={() => onNavigate('next')} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors">
           <ChevronRight className="w-4 h-4" />
         </button>
-        <span className="text-white/80 text-sm font-semibold capitalize ml-2">{label}</span>
+        <span className="text-slate-800 text-sm font-semibold capitalize ml-2">{label}</span>
       </div>
-      <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+      <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
         {VIEWS.map(v => (
           <button
             key={v.id}
             onClick={() => onSetView(v.id)}
             className={cn(
               'px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
-              view === v.id ? 'bg-blue-600/30 text-blue-300' : 'text-white/50 hover:text-white/80',
+              view === v.id ? 'bg-[#1B4D8F] text-white' : 'text-slate-500 hover:text-slate-800',
             )}
           >
             {v.label}

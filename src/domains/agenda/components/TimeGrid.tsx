@@ -53,12 +53,12 @@ export const TimeGrid: React.FC<Props> = ({ days, events, onCreateRange, onMoveE
   }, [days, onCreateRange]);
 
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar">
+    <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
       <div className="flex">
         {/* Coluna de horas */}
         <div className="w-14 shrink-0 pt-2">
           {HOURS.map(h => (
-            <div key={h} style={{ height: HOUR_HEIGHT }} className="text-[10px] text-white/30 text-right pr-2 -translate-y-1.5">
+            <div key={h} style={{ height: HOUR_HEIGHT }} className="text-[10px] text-slate-400 text-right pr-2 -translate-y-1.5">
               {h > 0 ? `${String(h).padStart(2, '0')}:00` : ''}
             </div>
           ))}
@@ -69,16 +69,16 @@ export const TimeGrid: React.FC<Props> = ({ days, events, onCreateRange, onMoveE
           <div
             key={day.toISOString()}
             onMouseDown={e => handleGridMouseDown(dayIndex, e)}
-            className="flex-1 relative border-l border-white/5"
+            className="flex-1 relative border-l border-slate-200"
             style={{ height: HOUR_HEIGHT * 24 }}
           >
             {HOURS.map(h => (
-              <div key={h} style={{ height: HOUR_HEIGHT }} className="border-b border-white/5" />
+              <div key={h} style={{ height: HOUR_HEIGHT }} className="border-b border-slate-100" />
             ))}
 
             {draftRange && draftRange.dayIndex === dayIndex && (
               <div
-                className="absolute left-0.5 right-0.5 rounded bg-blue-500/30 border border-blue-400/50 pointer-events-none"
+                className="absolute left-0.5 right-0.5 rounded bg-[#1B4D8F]/15 border border-[#1B4D8F]/50 pointer-events-none"
                 style={{
                   top: Math.min(draftRange.startY, draftRange.endY),
                   height: Math.abs(draftRange.endY - draftRange.startY),

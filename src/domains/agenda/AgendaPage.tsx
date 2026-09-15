@@ -10,6 +10,7 @@ import { TimeGrid } from './components/TimeGrid';
 import { MonthGrid } from './components/MonthGrid';
 import { EventPopover } from './components/EventPopover';
 import { EventEditorModal } from './components/EventEditorModal';
+import { Button } from '../../components/ui';
 import type { EmailAccount } from '../../services/EmailService';
 import type { CalendarEvent } from '../../services/AgendaService';
 
@@ -64,8 +65,8 @@ export const AgendaPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-full w-full bg-[#0f0f0f] overflow-hidden">
-      <aside className="w-64 shrink-0 bg-[#111111] border-r border-white/5 flex flex-col overflow-hidden">
+    <div className="flex h-full w-full bg-slate-50 overflow-hidden">
+      <aside className="w-64 shrink-0 bg-white border-r border-slate-200 flex flex-col overflow-hidden">
         <AccountSelector accounts={accounts} selectedAccountId={state.selectedAccountId} onSelect={selectAccount} />
         <MiniCalendar currentDate={state.currentDate} onSelectDate={goToDate} />
       </aside>
@@ -75,21 +76,16 @@ export const AgendaPage: React.FC = () => {
 
         {needsConnect ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8">
-            <div className="w-16 h-16 rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center">
-              <CalendarPlus className="w-8 h-8 text-blue-400" />
+            <div className="w-16 h-16 rounded-2xl bg-[#1B4D8F]/10 border border-[#1B4D8F]/20 flex items-center justify-center">
+              <CalendarPlus className="w-8 h-8 text-[#1B4D8F]" />
             </div>
             <div className="text-center">
-              <h2 className="text-white/80 text-lg font-semibold mb-1">Conectar calendário desta conta</h2>
-              <p className="text-white/40 text-sm max-w-sm">
+              <h2 className="text-slate-800 text-lg font-semibold mb-1">Conectar calendário desta conta</h2>
+              <p className="text-slate-500 text-sm max-w-sm">
                 Pra ver e criar eventos de {selectedAccount.email}, autorize o acesso ao calendário — é uma permissão separada da de e-mail.
               </p>
             </div>
-            <button
-              onClick={handleConnect}
-              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
-            >
-              Conectar calendário
-            </button>
+            <Button variant="primary" onClick={handleConnect}>Conectar calendário</Button>
           </div>
         ) : (
           state.view === 'month' ? (
