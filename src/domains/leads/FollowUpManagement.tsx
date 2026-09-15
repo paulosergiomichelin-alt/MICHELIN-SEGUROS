@@ -192,7 +192,7 @@ export const FollowUpManagement: React.FC<FollowUpManagementProps> = ({ leadId, 
               <button 
                 disabled={saving}
                 onClick={handleCreateManual}
-                className="w-full py-2 bg-gold-deep text-brand-dark rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gold-deep/80 transition-all flex items-center justify-center gap-2"
+                className="w-full py-2 bg-[#1B4D8F] text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#153E73] transition-all flex items-center justify-center gap-2"
               >
                 {saving ? 'Agendando...' : 'Agendar Follow-up'}
               </button>

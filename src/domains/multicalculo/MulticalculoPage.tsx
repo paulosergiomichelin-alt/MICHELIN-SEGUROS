@@ -263,9 +263,14 @@ export const MulticalculoPage: React.FC = () => {
                 <input className={inputCls} value={anoFabricacao} onChange={(e) => setAnoFabricacao(e.target.value)} placeholder="2023" />
               </Field>
               <Field label="Ano Modelo">
-                <div className="flex gap-2">
-                  <input className={inputCls} value={anoModelo} onChange={(e) => setAnoModelo(e.target.value)} placeholder="2023" />
-                  <button type="button" onClick={buscarVeiculos} disabled={buscandoVeiculo} className="px-3 bg-gold-deep text-brand-dark rounded-lg shrink-0">
+                <div className="flex rounded-lg border border-slate-200 overflow-hidden focus-within:border-gold-deep/60 focus-within:ring-2 focus-within:ring-gold-deep/15 transition-all">
+                  <input
+                    className="w-full px-3 py-2 bg-white text-slate-800 text-[12px] font-medium outline-none placeholder:text-slate-300"
+                    value={anoModelo}
+                    onChange={(e) => setAnoModelo(e.target.value)}
+                    placeholder="2023"
+                  />
+                  <button type="button" onClick={buscarVeiculos} disabled={buscandoVeiculo} className="px-3 bg-slate-50 border-l border-slate-200 text-slate-500 hover:text-gold-deep transition-colors shrink-0">
                     {buscandoVeiculo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                   </button>
                 </div>
@@ -546,7 +551,7 @@ export const MulticalculoPage: React.FC = () => {
             type="button"
             onClick={cotar}
             disabled={cotando || !veiculoSelecionado}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-gold-deep text-brand-dark rounded-xl font-black uppercase tracking-widest text-[10px] disabled:opacity-40 shadow-lg shadow-gold-deep/20"
+            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-[#1B4D8F] text-white rounded-xl font-black uppercase tracking-widest text-[10px] disabled:opacity-40 shadow-lg shadow-[#1B4D8F]/20"
           >
             <Search className="w-3.5 h-3.5" /> {cotando ? 'Calculando...' : 'Calcular cotações'}
           </button>

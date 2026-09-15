@@ -103,7 +103,7 @@ export const LeadDetailsSidebar = React.memo(({
                  const url = buildAggerQuoteUrl(selectedLeadForChat);
                  window.open(url, '_blank', 'noopener,noreferrer');
                }}
-               className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gold-deep text-brand-dark font-black text-[11px] uppercase tracking-[0.18em] hover:bg-gold-light transition-colors shadow-lg shadow-gold-deep/20"
+               className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#1B4D8F] text-white font-black text-[11px] uppercase tracking-[0.18em] hover:bg-[#153E73] transition-colors shadow-lg shadow-[#1B4D8F]/20"
              >
                <ExternalLink className="w-4 h-4" />
                Cotar no Agger

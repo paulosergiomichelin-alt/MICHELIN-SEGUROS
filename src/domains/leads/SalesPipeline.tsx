@@ -385,7 +385,7 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
             </button>
             <button
               onClick={() => navigate('/leads/new')}
-              className="flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-1.5 rounded-lg bg-gold-deep text-brand-dark hover:bg-gold-deep/90 transition-all font-black text-[9px] uppercase tracking-widest shadow-[0_0_15px_rgba(207,167,100,0.1)]"
+              className="flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-1.5 rounded-lg bg-[#1B4D8F] text-white hover:bg-[#153E73] transition-all font-black text-[9px] uppercase tracking-widest shadow-[0_0_15px_rgba(27,77,143,0.15)]"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span className="hidden md:inline">Lead</span>

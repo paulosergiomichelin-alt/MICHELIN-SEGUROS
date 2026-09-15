@@ -148,7 +148,7 @@ export const LeadsView = React.memo(({
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setShowAddLead(true)}
-              className="flex-1 sm:flex-none px-4 py-1 bg-gold-deep text-brand-dark rounded-lg font-black text-[9.5px] hover:bg-gold-light transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-gold-deep/10"
+              className="flex-1 sm:flex-none px-4 py-1 bg-[#1B4D8F] text-white rounded-lg font-black text-[9.5px] hover:bg-[#153E73] transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-[#1B4D8F]/20"
             >
               Novo Lead
               <PlusCircle className="w-3 h-3" />

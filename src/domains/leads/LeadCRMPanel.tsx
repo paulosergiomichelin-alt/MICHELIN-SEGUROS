@@ -703,7 +703,7 @@ export const LeadCRMPanel = React.memo(({
 
         {/* ── Ações ── */}
         <section className="pt-2 space-y-2.5">
-          <button className="w-full px-3 py-3.5 bg-gold-deep text-brand-dark rounded-xl text-[9px] font-black uppercase tracking-[0.15em] shadow-lg shadow-gold-deep/20 hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2.5">
+          <button className="w-full px-3 py-3.5 bg-[#1B4D8F] text-white rounded-xl text-[9px] font-black uppercase tracking-[0.15em] shadow-lg shadow-[#1B4D8F]/20 hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2.5">
             <Bot className="w-3.5 h-3.5" /> Cotar Michelin IA
           </button>
         </section>
