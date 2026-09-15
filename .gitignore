@@ -6,3 +6,4 @@ node_modules
 .claude/worktrees/
 skills-lock.json
 .env*
+.superpowers/
