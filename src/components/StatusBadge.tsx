@@ -15,7 +15,7 @@ import { cn } from '../lib/utils';
 
 export const StatusBadge = ({ status }: { status: LeadStatus }) => {
   const styles: Record<string, string> = {
-    'Novo Lead': 'bg-white/5 text-white/60 border-white/10',
+    'Novo Lead': 'bg-slate-400/10 text-slate-500 border-slate-400/20',
     'Em Atendimento': 'bg-blue-500/10 text-blue-400 border-blue-500/20',
     'Aguardando Documento': 'bg-orange-500/10 text-orange-400 border-orange-500/20',
     'Em Cotação': 'bg-gold-deep/10 text-gold-deep border-gold-deep/20',

@@ -45,7 +45,7 @@ export const SeguradoraBadge: React.FC<SeguradoraBadgeProps> = ({
         </div>
       )}
       {showName && (
-        <span className={cn('font-semibold text-white/80 truncate', textSize)}>{nome}</span>
+        <span className={cn('font-semibold text-[var(--text-primary)] opacity-80 truncate', textSize)}>{nome}</span>
       )}
     </div>
   );

@@ -120,6 +120,37 @@
     color: var(--text-primary) !important;
   }
 
+  /* text-white/NN (opacidade) — o override acima só cobre text-white puro (100%).
+     Componentes escritos para fundo escuro usam muito texto branco translúcido
+     (text-white/40, /60 etc.); sem isso, esse texto fica ilegível sempre que o
+     fundo ao redor é convertido para claro pelos overrides de background acima. */
+  .light .text-white\/5  { color: color-mix(in srgb, var(--text-primary) 5%,  transparent) !important; }
+  .light .text-white\/10 { color: color-mix(in srgb, var(--text-primary) 10%, transparent) !important; }
+  .light .text-white\/15 { color: color-mix(in srgb, var(--text-primary) 15%, transparent) !important; }
+  .light .text-white\/20 { color: color-mix(in srgb, var(--text-primary) 20%, transparent) !important; }
+  .light .text-white\/25 { color: color-mix(in srgb, var(--text-primary) 25%, transparent) !important; }
+  .light .text-white\/30 { color: color-mix(in srgb, var(--text-primary) 30%, transparent) !important; }
+  .light .text-white\/35 { color: color-mix(in srgb, var(--text-primary) 35%, transparent) !important; }
+  .light .text-white\/40 { color: color-mix(in srgb, var(--text-primary) 40%, transparent) !important; }
+  .light .text-white\/45 { color: color-mix(in srgb, var(--text-primary) 45%, transparent) !important; }
+  .light .text-white\/50 { color: color-mix(in srgb, var(--text-primary) 50%, transparent) !important; }
+  .light .text-white\/55 { color: color-mix(in srgb, var(--text-primary) 55%, transparent) !important; }
+  .light .text-white\/60 { color: color-mix(in srgb, var(--text-primary) 60%, transparent) !important; }
+  .light .text-white\/65 { color: color-mix(in srgb, var(--text-primary) 65%, transparent) !important; }
+  .light .text-white\/70 { color: color-mix(in srgb, var(--text-primary) 70%, transparent) !important; }
+  .light .text-white\/75 { color: color-mix(in srgb, var(--text-primary) 75%, transparent) !important; }
+  .light .text-white\/80 { color: color-mix(in srgb, var(--text-primary) 80%, transparent) !important; }
+  .light .text-white\/85 { color: color-mix(in srgb, var(--text-primary) 85%, transparent) !important; }
+  .light .text-white\/90 { color: color-mix(in srgb, var(--text-primary) 90%, transparent) !important; }
+  .light .text-white\/95 { color: color-mix(in srgb, var(--text-primary) 95%, transparent) !important; }
+
+  /* mesma lacuna para placeholder de texto claro sobre fundo agora claro */
+  .light .placeholder-white\/20::placeholder,
+  .light .placeholder-white\/30::placeholder,
+  .light .placeholder-white\/40::placeholder {
+    color: var(--text-muted) !important;
+  }
+
   /* === FASE 3: cobertura completa de classes hardcoded ============= */
 
   /* --- Backgrounds dark → surface tokens ----------------------- */
