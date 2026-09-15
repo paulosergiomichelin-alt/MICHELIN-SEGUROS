@@ -9,7 +9,7 @@
 - Já existe uma lista estática de seguradoras com id, cor e logo em `src/lib/seguradoras.ts` — inclui `{ id: 'tokio', nome: 'Tokio Marine', cor: '#003087', logo: ... }`. Essa spec reaproveita o id `'tokio'` como identificador do provider, para ficar consistente com o resto do sistema (ex.: usado em `ApoliceForm.tsx`'s dropdown de seguradora).
 - O formulário de Lead (`LeadForm.tsx`) já tem uma seção "Veículo e Seguro" com Placa/Chassi/Ano/Valor e uma seção "Perfil de Uso" com boa parte dos dados de perfil de condução (uso comercial, condutor jovem, proprietário é condutor, alienação fiduciária) — esses dados já existem no `Lead` e podem alimentar o formulário de multicálculo quando a cotação partir de um lead existente.
 - O tipo `Lead` (`src/types.ts`) não tem nenhum campo equivalente a `IdVeiculo`, `ClasseBonus`, `CodigoCobertura`, `RegiaoCirculacao` ou qualquer outro campo específico da Tokio Marine — esses são conceitos novos, exclusivos da cotação, que não pertencem ao modelo de dados do Lead.
-- **Lacuna de documentação conhecida:** a doc fornecida pelo usuário para o serviço REST `/modelos` (busca de veículo, que resolve o `IdVeiculo` obrigatório para cotar) tem a seção de **resposta** claramente trocada com a de outro endpoint ("Coberturas Adicionais") — os parâmetros de entrada fazem sentido, mas o formato de saída documentado é o errado. Da mesma forma, vários outros serviços REST de "Consultas" mencionados na doc (Valor Mercado, Bancos, Franquia, Região Circulação, Coberturas Adicionais em si, etc.) foram citados só pelo nome, sem contrato de entrada/saída. Essa spec assume formatos razoáveis onde necessário e isola essas incertezas atrás de uma interface só (ver §4.4 e §8).
+- **Lacuna de documentação identificada e depois resolvida:** a primeira versão da doc fornecida pelo usuário para o serviço REST `/modelos` tinha a seção de **resposta** trocada com a de outro endpoint ("Coberturas Adicionais"). O usuário forneceu depois o contrato completo e correto de ambos os serviços (ver §5 — "Resolvido em 2026-09-15"), então essa confusão já está sanada.
 - **Domínios confirmados pelo usuário apesar do formato divergente:** parte do material colado vem num bloco de formato conversacional ("Olá! Fico feliz em ajudar você..."), estruturalmente diferente das tabelas de doc oficial que vêm antes. O usuário confirmou que a informação é confiável — essa spec trata `TipoSeguro` (1/6/7), `TipoAssistencia` (N/C/V), `IsencaoFiscal` (3 códigos) e as regras associadas (ex.: `TipoVeiculo` Táxi × `IsencaoFiscal`) como **confirmados**, utilizáveis como `<select>` desde já.
 
 ## 1. Escopo desta fase
@@ -42,7 +42,11 @@ A doc da Tokio Marine já traz o XML exato de request/response de cada operaçã
 export interface CotacaoInput {
   segurado: { nome: string; cpfCnpj: string; tipoPessoa: 'fisica' | 'juridica'; telefone?: string; email?: string };
   veiculo: { idVeiculoTokio?: number /* opcional no tipo genérico — cada provider decide o que exige; o mapper da Tokio Marine rejeita com erro claro se faltar, ver ADR-4 */; anoModelo: number; zeroKm: boolean; valorVeiculo: number; cep: string; placa?: string; chassi?: string };
-  cobertura: { classeBonus?: number; tipoSeguro: '1' | '6' | '7'; tipoAssistencia: 'N' | 'C' | 'V'; regiaoCirculacao?: string; principalCondutor?: string };
+  cobertura: {
+    classeBonus?: number; tipoSeguro: '1' | '6' | '7'; tipoAssistencia: 'N' | 'C' | 'V';
+    codigoCobertura?: string; tipoModalidade?: string; codigoFranquia?: string; // domínio pendente, ver §5 — texto livre por enquanto
+    codigoFranquiaIndenizacaoIntegral?: string; principalCondutor?: string; garagemPrincipalCondutor?: string; coberturaPessoasResidentes1825Anos?: string; // domínio confirmado, ver ADR-5
+  }; // regiaoCirculacao NÃO entra aqui — confirmado exclusivo Caminhão/Utilitário, ver ADR-9
   vigencia: { inicio: string; fim: string };
 }
 
@@ -93,8 +97,8 @@ Cada seguradora futura ganha sua própria subpasta (`_api/insurers/allianz/`, et
 **ADR-4 — Busca de veículo (`IdVeiculo`) é uma chamada separada do usuário, não automática dentro do `cotar`.**
 A doc deixa claro que o `cotar` espera `IdVeiculo` já resolvido (campo antigo `CodigoVeiculo` está descontinuado). Não existe forma de mandar "marca + modelo + ano" em texto livre direto pro cálculo. Por isso a tela de multicálculo precisa de um passo de busca (`GET /api/insurers/veiculos?anoModelo=...&descricao=...`) que chama `/modelos` da Tokio Marine e deixa o usuário escolher o veículo certo antes de cotar — igual a um autocomplete.
 
-**ADR-5 — Formato de resposta de `/modelos` é assumido, não confirmado (ver Contexto §0).**
-`restClient.ts` isola essa chamada atrás de uma função só (`buscarVeiculos(params)`), com o parsing da resposta claramente comentado como "formato assumido, confirmar com doc real ou teste em Aceite". Assim, quando a doc certa (ou o teste real contra o Aceite) confirmar o formato, o ajuste fica isolado num único arquivo, sem vazar pro resto do sistema.
+**ADR-5 — Formato de resposta de `/modelos` confirmado (atualizado 2026-09-15).**
+Contrato completo: entrada `{ codigoCorretor, codigoUsuario, codigoOperadora, codigoProduto, anoModelo, codigoFIPE?, tipoCombustivel?, inicioVigencia? }` (só um filtro de busca por vez, conforme a introdução do serviço); saída `{ veiculos: [{ idVeiculo, codigoProduto, nomeProduto, codigoFipe, codigoMolicar, categoria, codigoFabricante, descricaoFabricante, codigoModelo, descricaoModelo, lotacao, lotacaoMaxima, tipoCombustivel }], erros: { mensagens } }`. `idVeiculo` é o campo que resolve `IdVeiculo` no `cotar`. `restClient.ts` ainda isola essa chamada atrás de uma função só (`buscarVeiculos(params)`), mas agora com o formato real, não mais um placeholder.
 
 **ADR-6 — Credenciais via env vars no Railway, nunca no navegador.**
 ```
@@ -130,11 +134,18 @@ export const cotacoes = pgTable('cotacoes', {
 ```
 `leadId` **já nasce com `onDelete: 'cascade'`** — essa mesma sessão encontrou dois bugs em produção (`lead_pessoa_juridica` e `campaign_log`) causados exatamente por FKs pra `leads.id` sem essa configuração, quebrando a exclusão de lead com erro 500. Não repetir o erro aqui.
 
+**ADR-9 — Campos/serviços confirmados como fora do produto Automóvel Pessoa Física não entram no formulário do MVP (atualizado 2026-09-15).**
+A doc trazida pelo usuário em 2026-09-15 confirma, com o texto exato de cada serviço, que os seguintes são exclusivos de outro produto ou tipo de pessoa — não fazem parte do formulário de `/multicalculo` nesta fase:
+- **Exclusivo Caminhão / Reboque / Utilitário Carga** (não Automóvel passeio): `Carroceria`/`TipoCarroceria` (`/tipoCarroceria`, "Serviço exclusivo para Caminhão"), `CabineSuplementar` (`/cabineSuplementar`, "exclusivo para Caminhão/Reboque e Semi-reboque"), `RegiaoCirculacao` (`/regiaoCirculacao`, "exclusivo para Caminhão/Utilitário Carga"). `CargasTransportadas` não teve contrato fornecido ainda, mas segue o mesmo padrão de nome/contexto — tratado como mesmo grupo até confirmação.
+- **Exclusivo Pessoa Jurídica** (só entram se a cotação for pra um lead PJ, fora do caminho principal do MVP): `RamoAtividade` (`/ramoAtividade`), `Administradores` (`/tipoAdministradores`), `Empresas`/`EmpresaParceira` (`/tipoEmpresa`), `PatrimonioLiquido` (`/valorPatrimonioLiquido`), `ReceitaBrutaAnual` (`/valorReceitaBrutaAnual`).
+- **Campos com serviço de consulta marcado "DESCONTINUADO" na própria doc** (confirma o que já vínhamos assumindo pelo nome do campo no `cotar`): `GaragemForaServico` (`/garagemQuandoForaServico`), `PrincipalCondutorResideEm` (`/principalCondutorResideEm`).
+- **Fora do escopo desta fase por não fazerem parte do fluxo de cotação em si** (são de pagamento/efetivação/outros produtos, não aparecem no payload do `cotar`): `Bancos`, `País`, `Vencimento 1ª Parcela`, `Escolaridade`, `Bandeiras Cartão`, `Profissões`, `Tipo Envio Apólice`, `Titular Cartão`, `Titular Conta`, `Renda Mensal`, `Grupo Segurado` ("exclusivo para operações previamente acordadas com a Tokio Marine" — não se aplica por padrão).
+
 ## 4. Fluxo da tela `/multicalculo`
 
 1. Usuário abre `/multicalculo`. Pode opcionalmente escolher um Lead existente (autocomplete) para pré-carregar nome/CPF/telefone/e-mail/placa/ano do veículo — ou preencher tudo do zero.
 2. Campo de veículo: usuário digita a descrição (marca/modelo) ou informa código FIPE/Molicar se souber; sistema chama `GET /api/insurers/veiculos` e mostra os resultados pra escolher — resolve o `idVeiculoTokio`.
-3. Formulário com os campos mínimos exigidos (ano, zero km, valor, CEP, classe bônus, tipo de seguro, assistência, vigência) — `TipoSeguro`, `TipoAssistencia` e `IsencaoFiscal` já entram como `<select>` (domínios confirmados, ver §0); os demais campos sem domínio confirmado (Franquia, Região Circulação, etc.) entram como texto livre nesta fase, viram dropdown assim que o contrato for confirmado.
+3. Formulário com os campos mínimos exigidos (ano, zero km, valor, CEP, classe bônus, tipo de seguro, assistência, vigência) — `TipoSeguro`, `TipoAssistencia`, `IsencaoFiscal`, `FranquiaIndenizacaoIntegral`, `PrincipalCondutor`, `GaragemPrincipalCondutor` e `CoberturaPessoasResidentes1825Anos` já entram como `<select>` (domínios confirmados, ver §0/ADR-5/ADR-9); os campos ainda sem domínio confirmado (`CodigoCobertura`, `TipoModalidade`, `CodigoFranquia` parcial, `CoberturaPessoas1825Anos` sem "Resid") entram como texto livre nesta fase, viram dropdown assim que o contrato for confirmado (ver §5).
 4. Botão "Cotar" → `POST /api/insurers/cotar` com o `CotacaoInput` → aguarda `CotacaoResultado[]` (hoje: 1 item) → mostra card(s) com modalidade, prêmio líquido, coberturas e parcelas — usando a cor/logo de `src/lib/seguradoras.ts` pra identidade visual de cada seguradora.
 5. Cada resultado (sucesso ou erro) é salvo em `cotacoes` (ADR-8), vinculado ao lead se a cotação partiu de um lead existente.
 6. Botão "Ver PDF" por resultado → `GET /api/insurers/cotacao/:numeroCalculo/pdf?providerId=tokio` → abre o PDF (base64 decodificado) numa nova aba, reusando o `PDFViewer`/`UniversalDocumentViewer` que o projeto já tem.
@@ -142,21 +153,14 @@ export const cotacoes = pgTable('cotacoes', {
 
 ## 5. O que fica pendente de confirmação (não bloqueia o início da implementação)
 
-Levantamento revisado campo a campo do payload de `cotar` (auditoria de 2026-09-15, ver histórico do doc) — lista completa a solicitar à Tokio Marine:
+**Resolvido em 2026-09-15** (usuário forneceu o contrato completo): `/modelos` (resposta), `/coberturasAdicionais` (entrada), `/valorMercado`, `/franquiaIndenizacaoIntegral`, `/principalCondutor`, `/principalCondutorGaragem`, `/coberturaResidentes1825Anos`, `/codigoProduto` (mecanismo pra obter o valor — chamar sem filtro e localizar "Automóvel" na lista retornada). Confirmado também que `/tipoCarroceria`, `/cabineSuplementar` e `/regiaoCirculacao` são exclusivos de Caminhão/Utilitário e não entram no formulário de Automóvel (ver ADR-9).
 
-**Bloqueiam montar um request de cotação válido:**
-- Formato real de resposta de `/modelos` (ADR-5) — a única saída documentada até agora pertence a outro endpoint.
-- Contrato de **entrada** do endpoint real "Coberturas Adicionais" — hoje só temos a **saída** dele (veio colada por engano junto da doc de "Modelos").
-- Valor numérico de `CodigoProduto` para Automóvel — nenhum material fornecido traz o valor, só o nome do lookup.
-- Domínio de `CodigoCobertura` ("tipo de cobertura para contratação": Compreensiva, Incêndio+Roubo, RCF isolado etc.) — nenhum serviço de consulta identificado para esse campo em toda a doc fornecida.
-- Domínio de `TipoModalidade` — mesma situação: campo essencial, nenhum lookup identificado.
-- Domínio de `CodigoFranquia` (franquia de indenização **parcial** — diferente de `CodigoFranquiaIndenizacaoIntegral`, que tem lookup próprio) — não identificado.
-
-**Endpoints citados só pelo nome no menu, sem contrato de entrada/saída** (falta pedir os dois lados de cada um): Valor Mercado, Franquia Indenização Integral, Cabine Suplementar, Principal Condutor, Cobertura 18 a 25 Anos, Cobertura Resid 18 a 25 Anos, Garagem Condutor, Região Circulação, Carroceria.
-
-**Gap dentro de um endpoint já documentado:** "Tipo Veículo v2" (`consultarTipoVeiculo2`) exige `codigoCategoria` na entrada, mas não há documentação de quais valores esse campo aceita.
-
-**Pergunta de escopo (não é bem um endpoint faltando):** boa parte dos ~60 campos do bloco `Item` do `cotar` (equipamentos hidráulicos, cargas transportadas, cabine suplementar, carroceria) parecem ser específicos de caminhão/utilitário, não de carro de passeio — o payload provavelmente é compartilhado entre vários produtos (Auto, Caminhão, Utilitário Carga). Vale confirmar direto com a Tokio Marine: **quais campos do bloco `Item` são de fato obrigatórios/aplicáveis para o produto Automóvel (carro de passeio)?** Isso pode reduzir bastante o formulário real necessário.
+**Ainda pendente — sem nenhum serviço de consulta identificado em toda a doc fornecida até agora:**
+- Domínio de `CodigoCobertura` ("tipo de cobertura para contratação": Compreensiva, Incêndio+Roubo, RCF isolado etc.) — campo essencial pra cotar, nenhum lookup encontrado.
+- Domínio de `TipoModalidade` — mesma situação, campo essencial sem lookup.
+- Domínio de `CodigoFranquia` (franquia de indenização **parcial** — diferente de `CodigoFranquiaIndenizacaoIntegral`, que já tem lookup confirmado).
+- Domínio de `CoberturaPessoas1825Anos` (a versão **sem** "Resid" do campo — só a variante "Residentes" foi documentada, ver `/coberturaResidentes1825Anos`; a versão simples ficou de fora desta última leva de doc).
+- Quais valores `codigoCategoria` aceita na entrada do serviço SOAP "Tipo Veículo v2" (`consultarTipoVeiculo2`) — endpoint já documentado, mas esse parâmetro específico não.
 
 Nesta fase, todo campo sem domínio confirmado entra como texto livre no formulário (o usuário digita o código, se souber) em vez de `<select>`; vira dropdown assim que o contrato for confirmado.
 
@@ -172,7 +176,7 @@ Nesta fase, todo campo sem domínio confirmado entra como texto livre no formul�
 2. Tabela `cotacoes` (ADR-8) + `db:push` em produção + registro em `entityMap.ts`/`DataService`.
 3. `tokioMarine/config.ts` + `soapClient.ts` genérico + teste unitário do parser contra os exemplos de XML da doc.
 4. `tokioMarine/mapper.ts` (`cotar`) + `provider.ts` + teste unitário do mapper.
-5. `tokioMarine/restClient.ts` (`/modelos`, `/cpfEmissor`) com o disclaimer do ADR-5.
+5. `tokioMarine/restClient.ts` (`/modelos`, `/cpfEmissor`, `/coberturasAdicionais`, `/franquiaIndenizacaoIntegral`, `/principalCondutor`, `/principalCondutorGaragem`, `/coberturaResidentes1825Anos`, `/codigoProduto` — todos com contrato confirmado, ADR-5/ADR-9).
 6. `_api/insurers/router.ts` (`POST /cotar` — já salvando em `cotacoes`, `GET /veiculos`, `GET /cotacao/:numeroCalculo/pdf`) + registro em `server.ts`.
 7. Tela `/multicalculo` (frontend): formulário + busca de veículo + card de resultado + visualizador de PDF.
 8. Teste manual ponta a ponta contra o Aceite com credenciais reais do usuário.
