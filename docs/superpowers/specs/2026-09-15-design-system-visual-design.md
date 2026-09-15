@@ -83,6 +83,12 @@ Como já vale hoje: no tema dark essas variáveis coincidem com as variáveis gl
 
 **Item ativo do menu** (variação "A" aprovada visualmente): fundo `rgba(255,255,255,0.04)`, barra de 3px em `--color-accent` encostada na borda esquerda com `border-radius: 0 3px 3px 0`, texto do item em `--color-accent`. Itens inativos: texto em `--text-muted`, sem fundo. Nenhum uso de `--color-primary` (azul) dentro da sidebar — o azul é reservado à área de conteúdo.
 
+## WhatsApp deixa de ser uma zona protegida
+
+Diferente da sidebar, o WhatsApp (`ChatView.tsx` — "WhatsApp IA" — e `WhatsAppInboxPage.tsx` — "WA Pessoal") **não é mais uma exceção sempre-escura**. Decisão validada com o usuário: ele quer o sistema inteiro padronizado, sem telas que fogem do tema ativo. A zona protegida `.whatsapp-shell` em `index.css` (que hoje reforça cores fixas do WhatsApp em qualquer tema) é removida no Sub-projeto 2, e essas duas telas passam a responder ao tema claro/escuro como qualquer outra.
+
+O verde característico do WhatsApp é mantido, mas só onde já carrega significado (bolhas de mensagem do contato vs. do usuário, indicador de status online, ícone de "mensagem enviada/lida") — não mais como cor de fundo geral da tela. Fora das bolhas, `/chat` e `/whatsapp` passam a usar exatamente os mesmos tokens de fundo/texto/borda do resto do sistema (`--bg-primary/secondary/elevated`, `--text-primary/muted`, `--border-*`), então no tema light ficam com fundo claro como todas as outras telas, e no tema dark ficam escuras como todas as outras — nunca hardcoded.
+
 ## Tipografia
 
 Fonte única em todo o sistema: **Sora** (Google Fonts, pesos 400/600/700/800), substituindo a combinação atual Montserrat + Cinzel. Cinzel sai completamente — inclusive do nome da marca na sidebar, que passa a usar Sora 800 como as demais telas, mantendo apenas a cor dourada (`--color-accent`) na palavra "SEGUROS" como toque de identidade.
@@ -144,6 +150,7 @@ Cada componente exporta seus tipos de props e é usado como `import { Button, Ca
 
 - Migrar as 41 telas existentes para os novos componentes — **Sub-projeto 2**.
 - Remover os overrides `!important` de `index.css` — acontece tela por tela, conforme migrada, no Sub-projeto 2.
+- Remover a zona protegida `.whatsapp-shell` e migrar `ChatView.tsx`/`WhatsAppInboxPage.tsx` para os tokens de tema padrão, mantendo o verde só nos elementos com significado (bolhas, status online) — **Sub-projeto 2** (ver seção "WhatsApp deixa de ser uma zona protegida" acima).
 - Converter os 8 modais (`EventEditorModal`, `EmitirNfseModal`, `QRCodeModal`, `SystemDocumentationModal`, `DashboardDetailModal`, `UserProfileModal`, e os usos de `Modal.tsx` genérico) em rotas dedicadas — **Sub-projeto 3**.
 - Revisão do fluxo de light/dark toggle em si (já implementado, fora de escopo).
 
