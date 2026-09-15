@@ -354,6 +354,12 @@ async function startServer() {
   app.all('/api/calendar/events/:id', calendarEventsHandler);
   log.info('Calendar Module routes registradas');
 
+  // ── CNPJ lookup (BrasilAPI) ───────────────────────────────────────────────────
+  const { requireAuth: requireAuthForCnpj } = await import('./_api/lib/authMiddleware.js');
+  const { default: cnpjLookupHandler } = await import('./_api/cnpj/lookup.js');
+  app.get('/api/cnpj/:cnpj', requireAuthForCnpj, cnpjLookupHandler);
+  log.info('Rota de busca de CNPJ registrada');
+
   if (process.env.NODE_ENV === 'production' && process.env.SERVE_STATIC !== 'false') {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
