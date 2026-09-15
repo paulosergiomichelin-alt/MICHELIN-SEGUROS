@@ -79,63 +79,63 @@ export function DanfsePreview({ nfse, empresa, onClose }: DanfsePreviewProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#050505]">
+    <div className="flex flex-col h-full bg-slate-50">
       {/* Toolbar */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06] bg-[#0E0F11] shrink-0">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-200 bg-white shrink-0">
         <div className="flex items-center gap-2 flex-1">
-          <div className="w-7 h-7 rounded-lg bg-[#D4A854]/[0.08] border border-[#D4A854]/15 flex items-center justify-center">
-            <FileText className="w-3.5 h-3.5 text-[#D4A854]" />
+          <div className="w-7 h-7 rounded-lg bg-gold-deep/10 border border-gold-deep/25 flex items-center justify-center">
+            <FileText className="w-3.5 h-3.5 text-gold-deep" />
           </div>
           <div>
-            <p className="text-[12px] font-black text-white">
+            <p className="text-[12px] font-black text-slate-900">
               NFS-e {nfse.numeroNota ?? 'Rascunho'}
             </p>
-            <p className="text-[10px] text-[#8E8E93]/50">{nfse.clienteNome} · {formatCurrency(nfse.valorServico)}</p>
+            <p className="text-[10px] text-slate-500">{nfse.clienteNome} · {formatCurrency(nfse.valorServico)}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5">
           <button onClick={handleDownload} title="Download PDF"
-            className="h-8 px-3 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[10px] font-semibold text-[#8E8E93]/80 hover:border-[#D4A854]/30 hover:text-[#D4A854] transition-all flex items-center gap-1.5">
+            className="h-8 px-3 rounded-lg border border-slate-200 bg-white text-[10px] font-semibold text-slate-600 hover:border-gold-deep/40 hover:text-gold-deep transition-all flex items-center gap-1.5">
             <Download className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Download</span>
           </button>
           <button onClick={handlePrint} title="Imprimir"
-            className="h-8 px-3 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[10px] font-semibold text-[#8E8E93]/80 hover:border-blue-400/30 hover:text-blue-400 transition-all flex items-center gap-1.5">
+            className="h-8 px-3 rounded-lg border border-slate-200 bg-white text-[10px] font-semibold text-slate-600 hover:border-[#1B4D8F]/40 hover:text-[#1B4D8F] transition-all flex items-center gap-1.5">
             <Printer className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Imprimir</span>
           </button>
           <button onClick={handleWhatsApp} title="Compartilhar via WhatsApp"
-            className="h-8 px-3 rounded-lg border border-green-500/20 bg-green-500/[0.04] text-[10px] font-semibold text-green-400/70 hover:border-green-500/40 hover:text-green-400 transition-all flex items-center gap-1.5">
+            className="h-8 px-3 rounded-lg border border-[#1F8A4C]/20 bg-[#E4F5EA] text-[10px] font-semibold text-[#1F8A4C] hover:border-[#1F8A4C]/40 transition-all flex items-center gap-1.5">
             <MessageCircle className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">WhatsApp</span>
           </button>
           <button onClick={handleEmail} title="Enviar por e-mail"
-            className="h-8 px-3 rounded-lg border border-blue-500/20 bg-blue-500/[0.04] text-[10px] font-semibold text-blue-400/70 hover:border-blue-500/40 hover:text-blue-400 transition-all flex items-center gap-1.5">
+            className="h-8 px-3 rounded-lg border border-[#1B4D8F]/20 bg-[#EAF1F9] text-[10px] font-semibold text-[#1B4D8F] hover:border-[#1B4D8F]/40 transition-all flex items-center gap-1.5">
             <Mail className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">E-mail</span>
           </button>
           {onClose && (
             <button onClick={onClose}
-              className="h-8 w-8 rounded-lg border border-white/[0.08] bg-white/[0.03] flex items-center justify-center text-[#8E8E93]/60 hover:text-white hover:bg-white/[0.06] transition-all">
+              className="h-8 w-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-all">
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
       </div>
 
-      {/* Preview */}
-      <div className="flex-1 overflow-hidden bg-[#111]">
+      {/* Preview — conteúdo do documento (PDF) permanece inalterado */}
+      <div className="flex-1 overflow-hidden bg-slate-200">
         {loading && (
           <div className="flex flex-col items-center justify-center h-full gap-3">
-            <Loader2 className="w-6 h-6 text-[#D4A854] animate-spin" />
-            <p className="text-[12px] text-[#8E8E93]/60">Gerando DANF-Se...</p>
+            <Loader2 className="w-6 h-6 text-gold-deep animate-spin" />
+            <p className="text-[12px] text-slate-500">Gerando DANF-Se...</p>
           </div>
         )}
         {error && !loading && (
           <div className="flex flex-col items-center justify-center h-full gap-3">
-            <FileText className="w-8 h-8 text-red-400/40" />
-            <p className="text-[12px] text-red-400">{error}</p>
+            <FileText className="w-8 h-8 text-[#C0392B]/40" />
+            <p className="text-[12px] text-[#C0392B]">{error}</p>
           </div>
         )}
         {blobUrl && !loading && !error && (
