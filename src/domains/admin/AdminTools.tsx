@@ -14,6 +14,7 @@ import {
   Crown
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { Button } from '../../components/ui';
 import { auth } from '../../lib/firebase';
 import { DataService } from '../../services/DataService';
 import { CacheManager } from '../../services/CacheManager';
@@ -190,7 +191,7 @@ export function AdminTools() {
           </div>
         </div>
         <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-brand-dark/10 flex items-center justify-center text-brand-dark">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500">
             <Zap className="w-5 h-5" />
           </div>
           <div>
@@ -199,12 +200,12 @@ export function AdminTools() {
           </div>
         </div>
         <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+          <div className="w-10 h-10 rounded-xl bg-[#E4F5EA] flex items-center justify-center text-[#1F8A4C]">
             <CheckCircle2 className="w-5 h-5" />
           </div>
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">System Health</p>
-            <p className="text-xl font-black text-emerald-600">STABLE</p>
+            <p className="text-xl font-black text-[#1F8A4C]">STABLE</p>
           </div>
         </div>
         <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
@@ -222,7 +223,7 @@ export function AdminTools() {
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center gap-3 mb-2">
             <Wrench className="w-5 h-5 text-gold-deep" />
-            <h2 className="text-xs font-black text-brand-dark uppercase tracking-[0.2em]">Ferramentas Administrativas</h2>
+            <h2 className="text-xs font-black text-slate-800 uppercase tracking-[0.2em]">Ferramentas Administrativas</h2>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -251,14 +252,14 @@ export function AdminTools() {
           </div>
 
           {isExecuting && (
-            <div className="p-4 bg-brand-dark text-white rounded-2xl border border-white/5 space-y-3 animate-pulse">
+            <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-3 animate-pulse">
               <div className="flex items-center justify-between">
-                <span className="text-[9px] font-black uppercase tracking-widest italic">Ação em progresso...</span>
-                <span className="text-[10px] font-black">{Math.round(progress)}%</span>
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Ação em progresso...</span>
+                <span className="text-[10px] font-black text-slate-700">{Math.round(progress)}%</span>
               </div>
-              <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gold-deep transition-all duration-300"
+              <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#1B4D8F] transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -269,40 +270,40 @@ export function AdminTools() {
         <div className="space-y-4">
           <div className="flex items-center gap-3 mb-2">
             <Terminal className="w-5 h-5 text-gold-deep" />
-            <h2 className="text-xs font-black text-brand-dark uppercase tracking-[0.2em]">Console de Execução</h2>
+            <h2 className="text-xs font-black text-slate-800 uppercase tracking-[0.2em]">Console de Execução</h2>
           </div>
-          
-          <div className="bg-brand-black rounded-[2.5rem] border border-white/5 p-6 h-[400px] flex flex-col shadow-2xl">
+
+          <div className="bg-white rounded-[2.5rem] border border-slate-200 p-6 h-[400px] flex flex-col shadow-sm">
             <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
               {logs.length === 0 && (
-                <div className="h-full flex flex-col items-center justify-center text-slate-700">
-                  <Terminal className="w-12 h-12 mb-4 opacity-20" />
+                <div className="h-full flex flex-col items-center justify-center text-slate-300">
+                  <Terminal className="w-12 h-12 mb-4 opacity-40" />
                   <p className="text-[9px] font-black uppercase tracking-widest">Aguardando comandos...</p>
                 </div>
               )}
               {logs.map((log, i) => (
-                <div key={i} className="text-[10px] font-mono leading-relaxed border-l-2 pl-3 py-1 animate-in slide-in-from-left-2" 
-                  style={{ borderColor: log.type === 'error' ? '#ef4444' : log.type === 'success' ? '#10b981' : '#d4af37' }}>
-                  <span className="text-slate-600 mr-2">[{log.time}]</span>
+                <div key={i} className="text-[10px] font-mono leading-relaxed border-l-2 pl-3 py-1 animate-in slide-in-from-left-2"
+                  style={{ borderColor: log.type === 'error' ? '#C0392B' : log.type === 'success' ? '#1F8A4C' : '#C08A3E' }}>
+                  <span className="text-slate-400 mr-2">[{log.time}]</span>
                   <span className={cn(
-                    log.type === 'error' ? 'text-red-400' : 
-                    log.type === 'success' ? 'text-emerald-400' : 
-                    'text-gold-light'
+                    log.type === 'error' ? 'text-[#C0392B]' :
+                    log.type === 'success' ? 'text-[#1F8A4C]' :
+                    'text-slate-600'
                   )}>
                     {log.msg}
                   </span>
                 </div>
               ))}
             </div>
-            
-            <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+
+            <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-gold-deep animate-pulse" />
                 <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Sistema Ativo</span>
               </div>
-              <button 
+              <button
                 onClick={() => setLogs([])}
-                className="text-[8px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition-colors"
+                className="text-[8px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-800 transition-colors"
               >
                 Limpar Logs
               </button>
@@ -312,14 +313,14 @@ export function AdminTools() {
       </div>
 
       {/* Master Admin Activation */}
-      <div className="p-6 bg-brand-black border border-gold-deep/20 rounded-[2rem] flex items-center justify-between gap-6">
+      <div className="p-6 bg-white border border-slate-200 rounded-[2rem] shadow-sm flex items-center justify-between gap-6 flex-wrap">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-gold-deep/10 flex items-center justify-center text-gold-deep shrink-0">
             <Crown className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-black text-white uppercase tracking-widest">Modo Master (Superadmin)</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">
+            <p className="text-xs font-black text-slate-800 uppercase tracking-widest">Modo Master (Superadmin)</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">
               {masterDone
                 ? 'Ativado. Recarregue a página para aplicar os privilégios completos.'
                 : 'Define superadmin: true na sua conta, concedendo bypass total de todas as regras de segurança.'}
@@ -327,21 +328,18 @@ export function AdminTools() {
           </div>
         </div>
         {!masterDone && (
-          <button
+          <Button
+            variant={masterConfirm ? 'danger' : 'primary'}
             onClick={handleActivateMaster}
             disabled={masterLoading}
-            className={cn(
-              'shrink-0 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all',
-              masterConfirm
-                ? 'bg-red-600 text-white hover:bg-red-700 border border-red-500'
-                : 'bg-gold-deep text-brand-dark hover:bg-gold-light border border-gold-deep/50'
-            )}
+            loading={masterLoading}
+            className="shrink-0"
           >
-            {masterLoading ? 'Aguarde...' : masterConfirm ? 'Confirmar Ativação' : 'Ativar Modo Master'}
-          </button>
+            {masterConfirm ? 'Confirmar Ativação' : 'Ativar Modo Master'}
+          </Button>
         )}
         {masterDone && (
-          <div className="shrink-0 flex items-center gap-2 text-emerald-400">
+          <div className="shrink-0 flex items-center gap-2 text-[#1F8A4C]">
             <CheckCircle2 className="w-5 h-5" />
             <span className="text-[10px] font-black uppercase tracking-widest">Ativado</span>
           </div>

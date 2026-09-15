@@ -104,6 +104,7 @@ interface SystemUser {
 import { AccessProfile, Permissions, Theme, UserRole } from '../../types';
 import { AccessProfileManagement } from './AccessProfileManagement';
 import { maskPhone, maskEmail } from '../../lib/utils';
+import { Button } from '../../components/ui';
 
 export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permissions: parentPermissions }) => {
   const { userProfile: currentUser } = usePermissions();
@@ -139,9 +140,9 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
     const level = u.metrics?.performanceLevel || 'LOW';
     const rate = u.metrics?.conversionRate ?? 0;
     
-    if (level === 'HIGH' || rate >= 25) return { label: '🔥 Alta Performance', color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20', icon: Zap };
-    if (level === 'MEDIUM' || rate >= 10) return { label: '⚠ Média', color: 'bg-amber-500/10 text-amber-500 border-amber-500/20', icon: TrendingUp };
-    return { label: '❌ Baixa', color: 'bg-red-500/10 text-red-500 border-red-500/20', icon: AlertCircle };
+    if (level === 'HIGH' || rate >= 25) return { label: '🔥 Alta Performance', color: 'bg-[#E4F5EA] text-[#1F8A4C] border-[#1F8A4C]/20', icon: Zap };
+    if (level === 'MEDIUM' || rate >= 10) return { label: '⚠ Média', color: 'bg-[#FFF3DC] text-[#B8860B] border-[#B8860B]/20', icon: TrendingUp };
+    return { label: '❌ Baixa', color: 'bg-[#FDE4E4] text-[#C0392B] border-[#C0392B]/20', icon: AlertCircle };
   };
 
   const getUserOnlineStatus = (u: SystemUser) => {
@@ -160,10 +161,10 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ONLINE': return 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]';
-      case 'AWAY': return 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]';
-      case 'OFFLINE': return 'bg-slate-700';
-      default: return 'bg-slate-700';
+      case 'ONLINE': return 'bg-[#1F8A4C]';
+      case 'AWAY': return 'bg-[#B8860B]';
+      case 'OFFLINE': return 'bg-slate-300';
+      default: return 'bg-slate-300';
     }
   };
 
@@ -379,58 +380,59 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
   };
 
   return (
+    <div className="min-h-full bg-slate-50">
     <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-8">
       {/* SaaS Dashboard Top Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
-        <div className="bg-brand-dark p-6 rounded-[2rem] border border-white/5 shadow-xl relative overflow-hidden group">
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
             <Users className="w-12 h-12" />
           </div>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total de Colaboradores</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total de Colaboradores</p>
           <div className="flex items-baseline gap-2">
-            <h4 className="text-3xl font-black text-white">{stats.total}</h4>
-            <span className="text-[10px] text-emerald-500 font-bold">Ativos</span>
+            <h4 className="text-3xl font-black text-slate-800">{stats.total}</h4>
+            <span className="text-[10px] text-[#1F8A4C] font-bold">Ativos</span>
           </div>
         </div>
 
-        <div className="bg-brand-dark p-6 rounded-[2rem] border border-white/5 shadow-xl relative overflow-hidden group">
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-            <Activity className="w-12 h-12 text-emerald-500" />
+            <Activity className="w-12 h-12 text-[#1F8A4C]" />
           </div>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Operando Agora</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Operando Agora</p>
           <div className="flex items-baseline gap-2">
-            <h4 className="text-3xl font-black text-emerald-500">{stats.online}</h4>
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Online</span>
+            <h4 className="text-3xl font-black text-[#1F8A4C]">{stats.online}</h4>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Online</span>
           </div>
         </div>
 
-        <div className="bg-brand-dark p-6 rounded-[2rem] border border-white/5 shadow-xl relative overflow-hidden group">
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
             <Target className="w-12 h-12 text-gold-deep" />
           </div>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Conversão Média</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Conversão Média</p>
           <div className="flex items-baseline gap-2">
             <h4 className="text-3xl font-black text-gold-deep">{stats.avgConversion.toFixed(1)}%</h4>
-            <div className="flex items-center gap-1 text-[10px] text-emerald-500 font-bold">
+            <div className="flex items-center gap-1 text-[10px] text-[#1F8A4C] font-bold">
                <TrendingUp className="w-3 h-3" />
                <span>Benchmark</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-brand-dark p-6 rounded-[2rem] border border-gold-deep/20 shadow-xl relative overflow-hidden">
+        <div className="bg-white p-6 rounded-[2rem] border border-gold-deep/20 shadow-sm relative overflow-hidden">
           <p className="text-[10px] font-black text-gold-deep uppercase tracking-widest mb-3">Top Performers</p>
           <div className="space-y-2">
             {stats.topSellers.map((u, i) => (
               <div key={u.uid} className="flex items-center justify-between text-[10px]">
                 <div className="flex items-center gap-2">
-                  <span className="font-black text-gold-deep/40">#0{i+1}</span>
-                  <span className="font-bold text-slate-300 truncate w-24 uppercase">{u.name.split(' ')[0]}</span>
+                  <span className="font-black text-gold-deep/50">#0{i+1}</span>
+                  <span className="font-bold text-slate-600 truncate w-24 uppercase">{u.name.split(' ')[0]}</span>
                 </div>
-                <span className="font-black text-white">{u.metrics?.conversionRate || 0}%</span>
+                <span className="font-black text-slate-800">{u.metrics?.conversionRate || 0}%</span>
               </div>
             ))}
-            {stats.topSellers.length === 0 && <p className="text-[9px] text-slate-600 font-bold uppercase">Sem registros</p>}
+            {stats.topSellers.length === 0 && <p className="text-[9px] text-slate-400 font-bold uppercase">Sem registros</p>}
           </div>
         </div>
       </div>
@@ -443,24 +445,24 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
       )}
 
       <div className="space-y-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-brand-dark p-6 rounded-3xl border border-gold-deep/10 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
             <div className="relative w-full md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input 
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
                 type="text"
                 placeholder="Buscar colaboradores..."
                 value={search || ''}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-brand-black border border-white/5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold-deep/20 text-slate-100 font-medium"
+                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1B4D8F]/15 focus:border-[#1B4D8F]/60 text-slate-800 font-medium"
               />
             </div>
-            
+
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <select 
+              <select
                 value={filterProfile || 'all'}
                 onChange={(e) => setFilterProfile(e.target.value)}
-                className="flex-1 sm:flex-none bg-brand-black border border-white/5 rounded-xl px-3 py-2 text-[10px] font-black uppercase text-gold-deep outline-none"
+                className="flex-1 sm:flex-none bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px] font-black uppercase text-slate-600 outline-none focus:border-[#1B4D8F]/60"
               >
                 <option value="all">PERFIL: TODOS</option>
                 {profiles.map(p => (
@@ -468,32 +470,28 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                 ))}
               </select>
 
-              <select 
+              <select
                 value={filterStatus || 'all'}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="flex-1 sm:flex-none bg-brand-black border border-white/5 rounded-xl px-3 py-2 text-[10px] font-black uppercase text-gold-deep outline-none"
+                className="flex-1 sm:flex-none bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px] font-black uppercase text-slate-600 outline-none focus:border-[#1B4D8F]/60"
               >
                 <option value="all">STATUS: TODOS</option>
                 <option value="active">ATIVOS</option>
                 <option value="pending_setup">PENDENTES</option>
-                <option value="suspended text-red-500">SUSPENSOS</option>
+                <option value="suspended">SUSPENSOS</option>
               </select>
             </div>
           </div>
 
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="w-full lg:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-gold-deep text-brand-black rounded-xl font-black text-xs uppercase tracking-widest border border-gold-deep/20 hover:bg-gold-light transition-all shadow-xl shadow-gold-deep/10"
-          >
-            <UserPlus className="w-4 h-4" />
+          <Button variant="primary" icon={UserPlus} onClick={() => setShowAddModal(true)} className="w-full lg:w-auto">
             Novo Registro SaaS
-          </button>
+          </Button>
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-brand-dark rounded-3xl border border-white/5">
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-200 shadow-sm">
              <Loader2 className="w-8 h-8 animate-spin text-gold-deep mb-4" />
-             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold-deep/60">Carregando Inteligência de Equipe...</p>
+             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Carregando Inteligência de Equipe...</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -511,33 +509,33 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                     exit={{ opacity: 0, scale: 0.95 }}
                     key={u.uid}
                     className={cn(
-                      "bg-brand-dark rounded-[2.5rem] border transition-all relative overflow-hidden group shadow-xl",
-                      u.status === 'suspended' ? "border-red-500/20 grayscale" : "border-white/5 hover:border-gold-deep/30"
+                      "bg-white rounded-[2.5rem] border transition-all relative overflow-hidden group shadow-sm",
+                      u.status === 'suspended' ? "border-[#C0392B]/30 grayscale-[0.4]" : "border-slate-200 hover:border-gold-deep/30"
                     )}
                   >
                     {/* Header: Identity & Status */}
                     <div className="p-6 pb-4">
                       <div className="flex items-start justify-between">
                         <div className="relative">
-                          <div className="w-16 h-16 bg-brand-black rounded-2xl flex items-center justify-center border border-white/5 group-hover:bg-brand-dark transition-colors overflow-hidden">
+                          <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-200 group-hover:bg-slate-100 transition-colors overflow-hidden">
                             {u.userType === 'IA_SYSTEM' || u.userType === 'BOT_OPERACIONAL' ? (
                               <Cpu className="w-8 h-8 text-gold-deep" />
                             ) : u.userType === 'AI' ? (
                               <Bot className="w-8 h-8 text-gold-deep" />
                             ) : (
-                              <UserIcon className="w-8 h-8 text-slate-500 group-hover:text-gold-deep transition-colors" />
+                              <UserIcon className="w-8 h-8 text-slate-400 group-hover:text-gold-deep transition-colors" />
                             )}
                           </div>
                           <div className={cn(
-                            "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-brand-dark flex items-center justify-center",
+                            "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center",
                             getStatusColor(onlineStatus)
                           )} />
                         </div>
 
                         <div className="flex flex-col items-end gap-2">
-                           <div className="flex items-center gap-1.5 px-3 py-1 bg-white/5 rounded-full border border-white/10 group-hover:border-gold-deep/20 transition-all">
-                              <Shield className={cn("w-3 h-3", u.role === 'admin' ? "text-gold-deep" : "text-slate-500")} />
-                              <span className="text-[8px] font-black uppercase tracking-widest text-slate-300">{u.role}</span>
+                           <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-full border border-slate-200 group-hover:border-gold-deep/30 transition-all">
+                              <Shield className={cn("w-3 h-3", u.role === 'admin' ? "text-gold-deep" : "text-slate-400")} />
+                              <span className="text-[8px] font-black uppercase tracking-widest text-slate-600">{u.role}</span>
                            </div>
                            {perfBadge && (
                              <div className={cn("flex items-center gap-1 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest", perfBadge.color)}>
@@ -546,7 +544,7 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                              </div>
                            )}
                            {u.status === 'pending_setup' && (
-                             <div className="px-3 py-2 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
+                             <div className="px-3 py-2 bg-[#FFF3DC] text-[#B8860B] border border-[#B8860B]/20 rounded-xl text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 Onboarding
                              </div>
@@ -555,26 +553,26 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                       </div>
 
                       <div className="mt-4">
-                        <h3 className="font-bold text-slate-100 truncate text-lg uppercase tracking-tight leading-tight">{u.name}</h3>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5 mt-0.5">
-                           <Briefcase className="w-3 h-3 text-gold-deep/40" />
+                        <h3 className="font-bold text-slate-800 truncate text-lg uppercase tracking-tight leading-tight">{u.name}</h3>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5 mt-0.5">
+                           <Briefcase className="w-3 h-3 text-gold-deep/50" />
                            {profiles.find(p => p.id === u.profileId)?.name || 'Perfil Padrão'}
                         </p>
                       </div>
                     </div>
 
                     {/* Body: Commercial Performance */}
-                    <div className="px-6 py-4 bg-brand-black/40 border-y border-white/5 grid grid-cols-3 gap-2">
+                    <div className="px-6 py-4 bg-slate-50 border-y border-slate-100 grid grid-cols-3 gap-2">
                       <div className="text-center">
-                        <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">Leads</p>
-                        <p className="text-sm font-black text-white">{u.metrics?.totalLeads || 0}</p>
+                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1">Leads</p>
+                        <p className="text-sm font-black text-slate-800">{u.metrics?.totalLeads || 0}</p>
                       </div>
-                      <div className="text-center border-x border-white/5">
-                        <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">Vendas</p>
-                        <p className="text-sm font-black text-white">{u.metrics?.totalVendas || 0}</p>
+                      <div className="text-center border-x border-slate-200">
+                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1">Vendas</p>
+                        <p className="text-sm font-black text-slate-800">{u.metrics?.totalVendas || 0}</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">Conv.</p>
+                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1">Conv.</p>
                         <p className="text-sm font-black text-gold-deep">{u.metrics?.conversionRate || 0}%</p>
                       </div>
                     </div>
@@ -583,11 +581,11 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                     <div className="p-6">
                       <div className="flex items-center justify-between mb-6">
                         <div className="flex flex-col gap-1">
-                          <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest flex items-center gap-1.5">
+                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                             <History className="w-3 h-3" />
                             Atividade
                           </p>
-                          <p className="text-[9px] font-bold text-slate-400 capitalize">
+                          <p className="text-[9px] font-bold text-slate-500 capitalize">
                             {u.activity?.lastAccess || u.lastAccess ? (
                               formatDistanceToNow((u.activity?.lastAccess || u.lastAccess).toDate ? (u.activity?.lastAccess || u.lastAccess).toDate() : new Date(u.activity?.lastAccess || u.lastAccess), { addSuffix: true, locale: ptBR })
                             ) : (
@@ -595,13 +593,13 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                             )}
                           </p>
                         </div>
-                        
+
                         <div className="flex items-center -space-x-2">
-                          <div className="w-6 h-6 rounded-full border-2 border-brand-dark bg-brand-black flex items-center justify-center">
-                            <Mail className="w-3 h-3 text-slate-500" />
+                          <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center">
+                            <Mail className="w-3 h-3 text-slate-400" />
                           </div>
-                          <div className="w-6 h-6 rounded-full border-2 border-brand-dark bg-brand-black flex items-center justify-center">
-                            <Phone className="w-3 h-3 text-slate-500" />
+                          <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center">
+                            <Phone className="w-3 h-3 text-slate-400" />
                           </div>
                         </div>
                       </div>
@@ -609,19 +607,19 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                       {editingUser === u.uid ? (
                         <div className="space-y-4 animate-in fade-in zoom-in-95">
                            <div className="grid grid-cols-2 gap-2">
-                             <select 
+                             <select
                                 value={editRole}
                                 onChange={(e) => setEditRole(e.target.value as UserRole)}
-                                className="w-full bg-brand-black border border-white/5 rounded-xl px-3 py-2 text-[10px] font-black uppercase text-gold-deep outline-none"
+                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px] font-black uppercase text-slate-700 outline-none focus:border-[#1B4D8F]/60"
                              >
                                 <option value="atendente">ATENDENTE</option>
                                 <option value="gestor">GESTOR</option>
                                 <option value="admin">ADMIN</option>
                              </select>
-                             <select 
+                             <select
                                 value={editStatus}
                                 onChange={(e) => setEditStatus(e.target.value as any)}
-                                className="w-full bg-brand-black border border-white/5 rounded-xl px-3 py-2 text-[10px] font-black uppercase text-gold-deep outline-none"
+                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px] font-black uppercase text-slate-700 outline-none focus:border-[#1B4D8F]/60"
                              >
                                 <option value="active">ATIVO</option>
                                 <option value="pending_setup">PENDENTE</option>
@@ -629,25 +627,22 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                                 <option value="inactive">INATIVO</option>
                              </select>
                            </div>
-                           <button 
-                             onClick={() => handleUpdateRole(u.uid)}
-                             className="w-full py-3 bg-gold-deep text-brand-black rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2"
-                           >
-                             <CheckCircle2 className="w-3.5 h-3.5" /> Atualizar Portador
-                           </button>
+                           <Button variant="primary" onClick={() => handleUpdateRole(u.uid)} icon={CheckCircle2} className="w-full">
+                             Atualizar Portador
+                           </Button>
                         </div>
                       ) : (
                         <div className="grid grid-cols-2 gap-2">
-                          <button 
+                          <button
                             onClick={() => setEditingUser(u.uid)}
-                            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white/5 hover:bg-gold-deep/10 border border-white/5 text-slate-300 hover:text-gold-deep rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-50 hover:bg-gold-deep/10 border border-slate-200 text-slate-500 hover:text-gold-deep rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
                           >
                             <UserCog className="w-3.5 h-3.5" />
                             Gerenciar
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDeleteUser(u.uid)}
-                            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white/5 hover:bg-red-500/10 border border-white/5 text-slate-300 hover:text-red-500 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-50 hover:bg-[#FDE4E4] border border-slate-200 text-slate-500 hover:text-[#C0392B] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
                           >
                             <Lock className="w-3.5 h-3.5" />
                             Revogar
@@ -668,7 +663,7 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="flex items-center gap-2 px-8 py-3 bg-brand-black border border-white/5 text-gold-deep rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-gold-deep/5 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-8 py-3 bg-white border border-slate-200 text-gold-deep rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-gold-deep/5 hover:border-gold-deep/30 transition-all disabled:opacity-50 shadow-sm"
             >
               {loadingMore ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -692,29 +687,29 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                animate={{ opacity: 1 }}
                exit={{ opacity: 0 }}
                onClick={() => !creating && setShowAddModal(false)}
-               className="absolute inset-0 bg-brand-black/90 backdrop-blur-md"
+               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
              />
-             <motion.div 
+             <motion.div
                initial={{ opacity: 0, y: 50, scale: 0.95 }}
                animate={{ opacity: 1, y: 0, scale: 1 }}
                exit={{ opacity: 0, y: 50, scale: 0.95 }}
-               className="relative bg-brand-dark w-full max-w-xl rounded-[2.5rem] shadow-2xl p-10 border border-gold-deep/20 overflow-hidden"
+               className="relative bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl p-10 border border-gold-deep/20 overflow-hidden"
              >
                {/* Decorative elements */}
                <div className="absolute top-0 right-0 w-32 h-32 bg-gold-deep/5 rotate-45 translate-x-16 -translate-y-16 border border-gold-deep/10" />
 
-               <div className="relative z-10 flex items-center justify-between mb-8 pb-6 border-b border-white/5">
+               <div className="relative z-10 flex items-center justify-between mb-8 pb-6 border-b border-slate-100">
                  <div>
-                   <h2 className="text-2xl font-black text-slate-100 uppercase tracking-tight flex items-center gap-3">
+                   <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
                      <UserPlus className="w-6 h-6 text-gold-deep" />
                      Novo Certificado de Acesso
                    </h2>
                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-1">Autorização Profissional Michelin Seguros</p>
                  </div>
-                 <button 
-                  onClick={() => setShowAddModal(false)} 
+                 <button
+                  onClick={() => setShowAddModal(false)}
                   disabled={creating}
-                  className="p-2 bg-brand-black border border-white/5 rounded-full text-slate-500 hover:text-red-500 transition-all"
+                  className="p-2 bg-white border border-slate-200 rounded-full text-slate-400 hover:text-[#C0392B] transition-all"
                  >
                   <X className="w-6 h-6" />
                  </button>
@@ -726,13 +721,13 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Nome Completo do Portador</label>
                      <div className="relative">
                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gold-deep/50" />
-                       <input 
-                         type="text" 
+                       <input
+                         type="text"
                          required
                          placeholder="Ex: João da Silva"
                          value={newUserName || ''}
                          onChange={(e) => setNewUserName(e.target.value)}
-                         className="w-full pl-11 pr-4 py-3.5 bg-brand-black border border-white/5 rounded-2xl text-xs outline-none focus:ring-4 focus:ring-gold-deep/5 focus:border-gold-deep/40 text-white font-bold transition-all placeholder:text-slate-700"
+                         className="w-full pl-11 pr-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-xs outline-none focus:ring-4 focus:ring-[#1B4D8F]/10 focus:border-[#1B4D8F]/60 text-slate-800 font-bold transition-all placeholder:text-slate-300"
                        />
                      </div>
                    </div>
@@ -741,13 +736,13 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">E-mail de Autenticação</label>
                      <div className="relative">
                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gold-deep/50" />
-                       <input 
-                         type="email" 
+                       <input
+                         type="email"
                          required
                          placeholder="email@michelin.com"
                          value={newUserEmail || ''}
                          onChange={(e) => setNewUserEmail(e.target.value)}
-                         className="w-full pl-11 pr-4 py-3.5 bg-brand-black border border-white/5 rounded-2xl text-xs outline-none focus:ring-4 focus:ring-gold-deep/5 focus:border-gold-deep/40 text-white font-bold transition-all placeholder:text-slate-700"
+                         className="w-full pl-11 pr-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-xs outline-none focus:ring-4 focus:ring-[#1B4D8F]/10 focus:border-[#1B4D8F]/60 text-slate-800 font-bold transition-all placeholder:text-slate-300"
                        />
                      </div>
                    </div>
@@ -756,13 +751,13 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Telefone de Contato</label>
                      <div className="relative">
                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gold-deep/50" />
-                       <input 
-                         type="tel" 
+                       <input
+                         type="tel"
                          required
                          placeholder="(00) 00000-0000"
                          value={newUserPhone || ''}
                          onChange={(e) => setNewUserPhone(formatPhone(e.target.value))}
-                         className="w-full pl-11 pr-4 py-3.5 bg-brand-black border border-white/5 rounded-2xl text-xs outline-none focus:ring-4 focus:ring-gold-deep/5 focus:border-gold-deep/40 text-white font-bold transition-all placeholder:text-slate-700"
+                         className="w-full pl-11 pr-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-xs outline-none focus:ring-4 focus:ring-[#1B4D8F]/10 focus:border-[#1B4D8F]/60 text-slate-800 font-bold transition-all placeholder:text-slate-300"
                        />
                      </div>
                    </div>
@@ -771,18 +766,18 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Senha Primária</label>
                      <div className="relative">
                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gold-deep/50" />
-                       <input 
-                         type={showPass ? "text" : "password"} 
+                       <input
+                         type={showPass ? "text" : "password"}
                          required
                          placeholder="Mínimo 6 caracteres"
                          value={newUserPassword || ''}
                          onChange={(e) => setNewUserPassword(e.target.value)}
-                         className="w-full pl-11 pr-12 py-3.5 bg-brand-black border border-white/5 rounded-2xl text-xs outline-none focus:ring-4 focus:ring-gold-deep/5 focus:border-gold-deep/40 text-white font-bold transition-all placeholder:text-slate-700"
+                         className="w-full pl-11 pr-12 py-3.5 bg-white border border-slate-200 rounded-2xl text-xs outline-none focus:ring-4 focus:ring-[#1B4D8F]/10 focus:border-[#1B4D8F]/60 text-slate-800 font-bold transition-all placeholder:text-slate-300"
                        />
-                       <button 
+                       <button
                          type="button"
                          onClick={() => setShowPass(!showPass)}
-                         className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-gold-deep transition-colors"
+                         className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-gold-deep transition-colors"
                        >
                          {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                        </button>
@@ -793,10 +788,10 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Nível Hierárquico</label>
                      <div className="relative">
                        <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gold-deep/50 pointer-events-none" />
-                       <select 
+                       <select
                          value={newUserRole || 'atendente'}
                          onChange={(e) => setNewUserRole(e.target.value as UserRole)}
-                         className="w-full pl-11 pr-10 py-3.5 bg-brand-black border border-white/5 rounded-2xl text-xs outline-none focus:ring-4 focus:ring-gold-deep/5 focus:border-gold-deep/40 appearance-none text-white font-black uppercase tracking-widest cursor-pointer"
+                         className="w-full pl-11 pr-10 py-3.5 bg-white border border-slate-200 rounded-2xl text-xs outline-none focus:ring-4 focus:ring-[#1B4D8F]/10 focus:border-[#1B4D8F]/60 appearance-none text-slate-800 font-black uppercase tracking-widest cursor-pointer"
                        >
                          <option value="atendente">ATENDENTE</option>
                          <option value="gestor">GESTOR</option>
@@ -807,10 +802,10 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
 
                    <div className="md:col-span-2 space-y-1.5">
                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Vincular Perfil de Acesso Customizado</label>
-                     <select 
+                     <select
                        value={newUserProfileId || ''}
                        onChange={(e) => setNewUserProfileId(e.target.value)}
-                       className="w-full px-5 py-3.5 bg-brand-black border border-white/5 rounded-2xl text-xs outline-none focus:ring-4 focus:ring-gold-deep/5 focus:border-gold-deep/40 appearance-none text-gold-deep font-black uppercase tracking-widest cursor-pointer"
+                       className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl text-xs outline-none focus:ring-4 focus:ring-[#1B4D8F]/10 focus:border-[#1B4D8F]/60 appearance-none text-gold-deep font-black uppercase tracking-widest cursor-pointer"
                      >
                        <option value="">NENHUM PERFIL (USAR PERMISSÕES DA ROLE)</option>
                        {profiles.map(p => (
@@ -822,7 +817,7 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                    <div className="md:col-span-2 p-5 bg-gold-deep/5 rounded-2xl border border-gold-deep/10 space-y-4">
                       <div className="flex items-center justify-between">
                          <div>
-                            <p className="text-[10px] font-black text-white uppercase tracking-widest">Tipo de Entidade</p>
+                            <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Tipo de Entidade</p>
                             <p className="text-[8px] text-slate-500 font-bold uppercase mt-0.5">Identidade operacional no sistema</p>
                          </div>
                          <button
@@ -830,7 +825,7 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                            onClick={() => setNewUserType(newUserType === 'HUMAN' ? 'AI' : 'HUMAN')}
                            className={cn(
                              "w-12 h-6 rounded-full transition-all relative flex items-center px-1",
-                             newUserType === 'AI' ? "bg-emerald-500" : "bg-slate-800"
+                             newUserType === 'AI' ? "bg-[#1F8A4C]" : "bg-slate-300"
                            )}
                          >
                            <div className={cn(
@@ -843,30 +838,23 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
                  </div>
 
                  {regError && (
-                   <div className="p-4 bg-red-600/10 border-2 border-red-600/20 rounded-2xl flex items-start gap-3">
-                     <ShieldAlert className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                     <p className="text-[10px] font-black text-red-600 uppercase tracking-tight leading-tight">
+                   <div className="p-4 bg-[#FDE4E4] border-2 border-[#C0392B]/20 rounded-2xl flex items-start gap-3">
+                     <ShieldAlert className="w-5 h-5 text-[#C0392B] flex-shrink-0 mt-0.5" />
+                     <p className="text-[10px] font-black text-[#C0392B] uppercase tracking-tight leading-tight">
                         {regError}
                      </p>
                    </div>
                  )}
 
-                 <button 
-                   disabled={creating}
-                   className="w-full py-5 bg-gold-deep text-brand-black rounded-2xl font-black uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3 hover:bg-gold-light transition-all shadow-2xl shadow-gold-deep/10 border-b-4 border-gold-deep/50 disabled:opacity-50"
-                 >
-                   {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                     <>
-                       <ShieldCheck className="w-5 h-5" />
-                       Emitir Credenciais de Acesso
-                     </>
-                   )}
-                 </button>
+                 <Button variant="primary" type="submit" disabled={creating} loading={creating} icon={ShieldCheck} className="w-full py-5 text-xs">
+                   Emitir Credenciais de Acesso
+                 </Button>
                </form>
              </motion.div>
           </div>
         )}
       </AnimatePresence>
+    </div>
     </div>
   );
 };

@@ -17,6 +17,7 @@ import { DeadLetterQueue, DLQEntry } from '../../services/DeadLetterQueue';
 import { MigrationRunnerService } from '../../services/MigrationRunnerService';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { PageHeader } from '../../components/ui';
 
 export const DiagnosticDashboard: React.FC = () => {
   const [dlqItems, setDlqItems] = useState<DLQEntry[]>([]);
@@ -70,65 +71,64 @@ export const DiagnosticDashboard: React.FC = () => {
   );
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <header className="flex justify-between items-end">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <ShieldAlert className="w-8 h-8 text-orange-600" />
-            Centro de Diagnóstico e Observabilidade
-          </h1>
-          <p className="text-gray-500 mt-1">Monitore falhas de orquestração e integridade multi-tenant.</p>
-        </div>
+    <div className="min-h-full bg-slate-50">
+      <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+      <div className="flex justify-between items-end flex-wrap gap-4">
+        <PageHeader
+          icon={ShieldAlert}
+          title="Centro de Diagnóstico e Observabilidade"
+          subtitle="Monitore falhas de orquestração e integridade multi-tenant."
+        />
         <div className="flex gap-3">
-          <button 
+          <button
             onClick={handleMigrateLegacy}
-            className="px-4 py-2 bg-orange-50 text-orange-700 border border-orange-200 rounded-lg hover:bg-orange-100 flex items-center gap-2 text-sm font-medium transition-colors"
+            className="px-4 py-2 bg-[#FFF3DC] text-[#B8860B] border border-[#B8860B]/20 rounded-lg hover:bg-[#FFF3DC]/70 flex items-center gap-2 text-sm font-medium transition-colors"
           >
             <Database className="w-4 h-4" />
             Migrar Dados Legados (Default Org)
           </button>
-          <button 
+          <button
             onClick={loadDLQ}
-            className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors"
           >
             <RefreshCcw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
-      </header>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: 'Falhas Críticas (DLQ)', value: dlqItems.length, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
-          { label: 'Saúde da IA', value: '98.2%', icon: Cpu, color: 'text-green-600', bg: 'bg-green-50' },
-          { label: 'Latência Firestore', value: '45ms', icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Organizações Ativas', value: 1, icon: User, color: 'text-purple-600', bg: 'bg-purple-50' },
+          { label: 'Falhas Críticas (DLQ)', value: dlqItems.length, icon: AlertTriangle, color: 'text-[#C0392B]', bg: 'bg-[#FDE4E4]' },
+          { label: 'Saúde da IA', value: '98.2%', icon: Cpu, color: 'text-[#1F8A4C]', bg: 'bg-[#E4F5EA]' },
+          { label: 'Latência Firestore', value: '45ms', icon: Clock, color: 'text-slate-500', bg: 'bg-slate-100' },
+          { label: 'Organizações Ativas', value: 1, icon: User, color: 'text-gold-deep', bg: 'bg-gold-deep/10' },
         ].map((stat, i) => (
           <div key={i} className={`${stat.bg} p-4 rounded-xl border border-white/50 shadow-sm`}>
             <div className="flex justify-between items-start">
               <stat.icon className={`w-5 h-5 ${stat.color}`} />
             </div>
-            <div className="mt-2 text-2xl font-bold text-gray-900">{stat.value}</div>
-            <div className="text-sm text-gray-600">{stat.label}</div>
+            <div className="mt-2 text-2xl font-bold text-slate-800">{stat.value}</div>
+            <div className="text-sm text-slate-500">{stat.label}</div>
           </div>
         ))}
       </div>
 
       {/* DLQ Area */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-          <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-orange-600" />
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-wrap gap-3">
+          <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-[#B8860B]" />
             Dead Letter Queue (DLQ)
           </h2>
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input 
-              type="text" 
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
               placeholder="Filtrar erros..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-4 py-1.5 bg-white border border-gray-200 rounded-lg text-sm w-64 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none"
+              className="pl-9 pr-4 py-1.5 bg-white border border-slate-200 rounded-lg text-sm w-64 focus:ring-2 focus:ring-[#1B4D8F]/15 focus:border-[#1B4D8F]/60 outline-none"
             />
           </div>
         </div>
@@ -136,42 +136,42 @@ export const DiagnosticDashboard: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="px-4 py-3 font-medium text-gray-600">Timestamp</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Serviço</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Organização</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Mensagem de Erro</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Ações</th>
+              <tr className="bg-slate-50 border-b border-slate-100">
+                <th className="px-4 py-3 font-medium text-slate-500">Timestamp</th>
+                <th className="px-4 py-3 font-medium text-slate-500">Serviço</th>
+                <th className="px-4 py-3 font-medium text-slate-500">Organização</th>
+                <th className="px-4 py-3 font-medium text-slate-500">Mensagem de Erro</th>
+                <th className="px-4 py-3 font-medium text-slate-500">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-slate-50">
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-gray-400">
+                  <td colSpan={5} className="px-4 py-12 text-center text-slate-400">
                     Nenhuma falha crítica detectada no período.
                   </td>
                 </tr>
               ) : (
                 filteredItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-4 text-gray-500 whitespace-nowrap">
+                  <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-4 text-slate-500 whitespace-nowrap">
                       {format(new Date(item.timestamp), 'dd MMM, HH:mm', { locale: ptBR })}
                     </td>
                     <td className="px-4 py-4">
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-mono">
+                      <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-mono">
                         {item.service}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-gray-600">{item.organizationId}</td>
+                    <td className="px-4 py-4 text-slate-600">{item.organizationId}</td>
                     <td className="px-4 py-4">
-                      <div className="text-red-700 font-medium truncate max-w-sm" title={item.error}>
+                      <div className="text-[#C0392B] font-medium truncate max-w-sm" title={item.error}>
                         {item.error}
                       </div>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex gap-2">
-                        <button className="text-orange-600 hover:text-orange-700 font-medium">Reprocessar</button>
-                        <button className="text-gray-400 hover:text-red-600">
+                        <button className="text-[#1B4D8F] hover:text-[#153E73] font-medium">Reprocessar</button>
+                        <button className="text-slate-400 hover:text-[#C0392B]">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -182,6 +182,7 @@ export const DiagnosticDashboard: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
     </div>
   );

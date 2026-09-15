@@ -100,10 +100,10 @@ const Checkbox = ({
     className={cn(
       'w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all shrink-0',
       disabled
-        ? 'border-white/5 bg-transparent cursor-not-allowed'
+        ? 'border-slate-200 bg-transparent cursor-not-allowed'
         : checked
           ? 'border-gold-deep bg-gold-deep hover:brightness-110 cursor-pointer'
-          : 'border-white/20 bg-transparent hover:border-gold-deep/50 cursor-pointer',
+          : 'border-slate-300 bg-transparent hover:border-gold-deep/50 cursor-pointer',
     )}
   >
     {!disabled && checked && <Check className="w-3 h-3 text-black" />}
@@ -112,12 +112,12 @@ const Checkbox = ({
 
 const Dash = () => (
   <div className="w-5 h-5 flex items-center justify-center">
-    <div className="w-3 h-px bg-white/10 rounded" />
+    <div className="w-3 h-px bg-slate-200 rounded" />
   </div>
 );
 
 const SectionHeader = ({ label }: { label: string }) => (
-  <p className="text-[8.5px] font-black text-white/30 uppercase tracking-widest">{label}</p>
+  <p className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
 );
 
 // ─── Componente principal ────────────────────────────────────────────────────
@@ -224,32 +224,32 @@ export const AccessProfileForm: React.FC<Props> = ({ profile, onSave, onCancel }
 
   // ─────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden bg-slate-50">
 
       {/* ── Cabeçalho ── */}
-      <header className="shrink-0 px-5 py-3 bg-[#111214] border-b border-white/5 flex items-center justify-between gap-4">
+      <header className="shrink-0 px-5 py-3 bg-white border-b border-slate-200 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={onCancel}
-            className="p-1.5 rounded-lg hover:bg-white/5 text-white/40 hover:text-white transition-all shrink-0">
+            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-800 transition-all shrink-0">
             <ChevronLeft className="w-4 h-4" />
           </button>
           <div className="min-w-0">
-            <h1 className="text-[11px] font-black text-white uppercase tracking-widest truncate">
+            <h1 className="text-[11px] font-black text-slate-900 uppercase tracking-widest truncate">
               {profile ? 'Editar Perfil de Acesso' : 'Novo Perfil de Acesso'}
             </h1>
-            <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest mt-0.5">
+            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
               {profile ? profile.name : 'Configurando permissões de acesso'}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {errors.global && <p className="text-[8px] text-red-400 font-bold">{errors.global}</p>}
+          {errors.global && <p className="text-[8px] text-[#C0392B] font-bold">{errors.global}</p>}
           <button onClick={onCancel} disabled={isSaving}
-            className="px-3 py-1.5 rounded-lg text-[8.5px] font-black uppercase tracking-widest text-white/40 hover:text-white border border-white/10 hover:border-white/20 transition-all">
+            className="px-3 py-1.5 rounded-lg text-[8.5px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 border border-slate-200 hover:border-slate-300 transition-all">
             Cancelar
           </button>
           <button onClick={handleSave} disabled={isSaving}
-            className="px-4 py-1.5 rounded-lg text-[8.5px] font-black uppercase tracking-widest bg-gold-deep text-black hover:brightness-110 transition-all flex items-center gap-1.5 shadow-lg shadow-gold-deep/20 disabled:opacity-60">
+            className="px-4 py-1.5 rounded-lg text-[8.5px] font-black uppercase tracking-widest bg-[#1B4D8F] text-white hover:bg-[#153E73] transition-all flex items-center gap-1.5 shadow-sm shadow-[#1B4D8F]/20 disabled:opacity-60">
             {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
             {isSaving ? 'Salvando...' : 'Salvar'}
           </button>
@@ -260,10 +260,10 @@ export const AccessProfileForm: React.FC<Props> = ({ profile, onSave, onCancel }
       <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-5">
 
         {/* ══ 1. Informações Gerais ═══════════════════════════════════ */}
-        <section className="bg-[#111214] rounded-2xl border border-white/5 p-5 space-y-4">
-          <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+        <section className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm">
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
             <Shield className="w-3.5 h-3.5 text-gold-deep" />
-            <h2 className="text-[10px] font-black text-gold-deep uppercase tracking-[0.2em]">Informações Gerais</h2>
+            <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.2em]">Informações Gerais</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -274,11 +274,11 @@ export const AccessProfileForm: React.FC<Props> = ({ profile, onSave, onCancel }
                 onChange={e => { setName(e.target.value); setErrors(p => { const n={...p}; delete n.name; return n; }); }}
                 placeholder="Ex: Vendedor Júnior"
                 className={cn(
-                  'w-full bg-white/5 border rounded-xl px-3 py-2.5 text-[11px] font-bold text-white placeholder-white/20 outline-none transition-all',
-                  errors.name ? 'border-red-500/50' : 'border-white/10 focus:border-gold-deep/40 focus:ring-2 focus:ring-gold-deep/10',
+                  'w-full bg-white border rounded-xl px-3 py-2.5 text-[11px] font-bold text-slate-800 placeholder-slate-300 outline-none transition-all',
+                  errors.name ? 'border-[#C0392B]/50' : 'border-slate-200 focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15',
                 )}
               />
-              {errors.name && <p className="text-[8px] text-red-400 font-bold">{errors.name}</p>}
+              {errors.name && <p className="text-[8px] text-[#C0392B] font-bold">{errors.name}</p>}
             </div>
             <div className="space-y-1.5">
               <SectionHeader label="Descrição" />
@@ -286,21 +286,21 @@ export const AccessProfileForm: React.FC<Props> = ({ profile, onSave, onCancel }
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 placeholder="Responsável pelo atendimento inicial..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-[11px] font-bold text-white placeholder-white/20 outline-none focus:border-gold-deep/40 focus:ring-2 focus:ring-gold-deep/10 transition-all"
+                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-[11px] font-bold text-slate-800 placeholder-slate-300 outline-none focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 transition-all"
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-between p-3 bg-white/[0.02] border border-white/5 rounded-xl">
+          <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl">
             <div>
-              <p className="text-[10px] font-black text-white/70 uppercase tracking-widest">Status</p>
-              <p className="text-[8px] text-white/30 font-bold mt-0.5">
+              <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Status</p>
+              <p className="text-[8px] text-slate-400 font-bold mt-0.5">
                 {isActive ? 'Ativo — usuários podem ser atribuídos a este perfil' : 'Inativo — sem novos acessos'}
               </p>
             </div>
             <button type="button" onClick={() => setIsActive(v => !v)}
               className={cn('w-11 h-6 rounded-full transition-all relative border',
-                isActive ? 'bg-emerald-500 border-emerald-500' : 'bg-white/10 border-white/10')}>
+                isActive ? 'bg-[#1F8A4C] border-[#1F8A4C]' : 'bg-slate-200 border-slate-200')}>
               <div className={cn('absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all',
                 isActive ? 'left-[22px]' : 'left-0.5')} />
             </button>
@@ -308,10 +308,10 @@ export const AccessProfileForm: React.FC<Props> = ({ profile, onSave, onCancel }
         </section>
 
         {/* ══ 2. Visibilidade de Leads ════════════════════════════════ */}
-        <section className="bg-[#111214] rounded-2xl border border-white/5 p-5 space-y-4">
-          <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+        <section className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm">
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
             <Eye className="w-3.5 h-3.5 text-gold-deep" />
-            <h2 className="text-[10px] font-black text-gold-deep uppercase tracking-[0.2em]">Visibilidade de Leads</h2>
+            <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.2em]">Visibilidade de Leads</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {([
@@ -330,16 +330,16 @@ export const AccessProfileForm: React.FC<Props> = ({ profile, onSave, onCancel }
                 className={cn('p-4 rounded-xl border-2 text-left transition-all',
                   leadVis === opt.value
                     ? 'border-gold-deep bg-gold-deep/5'
-                    : 'border-white/10 bg-white/[0.02] hover:border-white/20')}
+                    : 'border-slate-200 bg-slate-50 hover:border-slate-300')}
               >
                 <div className="flex items-start gap-3">
                   <div className={cn('w-4 h-4 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all',
-                    leadVis === opt.value ? 'border-gold-deep' : 'border-white/30')}>
+                    leadVis === opt.value ? 'border-gold-deep' : 'border-slate-300')}>
                     {leadVis === opt.value && <div className="w-2 h-2 rounded-full bg-gold-deep" />}
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-white uppercase tracking-tight">{opt.title}</p>
-                    <p className="text-[8px] text-white/40 font-bold mt-1 leading-relaxed">{opt.desc}</p>
+                    <p className="text-[10px] font-black text-slate-800 uppercase tracking-tight">{opt.title}</p>
+                    <p className="text-[8px] text-slate-500 font-bold mt-1 leading-relaxed">{opt.desc}</p>
                   </div>
                 </div>
               </button>
@@ -348,11 +348,11 @@ export const AccessProfileForm: React.FC<Props> = ({ profile, onSave, onCancel }
         </section>
 
         {/* ══ 3. Permissões de Menu ═══════════════════════════════════ */}
-        <section className="bg-[#111214] rounded-2xl border border-white/5 p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-white/5 pb-3">
+        <section className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">
               <LayoutGrid className="w-3.5 h-3.5 text-gold-deep" />
-              <h2 className="text-[10px] font-black text-gold-deep uppercase tracking-[0.2em]">Permissões de Menu</h2>
+              <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.2em]">Permissões de Menu</h2>
             </div>
             <button type="button" onClick={allVisible ? clearAll : selectAll}
               className="px-2.5 py-1 bg-gold-deep/10 text-gold-deep rounded-lg text-[8px] font-black uppercase tracking-widest hover:bg-gold-deep/20 transition-all">
@@ -360,12 +360,12 @@ export const AccessProfileForm: React.FC<Props> = ({ profile, onSave, onCancel }
             </button>
           </div>
 
-          <div className="rounded-xl border border-white/5 overflow-hidden">
-            <div className="grid grid-cols-[1fr_80px_80px_80px] bg-white/[0.02] border-b border-white/5 px-4 py-2.5">
-              <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Item de Menu</p>
-              <p className="text-[8px] font-black text-white/30 uppercase tracking-widest text-center">Visualizar</p>
-              <p className="text-[8px] font-black text-white/30 uppercase tracking-widest text-center">Editar</p>
-              <p className="text-[8px] font-black text-white/30 uppercase tracking-widest text-center">Excluir</p>
+          <div className="rounded-xl border border-slate-200 overflow-hidden">
+            <div className="grid grid-cols-[1fr_80px_80px_80px] bg-slate-50 border-b border-slate-200 px-4 py-2.5">
+              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Item de Menu</p>
+              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-center">Visualizar</p>
+              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-center">Editar</p>
+              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-center">Excluir</p>
             </div>
 
             {MENU_ITEMS.map((item, idx) => {
@@ -375,17 +375,17 @@ export const AccessProfileForm: React.FC<Props> = ({ profile, onSave, onCancel }
                 <div key={item.key}
                   className={cn(
                     'grid grid-cols-[1fr_80px_80px_80px] px-4 py-3 items-center transition-colors',
-                    idx % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.015]',
-                    'hover:bg-white/[0.03]',
+                    idx % 2 === 0 ? 'bg-transparent' : 'bg-slate-50/60',
+                    'hover:bg-slate-50',
                   )}
                 >
                   <div className="flex items-center gap-2.5">
                     <div className={cn('w-6 h-6 rounded-lg flex items-center justify-center transition-colors',
-                      perms.canView ? 'bg-gold-deep/10 text-gold-deep' : 'bg-white/5 text-white/20')}>
+                      perms.canView ? 'bg-gold-deep/10 text-gold-deep' : 'bg-slate-100 text-slate-300')}>
                       <Icon className="w-3 h-3" />
                     </div>
                     <span className={cn('text-[10px] font-bold uppercase tracking-tight transition-colors',
-                      perms.canView ? 'text-white' : 'text-white/30')}>{item.label}</span>
+                      perms.canView ? 'text-slate-800' : 'text-slate-300')}>{item.label}</span>
                   </div>
                   <div className="flex justify-center">
                     <Checkbox checked={perms.canView}
@@ -410,12 +410,12 @@ export const AccessProfileForm: React.FC<Props> = ({ profile, onSave, onCancel }
         </section>
 
         {/* ══ 4. Permissões por Campo ═════════════════════════════════ */}
-        <section className="bg-[#111214] rounded-2xl border border-white/5 p-5 space-y-4">
-          <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+        <section className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm">
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
             <Lock className="w-3.5 h-3.5 text-gold-deep" />
-            <h2 className="text-[10px] font-black text-gold-deep uppercase tracking-[0.2em]">Permissões por Campo</h2>
+            <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.2em]">Permissões por Campo</h2>
           </div>
-          <p className="text-[8.5px] text-white/30 font-bold leading-relaxed">
+          <p className="text-[8.5px] text-slate-400 font-bold leading-relaxed">
             Campos sem restrição têm acesso total por padrão. Configure apenas os campos que devem ser restritos.
           </p>
 
@@ -425,14 +425,14 @@ export const AccessProfileForm: React.FC<Props> = ({ profile, onSave, onCancel }
             const isOpen = openSections[entityDef.entity] ?? true;
 
             return (
-              <div key={entityDef.entity} className="border border-white/5 rounded-xl overflow-hidden">
+              <div key={entityDef.entity} className="border border-slate-200 rounded-xl overflow-hidden">
                 <button type="button"
                   onClick={() => setOpenSections(p => ({ ...p, [entityDef.entity]: !isOpen }))}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
-                  <p className="text-[10px] font-black text-white uppercase tracking-widest">{entityDef.label}</p>
+                  className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors">
+                  <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{entityDef.label}</p>
                   {isOpen
-                    ? <ChevronUp className="w-3.5 h-3.5 text-white/30" />
-                    : <ChevronDown className="w-3.5 h-3.5 text-white/30" />}
+                    ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                    : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
                 </button>
 
                 <AnimatePresence initial={false}>
@@ -444,18 +444,18 @@ export const AccessProfileForm: React.FC<Props> = ({ profile, onSave, onCancel }
                       transition={{ duration: 0.2 }}
                     >
                       {!menuVisible && (
-                        <div className="mx-4 my-3 p-3 bg-orange-500/5 border border-orange-500/20 rounded-xl flex items-start gap-2">
-                          <Lock className="w-3 h-3 text-orange-400 shrink-0 mt-0.5" />
-                          <p className="text-[8px] text-orange-400 font-bold leading-relaxed">
+                        <div className="mx-4 my-3 p-3 bg-[#FFF3DC] border border-[#B8860B]/20 rounded-xl flex items-start gap-2">
+                          <Lock className="w-3 h-3 text-[#B8860B] shrink-0 mt-0.5" />
+                          <p className="text-[8px] text-[#B8860B] font-bold leading-relaxed">
                             Ative o acesso ao menu <span className="font-black">{entityDef.label}</span> para configurar permissões de campo.
                           </p>
                         </div>
                       )}
 
-                      <div className="grid grid-cols-[1fr_80px_80px] px-4 py-2 bg-white/[0.015] border-b border-white/5">
-                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Campo</p>
-                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest text-center">Visualizar</p>
-                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest text-center">Editar</p>
+                      <div className="grid grid-cols-[1fr_80px_80px] px-4 py-2 bg-slate-50 border-b border-slate-100">
+                        <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Campo</p>
+                        <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest text-center">Visualizar</p>
+                        <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest text-center">Editar</p>
                       </div>
 
                       {entityDef.fields.map((field, idx) => {
@@ -465,16 +465,16 @@ export const AccessProfileForm: React.FC<Props> = ({ profile, onSave, onCancel }
                           <div key={field.key}
                             className={cn(
                               'grid grid-cols-[1fr_80px_80px] px-4 py-2.5 items-center',
-                              idx % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.015]',
-                              blocked ? 'opacity-30 pointer-events-none' : 'hover:bg-white/[0.02]',
+                              idx % 2 === 0 ? 'bg-transparent' : 'bg-slate-50/60',
+                              blocked ? 'opacity-30 pointer-events-none' : 'hover:bg-slate-50',
                             )}>
                             <div className="flex items-center gap-2">
                               <span className={cn('text-[10px] font-bold',
-                                (fp?.canView ?? true) ? 'text-white/70' : 'text-white/30')}>
+                                (fp?.canView ?? true) ? 'text-slate-600' : 'text-slate-300')}>
                                 {field.label}
                               </span>
                               {field.sensitive && (
-                                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-red-500/10 border border-red-500/20 rounded text-[7px] font-black text-red-400 uppercase tracking-widest">
+                                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-[#FDE4E4] border border-[#C0392B]/20 rounded text-[7px] font-black text-[#C0392B] uppercase tracking-widest">
                                   <Lock className="w-2 h-2" /> Sensível
                                 </span>
                               )}
