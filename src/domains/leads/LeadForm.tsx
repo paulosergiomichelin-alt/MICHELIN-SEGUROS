@@ -1508,7 +1508,13 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                 </div>
               </div>
 
-              {/* Linha 4: Endereço desmembrado */}
+              {/* Linha 4: Endereço desmembrado (pernoite do veículo — distinto do endereço da empresa, abaixo) */}
+              <div className="flex items-center gap-1.5 pt-1">
+                <Car className="w-3 h-3 text-[#D4A854]/60" />
+                <span className="text-[8.5px] font-bold uppercase tracking-[0.18em] text-[#D4A854]/60">
+                  Endereço de Pernoite do Veículo
+                </span>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4">
                 <PremiumInput
                   label="Logradouro"
