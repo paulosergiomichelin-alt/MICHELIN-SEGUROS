@@ -419,7 +419,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
                 <input className={inputCls} value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Nome completo" required />
               </Field>
             </div>
-            <Field label={tipoPessoa === 'juridica' ? 'CNPJ' : 'CPF'} required>
+            <Field label="CPF/CNPJ" required>
               <div className="relative">
                 <input
                   className={inputCls}

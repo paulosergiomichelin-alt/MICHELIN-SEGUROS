@@ -1405,7 +1405,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
               {/* Linha 2: CPF/CNPJ + Data Nascimento + Idade + Aniversário (PF) */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <PremiumCpfCnpjInput
-                  label={formData.tipoPessoa === 'juridica' ? 'CNPJ' : 'CPF'}
+                  label="CPF/CNPJ"
                   name="cpf"
                   value={formData.cpf || ''}
                   onChange={handleChange}

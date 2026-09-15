@@ -27,7 +27,14 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const apiRes = await fetch(`${BRASIL_API_BASE}/${digits}`);
+    // BrasilAPI está atrás do Cloudflare e bloqueia com 403/429 requisições sem
+    // um User-Agent de navegador (o fetch nativo do Node manda "node").
+    const apiRes = await fetch(`${BRASIL_API_BASE}/${digits}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+        Accept: 'application/json',
+      },
+    });
 
     if (!apiRes.ok) {
       if (apiRes.status === 404) {
