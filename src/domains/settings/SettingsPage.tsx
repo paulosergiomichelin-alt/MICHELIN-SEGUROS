@@ -21,6 +21,7 @@ import { AIDocumentExtractionPanel } from './AIDocumentExtractionPanel';
 import { AggerToolSettings } from '../../components/AggerToolSettings';
 import { AgentSettings } from './AgentSettings';
 import { SessionsPage } from '../whatsapp/SessionsPage';
+import { InsurerSettings } from './InsurerSettings';
 
 interface SettingsProps {
   canManageUsers?: boolean;
@@ -278,7 +279,7 @@ const WebhookUrlBox: React.FC = () => {
 
 export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig, onUpdateVisualConfig, permissions, userProfile }: SettingsProps) {
   const { theme: currentTheme, setTheme: setAppTheme } = useTheme();
-  const [activeSubTab, setActiveSubTab] = useState<'general' | 'diagnostic' | 'health' | 'admin' | 'visual' | 'ai_ocr' | 'empresa' | 'sessoes_wa' | 'agente_ia'>('general');
+  const [activeSubTab, setActiveSubTab] = useState<'general' | 'diagnostic' | 'health' | 'admin' | 'visual' | 'ai_ocr' | 'empresa' | 'sessoes_wa' | 'agente_ia' | 'seguradoras'>('general');
 
   const [isDocsModalOpen, setIsDocsModalOpen] = useState(false);
   const [isTestMode, setIsTestMode] = useState<boolean>(() => {
@@ -684,6 +685,18 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
 
         {canManageUsers && (
           <button
+            onClick={() => setActiveSubTab('seguradoras')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
+              activeSubTab === 'seguradoras' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+            )}
+          >
+            <Shield className="w-3.5 h-3.5 flex-shrink-0" /> Seguradoras
+          </button>
+        )}
+
+        {canManageUsers && (
+          <button
             onClick={() => setActiveSubTab('diagnostic')}
             className={cn(
               "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
@@ -1086,6 +1099,12 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
               visualConfig={visualConfig}
               onUpdate={async () => {}}
             />
+          </motion.div>
+        )}
+
+        {activeSubTab === 'seguradoras' && canManageUsers && (
+          <motion.div key="seguradoras" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+            <InsurerSettings />
           </motion.div>
         )}
         </div>
