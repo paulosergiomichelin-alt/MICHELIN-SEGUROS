@@ -82,6 +82,9 @@ function utf8ToBase64Url(input: string): string {
 }
 
 export function buildAggerPayload(lead: Lead): AggerLeadPayload {
+  if (!lead.cpf) {
+    throw new Error('buildAggerPayload: lead.cpf é obrigatório (cotação Agger é só para pessoa física)');
+  }
   return {
     v: 2,
     source: 'michelin-crm',
