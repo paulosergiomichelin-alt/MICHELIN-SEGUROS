@@ -360,6 +360,11 @@ async function startServer() {
   app.get('/api/cnpj/:cnpj', requireAuthForCnpj, cnpjLookupHandler);
   log.info('Rota de busca de CNPJ registrada');
 
+  // ── Multicálculo / Seguradoras ────────────────────────────────────────────────
+  const { insurersRouter } = await import('./_api/insurers/router.js');
+  app.use('/api/insurers', insurersRouter);
+  log.info('Rotas de multicálculo/seguradoras registradas');
+
   if (process.env.NODE_ENV === 'production' && process.env.SERVE_STATIC !== 'false') {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
