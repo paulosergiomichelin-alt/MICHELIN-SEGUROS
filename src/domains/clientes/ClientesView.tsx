@@ -69,7 +69,7 @@ export const ClientesView: React.FC<ClientesViewProps> = ({
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return clientes.filter(c => {
-      if (q && !c.nome.toLowerCase().includes(q) && !c.cpf.includes(q.replace(/\D/g,'')) && !(c.telefone || '').includes(q.replace(/\D/g,''))) return false;
+      if (q && !c.nome.toLowerCase().includes(q) && !(c.cpf ?? '').includes(q.replace(/\D/g,'')) && !(c.telefone || '').includes(q.replace(/\D/g,''))) return false;
       if (filterStatus && c.status !== filterStatus) return false;
       if (filterSeguradora && c.seguradoraAtualId !== filterSeguradora) return false;
       if (filterProduto && c.produtoAtual !== filterProduto) return false;
@@ -203,7 +203,7 @@ export const ClientesView: React.FC<ClientesViewProps> = ({
                     >
                       <td className="px-4 py-3">
                         <p className="text-[11px] font-bold text-white">{c.nome}</p>
-                        <p className="text-[9px] text-white/30 font-mono">{c.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</p>
+                        <p className="text-[9px] text-white/30 font-mono">{c.tipoPessoa === 'juridica' ? 'Pessoa Jurídica' : (c.cpf ?? '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</p>
                       </td>
                       <td className="px-4 py-3">
                         <p className="text-[10px] text-white/60">{formatPhone(c.telefone)}</p>
@@ -253,7 +253,7 @@ export const ClientesView: React.FC<ClientesViewProps> = ({
                       <p className="text-[12px] font-bold text-white">{c.nome}</p>
                       <StatusBadge status={c.status} />
                     </div>
-                    <p className="text-[10px] text-white/40 font-mono mt-0.5">{c.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</p>
+                    <p className="text-[10px] text-white/40 font-mono mt-0.5">{c.tipoPessoa === 'juridica' ? 'Pessoa Jurídica' : (c.cpf ?? '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</p>
                     <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                       {c.telefone && <span className="flex items-center gap-1 text-[9px] text-white/50"><Phone className="w-2.5 h-2.5" />{formatPhone(c.telefone)}</span>}
                       {(c.cidade || c.estado) && <span className="flex items-center gap-1 text-[9px] text-white/40"><MapPin className="w-2.5 h-2.5" />{[c.cidade, c.estado].filter(Boolean).join('/')}</span>}

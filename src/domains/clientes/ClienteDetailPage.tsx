@@ -5,10 +5,11 @@ import {
   User, Phone, Mail, MapPin, FileText, History, RefreshCw, ExternalLink,
   Calendar, DollarSign, Building2, ClipboardList, Car, Shield, Tag, Users,
 } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, formatCNPJ } from '../../lib/utils';
 import { Cliente, Lead, Apolice, ClienteHistoricoItem, ClienteStatus, UserProfile } from '../../types';
 import { DataService } from '../../services/DataService';
 import { ClienteService } from '../../services/ClienteService';
+import { dataApiClient } from '../../lib/dataApiClient';
 import { SeguradoraBadge } from '../../components/SeguradoraBadge';
 import { ClienteForm } from './ClienteForm';
 import { ApoliceForm } from './ApoliceForm';
@@ -44,7 +45,7 @@ function fmtMoney(cents?: number) {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-function fmtCPF(cpf: string) {
+function fmtCPF(cpf?: string) {
   const n = (cpf ?? '').replace(/\D/g, '');
   return n.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 }
@@ -73,6 +74,7 @@ export const ClienteDetailPage: React.FC = () => {
   const { clientes: allClientes } = useClientes();
 
   const [cliente, setCliente] = useState<Cliente | null>(null);
+  const [clientePJ, setClientePJ] = useState<any>(null);
   const [leadOrigem, setLeadOrigem] = useState<Lead | null>(null);
   const [apolices, setApolices] = useState<Apolice[]>([]);
   const [historico, setHistorico] = useState<ClienteHistoricoItem[]>([]);
@@ -117,6 +119,15 @@ export const ClienteDetailPage: React.FC = () => {
     if (!id) return;
     return ClienteService.subscribeHistorico(id, setHistorico);
   }, [id]);
+
+  // Load satellite PJ row when cliente is pessoa jurídica
+  useEffect(() => {
+    if (cliente?.tipoPessoa === 'juridica') {
+      dataApiClient.get('cliente_pessoa_juridica', cliente.id).then(setClientePJ).catch(() => setClientePJ(null));
+    } else {
+      setClientePJ(null);
+    }
+  }, [cliente?.id, cliente?.tipoPessoa]);
 
   // Load original lead when available
   useEffect(() => {
@@ -200,12 +211,16 @@ export const ClienteDetailPage: React.FC = () => {
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-sm font-black text-white">{cliente.nome}</h1>
+            <h1 className="text-sm font-black text-white">
+              {cliente.tipoPessoa === 'juridica' ? (clientePJ?.razaoSocial ?? cliente.nome) : cliente.nome}
+            </h1>
             <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-wider', statusCfg.cls)}>
               <StatusIcon className="w-2.5 h-2.5" />{statusCfg.label}
             </span>
           </div>
-          <p className="text-[10px] text-white/30 font-mono mt-0.5">{fmtCPF(cliente.cpf)}</p>
+          <p className="text-[10px] text-white/30 font-mono mt-0.5">
+            {cliente.tipoPessoa === 'juridica' ? (clientePJ ? formatCNPJ(clientePJ.cnpj) : '') : fmtCPF(cliente.cpf)}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {cliente.leadOrigemId && (
@@ -269,14 +284,23 @@ export const ClienteDetailPage: React.FC = () => {
                 <User className="w-4 h-4 text-gold-deep" />
                 <h3 className="text-[10px] font-black text-gold-light uppercase tracking-widest">Dados Pessoais</h3>
               </div>
-              {[
+              {(cliente.tipoPessoa === 'juridica' ? [
+                ['Razão Social', clientePJ?.razaoSocial],
+                ['Nome Fantasia', clientePJ?.nomeFantasia],
+                ['CNPJ', clientePJ ? formatCNPJ(clientePJ.cnpj) : ''],
+                ['Inscrição Estadual', clientePJ?.inscricaoEstadual],
+                ['Situação Cadastral', clientePJ?.situacaoCadastral],
+                ['Porte', clientePJ?.porte],
+                ['CNAE', clientePJ?.cnae],
+                ['Contato responsável', cliente.nome],
+              ] : [
                 ['Nome', cliente.nome],
                 ['CPF', fmtCPF(cliente.cpf)],
                 ['RG', cliente.rg],
                 ['Nascimento', fmtDate(cliente.dataNascimento)],
                 ['Estado civil', cliente.estadoCivil],
                 ['Profissão', cliente.profissao],
-              ].map(([k,v]) => v ? (
+              ]).map(([k,v]) => v ? (
                 <div key={k} className="flex justify-between gap-2">
                   <span className="text-[9px] text-white/30 uppercase tracking-widest font-black">{k}</span>
                   <span className="text-[10px] text-white/80 font-medium text-right">{v}</span>

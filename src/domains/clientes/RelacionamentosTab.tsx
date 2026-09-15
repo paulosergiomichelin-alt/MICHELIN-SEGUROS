@@ -57,10 +57,15 @@ function getInverseRelationship(tipo: string, genderA?: 'M' | 'F'): string {
   return e[2];
 }
 
-function fmtCPFMasked(cpf: string) {
+function fmtCPFMasked(cpf?: string) {
   const n = (cpf ?? '').replace(/\D/g, '');
   if (n.length < 11) return cpf || '—';
   return `${n.slice(0, 3)}.***.*${n.slice(8, 9)}-${n.slice(9, 11)}`;
+}
+
+function documentoOuVazio(c: { tipoPessoa?: string; cpf?: string }): string {
+  if (c.tipoPessoa === 'juridica') return '';
+  return fmtCPFMasked(c.cpf);
 }
 
 function fmtPhone(phone?: string) {
@@ -185,7 +190,7 @@ const AddRelacionamentoModal: React.FC<AddModalProps> = ({
                   </div>
                   <div>
                     <p className="text-[11px] font-bold text-white">{c.nome}</p>
-                    <p className="text-[9px] text-white/30 font-mono">{fmtCPFMasked(c.cpf)}</p>
+                    <p className="text-[9px] text-white/30 font-mono">{documentoOuVazio(c)}</p>
                   </div>
                 </button>
               ))}
@@ -199,7 +204,7 @@ const AddRelacionamentoModal: React.FC<AddModalProps> = ({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-bold text-white truncate">{selected.nome}</p>
-                  <p className="text-[9px] text-white/30 font-mono">{fmtCPFMasked(selected.cpf)}</p>
+                  <p className="text-[9px] text-white/30 font-mono">{documentoOuVazio(selected)}</p>
                 </div>
                 <button onClick={() => setSelected(null)} className="p-1 text-white/30 hover:text-white transition-colors">
                   <X className="w-3.5 h-3.5" />
