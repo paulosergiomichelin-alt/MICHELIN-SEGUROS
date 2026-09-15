@@ -1029,7 +1029,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
     const { where } = await import('../../lib/queryConstraints');
     if (field === 'cpf' && clean.length === 14) {
       // CNPJ mora na tabela satélite lead_pessoa_juridica, não em leads.cpf.
-      const pjMatches = await DataService.list('lead_pessoa_juridica', [where('cnpj', '==', clean)]) as LeadPessoaJuridica[];
+      const pjMatches = await dataApiClient.query('lead_pessoa_juridica', [where('cnpj', '==', clean)]) as LeadPessoaJuridica[];
       const dup = pjMatches.find(m => m.leadId !== formData.id);
       if (!dup) { setDuplicateAlert(null); return; }
       const duplicateLead = await DataService.get('lead', dup.leadId) as Lead | null;
