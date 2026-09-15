@@ -98,15 +98,17 @@ export const LeadsView = React.memo(({
       startDate: '',
       endDate: ''
     });
+    setSearchLeads('');
   };
 
-  const hasActiveFilters = 
-    filters.status.length > 0 || 
-    filters.temperature.length > 0 || 
-    filters.origin.length > 0 || 
+  const hasActiveFilters =
+    filters.status.length > 0 ||
+    filters.temperature.length > 0 ||
+    filters.origin.length > 0 ||
     filters.responsible.length > 0 ||
-    filters.startDate || 
-    filters.endDate;
+    filters.startDate ||
+    filters.endDate ||
+    !!searchLeads;
 
   React.useEffect(() => {
     console.log('[REAL_LEADS_LOADED]', leads.length);
