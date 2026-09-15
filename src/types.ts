@@ -96,6 +96,8 @@ export interface LeadDocument {
   finalizedAt?: string;
 }
 
+export type TipoPessoa = 'fisica' | 'juridica';
+
 export interface Lead {
   id: string;
   createdAt: string;
@@ -107,19 +109,21 @@ export interface Lead {
   lastInteraction?: string; // ISO
   nextAction?: string;
   stuckSince?: string; // ISO - para alertas de lead parado
-  
+
   // Insurance info
   hasInsurance: boolean;
   insurer?: string;
   startDate?: string;
   insuranceExpiry?: string;
-  
+
   // Personal info
   name: string;
   phone: string;
   phone2?: string;
   email?: string;
-  cpf: string;
+  cpf?: string;
+  tipoPessoa?: TipoPessoa;
+  cnpj?: string;
   birthDate: string;
   civilStatus: string;
   rg?: string;
@@ -408,7 +412,8 @@ export interface ClienteDocumento {
 export interface Cliente {
   id: string;
   nome: string;
-  cpf: string;
+  cpf?: string;
+  tipoPessoa?: TipoPessoa;
   rg?: string;
   rgDataExpedicao?: string;
   rgOrgaoEmissor?: string;
@@ -437,6 +442,36 @@ export interface Cliente {
   organizationId?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface DadosEmpresa {
+  cnpj: string;
+  razaoSocial: string;
+  nomeFantasia?: string | null;
+  situacaoCadastral?: string | null;
+  porte?: string | null;
+  cnae?: string | null;
+  cep?: string | null;
+  rua?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+}
+
+export interface ClientePessoaJuridica extends DadosEmpresa {
+  clienteId: string;
+  organizationId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface LeadPessoaJuridica extends DadosEmpresa {
+  leadId: string;
+  organizationId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ClienteRelacionamento {
