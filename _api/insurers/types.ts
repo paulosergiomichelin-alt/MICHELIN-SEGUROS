@@ -58,5 +58,5 @@ export interface CotacaoResultado {
 
 export interface InsurerProvider {
   id: string;
-  cotar(input: CotacaoInput): Promise<CotacaoResultado>;
+  cotar(organizationId: string, input: CotacaoInput): Promise<CotacaoResultado>;
 }
