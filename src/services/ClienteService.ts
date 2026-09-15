@@ -1,5 +1,5 @@
 import { DataService } from './DataService';
-import { authHeader } from '../lib/dataApiClient';
+import { authHeader, dataApiClient } from '../lib/dataApiClient';
 import { Apolice, Cliente, ClienteHistoricoItem, ClienteStatus, Lead } from '../types';
 
 function nowISO() {
@@ -192,7 +192,8 @@ export class ClienteService {
   ): Promise<string> {
     const clienteData: Omit<Cliente, 'id'> = {
       nome: lead.name,
-      cpf: lead.cpf,
+      cpf: lead.tipoPessoa === 'juridica' ? undefined : lead.cpf,
+      tipoPessoa: lead.tipoPessoa ?? 'fisica',
       rg: lead.rg,
       dataNascimento: lead.birthDate,
       estadoCivil: lead.civilStatus,
@@ -215,6 +216,27 @@ export class ClienteService {
     };
 
     const clienteId = await DataService.create('cliente', clienteData);
+
+    if (lead.tipoPessoa === 'juridica') {
+      const leadPJ = await dataApiClient.get('lead_pessoa_juridica', lead.id).catch(() => null);
+      if (leadPJ) {
+        await dataApiClient.save('cliente_pessoa_juridica', clienteId, {
+          cnpj: leadPJ.cnpj,
+          razaoSocial: leadPJ.razaoSocial,
+          nomeFantasia: leadPJ.nomeFantasia,
+          inscricaoEstadual: leadPJ.inscricaoEstadual,
+          situacaoCadastral: leadPJ.situacaoCadastral,
+          porte: leadPJ.porte,
+          cnae: leadPJ.cnae,
+        }).catch(() => {});
+        // lead_pessoa_juridica não tem colunas de endereço promovidas em `clientes`
+        // separadas da PJ — o endereço do lead PJ vira o endereço do cliente.
+        await DataService.update('cliente', clienteId, {
+          cep: leadPJ.cep, rua: leadPJ.rua, numero: leadPJ.numero, complemento: leadPJ.complemento,
+          bairro: leadPJ.bairro, cidade: leadPJ.cidade, estado: leadPJ.estado,
+        });
+      }
+    }
 
     // Link lead back to cliente
     await DataService.update('lead', lead.id, {
