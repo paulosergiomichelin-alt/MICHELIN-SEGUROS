@@ -27,7 +27,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { Lead, LeadStatus, Permissions, UserProfile } from '../../types';
-import { cn, maskCPF, maskPhone } from '../../lib/utils';
+import { cn, maskCPF, maskCNPJ, maskPhone } from '../../lib/utils';
 import { motion } from 'motion/react';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SensitiveContent } from '../../components/SensitiveContent';
@@ -216,8 +216,8 @@ export const LeadsView = React.memo(({
                         <div className="min-w-0">
                           <p className="text-[11px] font-bold truncate group-hover:text-gold-deep transition-colors">{lead.name}</p>
                           <div className="text-[8.5px] text-white/20 font-bold mt-0 flex items-center gap-1">
-                            <span className="hidden sm:inline">CPF:</span> 
-                            <SensitiveContent value={lead.cpf} maskFn={maskCPF} canView={permissions.canReadAllLeads} />
+                            <span className="hidden sm:inline">{lead.tipoPessoa === 'juridica' ? 'CNPJ:' : 'CPF:'}</span>
+                            <SensitiveContent value={lead.cpf} maskFn={lead.tipoPessoa === 'juridica' ? maskCNPJ : maskCPF} canView={permissions.canReadAllLeads} />
                           </div>
                         </div>
                       </div>

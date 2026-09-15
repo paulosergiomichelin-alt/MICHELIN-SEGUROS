@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 
-export const SensitiveContent = ({ 
-  value, 
-  maskFn, 
-  canView 
-}: { 
-  value: string; 
-  maskFn: (v: string) => string; 
+export const SensitiveContent = ({
+  value,
+  maskFn,
+  canView
+}: {
+  value: string | undefined;
+  maskFn: (v: string) => string;
   canView: boolean;
 }) => {
   const [show, setShow] = useState(false);

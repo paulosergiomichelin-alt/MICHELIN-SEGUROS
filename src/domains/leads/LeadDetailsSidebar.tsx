@@ -11,7 +11,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { Lead, Permissions, VisualIdentityConfig } from '../../types';
-import { cn, maskCPF, maskPhone } from '../../lib/utils';
+import { cn, maskCPF, maskCNPJ, maskPhone } from '../../lib/utils';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SensitiveContent } from '../../components/SensitiveContent';
 import { FollowUpManagement } from './FollowUpManagement';
@@ -200,17 +200,21 @@ export const LeadDetailsSidebar = React.memo(({
              <div className="flex flex-col chat-dynamic-spacing">
                <p className="text-[10px] font-black text-gold-deep uppercase tracking-widest border-b border-gold-deep/20 pb-1">Informações Pessoais</p>
                <div>
-                  <p className="text-[10px] font-bold text-white/30 uppercase mb-1">Nome Completo</p>
+                  <p className="text-[10px] font-bold text-white/30 uppercase mb-1">
+                    {selectedLeadForChat.tipoPessoa === 'juridica' ? 'Nome do Responsável' : 'Nome Completo'}
+                  </p>
                   <p className="text-sm font-black text-white">{selectedLeadForChat.name}</p>
                </div>
                <div className="grid grid-cols-2 gap-4">
                   <div>
-                     <p className="text-[10px] font-bold text-white/30 uppercase mb-1">CPF</p>
+                     <p className="text-[10px] font-bold text-white/30 uppercase mb-1">
+                       {selectedLeadForChat.tipoPessoa === 'juridica' ? 'CNPJ' : 'CPF'}
+                     </p>
                      <div className="text-sm font-black text-white">
-                       <SensitiveContent 
-                         value={selectedLeadForChat.cpf} 
-                         maskFn={maskCPF} 
-                         canView={permissions.canReadAllLeads} 
+                       <SensitiveContent
+                         value={selectedLeadForChat.cpf}
+                         maskFn={selectedLeadForChat.tipoPessoa === 'juridica' ? maskCNPJ : maskCPF}
+                         canView={permissions.canReadAllLeads}
                        />
                      </div>
                   </div>
