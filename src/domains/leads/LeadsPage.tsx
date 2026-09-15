@@ -58,9 +58,12 @@ export const LeadsPage = React.memo(({
   const [showAddLead, setShowAddLead] = React.useState(false);
   const [editingLead, setEditingLead] = React.useState<Lead | null>(null);
   const [showImport, setShowImport] = React.useState(false);
-  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = React.useState(false);
   const [isImporting, setIsImporting] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [selectionMode, setSelectionMode] = React.useState(false);
+  const [selectedLeadIds, setSelectedLeadIds] = React.useState<Set<string>>(new Set());
+  const [showDeleteSelectedConfirm, setShowDeleteSelectedConfirm] = React.useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
 
   const [crmUsers, setCrmUsers] = React.useState<UserProfile[]>([]);
 
@@ -76,17 +79,29 @@ export const LeadsPage = React.memo(({
     }
   };
 
-  const handleDeleteAllLeads = async () => {
-    if (window.confirm('TEM CERTEZA? Isso excluirá TODOS os seus leads permanentemente.')) {
-      setIsImporting(true);
-      try {
-        for(const lead of leads) {
-          await DataService.delete('lead', lead.id);
-        }
-        setShowDeleteAllConfirm(false);
-      } finally {
-        setIsImporting(false);
+  const toggleLeadSelected = (id: string) => {
+    setSelectedLeadIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedLeadIds(new Set());
+  };
+
+  const handleDeleteSelected = async () => {
+    setIsBulkDeleting(true);
+    try {
+      for (const id of selectedLeadIds) {
+        await DataService.delete('lead', id);
       }
+      setShowDeleteSelectedConfirm(false);
+      exitSelectionMode();
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
@@ -230,7 +245,12 @@ export const LeadsPage = React.memo(({
         handleEditLead={handleEditLead}
         handleDeleteLead={handleDeleteLead}
         setActiveTab={setActiveTab}
-        setShowDeleteAllConfirm={setShowDeleteAllConfirm}
+        selectionMode={selectionMode}
+        setSelectionMode={setSelectionMode}
+        selectedLeadIds={selectedLeadIds}
+        toggleLeadSelected={toggleLeadSelected}
+        exitSelectionMode={exitSelectionMode}
+        setShowDeleteSelectedConfirm={setShowDeleteSelectedConfirm}
         setShowImport={setShowImport}
         setShowAddLead={(show) => { if (show) navigate('/leads/new'); }}
         isImporting={isImporting}
@@ -258,33 +278,35 @@ export const LeadsPage = React.memo(({
         </Modal>
       )}
 
-      {showDeleteAllConfirm && (
+      {showDeleteSelectedConfirm && (
         <Modal
-          isOpen={showDeleteAllConfirm}
-          onClose={() => setShowDeleteAllConfirm(false)}
-          title="Confirmar Limpeza"
+          isOpen={showDeleteSelectedConfirm}
+          onClose={() => setShowDeleteSelectedConfirm(false)}
+          title="Confirmar Exclusão"
         >
           <div className="space-y-4 p-4">
             <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-bold text-red-500 uppercase tracking-tight">ATENÇÃO: Ação irreversível!</p>
-                <p className="text-xs text-white/50 mt-1">Isso apagará permanentemente todos os leads visíveis nesta lista.</p>
+                <p className="text-xs text-white/50 mt-1">
+                  Isso apagará permanentemente {selectedLeadIds.size} lead{selectedLeadIds.size === 1 ? '' : 's'} selecionado{selectedLeadIds.size === 1 ? '' : 's'}.
+                </p>
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
-              <button 
-                onClick={() => setShowDeleteAllConfirm(false)}
+              <button
+                onClick={() => setShowDeleteSelectedConfirm(false)}
                 className="px-4 py-2 text-white/40 font-bold text-[10px] uppercase tracking-widest hover:text-white transition-colors"
               >
                 Cancelar
               </button>
-              <button 
-                onClick={handleDeleteAllLeads}
-                disabled={isImporting}
+              <button
+                onClick={handleDeleteSelected}
+                disabled={isBulkDeleting}
                 className="px-6 py-2 bg-red-600 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 disabled:opacity-50"
               >
-                {isImporting ? 'Excluindo...' : 'Sim, Excluir Tudo'}
+                {isBulkDeleting ? 'Excluindo...' : `Sim, Excluir ${selectedLeadIds.size}`}
               </button>
             </div>
           </div>

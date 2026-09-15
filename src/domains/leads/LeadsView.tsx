@@ -43,12 +43,17 @@ export const LeadsView = React.memo(({
   filters,
   setFilters,
   permissions, 
-  handleEditLead, 
-  handleDeleteLead, 
-  setActiveTab, 
-  setShowDeleteAllConfirm, 
-  setShowImport, 
-  setShowAddLead, 
+  handleEditLead,
+  handleDeleteLead,
+  setActiveTab,
+  selectionMode,
+  setSelectionMode,
+  selectedLeadIds,
+  toggleLeadSelected,
+  exitSelectionMode,
+  setShowDeleteSelectedConfirm,
+  setShowImport,
+  setShowAddLead,
   isImporting,
   loadMoreLeads,
   hasMoreLeads,
@@ -57,11 +62,11 @@ export const LeadsView = React.memo(({
   handleRefresh,
   isRefreshing,
   handleExportLeads
-}: { 
+}: {
   leads: Lead[];
   crmUsers: UserProfile[];
   totalLeads: number;
-  searchLeads: string; 
+  searchLeads: string;
   setSearchLeads: (s: string) => void;
   filters: any;
   setFilters: (f: any) => void;
@@ -69,17 +74,22 @@ export const LeadsView = React.memo(({
   handleEditLead: (lead: Lead) => void;
   handleDeleteLead: (id: string) => void;
   setActiveTab: (tab: any) => void;
-  setShowDeleteAllConfirm: (show: boolean) => void;
+  selectionMode: boolean;
+  setSelectionMode: (v: boolean) => void;
+  selectedLeadIds: Set<string>;
+  toggleLeadSelected: (id: string) => void;
+  exitSelectionMode: () => void;
+  setShowDeleteSelectedConfirm: (show: boolean) => void;
   setShowImport: (show: boolean) => void;
   setShowAddLead: (show: boolean) => void;
   isImporting: boolean;
   loadMoreLeads?: () => void;
   hasMoreLeads?: boolean;
   leadsLoading?: boolean;
-  stats: { 
-    total: number; 
-    quente: number; 
-    novosHoje: number; 
+  stats: {
+    total: number;
+    quente: number;
+    novosHoje: number;
     emAtendimento: number;
     conversao: number;
   };
@@ -109,6 +119,16 @@ export const LeadsView = React.memo(({
     filters.startDate ||
     filters.endDate ||
     !!searchLeads;
+
+  const allLoadedSelected = leads.length > 0 && leads.every(l => selectedLeadIds.has(l.id));
+  const someLoadedSelected = leads.some(l => selectedLeadIds.has(l.id));
+  const handleToggleSelectAll = () => {
+    if (allLoadedSelected) {
+      leads.forEach(l => { if (selectedLeadIds.has(l.id)) toggleLeadSelected(l.id); });
+    } else {
+      leads.forEach(l => { if (!selectedLeadIds.has(l.id)) toggleLeadSelected(l.id); });
+    }
+  };
 
   React.useEffect(() => {
     console.log('[REAL_LEADS_LOADED]', leads.length);
@@ -183,6 +203,25 @@ export const LeadsView = React.memo(({
               <Trash2 className="w-2.5 h-2.5 md:w-3 md:h-3" />
               Limpar
             </button>
+            {!selectionMode ? (
+              <button onClick={() => setSelectionMode(true)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#111214] border border-white/5 text-white/50 whitespace-nowrap text-[7.5px] md:text-[8.5px] font-black uppercase tracking-widest shrink-0">
+                <CheckCircle2 className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                Selecionar
+              </button>
+            ) : (
+              <>
+                <button onClick={exitSelectionMode} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#111214] border border-white/5 text-white/50 whitespace-nowrap text-[7.5px] md:text-[8.5px] font-black uppercase tracking-widest shrink-0">
+                  <X className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                  Cancelar
+                </button>
+                {someLoadedSelected && (
+                  <button onClick={() => setShowDeleteSelectedConfirm(true)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500 text-white whitespace-nowrap text-[7.5px] md:text-[8.5px] font-black uppercase tracking-widest shrink-0">
+                    <Trash2 className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                    Excluir Selecionados ({selectedLeadIds.size})
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
 
@@ -193,6 +232,16 @@ export const LeadsView = React.memo(({
               <table className="w-full text-left border-collapse min-w-[600px] md:min-w-0">
               <thead>
                 <tr className="border-b border-white/5 text-[7.5px] md:text-[8.5px] font-black uppercase tracking-wider text-white/20">
+                  {selectionMode && (
+                    <th className="px-4 py-2.5 w-8">
+                      <input
+                        type="checkbox"
+                        checked={allLoadedSelected}
+                        onChange={handleToggleSelectAll}
+                        className="w-3.5 h-3.5 accent-gold-deep cursor-pointer"
+                      />
+                    </th>
+                  )}
                   <th className="px-4 py-2.5">Lead</th>
                   <th className="px-4 py-2.5 hidden sm:table-cell">Contato</th>
                   <th className="px-4 py-2.5">Status</th>
@@ -205,11 +254,25 @@ export const LeadsView = React.memo(({
               </thead>
               <tbody className="divide-y divide-white/[0.02]">
                 {leads.map((lead) => (
-                  <tr 
-                    key={lead.id} 
-                    onClick={() => handleEditLead(lead)}
-                    className="group cursor-pointer transition-colors hover:bg-white/[0.02]"
+                  <tr
+                    key={lead.id}
+                    onClick={() => selectionMode ? toggleLeadSelected(lead.id) : handleEditLead(lead)}
+                    className={cn(
+                      "group cursor-pointer transition-colors hover:bg-white/[0.02]",
+                      selectionMode && selectedLeadIds.has(lead.id) && "bg-gold-deep/5"
+                    )}
                   >
+                    {selectionMode && (
+                      <td className="px-4 py-2.5 w-8">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeadIds.has(lead.id)}
+                          onChange={() => toggleLeadSelected(lead.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-3.5 h-3.5 accent-gold-deep cursor-pointer"
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center font-bold text-[9px] shrink-0 bg-gradient-to-br from-slate-700 to-slate-800">
