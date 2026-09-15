@@ -11,7 +11,7 @@ export const UnreadBadge: React.FC<Props> = ({ count, active }) => {
   return (
     <span className={cn(
       'text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shrink-0',
-      active ? 'bg-blue-500/30 text-blue-200' : 'bg-blue-600/30 text-blue-400',
+      active ? 'bg-[#1B4D8F] text-white' : 'bg-[#1B4D8F]/10 text-[#1B4D8F]',
     )}>
       {count > 99 ? '99+' : count}
     </span>

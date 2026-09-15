@@ -79,7 +79,7 @@ export const EmailShell: React.FC<{ onOpenSettings: () => void }> = ({ onOpenSet
             <button
               type="button"
               onClick={() => setMobilePane('sidebar')}
-              className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-bold text-white/50 uppercase tracking-widest shrink-0 border-b border-white/5"
+              className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-bold text-slate-500 hover:text-slate-800 uppercase tracking-widest shrink-0 border-b border-slate-200 bg-white"
             >
               <ChevronLeft className="w-4 h-4" /> Pastas
             </button>
@@ -92,7 +92,7 @@ export const EmailShell: React.FC<{ onOpenSettings: () => void }> = ({ onOpenSet
             <button
               type="button"
               onClick={() => { closeComposer(); setMobilePane('list'); }}
-              className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-bold text-white/50 uppercase tracking-widest shrink-0 border-b border-white/5"
+              className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-bold text-slate-500 hover:text-slate-800 uppercase tracking-widest shrink-0 border-b border-slate-200 bg-white"
             >
               <ChevronLeft className="w-4 h-4" /> {currentFolderLabel}
             </button>

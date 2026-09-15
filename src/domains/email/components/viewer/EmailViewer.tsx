@@ -11,6 +11,7 @@ import { EmailViewerBody } from './EmailViewerBody';
 import { EmailViewerAttachments } from './EmailViewerAttachments';
 import { addrDisplay, addrFull } from '../../utils/addressFormat';
 import { fmtFull } from '../../utils/dateFormat';
+import { EmptyState } from '../../../../components/ui';
 
 export const EmailViewer: React.FC = () => {
   const { state, doAction, openComposer } = useEmail();
@@ -20,11 +21,8 @@ export const EmailViewer: React.FC = () => {
 
   if (!selectedMessage) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-[#161616] gap-4">
-        <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center">
-          <Mail className="w-8 h-8 text-white/15" />
-        </div>
-        <p className="text-white/25 text-sm">Selecione um e-mail para ler</p>
+      <div className="flex-1 flex items-center justify-center bg-white">
+        <EmptyState icon={Mail} title="Selecione um e-mail para ler" />
       </div>
     );
   }
@@ -35,24 +33,24 @@ export const EmailViewer: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-[#161616] min-w-0 overflow-hidden">
+    <div className="flex-1 flex flex-col bg-white min-w-0 overflow-hidden">
       {/* Header */}
-      <div className="shrink-0 px-6 py-4 border-b border-white/5">
+      <div className="shrink-0 px-6 py-4 border-b border-slate-200">
         <div className="flex items-start justify-between gap-4 mb-3">
-          <h1 className="text-white/90 font-semibold text-base leading-snug flex-1">
+          <h1 className="text-slate-900 font-semibold text-base leading-snug flex-1">
             {selectedMessage.subject || '(sem assunto)'}
           </h1>
           <div className="flex items-center gap-1 shrink-0">
             <button title="Responder" onClick={() => openComposer('reply', selectedMessage)}
-              className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/8 transition-colors">
+              className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
               <Reply className="w-4 h-4" />
             </button>
             <button title="Responder a todos" onClick={() => openComposer('replyAll', selectedMessage)}
-              className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/8 transition-colors">
+              className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
               <ReplyAll className="w-4 h-4" />
             </button>
             <button title="Encaminhar" onClick={() => openComposer('forward', selectedMessage)}
-              className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/8 transition-colors">
+              className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
               <Forward className="w-4 h-4" />
             </button>
             <button
@@ -61,23 +59,23 @@ export const EmailViewer: React.FC = () => {
               className={cn(
                 'p-2 rounded-lg transition-colors',
                 selectedMessage.isStarred
-                  ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10'
-                  : 'text-white/40 hover:text-amber-400 hover:bg-amber-500/10',
+                  ? 'text-gold-deep hover:text-gold-deep/80 hover:bg-gold-deep/10'
+                  : 'text-slate-400 hover:text-gold-deep hover:bg-gold-deep/10',
               )}
             >
-              <Star className={cn('w-4 h-4', selectedMessage.isStarred && 'fill-amber-400')} />
+              <Star className={cn('w-4 h-4', selectedMessage.isStarred && 'fill-gold-deep')} />
             </button>
             <button title="Arquivar" onClick={() => handleAction('archive')}
-              className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/8 transition-colors">
+              className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
               <Archive className="w-4 h-4" />
             </button>
             <button title="Mover para lixeira" onClick={() => handleAction('trash')}
-              className="p-2 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+              className="p-2 rounded-lg text-slate-400 hover:text-[#C0392B] hover:bg-[#FDE4E4] transition-colors">
               <Trash2 className="w-4 h-4" />
             </button>
             <div className="relative">
               <button onClick={() => setMoreOpen(!moreOpen)}
-                className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/8 transition-colors">
+                className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
                 <MoreVertical className="w-4 h-4" />
               </button>
               <AnimatePresence>
@@ -86,7 +84,7 @@ export const EmailViewer: React.FC = () => {
                     initial={{ opacity: 0, scale: 0.95, y: -4 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                    className="absolute right-0 top-full mt-1 w-48 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl z-20 overflow-hidden"
+                    className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-20 overflow-hidden"
                   >
                     {[
                       { label: selectedMessage.isRead ? 'Marcar como não lido' : 'Marcar como lido', action: selectedMessage.isRead ? 'unread' : 'read' },
@@ -94,7 +92,7 @@ export const EmailViewer: React.FC = () => {
                       { label: 'Restaurar', action: 'restore' },
                     ].map(item => (
                       <button key={item.action} onClick={() => handleAction(item.action)}
-                        className="w-full text-left px-4 py-2.5 text-sm text-white/60 hover:bg-white/5 hover:text-white/90 transition-colors">
+                        className="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">
                         {item.label}
                       </button>
                     ))}
@@ -111,14 +109,14 @@ export const EmailViewer: React.FC = () => {
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline justify-between gap-2">
               <div>
-                <span className="text-white/80 font-medium text-sm">{addrDisplay(selectedMessage.from)}</span>
-                <span className="text-white/30 text-xs ml-2">{`<${selectedMessage.from?.email ?? ''}>`}</span>
+                <span className="text-slate-800 font-medium text-sm">{addrDisplay(selectedMessage.from)}</span>
+                <span className="text-slate-400 text-xs ml-2">{`<${selectedMessage.from?.email ?? ''}>`}</span>
               </div>
-              <span className="text-white/30 text-xs shrink-0">{fmtFull(selectedMessage.date)}</span>
+              <span className="text-slate-400 text-xs shrink-0">{fmtFull(selectedMessage.date)}</span>
             </div>
             <button
               onClick={() => setShowDetails(!showDetails)}
-              className="flex items-center gap-1 text-xs text-white/30 hover:text-white/50 transition-colors mt-0.5"
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors mt-0.5"
             >
               Para: {(selectedMessage.to ?? []).map(addrDisplay).join(', ')}
               <ChevronDown className={cn('w-3 h-3 transition-transform', showDetails && 'rotate-180')} />
@@ -132,10 +130,10 @@ export const EmailViewer: React.FC = () => {
                   className="overflow-hidden"
                 >
                   <div className="pt-2 space-y-1">
-                    <p className="text-xs text-white/40"><span className="text-white/25">De:</span> {addrFull(selectedMessage.from)}</p>
-                    <p className="text-xs text-white/40"><span className="text-white/25">Para:</span> {(selectedMessage.to ?? []).map(addrFull).join(', ')}</p>
+                    <p className="text-xs text-slate-500"><span className="text-slate-400">De:</span> {addrFull(selectedMessage.from)}</p>
+                    <p className="text-xs text-slate-500"><span className="text-slate-400">Para:</span> {(selectedMessage.to ?? []).map(addrFull).join(', ')}</p>
                     {selectedMessage.cc && selectedMessage.cc.length > 0 && (
-                      <p className="text-xs text-white/40"><span className="text-white/25">CC:</span> {selectedMessage.cc.map(addrFull).join(', ')}</p>
+                      <p className="text-xs text-slate-500"><span className="text-slate-400">CC:</span> {selectedMessage.cc.map(addrFull).join(', ')}</p>
                     )}
                   </div>
                 </motion.div>
@@ -160,15 +158,15 @@ export const EmailViewer: React.FC = () => {
         <div className="px-6 pb-6">
           <div className="flex items-center gap-2">
             <button onClick={() => openComposer('reply', selectedMessage)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/8 text-white/50 hover:text-white/80 hover:border-white/20 hover:bg-white/5 transition-all text-sm">
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 transition-all text-sm">
               <Reply className="w-3.5 h-3.5" /> Responder
             </button>
             <button onClick={() => openComposer('replyAll', selectedMessage)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/8 text-white/50 hover:text-white/80 hover:border-white/20 hover:bg-white/5 transition-all text-sm">
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 transition-all text-sm">
               <ReplyAll className="w-3.5 h-3.5" /> Responder a todos
             </button>
             <button onClick={() => openComposer('forward', selectedMessage)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/8 text-white/50 hover:text-white/80 hover:border-white/20 hover:bg-white/5 transition-all text-sm">
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 transition-all text-sm">
               <Forward className="w-3.5 h-3.5" /> Encaminhar
             </button>
           </div>

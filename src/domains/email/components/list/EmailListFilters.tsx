@@ -24,18 +24,18 @@ export const EmailListFilters: React.FC<Props> = ({
   return (
     <>
       <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
         <input
           type="text"
           value={searchValue}
           onChange={e => onSearchValueChange(e.target.value)}
           placeholder="Buscar..."
-          className="w-full bg-white/5 border border-white/8 rounded-lg pl-8 pr-8 py-1.5 text-xs text-white/70 placeholder:text-white/25 outline-none focus:border-blue-500/40 focus:bg-white/8 transition-all"
+          className="w-full bg-slate-100 border border-slate-200 rounded-lg pl-8 pr-8 py-1.5 text-xs text-slate-700 placeholder:text-slate-400 outline-none focus:border-slate-300 focus:bg-white transition-all"
         />
         {searchValue && (
           <button
             onClick={() => { onSearchValueChange(''); onClear(); }}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
           >
             <X className="w-3 h-3" />
           </button>
@@ -49,8 +49,8 @@ export const EmailListFilters: React.FC<Props> = ({
             className={cn(
               'px-2.5 py-1 rounded-full text-[11px] transition-colors',
               filter === f
-                ? 'bg-blue-600/30 text-blue-300 font-medium'
-                : 'text-white/40 hover:text-white/60 hover:bg-white/5',
+                ? 'bg-[#1B4D8F]/10 text-[#1B4D8F] font-medium'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100',
             )}
           >
             {FILTER_LABELS[f]}

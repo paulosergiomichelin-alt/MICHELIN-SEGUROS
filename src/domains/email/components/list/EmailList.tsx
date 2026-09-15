@@ -89,13 +89,13 @@ export const EmailList: React.FC = () => {
   const hasNoAccounts = accounts.length === 0 && !messagesLoading;
 
   return (
-    <div className="flex flex-col h-full min-w-[300px] w-[380px] shrink-0 border-r border-white/5 bg-[#141414]">
+    <div className="flex flex-col h-full min-w-[300px] w-[380px] shrink-0 border-r border-slate-200 bg-white">
       {/* Header */}
       <div className="shrink-0 px-4 pt-4 pb-2">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-white/80 font-semibold text-sm">{folderLabel}</h2>
+          <h2 className="text-slate-800 font-semibold text-sm">{folderLabel}</h2>
           {messagesLoading && (
-            <div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
           )}
         </div>
         <EmailListFilters
@@ -132,8 +132,8 @@ export const EmailList: React.FC = () => {
                   }}
                 >
                   {row.type === 'header' ? (
-                    <div className="flex items-center px-4 h-[30px] bg-[#141414]">
-                      <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">
+                    <div className="flex items-center px-4 h-[30px] bg-white">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                         {row.label}
                       </span>
                     </div>
@@ -166,11 +166,11 @@ export const EmailList: React.FC = () => {
         )}
         {messagesLoading && displayMessages.length > 0 && (
           <div className="flex items-center justify-center py-4">
-            <div className="w-4 h-4 border-2 border-white/20 border-t-blue-400 rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-slate-200 border-t-[#1B4D8F] rounded-full animate-spin" />
           </div>
         )}
         {!hasMore && displayMessages.length > 0 && !messagesLoading && (
-          <p className="text-center text-white/20 text-xs py-4">Fim das mensagens</p>
+          <p className="text-center text-slate-400 text-xs py-4">Fim das mensagens</p>
         )}
       </div>
     </div>

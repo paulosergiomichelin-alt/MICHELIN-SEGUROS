@@ -75,11 +75,11 @@ export const EmailListItem: React.FC<Props> = ({
       onClick={onClick}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}
       className={cn(
-        'w-full text-left flex items-start gap-3 px-4 py-3 border-b border-white/5 transition-colors group cursor-pointer relative',
+        'w-full text-left flex items-start gap-3 px-4 py-3 border-b border-slate-100 transition-colors group cursor-pointer relative',
         isSelected
-          ? 'bg-[#2d2d2d] border-l-2 border-l-blue-500'
-          : 'hover:bg-[#252525]',
-        !message.isRead && 'bg-[#1e1e2a]',
+          ? 'bg-[#EAF1FB] border-l-2 border-l-[#1B4D8F]'
+          : 'hover:bg-slate-50',
+        !message.isRead && 'bg-[#F5F9FD]',
       )}
     >
       {/* Checkbox / unread dot */}
@@ -90,11 +90,11 @@ export const EmailListItem: React.FC<Props> = ({
             checked={isChecked ?? false}
             onChange={e => { e.stopPropagation(); onCheck(e.target.checked); }}
             onClick={e => e.stopPropagation()}
-            className="w-4 h-4 rounded accent-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="w-4 h-4 rounded accent-[#1B4D8F] opacity-0 group-hover:opacity-100 transition-opacity"
             style={isChecked ? { opacity: 1 } : undefined}
           />
         ) : (
-          !message.isRead && <div className="w-2 h-2 rounded-full bg-blue-500" />
+          !message.isRead && <div className="w-2 h-2 rounded-full bg-[#1B4D8F]" />
         )}
       </div>
 
@@ -106,23 +106,23 @@ export const EmailListItem: React.FC<Props> = ({
         <div className="flex items-baseline justify-between gap-1 mb-0.5">
           <span className={cn(
             'text-sm truncate',
-            message.isRead ? 'text-white/60 font-normal' : 'text-white/90 font-semibold',
+            message.isRead ? 'text-slate-500 font-normal' : 'text-slate-900 font-semibold',
           )}>
             {addrDisplay(message.from)}
           </span>
-          <span className="text-[11px] text-white/30 shrink-0">{fmtDate(message.date)}</span>
+          <span className="text-[11px] text-slate-400 shrink-0">{fmtDate(message.date)}</span>
         </div>
         <div className={cn(
           'text-xs truncate mb-0.5',
-          message.isRead ? 'text-white/50' : 'text-white/80 font-medium',
+          message.isRead ? 'text-slate-500' : 'text-slate-700 font-medium',
         )}>
           {message.subject || '(sem assunto)'}
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-[11px] text-white/30 truncate flex-1">{message.snippet}</span>
+          <span className="text-[11px] text-slate-400 truncate flex-1">{message.snippet}</span>
           <div className="flex items-center gap-1 shrink-0">
-            {message.isStarred && <Star className="w-3 h-3 text-amber-400 fill-amber-400" />}
-            {message.hasAttachments && <Paperclip className="w-3 h-3 text-white/30" />}
+            {message.isStarred && <Star className="w-3 h-3 text-gold-deep fill-gold-deep" />}
+            {message.hasAttachments && <Paperclip className="w-3 h-3 text-slate-400" />}
           </div>
         </div>
       </div>
@@ -133,7 +133,7 @@ export const EmailListItem: React.FC<Props> = ({
           type="button"
           title={message.isRead ? 'Marcar como não lida' : 'Marcar como lida'}
           onClick={e => { e.stopPropagation(); onToggleRead(); }}
-          className="p-1.5 rounded-md text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
+          className="p-1.5 rounded-md text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors"
         >
           {message.isRead ? <Mail className="w-3.5 h-3.5" /> : <MailOpen className="w-3.5 h-3.5" />}
         </button>
@@ -142,7 +142,7 @@ export const EmailListItem: React.FC<Props> = ({
           type="button"
           title="Mais ações"
           onClick={openMenu}
-          className="p-1.5 rounded-md text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
+          className="p-1.5 rounded-md text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors"
         >
           <MoreVertical className="w-3.5 h-3.5" />
         </button>
@@ -152,26 +152,26 @@ export const EmailListItem: React.FC<Props> = ({
         <div
           ref={menuRef}
           onClick={e => e.stopPropagation()}
-          className="fixed z-50 w-52 max-h-72 overflow-y-auto bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl py-1"
+          className="fixed z-50 w-52 max-h-72 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl py-1"
           style={{ top: menuPos.top, right: menuPos.right }}
         >
           {message.folder === 'spam' && (
             <button
               onClick={() => { setMenuOpen(false); onNotSpam(); }}
-              className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors"
+              className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
             >
               <ShieldOff className="w-3.5 h-3.5" />
               Não é lixo eletrônico
             </button>
           )}
-          <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide text-white/30 flex items-center gap-1.5">
+          <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide text-slate-400 flex items-center gap-1.5">
             <FolderInput className="w-3 h-3" /> Mover para
           </div>
           {moveTargets.map(target => (
             <button
               key={target.id}
               onClick={() => { setMenuOpen(false); onMoveTo(target.id); }}
-              className="w-full text-left px-3 py-2 text-xs text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors truncate"
+              className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors truncate"
             >
               {target.name}
             </button>

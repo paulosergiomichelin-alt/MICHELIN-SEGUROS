@@ -18,6 +18,7 @@ import { cn } from '../../lib/utils';
 import { useEmail } from '../../contexts/EmailContext';
 import { EmailAccount, EmailService } from '../../services/EmailService';
 import { usePermissions } from '../../contexts/PermissionsContext';
+import { Button, EmptyState, Input, Modal, PageHeader } from '../../components/ui';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -45,9 +46,9 @@ function fmtSync(iso?: string): string {
 
 const AccountStatusBadge: React.FC<{ status: EmailAccount['status'] }> = ({ status }) => {
   const map = {
-    connected: { label: 'Conectado', icon: CheckCircle, className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25' },
-    disconnected: { label: 'Desconectado', icon: XCircle, className: 'bg-white/5 text-white/40 border-white/10' },
-    error: { label: 'Erro', icon: AlertCircle, className: 'bg-red-500/15 text-red-400 border-red-500/25' },
+    connected: { label: 'Conectado', icon: CheckCircle, className: 'bg-[#E4F5EA] text-[#1F8A4C] border-[#1F8A4C]/20' },
+    disconnected: { label: 'Desconectado', icon: XCircle, className: 'bg-slate-100 text-slate-500 border-slate-200' },
+    error: { label: 'Erro', icon: AlertCircle, className: 'bg-[#FDE4E4] text-[#C0392B] border-[#C0392B]/20' },
   };
   const { label, icon: Icon, className } = map[status] ?? map.disconnected;
   return (
@@ -78,7 +79,7 @@ const AccountCard: React.FC<{
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97 }}
-      className="bg-[#1a1a1a] border border-white/8 rounded-2xl p-5 flex items-start gap-4 hover:border-white/12 transition-colors"
+      className="bg-white border border-slate-200 rounded-2xl p-5 flex items-start gap-4 hover:border-slate-300 shadow-sm transition-colors"
     >
       {/* Avatar */}
       <div
@@ -91,7 +92,7 @@ const AccountCard: React.FC<{
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap mb-1">
-          <span className="text-white/85 font-medium text-sm truncate">{account.displayName || account.email}</span>
+          <span className="text-slate-800 font-medium text-sm truncate">{account.displayName || account.email}</span>
           {account.isDefault && (
             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gold-deep/15 text-gold-deep text-xs border border-gold-deep/25">
               <Star className="w-2.5 h-2.5 fill-gold-deep" />
@@ -99,14 +100,14 @@ const AccountCard: React.FC<{
             </span>
           )}
         </div>
-        <p className="text-white/40 text-xs mb-2">{account.email}</p>
+        <p className="text-slate-500 text-xs mb-2">{account.email}</p>
         <div className="flex items-center gap-3 flex-wrap">
           <AccountStatusBadge status={account.status} />
-          <span className="flex items-center gap-1 text-xs text-white/30">
+          <span className="flex items-center gap-1 text-xs text-slate-400">
             <Clock className="w-3 h-3" />
             Sync: {fmtSync(account.lastSync)}
           </span>
-          <span className="text-xs text-white/25 capitalize">
+          <span className="text-xs text-slate-400 capitalize">
             {account.provider === 'gmail'
               ? 'Gmail'
               : account.provider === 'microsoft'
@@ -115,7 +116,7 @@ const AccountCard: React.FC<{
           </span>
         </div>
         {account.errorMessage && (
-          <p className="mt-2 text-xs text-red-400/80 bg-red-500/5 border border-red-500/15 rounded-lg px-3 py-1.5">
+          <p className="mt-2 text-xs text-[#C0392B] bg-[#FDE4E4] border border-[#C0392B]/15 rounded-lg px-3 py-1.5">
             {account.errorMessage}
           </p>
         )}
@@ -126,7 +127,7 @@ const AccountCard: React.FC<{
         {!account.isDefault && (
           <button
             onClick={onSetDefault}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/50 hover:text-gold-deep hover:bg-gold-deep/10 transition-colors border border-white/8 hover:border-gold-deep/25"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-500 hover:text-[#1B4D8F] hover:bg-[#1B4D8F]/8 transition-colors border border-slate-200 hover:border-[#1B4D8F]/30"
           >
             <Star className="w-3 h-3" />
             Definir padrão
@@ -135,7 +136,7 @@ const AccountCard: React.FC<{
         <button
           onClick={onSync}
           disabled={syncing}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/50 hover:text-white/80 hover:bg-white/5 transition-colors border border-white/8 disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors border border-slate-200 disabled:opacity-50"
         >
           <RefreshCw className={cn('w-3 h-3', syncing && 'animate-spin')} />
           {syncing ? 'Sincronizando...' : 'Sincronizar'}
@@ -145,14 +146,14 @@ const AccountCard: React.FC<{
             <button
               onClick={onDelete}
               disabled={deleting}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-red-400 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-[#C0392B] bg-[#FDE4E4] hover:bg-[#fbd0d0] border border-[#C0392B]/25 transition-colors disabled:opacity-50"
             >
               {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
               Confirmar
             </button>
             <button
               onClick={() => setConfirmDelete(false)}
-              className="px-2.5 py-1.5 rounded-lg text-xs text-white/40 hover:text-white/70 border border-white/8 transition-colors"
+              className="px-2.5 py-1.5 rounded-lg text-xs text-slate-500 hover:text-slate-800 border border-slate-200 transition-colors"
             >
               Cancelar
             </button>
@@ -160,7 +161,7 @@ const AccountCard: React.FC<{
         ) : (
           <button
             onClick={() => setConfirmDelete(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors border border-white/8 hover:border-red-500/20"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-[#C0392B] hover:bg-[#FDE4E4] transition-colors border border-slate-200 hover:border-[#C0392B]/20"
           >
             <Trash2 className="w-3 h-3" />
             Remover
@@ -244,182 +245,179 @@ export const EmailAccountsPage: React.FC = () => {
     : '#';
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#0f0f0f] p-6">
-      <div className="max-w-3xl mx-auto">
-        {/* Page header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-white/90 text-2xl font-bold mb-1">Contas de E-mail</h1>
-            <p className="text-white/40 text-sm">Gerencie as contas conectadas ao seu CRM</p>
-          </div>
-          <button
-            onClick={loadAccounts}
-            disabled={loading}
-            className="p-2 rounded-lg text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors"
-          >
-            <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
-          </button>
-        </div>
-
-        {syncError && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            {syncError}
-          </div>
-        )}
-
-        {/* Accounts list */}
-        {loading ? (
-          <div className="flex items-center justify-center h-40">
-            <Loader2 className="w-6 h-6 text-white/20 animate-spin" />
-          </div>
-        ) : accounts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/8 flex items-center justify-center">
-              <Mail className="w-8 h-8 text-white/15" />
-            </div>
-            <p className="text-white/30 text-sm">Nenhuma conta conectada</p>
-          </div>
-        ) : (
-          <div className="space-y-3 mb-8">
-            <AnimatePresence mode="popLayout">
-              {accounts.map(acc => (
-                <AccountCard
-                  key={acc.id}
-                  account={acc}
-                  onSetDefault={() => setDefaultAccount(acc.id)}
-                  onSync={() => handleSync(acc)}
-                  onDelete={() => handleDelete(acc.id)}
-                  syncing={syncingId === acc.id}
-                  deleting={deletingId === acc.id}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {/* Connect new account */}
-        <div className="bg-[#1a1a1a] border border-white/8 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Plus className="w-4 h-4 text-white/40" />
-            <h2 className="text-white/70 font-semibold text-sm">Conectar nova conta</h2>
-          </div>
-          <p className="text-white/30 text-sm mb-5">
-            Conecte uma conta Gmail ou Microsoft Outlook para sincronizar e-mails com o CRM.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Gmail */}
-            <a
-              href={gmailUrl}
-              className="flex items-center gap-3 px-5 py-3 rounded-xl border border-white/10 hover:border-red-500/30 hover:bg-red-500/5 transition-all text-white/60 hover:text-white/90 group"
-            >
-              <svg viewBox="0 0 48 48" className="w-5 h-5 shrink-0">
-                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-              </svg>
-              <div>
-                <p className="font-medium text-sm">Conectar Gmail</p>
-                <p className="text-xs text-white/30 group-hover:text-white/40">Google Workspace ou Gmail pessoal</p>
-              </div>
-            </a>
-
-            {/* Microsoft */}
-            <a
-              href={microsoftUrl}
-              className="flex items-center gap-3 px-5 py-3 rounded-xl border border-white/10 hover:border-blue-500/30 hover:bg-blue-500/5 transition-all text-white/60 hover:text-white/90 group"
-            >
-              <svg viewBox="0 0 48 48" className="w-5 h-5 shrink-0">
-                <path fill="#F25022" d="M22 22H2V2h20z"/>
-                <path fill="#7FBA00" d="M46 22H26V2h20z"/>
-                <path fill="#00A4EF" d="M22 46H2V26h20z"/>
-                <path fill="#FFB900" d="M46 46H26V26h20z"/>
-              </svg>
-              <div>
-                <p className="font-medium text-sm">Conectar Outlook</p>
-                <p className="text-xs text-white/30 group-hover:text-white/40">Microsoft 365 ou Outlook.com</p>
-              </div>
-            </a>
-
-            {/* Outro (IMAP) */}
+    <div className="min-h-full bg-slate-50">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="max-w-3xl mx-auto space-y-5">
+          {/* Page header */}
+          <div className="flex items-center justify-between">
+            <PageHeader
+              icon={Mail}
+              title="Contas de E-mail"
+              subtitle="Gerencie as contas conectadas ao seu CRM"
+            />
             <button
-              onClick={() => setShowImapModal(true)}
-              className="flex items-center gap-3 px-5 py-3 rounded-xl border border-white/10 hover:border-white/25 hover:bg-white/5 transition-all text-white/60 hover:text-white/90 group"
+              onClick={loadAccounts}
+              disabled={loading}
+              className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
             >
-              <Mail className="w-5 h-5 shrink-0 text-white/40" />
-              <div className="text-left">
-                <p className="font-medium text-sm">Outro (IMAP)</p>
-                <p className="text-xs text-white/30 group-hover:text-white/40">Qualquer provedor com IMAP/SMTP</p>
-              </div>
+              <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
             </button>
           </div>
-        </div>
-      </div>
 
-      {showImapModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-md">
-            <h3 className="text-white/90 font-semibold text-base mb-1">Conectar conta IMAP</h3>
-            <p className="text-white/40 text-xs mb-5">
+          {syncError && (
+            <div className="px-4 py-3 rounded-xl bg-[#FDE4E4] border border-[#C0392B]/20 text-[#C0392B] text-sm flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              {syncError}
+            </div>
+          )}
+
+          {/* Accounts list */}
+          {loading ? (
+            <div className="flex items-center justify-center h-40">
+              <Loader2 className="w-6 h-6 text-slate-300 animate-spin" />
+            </div>
+          ) : accounts.length === 0 ? (
+            <EmptyState icon={Mail} title="Nenhuma conta conectada" />
+          ) : (
+            <div className="space-y-3">
+              <AnimatePresence mode="popLayout">
+                {accounts.map(acc => (
+                  <AccountCard
+                    key={acc.id}
+                    account={acc}
+                    onSetDefault={() => setDefaultAccount(acc.id)}
+                    onSync={() => handleSync(acc)}
+                    onDelete={() => handleDelete(acc.id)}
+                    syncing={syncingId === acc.id}
+                    deleting={deletingId === acc.id}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* Connect new account */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Plus className="w-4 h-4 text-slate-400" />
+              <h2 className="text-slate-700 font-semibold text-sm">Conectar nova conta</h2>
+            </div>
+            <p className="text-slate-500 text-sm mb-5">
+              Conecte uma conta Gmail ou Microsoft Outlook para sincronizar e-mails com o CRM.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Gmail */}
+              <a
+                href={gmailUrl}
+                className="flex items-center gap-3 px-5 py-3 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all text-slate-600 hover:text-slate-900 group"
+              >
+                <svg viewBox="0 0 48 48" className="w-5 h-5 shrink-0">
+                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                </svg>
+                <div>
+                  <p className="font-medium text-sm">Conectar Gmail</p>
+                  <p className="text-xs text-slate-400 group-hover:text-slate-500">Google Workspace ou Gmail pessoal</p>
+                </div>
+              </a>
+
+              {/* Microsoft */}
+              <a
+                href={microsoftUrl}
+                className="flex items-center gap-3 px-5 py-3 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all text-slate-600 hover:text-slate-900 group"
+              >
+                <svg viewBox="0 0 48 48" className="w-5 h-5 shrink-0">
+                  <path fill="#F25022" d="M22 22H2V2h20z"/>
+                  <path fill="#7FBA00" d="M46 22H26V2h20z"/>
+                  <path fill="#00A4EF" d="M22 46H2V26h20z"/>
+                  <path fill="#FFB900" d="M46 46H26V26h20z"/>
+                </svg>
+                <div>
+                  <p className="font-medium text-sm">Conectar Outlook</p>
+                  <p className="text-xs text-slate-400 group-hover:text-slate-500">Microsoft 365 ou Outlook.com</p>
+                </div>
+              </a>
+
+              {/* Outro (IMAP) */}
+              <button
+                onClick={() => setShowImapModal(true)}
+                className="flex items-center gap-3 px-5 py-3 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all text-slate-600 hover:text-slate-900 group"
+              >
+                <Mail className="w-5 h-5 shrink-0 text-slate-400" />
+                <div className="text-left">
+                  <p className="font-medium text-sm">Outro (IMAP)</p>
+                  <p className="text-xs text-slate-400 group-hover:text-slate-500">Qualquer provedor com IMAP/SMTP</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {showImapModal && (
+          <Modal
+            title="Conectar conta IMAP"
+            onClose={() => { setShowImapModal(false); setImapError(null); }}
+            footer={
+              <>
+                <Button variant="ghost" onClick={() => { setShowImapModal(false); setImapError(null); }}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleCreateImapAccount}
+                  disabled={imapSubmitting || !imapForm.email || !imapForm.password}
+                  loading={imapSubmitting}
+                >
+                  {imapSubmitting ? 'Testando conexão...' : 'Testar e conectar'}
+                </Button>
+              </>
+            }
+          >
+            <p className="text-slate-500 text-xs mb-5">
               Funciona com qualquer provedor de e-mail que ofereça IMAP/SMTP.
             </p>
 
-            <label className="block text-white/50 text-xs mb-1.5">E-mail</label>
-            <input
-              type="email"
-              value={imapForm.email}
-              onChange={e => setImapForm(f => ({ ...f, email: e.target.value }))}
-              className="w-full mb-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/85 text-sm outline-none focus:border-white/25"
-              placeholder="voce@provedor.com"
-            />
+            <div className="space-y-3">
+              <Input
+                label="E-mail"
+                type="email"
+                value={imapForm.email}
+                onChange={e => setImapForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="voce@provedor.com"
+              />
 
-            <label className="block text-white/50 text-xs mb-1.5">Senha</label>
-            <input
-              type="password"
-              value={imapForm.password}
-              onChange={e => setImapForm(f => ({ ...f, password: e.target.value }))}
-              className="w-full mb-1.5 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/85 text-sm outline-none focus:border-white/25"
-              placeholder="Senha ou senha de app"
-            />
-            <p className="text-white/25 text-[11px] mb-3">
-              Provedores como Gmail e Yahoo exigem uma "senha de app" quando a verificação em duas etapas está ativa.
-            </p>
+              <div>
+                <Input
+                  label="Senha"
+                  type="password"
+                  value={imapForm.password}
+                  onChange={e => setImapForm(f => ({ ...f, password: e.target.value }))}
+                  placeholder="Senha ou senha de app"
+                />
+                <p className="text-slate-400 text-[11px] mt-1 ml-1">
+                  Provedores como Gmail e Yahoo exigem uma "senha de app" quando a verificação em duas etapas está ativa.
+                </p>
+              </div>
 
-            <label className="block text-white/50 text-xs mb-1.5">Nome de exibição (opcional)</label>
-            <input
-              type="text"
-              value={imapForm.displayName}
-              onChange={e => setImapForm(f => ({ ...f, displayName: e.target.value }))}
-              className="w-full mb-4 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/85 text-sm outline-none focus:border-white/25"
-              placeholder={imapForm.email || 'Como aparece pros destinatários'}
-            />
+              <Input
+                label="Nome de exibição (opcional)"
+                type="text"
+                value={imapForm.displayName}
+                onChange={e => setImapForm(f => ({ ...f, displayName: e.target.value }))}
+                placeholder={imapForm.email || 'Como aparece pros destinatários'}
+              />
+            </div>
 
             {imapError && (
-              <div className="mb-4 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+              <div className="mt-4 px-3 py-2 rounded-lg bg-[#FDE4E4] border border-[#C0392B]/20 text-[#C0392B] text-xs">
                 {imapError}
               </div>
             )}
-
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => { setShowImapModal(false); setImapError(null); }}
-                className="px-4 py-2 rounded-lg text-sm text-white/50 hover:text-white/80 border border-white/8 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleCreateImapAccount}
-                disabled={imapSubmitting || !imapForm.email || !imapForm.password}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm bg-gold-deep/15 text-gold-deep border border-gold-deep/25 hover:bg-gold-deep/25 transition-colors disabled:opacity-50"
-              >
-                {imapSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                {imapSubmitting ? 'Testando conexão...' : 'Testar e conectar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </Modal>
+        )}
+      </div>
     </div>
   );
 };

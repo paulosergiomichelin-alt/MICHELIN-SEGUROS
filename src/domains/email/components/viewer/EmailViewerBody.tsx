@@ -45,11 +45,11 @@ export const EmailViewerBody: React.FC<Props> = ({ bodyHtml, bodyText, snippet, 
 <base target="_blank">
 <meta charset="utf-8">
 <style>
-body{margin:0;padding:16px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:rgba(255,255,255,0.75);background:transparent;font-size:14px;line-height:1.6;word-break:break-word;overflow-x:auto;}
-a{color:#60a5fa;}
+body{margin:0;padding:16px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1e293b;background:transparent;font-size:14px;line-height:1.6;word-break:break-word;overflow-x:auto;}
+a{color:#1B4D8F;}
 img{max-width:100%;height:auto;}
-blockquote{border-left:3px solid rgba(255,255,255,0.15);margin:0;padding-left:12px;color:rgba(255,255,255,0.4);}
-pre,code{background:rgba(255,255,255,0.05);border-radius:4px;padding:2px 6px;font-size:13px;}
+blockquote{border-left:3px solid #cbd5e1;margin:0;padding-left:12px;color:#64748b;}
+pre,code{background:#f1f5f9;border-radius:4px;padding:2px 6px;font-size:13px;}
 table{max-width:100%;border-collapse:collapse;}
 </style>
 ${styles ? `<style>${styles}</style>` : ''}
@@ -68,7 +68,7 @@ ${styles ? `<style>${styles}</style>` : ''}
   }
 
   return (
-    <pre className="text-white/70 text-sm leading-relaxed whitespace-pre-wrap font-sans">
+    <pre className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap font-sans">
       {bodyText || snippet || '(Mensagem sem conteúdo)'}
     </pre>
   );

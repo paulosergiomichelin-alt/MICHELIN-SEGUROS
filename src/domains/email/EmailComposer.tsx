@@ -24,15 +24,16 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { useEmail } from '../../contexts/EmailContext';
 import { EmailService, CachedEmail, EmailAddress, fileToAttachmentPayload } from '../../services/EmailService';
+import { Button } from '../../components/ui';
 
 // ─── Email Chip ───────────────────────────────────────────────────────────────
 
 const EmailChip: React.FC<{ address: EmailAddress; onRemove: () => void }> = ({ address, onRemove }) => (
-  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-xs border border-blue-500/30">
+  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1B4D8F]/8 text-[#1B4D8F] text-xs border border-[#1B4D8F]/20">
     {address.name ? `${address.name} <${address.email}>` : address.email}
     <button
       onClick={onRemove}
-      className="hover:text-white transition-colors ml-0.5"
+      className="hover:text-slate-900 transition-colors ml-0.5"
       type="button"
     >
       <X className="w-3 h-3" />
@@ -78,8 +79,8 @@ const EmailField: React.FC<EmailFieldProps> = ({ label, addresses, onChange }) =
   };
 
   return (
-    <div className="flex items-start gap-2 px-4 py-2 border-b border-white/5 min-h-[40px]">
-      <span className="text-white/40 text-sm shrink-0 mt-1 w-8">{label}</span>
+    <div className="flex items-start gap-2 px-4 py-2 border-b border-slate-100 min-h-[40px]">
+      <span className="text-slate-500 text-sm shrink-0 mt-1 w-8">{label}</span>
       <div className="flex flex-wrap gap-1 flex-1 items-center">
         {addresses.map((addr, i) => (
           <EmailChip
@@ -95,7 +96,7 @@ const EmailField: React.FC<EmailFieldProps> = ({ label, addresses, onChange }) =
           onKeyDown={handleKeyDown}
           onBlur={() => addEmail(inputValue)}
           placeholder={addresses.length === 0 ? 'Adicionar endereço...' : ''}
-          className="flex-1 min-w-[120px] bg-transparent text-white/80 text-sm outline-none placeholder:text-white/20"
+          className="flex-1 min-w-[120px] bg-transparent text-slate-800 text-sm outline-none placeholder:text-slate-300"
         />
       </div>
     </div>
@@ -117,8 +118,8 @@ const ToolbarBtn: React.FC<{
     className={cn(
       'p-1.5 rounded transition-colors',
       active
-        ? 'bg-blue-500/30 text-blue-300'
-        : 'text-white/50 hover:text-white/90 hover:bg-white/10',
+        ? 'bg-[#1B4D8F]/10 text-[#1B4D8F]'
+        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100',
     )}
   >
     {children}
@@ -156,7 +157,7 @@ export const EmailComposer: React.FC = () => {
 
     const sig = settings?.signature?.trim() ?? '';
     const sigHtml = sig
-      ? `<div style="border-top:1px solid rgba(255,255,255,0.08);margin-top:12px;padding-top:10px;color:rgba(255,255,255,0.45);font-size:13px;">${sig}</div>`
+      ? `<div style="border-top:1px solid #e2e8f0;margin-top:12px;padding-top:10px;color:#64748b;font-size:13px;">${sig}</div>`
       : '';
 
     if (composerMode === 'new') {
@@ -210,7 +211,7 @@ export const EmailComposer: React.FC = () => {
       editorRef.current.innerHTML = `
         <p><br></p>
         ${sigHtml}
-        <div style="border-left: 2px solid #3b82f6; padding-left: 12px; margin-left: 4px; color: rgba(255,255,255,0.5); margin-top: 12px;">
+        <div style="border-left: 2px solid #1B4D8F; padding-left: 12px; margin-left: 4px; color: #64748b; margin-top: 12px;">
           <p style="font-size: 12px; margin-bottom: 4px;">
             ─── Original ─── Em ${originalDate}, ${originalFrom} escreveu:
           </p>
@@ -342,11 +343,11 @@ export const EmailComposer: React.FC = () => {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-      className="flex flex-col h-full w-full bg-[#111] border-l border-white/5 overflow-hidden"
+      className="flex flex-col h-full w-full bg-white border-l border-slate-200 overflow-hidden"
     >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-3 border-b border-white/8 bg-[#0d0d0d] shrink-0">
-            <h2 className="text-white/80 text-sm font-semibold">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 shrink-0">
+            <h2 className="text-slate-800 text-sm font-semibold">
               {composerMode === 'new'
                 ? 'Nova Mensagem'
                 : composerMode === 'reply'
@@ -357,7 +358,7 @@ export const EmailComposer: React.FC = () => {
             </h2>
             <button
               onClick={closeComposer}
-              className="p-1.5 rounded-lg text-white/40 hover:text-white/90 hover:bg-white/10 transition-colors"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -368,12 +369,12 @@ export const EmailComposer: React.FC = () => {
             <EmailField label="Para" addresses={to} onChange={setTo} />
 
             {/* CC/BCC toggles */}
-            <div className="flex items-center px-4 py-1 border-b border-white/5 gap-3">
+            <div className="flex items-center px-4 py-1 border-b border-slate-100 gap-3">
               {!showCc && (
                 <button
                   type="button"
                   onClick={() => setShowCc(true)}
-                  className="text-white/30 text-xs hover:text-white/60 transition-colors"
+                  className="text-slate-400 text-xs hover:text-slate-700 transition-colors"
                 >
                   + CC
                 </button>
@@ -382,7 +383,7 @@ export const EmailComposer: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowBcc(true)}
-                  className="text-white/30 text-xs hover:text-white/60 transition-colors"
+                  className="text-slate-400 text-xs hover:text-slate-700 transition-colors"
                 >
                   + CCO
                 </button>
@@ -397,19 +398,19 @@ export const EmailComposer: React.FC = () => {
             )}
 
             {/* Subject */}
-            <div className="flex items-center gap-2 px-4 py-2 border-b border-white/5">
-              <span className="text-white/40 text-sm shrink-0 w-8">Ass.</span>
+            <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-100">
+              <span className="text-slate-500 text-sm shrink-0 w-8">Ass.</span>
               <input
                 type="text"
                 value={subject}
                 onChange={e => setSubject(e.target.value)}
                 placeholder="Assunto"
-                className="flex-1 bg-transparent text-white/80 text-sm outline-none placeholder:text-white/20"
+                className="flex-1 bg-transparent text-slate-800 text-sm outline-none placeholder:text-slate-300"
               />
             </div>
 
             {/* Toolbar */}
-            <div className="flex items-center gap-0.5 px-3 py-1.5 border-b border-white/5 flex-wrap">
+            <div className="flex items-center gap-0.5 px-3 py-1.5 border-b border-slate-100 flex-wrap">
               <ToolbarBtn onClick={() => execCmd('bold')} title="Negrito (Ctrl+B)">
                 <Bold className="w-3.5 h-3.5" />
               </ToolbarBtn>
@@ -419,18 +420,18 @@ export const EmailComposer: React.FC = () => {
               <ToolbarBtn onClick={() => execCmd('underline')} title="Sublinhado (Ctrl+U)">
                 <Underline className="w-3.5 h-3.5" />
               </ToolbarBtn>
-              <div className="w-px h-4 bg-white/10 mx-1" />
+              <div className="w-px h-4 bg-slate-200 mx-1" />
               <ToolbarBtn onClick={() => execCmd('insertUnorderedList')} title="Lista com marcadores">
                 <List className="w-3.5 h-3.5" />
               </ToolbarBtn>
               <ToolbarBtn onClick={() => execCmd('insertOrderedList')} title="Lista numerada">
                 <span className="text-xs font-mono">1.</span>
               </ToolbarBtn>
-              <div className="w-px h-4 bg-white/10 mx-1" />
+              <div className="w-px h-4 bg-slate-200 mx-1" />
               <ToolbarBtn onClick={() => setLinkDialogOpen(true)} title="Inserir link">
                 <Link className="w-3.5 h-3.5" />
               </ToolbarBtn>
-              <div className="w-px h-4 bg-white/10 mx-1" />
+              <div className="w-px h-4 bg-slate-200 mx-1" />
               <ToolbarBtn onClick={() => execCmd('justifyLeft')} title="Alinhar à esquerda">
                 <AlignLeft className="w-3.5 h-3.5" />
               </ToolbarBtn>
@@ -440,7 +441,7 @@ export const EmailComposer: React.FC = () => {
               <ToolbarBtn onClick={() => execCmd('justifyRight')} title="Alinhar à direita">
                 <AlignRight className="w-3.5 h-3.5" />
               </ToolbarBtn>
-              <div className="w-px h-4 bg-white/10 mx-1" />
+              <div className="w-px h-4 bg-slate-200 mx-1" />
               <ToolbarBtn onClick={() => execCmd('removeFormat')} title="Remover formatação">
                 <Minus className="w-3.5 h-3.5" />
               </ToolbarBtn>
@@ -454,9 +455,9 @@ export const EmailComposer: React.FC = () => {
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                className="shrink-0 flex items-center gap-2 px-4 py-2 bg-[#0f0f0f] border-b border-white/10"
+                className="shrink-0 flex items-center gap-2 px-4 py-2 bg-slate-50 border-b border-slate-200"
               >
-                <span className="text-white/50 text-xs">URL:</span>
+                <span className="text-slate-500 text-xs">URL:</span>
                 <input
                   autoFocus
                   type="url"
@@ -467,19 +468,19 @@ export const EmailComposer: React.FC = () => {
                     if (e.key === 'Escape') setLinkDialogOpen(false);
                   }}
                   placeholder="https://..."
-                  className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-white/80 text-sm outline-none"
+                  className="flex-1 bg-white border border-slate-200 rounded px-2 py-1 text-slate-800 text-sm outline-none focus:border-[#1B4D8F]/50"
                 />
                 <button
                   type="button"
                   onClick={insertLink}
-                  className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded transition-colors"
+                  className="px-3 py-1 bg-[#1B4D8F] hover:bg-[#153E73] text-white text-xs rounded transition-colors"
                 >
                   OK
                 </button>
                 <button
                   type="button"
                   onClick={() => setLinkDialogOpen(false)}
-                  className="text-white/40 hover:text-white/80 transition-colors"
+                  className="text-slate-400 hover:text-slate-700 transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -494,8 +495,8 @@ export const EmailComposer: React.FC = () => {
             suppressContentEditableWarning
             data-placeholder="Escreva sua mensagem..."
             className={cn(
-              'flex-1 overflow-y-auto px-5 py-4 text-white/80 text-sm leading-relaxed outline-none min-h-0',
-              'empty:before:content-[attr(data-placeholder)] empty:before:text-white/20',
+              'flex-1 overflow-y-auto px-5 py-4 text-slate-800 text-sm leading-relaxed outline-none min-h-0',
+              'empty:before:content-[attr(data-placeholder)] empty:before:text-slate-300',
             )}
             style={{ wordBreak: 'break-word' }}
             onKeyDown={e => {
@@ -508,19 +509,19 @@ export const EmailComposer: React.FC = () => {
 
           {/* Attachments list */}
           {attachments.length > 0 && (
-            <div className="shrink-0 px-4 py-2 border-t border-white/5 flex flex-wrap gap-2">
+            <div className="shrink-0 px-4 py-2 border-t border-slate-100 flex flex-wrap gap-2">
               {attachments.map((file, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5 border border-white/8 text-xs text-white/60"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600"
                 >
                   <FileText className="w-3 h-3" />
                   <span className="max-w-[160px] truncate">{file.name}</span>
-                  <span className="text-white/30">({formatBytes(file.size)})</span>
+                  <span className="text-slate-400">({formatBytes(file.size)})</span>
                   <button
                     type="button"
                     onClick={() => removeAttachment(i)}
-                    className="text-white/30 hover:text-white/70 transition-colors"
+                    className="text-slate-400 hover:text-slate-700 transition-colors"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -531,58 +532,50 @@ export const EmailComposer: React.FC = () => {
 
           {/* Error message */}
           {error && (
-            <div className="shrink-0 px-4 py-2 bg-red-900/20 border-t border-red-500/20 text-red-400 text-xs">
+            <div className="shrink-0 px-4 py-2 bg-[#FDE4E4] border-t border-[#C0392B]/20 text-[#C0392B] text-xs">
               {error}
             </div>
           )}
 
           {/* Footer */}
-          <div className="shrink-0 flex items-center justify-between px-4 py-3 border-t border-white/8 bg-[#161616]">
+          <div className="shrink-0 flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
             <div className="flex items-center gap-2">
               {/* Send button */}
-              <button
+              <Button
                 type="button"
+                variant="primary"
+                size="sm"
+                icon={Send}
+                loading={sending}
+                disabled={success}
                 onClick={handleSend}
-                disabled={sending || success}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                  success
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 disabled:cursor-not-allowed',
-                )}
+                className={success ? 'bg-[#1F8A4C] hover:bg-[#1F8A4C]' : undefined}
               >
-                {sending ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
                 {success ? 'Enviado!' : 'Enviar'}
-              </button>
+              </Button>
 
               {/* Save draft */}
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
+                icon={FileText}
+                loading={savingDraft}
                 onClick={() => handleSaveDraft(false)}
-                disabled={savingDraft}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-white/50 hover:text-white/80 hover:bg-white/5 transition-all disabled:opacity-50"
               >
-                {savingDraft ? (
-                  <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
-                ) : (
-                  <FileText className="w-3.5 h-3.5" />
-                )}
                 Salvar rascunho
-              </button>
+              </Button>
 
               {/* Attach file */}
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
+                icon={Paperclip}
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-white/50 hover:text-white/80 hover:bg-white/5 transition-all"
               >
-                <Paperclip className="w-3.5 h-3.5" />
                 Anexar
-              </button>
+              </Button>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -592,13 +585,9 @@ export const EmailComposer: React.FC = () => {
               />
             </div>
 
-            <button
-              type="button"
-              onClick={closeComposer}
-              className="px-3 py-2 rounded-lg text-sm text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors"
-            >
+            <Button type="button" variant="ghost" size="sm" onClick={closeComposer}>
               Descartar
-            </button>
+            </Button>
           </div>
     </motion.div>
   );

@@ -18,7 +18,7 @@ export const EmailSidebar: React.FC<Props> = ({ onOpenSettings }) => {
   const { currentFolder, accounts, selectedAccountId, unreadByFolder } = state;
 
   return (
-    <aside className="w-full shrink-0 bg-[#111111] border-r border-white/5 flex flex-col h-full overflow-hidden">
+    <aside className="w-full shrink-0 bg-slate-50 border-r border-slate-200 flex flex-col h-full overflow-hidden">
       <AccountSelector
         accounts={accounts}
         selectedAccountId={selectedAccountId}
@@ -38,18 +38,18 @@ export const EmailSidebar: React.FC<Props> = ({ onOpenSettings }) => {
         onMoveMessage={moveMessage}
       />
 
-      <div className="p-2 border-t border-white/5 flex gap-1">
+      <div className="p-2 border-t border-slate-200 flex gap-1">
         <button
           onClick={() => navigate('/email/contas')}
           title="Contas de e-mail"
-          className="flex items-center justify-center p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/5 transition-all"
+          className="flex items-center justify-center p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
         >
           <Users className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={onOpenSettings}
           title="Configurações de e-mail"
-          className="flex items-center justify-center p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/5 transition-all"
+          className="flex items-center justify-center p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
         >
           <Cog className="w-3.5 h-3.5" />
         </button>

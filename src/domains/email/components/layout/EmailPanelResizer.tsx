@@ -7,6 +7,6 @@ interface Props {
 export const EmailPanelResizer: React.FC<Props> = ({ onMouseDown }) => (
   <div
     onMouseDown={onMouseDown}
-    className="w-1 cursor-col-resize bg-transparent hover:bg-blue-500/30 transition-colors active:bg-blue-500/50 shrink-0 h-full"
+    className="w-1 cursor-col-resize bg-transparent hover:bg-[#1B4D8F]/30 transition-colors active:bg-[#1B4D8F]/50 shrink-0 h-full"
   />
 );

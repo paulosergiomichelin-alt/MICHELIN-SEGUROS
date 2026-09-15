@@ -8,12 +8,12 @@ import { useEmail } from '../../../../contexts/EmailContext';
 
 // ─── Building blocks ────────────────────────────────────────────────────────
 
-const RibbonDivider: React.FC = () => <div className="w-px h-14 self-center bg-white/8 mx-2.5 shrink-0" />;
+const RibbonDivider: React.FC = () => <div className="w-px h-14 self-center bg-slate-200 mx-2.5 shrink-0" />;
 
 const RibbonGroup: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div className="flex flex-col items-center px-3 py-1.5 shrink-0">
     <div className="flex items-end gap-2 flex-1">{children}</div>
-    <span className="text-[9.5px] text-white/25 uppercase tracking-wide mt-1.5 whitespace-nowrap">{label}</span>
+    <span className="text-[9.5px] text-slate-400 uppercase tracking-wide mt-1.5 whitespace-nowrap">{label}</span>
   </div>
 );
 
@@ -31,10 +31,10 @@ const RibbonButtonBig: React.FC<{
     className={cn(
       'flex flex-col items-center justify-center gap-1.5 px-3 py-2 rounded-lg transition-colors min-w-[88px] h-[70px] shrink-0',
       disabled
-        ? 'text-white/15 cursor-not-allowed'
+        ? 'text-slate-300 cursor-not-allowed'
         : primary
-          ? 'text-gold-deep hover:bg-gold-deep/10 border border-gold-deep/20'
-          : 'text-white/60 hover:text-white/90 hover:bg-white/5',
+          ? 'text-[#1B4D8F] bg-[#1B4D8F]/8 hover:bg-[#1B4D8F]/15 border border-[#1B4D8F]/25'
+          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100',
     )}
   >
     {icon}
@@ -54,7 +54,7 @@ const RibbonButtonSmallStack: React.FC<{
     title={disabled ? `${label} (em breve)` : label}
     className={cn(
       'flex flex-col items-center justify-center gap-1 px-2.5 py-1.5 rounded-md transition-colors min-w-[68px] shrink-0',
-      disabled ? 'text-white/15 cursor-not-allowed' : 'text-white/55 hover:text-white/90 hover:bg-white/5',
+      disabled ? 'text-slate-300 cursor-not-allowed' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100',
     )}
   >
     {icon}
@@ -92,12 +92,12 @@ const MoveDropdown: React.FC<{ disabled: boolean; onMove: (action: string) => vo
         onClick={() => setOpen(o => !o)}
       />
       {open && !disabled && (
-        <div className="absolute left-0 top-full mt-1 w-44 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl z-30 overflow-hidden py-1">
+        <div className="absolute left-0 top-full mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-lg z-30 overflow-hidden py-1">
           {options.map(o => (
             <button
               key={o.action}
               onClick={() => { onMove(o.action); setOpen(false); }}
-              className="w-full text-left px-3 py-2 text-xs text-white/60 hover:bg-white/5 hover:text-white/90 transition-colors"
+              className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
             >
               Mover para: {o.label}
             </button>
@@ -130,7 +130,7 @@ export const EmailRibbon: React.FC = () => {
   };
 
   return (
-    <div className="shrink-0 w-full border-b border-white/5 bg-[#141414]">
+    <div className="shrink-0 w-full border-b border-slate-200 bg-white">
       <div className="flex flex-wrap items-stretch px-3 py-1">
         {/* Novo */}
         <RibbonGroup label="Novo">
@@ -207,13 +207,13 @@ export const EmailRibbon: React.FC = () => {
 
         {/* Localizar */}
         <RibbonGroup label="Localizar">
-          <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 w-44">
-            <Search className="w-3.5 h-3.5 text-white/30 shrink-0" />
+          <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 w-44">
+            <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <input
               value={searchValue}
               onChange={e => handleSearchChange(e.target.value)}
               placeholder="Pesquisar E-mail"
-              className="bg-transparent text-[11px] text-white/70 placeholder:text-white/25 outline-none w-full"
+              className="bg-transparent text-[11px] text-slate-700 placeholder:text-slate-400 outline-none w-full"
             />
           </div>
         </RibbonGroup>

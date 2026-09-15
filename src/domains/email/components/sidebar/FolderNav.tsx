@@ -124,8 +124,8 @@ export const FolderNav: React.FC<Props> = ({
           onDrop={e => handleDrop(e, node.id)}
           className={cn(
             'w-full flex items-center gap-1.5 py-1.5 rounded-lg text-sm transition-all group',
-            isActive ? 'bg-blue-600/20 text-blue-300 font-medium' : 'text-white/45 hover:bg-white/5 hover:text-white/75',
-            dragOverId === node.id && 'ring-1 ring-blue-400/60 bg-blue-500/10',
+            isActive ? 'bg-[#1B4D8F]/10 text-[#1B4D8F] font-medium' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700',
+            dragOverId === node.id && 'ring-1 ring-[#1B4D8F]/50 bg-[#1B4D8F]/8',
           )}
           style={{ paddingLeft: 10 + depth * 16, paddingRight: 10 }}
         >
@@ -136,7 +136,7 @@ export const FolderNav: React.FC<Props> = ({
           ) : (
             <span className="w-3.5 h-3.5 shrink-0" />
           )}
-          <Folder className={cn('w-4 h-4 shrink-0', isActive ? 'text-blue-400' : 'text-white/30 group-hover:text-white/60')} />
+          <Folder className={cn('w-4 h-4 shrink-0', isActive ? 'text-[#1B4D8F]' : 'text-slate-400 group-hover:text-slate-600')} />
           <span className="flex-1 text-left truncate">{node.name}</span>
           <UnreadBadge count={node.unreadCount} active={isActive} />
         </button>
@@ -165,9 +165,9 @@ export const FolderNav: React.FC<Props> = ({
               className={cn(
                 'w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition-all group',
                 isActive
-                  ? 'bg-blue-600/20 text-blue-300 font-medium'
-                  : 'text-white/50 hover:bg-white/5 hover:text-white/80',
-                dragOverId === folder.id && 'ring-1 ring-blue-400/60 bg-blue-500/10',
+                  ? 'bg-[#1B4D8F]/10 text-[#1B4D8F] font-medium'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800',
+                dragOverId === folder.id && 'ring-1 ring-[#1B4D8F]/50 bg-[#1B4D8F]/8',
               )}
             >
               {hasChildren ? (
@@ -177,7 +177,7 @@ export const FolderNav: React.FC<Props> = ({
               ) : (
                 <span className="w-3.5 h-3.5 shrink-0" />
               )}
-              <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-blue-400' : 'group-hover:text-white/70')} />
+              <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-[#1B4D8F]' : 'group-hover:text-slate-700')} />
               <span className="flex-1 text-left truncate">{folder.label}</span>
               <UnreadBadge count={unread} active={isActive} />
             </button>
@@ -187,7 +187,7 @@ export const FolderNav: React.FC<Props> = ({
       })}
 
       {rootCustomFolders.length > 0 && (
-        <div className="pt-2 mt-2 border-t border-white/5">
+        <div className="pt-2 mt-2 border-t border-slate-200">
           {rootCustomFolders.map(node => renderTreeNode(node, 0))}
         </div>
       )}
@@ -196,12 +196,12 @@ export const FolderNav: React.FC<Props> = ({
         <>
           <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
           <div
-            className="fixed z-50 w-52 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl overflow-hidden py-1"
+            className="fixed z-50 w-52 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden py-1"
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             <button
               onClick={() => handleContextAction('new')}
-              className="w-full text-left px-3 py-2 text-xs text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors"
+              className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
             >
               Nova subpasta
             </button>
@@ -209,28 +209,28 @@ export const FolderNav: React.FC<Props> = ({
               <>
                 <button
                   onClick={() => handleContextAction('rename')}
-                  className="w-full text-left px-3 py-2 text-xs text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors"
+                  className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
                 >
                   Renomear
                 </button>
                 <button
                   onClick={() => handleContextAction('delete')}
-                  className="w-full text-left px-3 py-2 text-xs text-red-400/80 hover:bg-white/5 hover:text-red-400 transition-colors"
+                  className="w-full text-left px-3 py-2 text-xs text-[#C0392B]/80 hover:bg-slate-50 hover:text-[#C0392B] transition-colors"
                 >
                   Excluir
                 </button>
               </>
             )}
-            <div className="border-t border-white/5 my-1" />
+            <div className="border-t border-slate-100 my-1" />
             <button
               onClick={() => handleContextAction('empty')}
-              className="w-full text-left px-3 py-2 text-xs text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors"
+              className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
             >
               Esvaziar pasta
             </button>
             <button
               onClick={() => handleContextAction('readall')}
-              className="w-full text-left px-3 py-2 text-xs text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors"
+              className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
             >
               Marcar tudo como lido
             </button>

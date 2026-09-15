@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { useEmail } from '../../contexts/EmailContext';
 import { EmailSettings } from '../../services/EmailService';
+import { Button, Input, PageHeader, Select, Textarea } from '../../components/ui';
 
 // ─── Toggle ───────────────────────────────────────────────────────────────────
 
@@ -27,7 +28,7 @@ const Toggle: React.FC<{
     onClick={() => onChange(!enabled)}
     className={cn(
       'relative inline-flex items-center w-10 h-5 rounded-full transition-colors shrink-0',
-      enabled ? 'bg-blue-600' : 'bg-white/15',
+      enabled ? 'bg-[#1B4D8F]' : 'bg-slate-200',
     )}
     aria-pressed={enabled}
   >
@@ -48,28 +49,19 @@ const SectionCard: React.FC<{
   icon: React.ReactNode;
   children: React.ReactNode;
 }> = ({ title, description, icon, children }) => (
-  <div className="bg-[#1a1a1a] border border-white/8 rounded-2xl overflow-hidden">
-    <div className="px-6 py-4 border-b border-white/5 flex items-center gap-3">
-      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40 shrink-0">
+  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+    <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+      <div className="w-8 h-8 rounded-lg bg-gold-deep/10 flex items-center justify-center text-gold-deep shrink-0">
         {icon}
       </div>
       <div>
-        <h2 className="text-white/80 font-semibold text-sm">{title}</h2>
-        {description && <p className="text-white/35 text-xs mt-0.5">{description}</p>}
+        <h2 className="text-slate-800 font-semibold text-sm">{title}</h2>
+        {description && <p className="text-slate-500 text-xs mt-0.5">{description}</p>}
       </div>
     </div>
     <div className="px-6 py-5 space-y-4">
       {children}
     </div>
-  </div>
-);
-
-// ─── FieldLabel ───────────────────────────────────────────────────────────────
-
-const FieldLabel: React.FC<{ label: string; hint?: string }> = ({ label, hint }) => (
-  <div className="mb-1.5">
-    <label className="block text-white/60 text-xs font-medium">{label}</label>
-    {hint && <p className="text-white/25 text-[11px] mt-0.5">{hint}</p>}
   </div>
 );
 
@@ -134,22 +126,21 @@ export const EmailSettingsPage: React.FC = () => {
 
   if (loading && !settings) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#0f0f0f]">
-        <Loader2 className="w-6 h-6 text-white/20 animate-spin" />
+      <div className="flex-1 flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-6 h-6 text-slate-300 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#0f0f0f] p-6">
-      <form onSubmit={handleSave} className="max-w-2xl mx-auto space-y-6">
+    <div className="min-h-full bg-slate-50">
+      <form onSubmit={handleSave} className="max-w-2xl mx-auto p-4 md:p-6 space-y-5">
         {/* Page header */}
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h1 className="text-white/90 text-2xl font-bold mb-1">Configurações de E-mail</h1>
-            <p className="text-white/40 text-sm">Personalize o comportamento do módulo de e-mail</p>
-          </div>
-        </div>
+        <PageHeader
+          icon={Mail}
+          title="Configurações de E-mail"
+          subtitle="Personalize o comportamento do módulo de e-mail"
+        />
 
         {/* Status feedback */}
         <AnimatePresence>
@@ -161,8 +152,8 @@ export const EmailSettingsPage: React.FC = () => {
               className={cn(
                 'flex items-center gap-2 px-4 py-3 rounded-xl text-sm border',
                 saveStatus === 'success'
-                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                  : 'bg-red-500/10 border-red-500/20 text-red-400',
+                  ? 'bg-[#E4F5EA] border-[#1F8A4C]/20 text-[#1F8A4C]'
+                  : 'bg-[#FDE4E4] border-[#C0392B]/20 text-[#C0392B]',
               )}
             >
               {saveStatus === 'success' ? (
@@ -181,23 +172,20 @@ export const EmailSettingsPage: React.FC = () => {
           icon={<Mail className="w-4 h-4" />}
         >
           {accounts.length === 0 ? (
-            <p className="text-white/30 text-sm">Nenhuma conta conectada.</p>
+            <p className="text-slate-500 text-sm">Nenhuma conta conectada.</p>
           ) : (
-            <div>
-              <FieldLabel label="Conta padrão para envio" />
-              <select
-                value={form.defaultAccountId ?? ''}
-                onChange={e => setForm(prev => ({ ...prev, defaultAccountId: e.target.value }))}
-                className="w-full bg-[#0f0f0f] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white/70 outline-none focus:border-blue-500/40 transition-colors appearance-none cursor-pointer"
-              >
-                <option value="">Selecionar conta...</option>
-                {accounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>
-                    {acc.email} {acc.isDefault ? '(padrão atual)' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label="Conta padrão para envio"
+              value={form.defaultAccountId ?? ''}
+              onChange={e => setForm(prev => ({ ...prev, defaultAccountId: e.target.value }))}
+            >
+              <option value="">Selecionar conta...</option>
+              {accounts.map(acc => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.email} {acc.isDefault ? '(padrão atual)' : ''}
+                </option>
+              ))}
+            </Select>
           )}
         </SectionCard>
 
@@ -207,16 +195,14 @@ export const EmailSettingsPage: React.FC = () => {
           description="Nome exibido quando você envia e-mails"
           icon={<User className="w-4 h-4" />}
         >
-          <div>
-            <FieldLabel label="Nome do remetente" hint="Deixe em branco para usar o nome da conta" />
-            <input
-              type="text"
-              value={form.displayName ?? ''}
-              onChange={e => setForm(prev => ({ ...prev, displayName: e.target.value }))}
-              placeholder="Ex: Paulo Michelin"
-              className="w-full bg-[#0f0f0f] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white/70 placeholder:text-white/20 outline-none focus:border-blue-500/40 transition-colors"
-            />
-          </div>
+          <Input
+            label="Nome do remetente"
+            type="text"
+            value={form.displayName ?? ''}
+            onChange={e => setForm(prev => ({ ...prev, displayName: e.target.value }))}
+            placeholder="Ex: Paulo Michelin"
+          />
+          <p className="text-slate-400 text-[11px] -mt-2 ml-1">Deixe em branco para usar o nome da conta</p>
         </SectionCard>
 
         {/* Signature */}
@@ -226,19 +212,20 @@ export const EmailSettingsPage: React.FC = () => {
           icon={<PenLine className="w-4 h-4" />}
         >
           <div>
-            <FieldLabel label="Assinatura" hint="Suporta HTML básico" />
-            <textarea
+            <Textarea
+              label="Assinatura"
               value={form.signature ?? ''}
               onChange={e => setForm(prev => ({ ...prev, signature: e.target.value }))}
               rows={6}
               placeholder={`Ex:\n--\nPaulo Michelin\nCorretor de Seguros | Michelin Seguros\n(11) 99999-9999`}
-              className="w-full bg-[#0f0f0f] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white/70 placeholder:text-white/15 outline-none focus:border-blue-500/40 transition-colors resize-none font-mono"
+              className="font-mono"
             />
+            <p className="text-slate-400 text-[11px] mt-1 ml-1">Suporta HTML básico</p>
             {form.signature && (
-              <div className="mt-2 p-3 rounded-lg bg-white/3 border border-white/5">
-                <p className="text-[11px] text-white/25 uppercase tracking-widest mb-2">Pré-visualização</p>
+              <div className="mt-2 p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <p className="text-[11px] text-slate-400 uppercase tracking-widest mb-2">Pré-visualização</p>
                 <div
-                  className="text-white/50 text-sm leading-relaxed"
+                  className="text-slate-600 text-sm leading-relaxed"
                   dangerouslySetInnerHTML={{ __html: form.signature }}
                 />
               </div>
@@ -254,8 +241,8 @@ export const EmailSettingsPage: React.FC = () => {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-white/70 text-sm font-medium">Ativar resposta automática</p>
-              <p className="text-white/30 text-xs mt-0.5">Responde automaticamente a novos e-mails recebidos</p>
+              <p className="text-slate-700 text-sm font-medium">Ativar resposta automática</p>
+              <p className="text-slate-400 text-xs mt-0.5">Responde automaticamente a novos e-mails recebidos</p>
             </div>
             <Toggle
               enabled={form.autoReply?.enabled ?? false}
@@ -272,26 +259,20 @@ export const EmailSettingsPage: React.FC = () => {
                 className="overflow-hidden"
               >
                 <div className="pt-2 space-y-4">
-                  <div>
-                    <FieldLabel label="Assunto da resposta automática" />
-                    <input
-                      type="text"
-                      value={form.autoReply?.subject ?? ''}
-                      onChange={e => updateAutoReply('subject', e.target.value)}
-                      placeholder="Ex: Recebi sua mensagem"
-                      className="w-full bg-[#0f0f0f] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white/70 placeholder:text-white/20 outline-none focus:border-blue-500/40 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <FieldLabel label="Corpo da resposta automática" />
-                    <textarea
-                      value={form.autoReply?.body ?? ''}
-                      onChange={e => updateAutoReply('body', e.target.value)}
-                      rows={4}
-                      placeholder="Ex: Olá! Recebi sua mensagem e responderei em breve. Obrigado."
-                      className="w-full bg-[#0f0f0f] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white/70 placeholder:text-white/20 outline-none focus:border-blue-500/40 transition-colors resize-none"
-                    />
-                  </div>
+                  <Input
+                    label="Assunto da resposta automática"
+                    type="text"
+                    value={form.autoReply?.subject ?? ''}
+                    onChange={e => updateAutoReply('subject', e.target.value)}
+                    placeholder="Ex: Recebi sua mensagem"
+                  />
+                  <Textarea
+                    label="Corpo da resposta automática"
+                    value={form.autoReply?.body ?? ''}
+                    onChange={e => updateAutoReply('body', e.target.value)}
+                    rows={4}
+                    placeholder="Ex: Olá! Recebi sua mensagem e responderei em breve. Obrigado."
+                  />
                 </div>
               </motion.div>
             )}
@@ -307,8 +288,8 @@ export const EmailSettingsPage: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white/70 text-sm font-medium">Notificações de novos e-mails</p>
-                <p className="text-white/30 text-xs mt-0.5">Exibe uma notificação quando novos e-mails chegam</p>
+                <p className="text-slate-700 text-sm font-medium">Notificações de novos e-mails</p>
+                <p className="text-slate-400 text-xs mt-0.5">Exibe uma notificação quando novos e-mails chegam</p>
               </div>
               <Toggle
                 enabled={form.notifications?.newEmail ?? true}
@@ -317,8 +298,8 @@ export const EmailSettingsPage: React.FC = () => {
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white/70 text-sm font-medium">Notificações do sistema</p>
-                <p className="text-white/30 text-xs mt-0.5">Notificações push no navegador (requer permissão)</p>
+                <p className="text-slate-700 text-sm font-medium">Notificações do sistema</p>
+                <p className="text-slate-400 text-xs mt-0.5">Notificações push no navegador (requer permissão)</p>
               </div>
               <Toggle
                 enabled={form.notifications?.desktop ?? false}
@@ -330,18 +311,9 @@ export const EmailSettingsPage: React.FC = () => {
 
         {/* Save button */}
         <div className="flex justify-end pb-8">
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-xl transition-colors shadow-lg shadow-blue-900/20"
-          >
-            {saving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
+          <Button type="submit" variant="primary" icon={Save} loading={saving} disabled={saving}>
             {saving ? 'Salvando...' : 'Salvar configurações'}
-          </button>
+          </Button>
         </div>
       </form>
     </div>
