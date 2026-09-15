@@ -25,6 +25,7 @@ export const ENTITY_TABLE: Record<string, any> = {
   whatsapp_messages: schema.whatsappMessages, whatsapp_message: schema.whatsappMessages,
   campaigns: schema.campaigns, campaign: schema.campaigns,
   campaign_log: schema.campaignLog,
+  cotacoes: schema.cotacoes, cotacao: schema.cotacoes,
   settings: schema.settings,
   config: schema.config,
   platform_agent_templates: schema.platformAgentTemplates,

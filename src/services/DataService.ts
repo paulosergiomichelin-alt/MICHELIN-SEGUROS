@@ -54,6 +54,7 @@ export class DataService {
     'whatsapp_conversations', 'whatsapp_conversation',
     'whatsapp_messages', 'whatsapp_message',
     'cliente_relacionamentos', 'cliente_relacionamento',
+    'cotacoes', 'cotacao',
   ]);
 
   // Collections whose document IDs are scoped per-org: {orgId}::{docId}
@@ -114,6 +115,8 @@ export class DataService {
     'email_accounts': 'email_accounts',
     'email_account': 'email_accounts',
     'email_settings': 'email_settings',
+    'cotacoes': 'cotacoes',
+    'cotacao': 'cotacoes',
   };
 
   private static _lastOrgId: string | null = null;

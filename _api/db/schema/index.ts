@@ -7,3 +7,4 @@ export * from './whatsapp';
 export * from './campaigns-email';
 export * from './tenant-nfse';
 export * from './settings';
+export * from './insurers';
