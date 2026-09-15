@@ -12,9 +12,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { PDFViewer } from '../../components/PDFViewer';
 import { useViewport } from '../../hooks/useAppContexts';
 import { Lead, LeadStatus, LeadTemperature, AgentConfig, UserProfile, LeadDocument, DocumentProcessingStage } from '../../types';
+import type { DadosEmpresa, LeadPessoaJuridica } from '../../types';
 import { agentService } from '../../services/agentService';
 import { validateLead } from '../../lib/validation';
-import { cn, formatCPF, validateCPF, generateId } from '../../lib/utils';
+import { cn, formatCPF, validateCPF, generateId, formatCpfCnpjProgressive, detectTipoPessoa, formatCNPJ, validateCNPJ } from '../../lib/utils';
+import { CnpjService } from '../../services/CnpjService';
+import { dataApiClient } from '../../lib/dataApiClient';
 import { format, differenceInYears, differenceInMonths, differenceInDays, addYears, addMonths, isValid, parseISO } from 'date-fns';
 import { StorageService } from '../../services/StorageService';
 import { handleFirestoreError, OperationType } from '../../lib/firestore-utils';
@@ -228,16 +231,17 @@ const PremiumSelect = React.memo(({ label, icon: Icon, required, options, ...pro
  * CPF input com máscara em tempo real e validação mod-11 inline.
  * Borda verde quando válido, vermelha quando incompleto/inválido, neutra quando vazio.
  */
-const PremiumCpfInput = React.memo(({ label, name, value, onChange, onBlur, required, placeholder }: any) => {
+const PremiumCpfCnpjInput = React.memo(({ label, name, value, onChange, onBlur, required, placeholder }: any) => {
   const digits = (value || '').replace(/\D/g, '');
+  const tipoPessoa = digits.length > 11 ? 'juridica' : 'fisica';
   const hasContent = digits.length > 0;
-  const isComplete = digits.length === 11;
-  const isValidCpf = isComplete && validateCPF(digits);
+  const isComplete = tipoPessoa === 'juridica' ? digits.length === 14 : digits.length === 11;
+  const isValidDoc = isComplete && (tipoPessoa === 'juridica' ? validateCNPJ(digits) : validateCPF(digits));
   const status: 'idle' | 'partial' | 'invalid' | 'valid' = !hasContent
     ? 'idle'
     : !isComplete
       ? 'partial'
-      : isValidCpf
+      : isValidDoc
         ? 'valid'
         : 'invalid';
 
@@ -263,10 +267,10 @@ const PremiumCpfInput = React.memo(({ label, name, value, onChange, onBlur, requ
           onChange={onChange}
           onBlur={onBlur}
           required={required}
-          placeholder={placeholder || '000.000.000-00'}
+          placeholder={placeholder || (tipoPessoa === 'juridica' ? '00.000.000/0000-00' : '000.000.000-00')}
           inputMode="numeric"
           autoComplete="off"
-          maxLength={14}
+          maxLength={18}
           className={cn(
             'w-full h-10 bg-[#16181B] border rounded-lg px-3.5 pr-9 text-[12px] font-medium text-white tracking-wider transition-all duration-200 focus:ring-2 outline-none placeholder:text-white/15 hover:border-white/15',
             status === 'idle' && 'border-white/[0.07] focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40 focus:shadow-[0_0_0_4px_rgba(212,168,84,0.04)]',
@@ -645,11 +649,33 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
     return initial;
   });
 
+  useEffect(() => {
+    if (lead?.id && lead.tipoPessoa === 'juridica') {
+      dataApiClient.get('lead_pessoa_juridica', lead.id).then((row: any) => {
+        if (row) {
+          setPj({
+            razaoSocial: row.razaoSocial ?? '', nomeFantasia: row.nomeFantasia ?? '',
+            inscricaoEstadual: row.inscricaoEstadual ?? '', situacaoCadastral: row.situacaoCadastral ?? '',
+            porte: row.porte ?? '', cnae: row.cnae ?? '',
+            cep: row.cep ?? '', rua: row.rua ?? '', numero: row.numero ?? '', complemento: row.complemento ?? '',
+            bairro: row.bairro ?? '', cidade: row.cidade ?? '', estado: row.estado ?? '',
+          });
+        }
+      }).catch(() => {});
+    }
+  }, [lead?.id, lead?.tipoPessoa]);
+
   const [isDirty, setIsDirty] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
   const [isAnalysing, setIsAnalysing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [pj, setPj] = useState({
+    razaoSocial: '', nomeFantasia: '', inscricaoEstadual: '', situacaoCadastral: '', porte: '', cnae: '',
+    cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '',
+  });
+  const [loadingCnpj, setLoadingCnpj] = useState(false);
+  const [cnpjError, setCnpjError] = useState('');
   const handleToggleComercial = useCallback((active: boolean) => {
     setFormData(p => ({ ...p, perfilUso: { ...(p.perfilUso || {}), comercial: active }, serviceUsage: active }));
     setIsDirty(true);
@@ -700,10 +726,30 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
     isSavingRef.current = true;
     try {
       await onSave(data, options);
+      if (data.tipoPessoa === 'juridica') {
+        await dataApiClient.save('lead_pessoa_juridica', data.id, {
+          cnpj: (data.cpf || '').replace(/\D/g, ''),
+          razaoSocial: pj.razaoSocial.trim(),
+          nomeFantasia: pj.nomeFantasia || undefined,
+          inscricaoEstadual: pj.inscricaoEstadual || undefined,
+          situacaoCadastral: pj.situacaoCadastral || undefined,
+          porte: pj.porte || undefined,
+          cnae: pj.cnae || undefined,
+          cep: pj.cep || undefined,
+          rua: pj.rua || undefined,
+          numero: pj.numero || undefined,
+          complemento: pj.complemento || undefined,
+          bairro: pj.bairro || undefined,
+          cidade: pj.cidade || undefined,
+          estado: pj.estado || undefined,
+        }).catch(() => {});
+      } else if (lead?.tipoPessoa === 'juridica') {
+        await dataApiClient.remove('lead_pessoa_juridica', data.id).catch(() => {});
+      }
     } finally {
       setTimeout(() => { isSavingRef.current = false; }, 1000);
     }
-  }, [onSave]);
+  }, [onSave, pj, lead?.tipoPessoa]);
 
   const confirmExtraction = useCallback(async (validatedData: any) => {
     const session = controller.getSession();
@@ -948,13 +994,49 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
     }
   }, []);
 
+  const buscarCnpjLead = useCallback(async (digits: string) => {
+    setLoadingCnpj(true);
+    setCnpjError('');
+    try {
+      const data: DadosEmpresa = await CnpjService.lookup(digits);
+      setPj(p => ({
+        ...p,
+        razaoSocial: data.razaoSocial ?? p.razaoSocial,
+        nomeFantasia: data.nomeFantasia ?? p.nomeFantasia,
+        situacaoCadastral: data.situacaoCadastral ?? p.situacaoCadastral,
+        porte: data.porte ?? p.porte,
+        cnae: data.cnae ?? p.cnae,
+        cep: data.cep ?? p.cep,
+        rua: data.rua ?? p.rua,
+        numero: data.numero ?? p.numero,
+        complemento: data.complemento ?? p.complemento,
+        bairro: data.bairro ?? p.bairro,
+        cidade: data.cidade ?? p.cidade,
+        estado: data.estado ?? p.estado,
+      }));
+    } catch (err: any) {
+      setCnpjError(err?.message || 'Não foi possível buscar os dados do CNPJ. Preencha manualmente.');
+    } finally {
+      setLoadingCnpj(false);
+    }
+  }, []);
+
   const checkDuplicate = useCallback(async (field: 'cpf' | 'phone', rawValue: string) => {
     if (!rawValue) { setDuplicateAlert(null); return; }
     const clean = rawValue.replace(/\D/g, '');
     if (field === 'phone' && clean.length < 10) { setDuplicateAlert(null); return; }
-    if (field === 'cpf' && clean.length !== 11) { setDuplicateAlert(null); return; }
-    // Query only leads matching the exact formatted value — avoids full-collection scan
+    if (field === 'cpf' && clean.length !== 11 && clean.length !== 14) { setDuplicateAlert(null); return; }
     const { where } = await import('../../lib/queryConstraints');
+    if (field === 'cpf' && clean.length === 14) {
+      // CNPJ mora na tabela satélite lead_pessoa_juridica, não em leads.cpf.
+      const pjMatches = await DataService.list('lead_pessoa_juridica', [where('cnpj', '==', clean)]) as LeadPessoaJuridica[];
+      const dup = pjMatches.find(m => m.leadId !== formData.id);
+      if (!dup) { setDuplicateAlert(null); return; }
+      const duplicateLead = await DataService.get('lead', dup.leadId) as Lead | null;
+      setDuplicateAlert(duplicateLead ? { lead: duplicateLead, field } : null);
+      return;
+    }
+    // Query only leads matching the exact formatted value — avoids full-collection scan
     const matches = await DataService.list('leads', [where(field, '==', rawValue)]) as Lead[];
     const duplicate = matches.find(l => l.id !== formData.id);
     setDuplicateAlert(duplicate ? { lead: duplicate, field } : null);
@@ -973,7 +1055,16 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
     let val = type === 'checkbox' ? checked : value;
 
     if (name === 'phone') val = formatPhone(value);
-    if (name === 'cpf' || name === 'cpfProprietario') val = formatCpf(value);
+    if (name === 'cpfProprietario') val = formatCpf(value);
+    if (name === 'cpf') {
+      val = formatCpfCnpjProgressive(value);
+      const novoTipo = detectTipoPessoa(val);
+      const digits = String(val).replace(/\D/g, '');
+      setFormData(prev => ({ ...prev, cpf: val, tipoPessoa: novoTipo }));
+      setIsDirty(true);
+      if (novoTipo === 'juridica' && digits.length === 14) buscarCnpjLead(digits);
+      return;
+    }
     if (name === 'name' || name === 'nomeProprietario' || name === 'plate' || name === 'chassi') {
       val = typeof val === 'string' ? val.toUpperCase() : val;
     }
@@ -984,7 +1075,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
     if (name === 'cepPernoite' && typeof value === 'string' && value.replace(/\D/g, '').length === 8) {
       handleCepLookup(value);
     }
-  }, [handleCepLookup]);
+  }, [handleCepLookup, buscarCnpjLead]);
 
   // Auto-calculated fields. Recompute only when their inputs change, and refresh
   // on a 60s tick so countdowns stay live without forcing a render every frame.
@@ -1307,72 +1398,79 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
             <div className="space-y-4">
               {/* Linha 1: Nome + Telefone */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <PremiumInput label="Nome Completo" name="name" value={formData.name || ''} onChange={handleChange} required placeholder="Digite o nome completo" icon={UserIcon} />
+                <PremiumInput label={formData.tipoPessoa === 'juridica' ? 'Nome do Responsável' : 'Nome Completo'} name="name" value={formData.name || ''} onChange={handleChange} required placeholder="Digite o nome completo" icon={UserIcon} />
                 <PremiumInput label="Telefone (WhatsApp)" name="phone" value={formData.phone || ''} onChange={handleChange} onBlur={handlePhoneBlur} required placeholder="(00) 00000-0000" icon={Smartphone} inputMode="tel" maxLength={15} />
               </div>
 
-              {/* Linha 2: CPF + Data Nascimento + Idade + Aniversário */}
+              {/* Linha 2: CPF/CNPJ + Data Nascimento + Idade + Aniversário (PF) */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <PremiumCpfInput
-                  label="CPF"
+                <PremiumCpfCnpjInput
+                  label={formData.tipoPessoa === 'juridica' ? 'CNPJ' : 'CPF'}
                   name="cpf"
                   value={formData.cpf || ''}
                   onChange={handleChange}
                   onBlur={handleCpfBlur}
-                  placeholder="000.000.000-00"
+                  placeholder={formData.tipoPessoa === 'juridica' ? '00.000.000/0000-00' : '000.000.000-00'}
                 />
-                <PremiumInput
-                  label="Data de Nascimento"
-                  name="birthDate"
-                  type="date"
-                  value={formData.birthDate || ''}
-                  onChange={handleChange}
-                  className="[color-scheme:dark]"
-                />
-                <PremiumComputedField
-                  label="Idade"
-                  value={ageDisplay}
-                  icon={Calendar}
-                  tone="gold"
-                  emptyLabel="—"
-                />
-                <PremiumComputedField
-                  label="Falta p/ Aniversário"
-                  value={birthdayCountdown}
-                  icon={Clock}
-                  tone="mint"
-                  emptyLabel="—"
-                />
+                {loadingCnpj && <Loader2 className="w-4 h-4 text-gold-deep animate-spin self-center" />}
+                {formData.tipoPessoa !== 'juridica' && (
+                  <>
+                    <PremiumInput
+                      label="Data de Nascimento"
+                      name="birthDate"
+                      type="date"
+                      value={formData.birthDate || ''}
+                      onChange={handleChange}
+                      className="[color-scheme:dark]"
+                    />
+                    <PremiumComputedField
+                      label="Idade"
+                      value={ageDisplay}
+                      icon={Calendar}
+                      tone="gold"
+                      emptyLabel="—"
+                    />
+                    <PremiumComputedField
+                      label="Falta p/ Aniversário"
+                      value={birthdayCountdown}
+                      icon={Clock}
+                      tone="mint"
+                      emptyLabel="—"
+                    />
+                  </>
+                )}
               </div>
 
-              {/* Linha 2b: RG + Data Expedição + Órgão Emissor */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <PremiumInput
-                  label="RG"
-                  name="rg"
-                  value={formData.rg || ''}
-                  onChange={handleChange}
-                  placeholder="RG"
-                  icon={FileCheck}
-                />
-                <PremiumInput
-                  label="Data de Expedição (RG)"
-                  name="rgDataExpedicao"
-                  type="date"
-                  value={formData.rgDataExpedicao || ''}
-                  onChange={handleChange}
-                  className="[color-scheme:dark]"
-                />
-                <PremiumInput
-                  label="Órgão Emissor (RG)"
-                  name="rgOrgaoEmissor"
-                  value={formData.rgOrgaoEmissor || ''}
-                  onChange={handleChange}
-                  placeholder="Ex: SSP/SP"
-                />
-              </div>
+              {/* Linha 2b: RG + Data Expedição + Órgão Emissor (PF) */}
+              {formData.tipoPessoa !== 'juridica' && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <PremiumInput
+                    label="RG"
+                    name="rg"
+                    value={formData.rg || ''}
+                    onChange={handleChange}
+                    placeholder="RG"
+                    icon={FileCheck}
+                  />
+                  <PremiumInput
+                    label="Data de Expedição (RG)"
+                    name="rgDataExpedicao"
+                    type="date"
+                    value={formData.rgDataExpedicao || ''}
+                    onChange={handleChange}
+                    className="[color-scheme:dark]"
+                  />
+                  <PremiumInput
+                    label="Órgão Emissor (RG)"
+                    name="rgOrgaoEmissor"
+                    value={formData.rgOrgaoEmissor || ''}
+                    onChange={handleChange}
+                    placeholder="Ex: SSP/SP"
+                  />
+                </div>
+              )}
 
-              {/* Linha 3: E-mail + Estado Civil + CEP Pernoite */}
+              {/* Linha 3: E-mail + Estado Civil (PF) + CEP Pernoite */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <PremiumInput
                   label="E-mail"
@@ -1382,19 +1480,21 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                   placeholder="seu@email.com"
                   icon={Mail}
                 />
-                <PremiumSelect
-                  label="Estado Civil"
-                  name="maritalStatus"
-                  value={formData.maritalStatus || formData.civilStatus || ''}
-                  onChange={handleChange}
-                  options={[
-                    { value: '', label: 'Selecione...' },
-                    { value: 'Solteiro', label: 'Solteiro(a)' },
-                    { value: 'Casado', label: 'Casado(a)' },
-                    { value: 'Divorciado', label: 'Divorciado(a)' },
-                    { value: 'Viuvo', label: 'Viúvo(a)' },
-                  ]}
-                />
+                {formData.tipoPessoa !== 'juridica' && (
+                  <PremiumSelect
+                    label="Estado Civil"
+                    name="maritalStatus"
+                    value={formData.maritalStatus || formData.civilStatus || ''}
+                    onChange={handleChange}
+                    options={[
+                      { value: '', label: 'Selecione...' },
+                      { value: 'Solteiro', label: 'Solteiro(a)' },
+                      { value: 'Casado', label: 'Casado(a)' },
+                      { value: 'Divorciado', label: 'Divorciado(a)' },
+                      { value: 'Viuvo', label: 'Viúvo(a)' },
+                    ]}
+                  />
+                )}
                 <div className="relative group">
                   <PremiumInput
                     label="CEP Pernoite"
@@ -1452,6 +1552,26 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
               </div>
             </div>
           </PremiumSection>
+
+          {formData.tipoPessoa === 'juridica' && (
+            <PremiumSection title="Dados da Empresa" icon={Briefcase} subtitle="Preenchido automaticamente a partir do CNPJ — revise e complete se necessário">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <PremiumInput label="Razão Social" name="pjRazaoSocial" value={pj.razaoSocial} onChange={(e: any) => setPj(p => ({ ...p, razaoSocial: e.target.value }))} required icon={Briefcase} />
+                <PremiumInput label="Nome Fantasia" name="pjNomeFantasia" value={pj.nomeFantasia} onChange={(e: any) => setPj(p => ({ ...p, nomeFantasia: e.target.value }))} icon={Briefcase} />
+                <PremiumInput label="Inscrição Estadual" name="pjInscricaoEstadual" value={pj.inscricaoEstadual} onChange={(e: any) => setPj(p => ({ ...p, inscricaoEstadual: e.target.value }))} icon={Briefcase} />
+                <PremiumInput label="Situação Cadastral" name="pjSituacaoCadastral" value={pj.situacaoCadastral} onChange={(e: any) => setPj(p => ({ ...p, situacaoCadastral: e.target.value }))} icon={Briefcase} />
+                <PremiumInput label="Porte" name="pjPorte" value={pj.porte} onChange={(e: any) => setPj(p => ({ ...p, porte: e.target.value }))} icon={Briefcase} />
+                <PremiumInput label="CNAE" name="pjCnae" value={pj.cnae} onChange={(e: any) => setPj(p => ({ ...p, cnae: e.target.value }))} icon={Briefcase} />
+                <PremiumInput label="CEP" name="pjCep" value={pj.cep} onChange={(e: any) => setPj(p => ({ ...p, cep: e.target.value }))} icon={MapPin} />
+                <PremiumInput label="Rua" name="pjRua" value={pj.rua} onChange={(e: any) => setPj(p => ({ ...p, rua: e.target.value }))} icon={MapPin} />
+                <PremiumInput label="Número" name="pjNumero" value={pj.numero} onChange={(e: any) => setPj(p => ({ ...p, numero: e.target.value }))} icon={MapPin} />
+                <PremiumInput label="Bairro" name="pjBairro" value={pj.bairro} onChange={(e: any) => setPj(p => ({ ...p, bairro: e.target.value }))} icon={MapPin} />
+                <PremiumInput label="Cidade" name="pjCidade" value={pj.cidade} onChange={(e: any) => setPj(p => ({ ...p, cidade: e.target.value }))} icon={MapPin} />
+                <PremiumInput label="Estado" name="pjEstado" value={pj.estado} onChange={(e: any) => setPj(p => ({ ...p, estado: e.target.value }))} icon={MapPin} />
+              </div>
+              {cnpjError && <p className="text-[10px] text-red-400 mt-2">{cnpjError}</p>}
+            </PremiumSection>
+          )}
 
           {/* Inteligência Comercial — dropdowns inline compactos */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1911,7 +2031,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
 const AggerQuoteButton: React.FC<{ formData: Partial<Lead> }> = ({ formData }) => {
   const { installed } = useAggerUserscriptInstalled();
   const [sending, setSending] = useState(false);
-  const canQuote = !!formData.name && !!formData.cpf && !!formData.plate;
+  const canQuote = !!formData.name && !!formData.cpf && !!formData.plate && formData.tipoPessoa !== 'juridica';
 
   const handleClick = async () => {
     if (!canQuote || sending) return;
