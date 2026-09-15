@@ -31,6 +31,7 @@ Construir a infraestrutura de **multicálculo** (cotação multi-seguradora) com
 - Consulta de apólices existentes (`consultarApolice`, `consultarApoliceDetalhada`) — não faz parte do fluxo de multicálculo em si.
 - Qualquer segunda seguradora real — a arquitetura é desenhada para comportar, mas nenhuma outra é implementada nesta fase.
 - Ambiente de Produção da Tokio Marine — o usuário só tem credenciais de **Aceite** (homologação) hoje; a integração é construída e testada em Aceite. A troca para Produção é só uma mudança de env var (URL base + credenciais), quando o usuário tiver acesso liberado.
+- **Autopreenchimento de dados por CPF (nome/nascimento/etc) ou por placa (chassi/modelo/ano) sem passar pelo catálogo `/modelos`** — o Agger faz isso, mas via serviço de terceiro pago (bureau de dados / consulta de placa), não pela API da Tokio Marine (que não oferece esse tipo de consulta — ver conversa de 2026-09-15). Decisão do usuário: como isso teria custo por consulta, fica de fora enquanto não tiver decisão sobre pagar por esse serviço.
 
 ## 3. Decisões de arquitetura (ADR)
 
