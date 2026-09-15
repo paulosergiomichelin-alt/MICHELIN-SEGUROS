@@ -142,10 +142,23 @@ export const cotacoes = pgTable('cotacoes', {
 
 ## 5. O que fica pendente de confirmação (não bloqueia o início da implementação)
 
-- Formato real de resposta de `/modelos` (ADR-5) — implementar com melhor esforço, ajustar quando testar contra o Aceite de verdade ou quando a doc certa chegar.
-- Contrato exato dos demais lookups REST de domínio (Franquia, Região Circulação, Coberturas Adicionais, etc.) — nesta fase, os campos que não têm domínio confirmado entram como texto livre no formulário (o usuário digita o código, se souber) em vez de `<select>`; viram dropdown assim que o contrato for confirmado.
-- Código exato de `CodigoProduto` para Automóvel — nenhum dos materiais fornecidos traz o valor numérico, só o nome do lookup ("Código Produto"). Precisa confirmar testando o lookup contra o Aceite, ou perguntando ao suporte da Tokio Marine.
-- Contrato de **entrada** do endpoint real "Coberturas Adicionais" — hoje só temos a **saída** dele (veio colada por engano junto da doc de "Modelos", ver acima).
+Levantamento revisado campo a campo do payload de `cotar` (auditoria de 2026-09-15, ver histórico do doc) — lista completa a solicitar à Tokio Marine:
+
+**Bloqueiam montar um request de cotação válido:**
+- Formato real de resposta de `/modelos` (ADR-5) — a única saída documentada até agora pertence a outro endpoint.
+- Contrato de **entrada** do endpoint real "Coberturas Adicionais" — hoje só temos a **saída** dele (veio colada por engano junto da doc de "Modelos").
+- Valor numérico de `CodigoProduto` para Automóvel — nenhum material fornecido traz o valor, só o nome do lookup.
+- Domínio de `CodigoCobertura` ("tipo de cobertura para contratação": Compreensiva, Incêndio+Roubo, RCF isolado etc.) — nenhum serviço de consulta identificado para esse campo em toda a doc fornecida.
+- Domínio de `TipoModalidade` — mesma situação: campo essencial, nenhum lookup identificado.
+- Domínio de `CodigoFranquia` (franquia de indenização **parcial** — diferente de `CodigoFranquiaIndenizacaoIntegral`, que tem lookup próprio) — não identificado.
+
+**Endpoints citados só pelo nome no menu, sem contrato de entrada/saída** (falta pedir os dois lados de cada um): Valor Mercado, Franquia Indenização Integral, Cabine Suplementar, Principal Condutor, Cobertura 18 a 25 Anos, Cobertura Resid 18 a 25 Anos, Garagem Condutor, Região Circulação, Carroceria.
+
+**Gap dentro de um endpoint já documentado:** "Tipo Veículo v2" (`consultarTipoVeiculo2`) exige `codigoCategoria` na entrada, mas não há documentação de quais valores esse campo aceita.
+
+**Pergunta de escopo (não é bem um endpoint faltando):** boa parte dos ~60 campos do bloco `Item` do `cotar` (equipamentos hidráulicos, cargas transportadas, cabine suplementar, carroceria) parecem ser específicos de caminhão/utilitário, não de carro de passeio — o payload provavelmente é compartilhado entre vários produtos (Auto, Caminhão, Utilitário Carga). Vale confirmar direto com a Tokio Marine: **quais campos do bloco `Item` são de fato obrigatórios/aplicáveis para o produto Automóvel (carro de passeio)?** Isso pode reduzir bastante o formulário real necessário.
+
+Nesta fase, todo campo sem domínio confirmado entra como texto livre no formulário (o usuário digita o código, se souber) em vez de `<select>`; vira dropdown assim que o contrato for confirmado.
 
 ## 6. Testes
 
