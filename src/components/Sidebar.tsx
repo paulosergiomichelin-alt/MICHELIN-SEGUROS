@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Permissions, VisualIdentityConfig } from '../types';
-import { useTheme, useViewport } from '../hooks/useAppContexts';
+import { useViewport } from '../hooks/useAppContexts';
 import { auth, signOut } from '../lib/firebase';
 import { AggerInstallBanner } from './AggerInstallBanner';
 import { useEmail } from '../contexts/EmailContext';
@@ -49,7 +49,6 @@ export const Sidebar = React.memo(({
   toggleSidebar,
   onProfileClick,
 }: SidebarProps) => {
-  const { theme } = useTheme();
   const viewport = useViewport();
   const location = useLocation();
   const navigate = useNavigate();
@@ -80,12 +79,10 @@ export const Sidebar = React.memo(({
     }
   };
 
+  // A sidebar é sempre escura (independente do tema do app — ver .sidebar-main
+  // em index.css), então sempre usa a logo de fundo escuro, nunca a variante clara.
   const [logoError, setLogoError] = React.useState(false);
-  const logoUrlRaw = theme === 'light' && visualConfig.logoLight
-    ? visualConfig.logoLight
-    : (visualConfig.logoDark || 'https://cdn-icons-png.flaticon.com/512/3755/3755250.png');
-
-  const logoUrl = logoUrlRaw;
+  const logoUrl = visualConfig.logoDark || 'https://cdn-icons-png.flaticon.com/512/3755/3755250.png';
 
   React.useEffect(() => {
     setLogoError(false);

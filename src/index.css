@@ -231,6 +231,27 @@
     opacity: 0.6;
   }
 
+  /* ── ZONA PROTEGIDA: Sidebar principal ──────────────────────────
+     A barra lateral mantém identidade visual escura em qualquer tema —
+     re-declara os tokens de cor pro valor "dark" dentro desse escopo.
+     Como a Sidebar já usa só classes baseadas nesses tokens (bg-brand-black,
+     border-white/5, bg-brand-dark/40 etc.), toda classe existente resolve
+     sozinha pro valor escuro, sem precisar de override por classe (diferente
+     do WhatsApp Shell abaixo, que usa hex hardcoded e por isso precisa disso).
+     ─────────────────────────────────────────────────────────────── */
+  .light .sidebar-main {
+    --bg-primary:   #0B0B0D;
+    --bg-secondary: #111214;
+    --bg-elevated:  #18191b;
+    --text-primary: #ffffff;
+    --text-muted:   #8E8E93;
+    --text-subtle:  rgba(255, 255, 255, 0.20);
+    --border-subtle: rgba(255, 255, 255, 0.05);
+    --border-medium: rgba(255, 255, 255, 0.10);
+    --border-strong: rgba(255, 255, 255, 0.20);
+    --border-main:   var(--border-subtle);
+  }
+
   /* ── ZONA PROTEGIDA: WhatsApp Shell ─────────────────────────────
      O painel WhatsApp mantém identidade visual própria em qualquer
      tema. Seletores mais específicos que os overrides genéricos

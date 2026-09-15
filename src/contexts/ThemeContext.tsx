@@ -12,7 +12,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode, userProfile: U
       const savedLocal = localStorage.getItem(STORAGE_KEY) as Theme;
       if (savedLocal) return savedLocal;
     }
-    return 'dark';
+    return 'light';
   });
 
   // Keep a ref to the last synced profile theme to avoid redundant effect triggers
