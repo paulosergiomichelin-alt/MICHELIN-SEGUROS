@@ -19,7 +19,8 @@ export const leads = pgTable('leads', {
   name: text('name').notNull(),
   phone: text('phone').notNull(),
   email: text('email'),
-  cpf: text('cpf').notNull(),
+  cpf: text('cpf'), // opcional — nulo quando tipoPessoa === 'juridica'
+  tipoPessoa: text('tipo_pessoa').notNull().default('fisica'), // 'fisica' | 'juridica'
   // Nulos em produção pra qualquer lead de seguro não-automotivo (residencial, moto,
   // bicicleta elétrica etc.) — confirmado via migração real: chassis ausente em 100% dos
   // 75 leads reais, plate ausente em 70/75. types.ts declara os dois como `string`
@@ -128,3 +129,26 @@ export const learningMemory = pgTable('learning_memory', {
   outcome: text('outcome').notNull(),
   timestamp: timestamp('timestamp', { withTimezone: true, mode: 'string' }).notNull(),
 });
+
+export const leadPessoaJuridica = pgTable('lead_pessoa_juridica', {
+  leadId: text('lead_id').primaryKey().references(() => leads.id),
+  organizationId: text('organization_id').references(() => organizations.id),
+  cnpj: text('cnpj').notNull(),
+  razaoSocial: text('razao_social').notNull(),
+  nomeFantasia: text('nome_fantasia'),
+  inscricaoEstadual: text('inscricao_estadual'),
+  situacaoCadastral: text('situacao_cadastral'),
+  porte: text('porte'),
+  cnae: text('cnae'),
+  cep: text('cep'),
+  rua: text('rua'),
+  numero: text('numero'),
+  complemento: text('complemento'),
+  bairro: text('bairro'),
+  cidade: text('cidade'),
+  estado: text('estado'),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_lead_pj_cnpj').on(t.cnpj),
+]);

@@ -22,6 +22,7 @@ export const ORG_SCOPED_ENTITIES = new Set([
   'whatsapp_conversations', 'whatsapp_conversation',
   'whatsapp_messages', 'whatsapp_message',
   'cliente_relacionamentos', 'cliente_relacionamento',
+  'cliente_pessoa_juridica', 'lead_pessoa_juridica',
   'nfse_documents', 'nfse_logs',
   'email_accounts', 'email_account',
 ]);

@@ -13,7 +13,8 @@ export const clientes = pgTable('clientes', {
   id: text('id').primaryKey(),
   organizationId: text('organization_id').references(() => organizations.id),
   nome: text('nome').notNull(),
-  cpf: text('cpf').notNull(),
+  cpf: text('cpf'), // opcional — nulo quando tipoPessoa === 'juridica'
+  tipoPessoa: text('tipo_pessoa').notNull().default('fisica'), // 'fisica' | 'juridica'
   rg: text('rg'),
   rgDataExpedicao: text('rg_data_expedicao'),
   rgOrgaoEmissor: text('rg_orgao_emissor'),
@@ -100,3 +101,19 @@ export const clienteRelacionamentos = pgTable('cliente_relacionamentos', {
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });
+
+export const clientePessoaJuridica = pgTable('cliente_pessoa_juridica', {
+  clienteId: text('cliente_id').primaryKey().references(() => clientes.id),
+  organizationId: text('organization_id').references(() => organizations.id),
+  cnpj: text('cnpj').notNull(),
+  razaoSocial: text('razao_social').notNull(),
+  nomeFantasia: text('nome_fantasia'),
+  inscricaoEstadual: text('inscricao_estadual'),
+  situacaoCadastral: text('situacao_cadastral'),
+  porte: text('porte'),
+  cnae: text('cnae'),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_cliente_pj_cnpj').on(t.cnpj),
+]);

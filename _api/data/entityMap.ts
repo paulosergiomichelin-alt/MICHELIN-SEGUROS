@@ -17,6 +17,8 @@ export const ENTITY_TABLE: Record<string, any> = {
   empresas: schema.organizations, empresa: schema.organizations,
   clientes: schema.clientes, cliente: schema.clientes,
   cliente_relacionamentos: schema.clienteRelacionamentos, cliente_relacionamento: schema.clienteRelacionamentos,
+  cliente_pessoa_juridica: schema.clientePessoaJuridica,
+  lead_pessoa_juridica: schema.leadPessoaJuridica,
   seguradoras: schema.seguradoras, seguradora: schema.seguradoras,
   whatsapp_sessions: schema.whatsappSessions, whatsapp_session: schema.whatsappSessions,
   whatsapp_conversations: schema.whatsappConversations, whatsapp_conversation: schema.whatsappConversations,
@@ -50,6 +52,8 @@ export const PK_COLUMN: Record<string, string> = {
   tenant_onboarding_wizard_state: 'organizationId',
   metrics_daily: 'day',
   email_settings: 'userId',
+  cliente_pessoa_juridica: 'clienteId',
+  lead_pessoa_juridica: 'leadId',
 };
 
 export function pkPropertyName(entity: string): string {
