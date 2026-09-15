@@ -119,7 +119,7 @@ Cada componente é um arquivo próprio, tipado, sem lógica de negócio — apen
 
 1. **`Button.tsx`** — variantes `primary` (fundo `--color-primary`), `secondary` (fundo transparente, borda `--border-medium`), `danger` (fundo `--color-danger`), `ghost` (sem fundo/borda, hover sutil). Tamanhos `sm`/`md`. Suporta `icon` (lucide-react), `loading` (spinner substitui o ícone), `disabled`.
 2. **`Card.tsx`** — contêiner com `bg-[var(--bg-primary)]`, borda `--border-subtle`, `rounded-2xl`, padding padrão. Prop opcional `title` + `icon` que renderiza o cabeçalho no padrão `--text-card-title`.
-3. **`Input.tsx`** — campo de texto com label acoplado (usa `--text-label`), estado de erro (borda `--color-danger` + mensagem), estado de foco (`--color-primary`).
+3. **`Input.tsx`** — campo de texto com label acoplado (usa `--text-label`), estado de erro (borda `--color-danger` + mensagem), estado de foco (`--color-primary`). Suporta uma prop opcional `action` (ícone + `onClick`) para casos como "buscar veículo pelo ano" ou "buscar CEP": o ícone fica **integrado ao mesmo retângulo do input** (dividido por uma borda interna sutil, mesmo fundo `--bg-input`), nunca como um botão azul separado — variação validada visualmente com o usuário, que rejeitou o botão de busca em `--color-primary` por competir com a ação principal da tela.
 4. **`Select.tsx`** — mesmo tratamento visual do `Input`, wrapper de `<select>` nativo (mantém acessibilidade e comportamento mobile nativo).
 5. **`Textarea.tsx`** — mesmo padrão do `Input`, multi-linha.
 6. **`Checkbox.tsx`** — caixa customizada usando `--color-primary` quando marcada, label ao lado.
