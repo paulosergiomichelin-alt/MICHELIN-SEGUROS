@@ -963,11 +963,12 @@ git commit -m "feat: ClienteForm.tsx — campo único CPF/CNPJ com detecção au
 
 ---
 
-### Task 6: Exibição de PJ em `ClienteDetailPage.tsx` e `RelacionamentosTab.tsx`
+### Task 6: Exibição de PJ em `ClienteDetailPage.tsx`, `RelacionamentosTab.tsx` e `ClientesView.tsx`
 
 **Files:**
 - Modify: `src/domains/clientes/ClienteDetailPage.tsx`
 - Modify: `src/domains/clientes/RelacionamentosTab.tsx`
+- Modify: `src/domains/clientes/ClientesView.tsx`
 
 **Interfaces:**
 - Consumes: `dataApiClient.get('cliente_pessoa_juridica', clienteId)` (Task 1/registro genérico), `formatCNPJ`/`maskCNPJ` (Task 2).
@@ -1066,16 +1067,44 @@ function documentoOuVazio(c: { tipoPessoa?: string; cpf?: string }): string {
 ```
 (Definir essa função perto de `fmtCPFMasked` já existente no arquivo.) E usar `documentoOuVazio(c)` / `documentoOuVazio(selected)` no lugar de cada `fmtCPFMasked(...)`. Isso evita mostrar "---" ou um CPF em branco pra um relacionado PJ, sem tentar buscar o CNPJ nesta lista (documentado como limitação conhecida, não um requisito quebrado).
 
-- [ ] **Step 5: Typecheck**
+- [ ] **Step 5: `ClientesView.tsx` (lista de clientes) — não travar em cliente PJ**
+
+Descoberto durante a Task 4 (typecheck): esta tela não estava no escopo original desta tarefa, mas `cpf` virou opcional (Task 1/4) e ela usa `c.cpf` em 3 lugares assumindo que é sempre uma string — quebra o build pra qualquer cliente PJ (`cpf` nulo) na lista. Mesma limitação já aceita no Step 4 acima (RelacionamentosTab): mostrar o CPF quando for PF, e não tentar buscar/exibir o CNPJ aqui (buscar a linha satélite por linha da lista teria custo desproporcional — cada cliente exigiria uma chamada extra só pra popular essa coluna).
+
+Trocar (linha 72, predicado de busca):
+```ts
+      if (q && !c.nome.toLowerCase().includes(q) && !c.cpf.includes(q.replace(/\D/g,'')) && !(c.telefone || '').includes(q.replace(/\D/g,''))) return false;
+```
+por:
+```ts
+      if (q && !c.nome.toLowerCase().includes(q) && !(c.cpf ?? '').includes(q.replace(/\D/g,'')) && !(c.telefone || '').includes(q.replace(/\D/g,''))) return false;
+```
+
+Trocar as 2 ocorrências idênticas de exibição (linhas 206 e 256):
+```tsx
+<p className="text-[9px] text-white/30 font-mono">{c.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</p>
+```
+```tsx
+<p className="text-[10px] text-white/40 font-mono mt-0.5">{c.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</p>
+```
+(são duas variantes de classe CSS diferentes — trocar cada uma preservando sua própria className, só o conteúdo interno muda) por, respectivamente:
+```tsx
+<p className="text-[9px] text-white/30 font-mono">{c.tipoPessoa === 'juridica' ? 'Pessoa Jurídica' : (c.cpf ?? '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</p>
+```
+```tsx
+<p className="text-[10px] text-white/40 font-mono mt-0.5">{c.tipoPessoa === 'juridica' ? 'Pessoa Jurídica' : (c.cpf ?? '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</p>
+```
+
+- [ ] **Step 6: Typecheck**
 
 Run: `npx tsc --noEmit`
 Expected: sem erros.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add src/domains/clientes/ClienteDetailPage.tsx src/domains/clientes/RelacionamentosTab.tsx
-git commit -m "feat: exibição de razão social/CNPJ em ClienteDetailPage e RelacionamentosTab"
+git add src/domains/clientes/ClienteDetailPage.tsx src/domains/clientes/RelacionamentosTab.tsx src/domains/clientes/ClientesView.tsx
+git commit -m "feat: exibição de razão social/CNPJ em ClienteDetailPage, RelacionamentosTab e ClientesView"
 ```
 
 ---
@@ -1324,12 +1353,20 @@ por:
   }, [formData.id]);
 ```
 
-- [ ] **Step 9: Ajustar `canQuote` (linha 1914) pra aceitar CNPJ**
+- [ ] **Step 9: Ajustar `canQuote` (linha 1914) pra EXCLUIR pessoa jurídica**
 
+A cotação da Agger (`src/lib/agger-quote.ts`) é uma integração de seguro auto **pessoa física** — o payload (`AggerLeadPayload.lead`) exige `cpf: string` e carrega campos como `birthDate`/`civilStatus`, que não existem/fazem sentido pra uma empresa. Sem essa exclusão, um lead PJ com `formData.cpf` preenchido (agora com o CNPJ formatado, já que os dois compartilham o mesmo campo) passaria `canQuote` e mandaria um CNPJ dentro de um campo `cpf` pra essa API de terceiro.
+
+Trocar:
 ```ts
   const canQuote = !!formData.name && !!formData.cpf && !!formData.plate;
 ```
-Essa linha já funciona sem alteração — `formData.cpf` continua preenchido (agora com o CNPJ formatado) quando é PJ, então `!!formData.cpf` continua `true`. Nenhuma mudança necessária aqui; deixado documentado pra quem revisar não "corrigir" à toa.
+por:
+```ts
+  const canQuote = !!formData.name && !!formData.cpf && !!formData.plate && formData.tipoPessoa !== 'juridica';
+```
+
+Cotação pra frota/empresa fica fora do escopo desta fase (ver SPEC.md seção 10) — o botão de gerar cotação simplesmente não aparece/fica desabilitado pra um lead PJ, sem nenhuma mensagem de erro nova a escrever.
 
 - [ ] **Step 10: Salvar — upsert/delete da linha satélite**
 
