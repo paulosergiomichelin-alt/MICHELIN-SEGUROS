@@ -64,6 +64,7 @@ export const LeadsPage = React.memo(({
   const [selectedLeadIds, setSelectedLeadIds] = React.useState<Set<string>>(new Set());
   const [showDeleteSelectedConfirm, setShowDeleteSelectedConfirm] = React.useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
+  const [deleteProgress, setDeleteProgress] = React.useState({ done: 0, total: 0 });
 
   const [crmUsers, setCrmUsers] = React.useState<UserProfile[]>([]);
 
@@ -93,15 +94,19 @@ export const LeadsPage = React.memo(({
   };
 
   const handleDeleteSelected = async () => {
+    const ids = Array.from(selectedLeadIds);
     setIsBulkDeleting(true);
+    setDeleteProgress({ done: 0, total: ids.length });
     try {
-      for (const id of selectedLeadIds) {
-        await DataService.delete('lead', id);
+      for (let i = 0; i < ids.length; i++) {
+        await DataService.delete('lead', ids[i]);
+        setDeleteProgress({ done: i + 1, total: ids.length });
       }
       setShowDeleteSelectedConfirm(false);
       exitSelectionMode();
     } finally {
       setIsBulkDeleting(false);
+      setDeleteProgress({ done: 0, total: 0 });
     }
   };
 
@@ -281,7 +286,7 @@ export const LeadsPage = React.memo(({
       {showDeleteSelectedConfirm && (
         <Modal
           isOpen={showDeleteSelectedConfirm}
-          onClose={() => setShowDeleteSelectedConfirm(false)}
+          onClose={() => { if (!isBulkDeleting) setShowDeleteSelectedConfirm(false); }}
           title="Confirmar Exclusão"
         >
           <div className="space-y-4 p-4">
@@ -294,10 +299,29 @@ export const LeadsPage = React.memo(({
                 </p>
               </div>
             </div>
+
+            {isBulkDeleting && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest">
+                  <span className="text-white/50">Excluindo {deleteProgress.done} de {deleteProgress.total}...</span>
+                  <span className="text-red-400">
+                    {deleteProgress.total > 0 ? Math.round((deleteProgress.done / deleteProgress.total) * 100) : 0}%
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-red-500 transition-all duration-200 ease-out"
+                    style={{ width: `${deleteProgress.total > 0 ? (deleteProgress.done / deleteProgress.total) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setShowDeleteSelectedConfirm(false)}
-                className="px-4 py-2 text-white/40 font-bold text-[10px] uppercase tracking-widest hover:text-white transition-colors"
+                disabled={isBulkDeleting}
+                className="px-4 py-2 text-white/40 font-bold text-[10px] uppercase tracking-widest hover:text-white transition-colors disabled:opacity-30"
               >
                 Cancelar
               </button>
@@ -306,7 +330,7 @@ export const LeadsPage = React.memo(({
                 disabled={isBulkDeleting}
                 className="px-6 py-2 bg-red-600 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 disabled:opacity-50"
               >
-                {isBulkDeleting ? 'Excluindo...' : `Sim, Excluir ${selectedLeadIds.size}`}
+                {isBulkDeleting ? `Excluindo... ${deleteProgress.total > 0 ? Math.round((deleteProgress.done / deleteProgress.total) * 100) : 0}%` : `Sim, Excluir ${selectedLeadIds.size}`}
               </button>
             </div>
           </div>
