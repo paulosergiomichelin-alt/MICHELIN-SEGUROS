@@ -1,6 +1,5 @@
 import { pgTable, text, boolean, integer, bigint, jsonb, timestamp, index } from 'drizzle-orm/pg-core';
 import { organizations } from './core';
-import { leads } from './leads';
 
 export const campaigns = pgTable('campaigns', {
   id: text('id').primaryKey(),
@@ -28,7 +27,10 @@ export const campaigns = pgTable('campaigns', {
 export const campaignLog = pgTable('campaign_log', {
   id: text('id').primaryKey(),
   campaignId: text('campaign_id').notNull().references(() => campaigns.id),
-  leadId: text('lead_id').notNull().references(() => leads.id),
+  // Sem .references() de propósito: já guarda leadName congelado justamente pra sobreviver
+  // à exclusão do lead, igual messages/notifications em leads.ts — log de campanha é
+  // histórico, não deve travar nem cascatear quando o lead é apagado.
+  leadId: text('lead_id').notNull(),
   leadName: text('lead_name').notNull(),
   status: text('status').notNull(),
   message: text('message'),
