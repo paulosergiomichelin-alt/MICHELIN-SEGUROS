@@ -241,63 +241,61 @@ export const RenovacoesPage: React.FC = () => {
     if (!active || !payload?.length) return null;
     const d = payload[0]?.payload;
     return (
-      <div className="bg-[#141414] border border-white/10 rounded-xl px-3 py-2.5 shadow-2xl min-w-[160px]">
-        <p className="text-[9px] font-black text-white/50 uppercase tracking-widest mb-2">{label}</p>
+      <div className="bg-white border border-slate-200 rounded-xl px-3 py-2.5 shadow-lg min-w-[160px]">
+        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{label}</p>
         <div className="flex items-center gap-2 mb-1">
-          <div className="w-2 h-2 rounded-sm bg-[#D4A94D]" />
-          <span className="text-[10px] text-white/50">Valor Total:</span>
-          <span className="text-[10px] font-bold text-white ml-auto">
+          <div className="w-2 h-2 rounded-sm bg-[#1B4D8F]" />
+          <span className="text-[10px] text-slate-500">Valor Total:</span>
+          <span className="text-[10px] font-bold text-slate-800 ml-auto">
             {(d?.valorTotal ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-sm bg-[#34d399]" />
-          <span className="text-[10px] text-white/50">Apólices:</span>
-          <span className="text-[10px] font-bold text-white ml-auto">{d?.qtd ?? 0}</span>
+          <div className="w-2 h-2 rounded-sm bg-[#1F8A4C]" />
+          <span className="text-[10px] text-slate-500">Apólices:</span>
+          <span className="text-[10px] font-bold text-slate-800 ml-auto">{d?.qtd ?? 0}</span>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="flex flex-col h-full bg-brand-dark">
-      {/* Header */}
-      <div className="shrink-0 border-b border-white/5 px-4 md:px-6 py-4 bg-brand-black/50">
+    <div className="min-h-full bg-slate-50">
+      <div className="p-4 md:p-6 space-y-5">
+        {/* PageHeader */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gold-deep/15 border border-gold-deep/20 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-gold-deep/10 border border-gold-deep/25 flex items-center justify-center">
             <RefreshCw className="w-4 h-4 text-gold-deep" />
           </div>
-          <div className="flex-1">
-            <h1 className="text-sm font-black text-white uppercase tracking-widest">Dashboard</h1>
-            <p className="text-[10px] text-white/40 font-medium">Visão geral da carteira</p>
+          <div>
+            <h1 className="text-[15px] font-black text-slate-900 uppercase tracking-widest">Dashboard</h1>
+            <p className="text-[10px] text-slate-500 font-medium">Visão geral da carteira</p>
           </div>
         </div>
-      </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-6">
         {/* Panels: Seguradora + Produto */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Por seguradora */}
-          <div className="bg-brand-black/50 border border-white/5 rounded-2xl p-5">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <PieChart className="w-4 h-4 text-gold-deep" />
-              <h3 className="text-[10px] font-black text-white/60 uppercase tracking-widest">Carteira por Seguradora</h3>
+              <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Carteira por Seguradora</h3>
               <div className="ml-auto">
                 {selectedSeguradora ? (
                   <button
                     onClick={() => setSelectedSeguradora(null)}
-                    className="flex items-center gap-1 text-[9px] font-black text-gold-deep/70 hover:text-gold-deep uppercase tracking-widest transition-colors"
+                    className="flex items-center gap-1 text-[9px] font-black text-gold-deep/80 hover:text-gold-deep uppercase tracking-widest transition-colors"
                   >
                     <X className="w-3 h-3" />
                     Limpar filtro
                   </button>
                 ) : (
-                  <span className="text-[9px] text-white/25 font-medium">clique para filtrar</span>
+                  <span className="text-[9px] text-slate-300 font-medium">clique para filtrar</span>
                 )}
               </div>
             </div>
             {bySeguradora.length === 0 ? (
-              <p className="text-[11px] text-white/20">Sem dados</p>
+              <p className="text-[11px] text-slate-300">Sem dados</p>
             ) : (
               <div className="space-y-3">
                 {bySeguradora.map(([id, { count, valor }]) => {
@@ -312,31 +310,31 @@ export const RenovacoesPage: React.FC = () => {
                         'w-full text-left rounded-xl p-2.5 -mx-1 transition-colors',
                         isSelected
                           ? 'bg-gold-deep/10 border border-gold-deep/25'
-                          : 'hover:bg-white/3 border border-transparent',
+                          : 'hover:bg-slate-50 border border-transparent',
                       )}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <SeguradoraBadge seguradoraId={id} size="xs" />
                         <div className="text-right">
-                          <span className="text-[10px] text-white/70 font-mono">{count}</span>
-                          <span className="text-[9px] text-white/40 ml-1">({pctCount}%)</span>
+                          <span className="text-[10px] text-slate-600 font-mono">{count}</span>
+                          <span className="text-[9px] text-slate-400 ml-1">({pctCount}%)</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[9px] text-white/55">{fmtCurrency(valor)}</span>
-                        <span className="text-[9px] text-white/40">{pctValor}% do total</span>
+                        <span className="text-[9px] text-slate-500">{fmtCurrency(valor)}</span>
+                        <span className="text-[9px] text-slate-400">{pctValor}% do total</span>
                       </div>
-                      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                        <div className="h-full bg-gold-deep/60 rounded-full" style={{ width: `${pctValor}%` }} />
+                      <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#1B4D8F] rounded-full" style={{ width: `${pctValor}%` }} />
                       </div>
                     </button>
                   );
                 })}
-                <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between">
-                  <span className="text-[9px] text-white/50 uppercase font-black">Total</span>
+                <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[9px] text-slate-500 uppercase font-black">Total</span>
                   <div className="text-right">
-                    <span className="text-[10px] text-white/70 font-mono">{totalApolices} apólices</span>
-                    <span className="text-[9px] text-white/50 ml-2">{fmtCurrency(totalValor)}</span>
+                    <span className="text-[10px] text-slate-600 font-mono">{totalApolices} apólices</span>
+                    <span className="text-[9px] text-slate-500 ml-2">{fmtCurrency(totalValor)}</span>
                   </div>
                 </div>
               </div>
@@ -344,31 +342,31 @@ export const RenovacoesPage: React.FC = () => {
           </div>
 
           {/* Por produto */}
-          <div className="bg-brand-black/50 border border-white/5 rounded-2xl p-5">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <BarChart2 className="w-4 h-4 text-gold-deep" />
-              <h3 className="text-[10px] font-black text-white/60 uppercase tracking-widest">Carteira por Produto</h3>
+              <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Carteira por Produto</h3>
               {selectedSeguradora && seguradoraNome && (
-                <div className="flex items-center gap-1 bg-white/5 rounded-full px-2 py-0.5">
-                  <span className="text-[9px] text-gold-deep/70 font-bold truncate max-w-[60px]">{seguradoraNome}</span>
+                <div className="flex items-center gap-1 bg-slate-100 rounded-full px-2 py-0.5">
+                  <span className="text-[9px] text-gold-deep font-bold truncate max-w-[60px]">{seguradoraNome}</span>
                 </div>
               )}
               <div className="ml-auto">
                 {selectedProduto ? (
                   <button
                     onClick={() => setSelectedProduto(null)}
-                    className="flex items-center gap-1 text-[9px] font-black text-gold-deep/70 hover:text-gold-deep uppercase tracking-widest transition-colors"
+                    className="flex items-center gap-1 text-[9px] font-black text-gold-deep/80 hover:text-gold-deep uppercase tracking-widest transition-colors"
                   >
                     <X className="w-3 h-3" />
                     Limpar filtro
                   </button>
                 ) : (
-                  <span className="text-[9px] text-white/25 font-medium">clique para filtrar</span>
+                  <span className="text-[9px] text-slate-300 font-medium">clique para filtrar</span>
                 )}
               </div>
             </div>
             {byProduto.length === 0 ? (
-              <p className="text-[11px] text-white/20">Sem dados</p>
+              <p className="text-[11px] text-slate-300">Sem dados</p>
             ) : (
               <div className="space-y-2.5">
                 {byProduto.map(([produto, { count, valor }]) => {
@@ -389,22 +387,22 @@ export const RenovacoesPage: React.FC = () => {
                         'w-full text-left rounded-xl p-2.5 -mx-1 transition-colors',
                         isSelected
                           ? 'bg-gold-deep/10 border border-gold-deep/25'
-                          : 'hover:bg-white/3 border border-transparent',
+                          : 'hover:bg-slate-50 border border-transparent',
                       )}
                     >
                       <div className="flex items-center justify-between mb-0.5">
-                        <span className={cn('text-[10px] font-medium', isSelected ? 'text-white' : 'text-white/60')}>{produto}</span>
+                        <span className={cn('text-[10px] font-medium', isSelected ? 'text-slate-800' : 'text-slate-600')}>{produto}</span>
                         <div className="text-right">
-                          <span className="text-[10px] text-white/70 font-mono">{count}</span>
-                          <span className="text-[9px] text-white/40 ml-1">({pctCount}%)</span>
+                          <span className="text-[10px] text-slate-600 font-mono">{count}</span>
+                          <span className="text-[9px] text-slate-400 ml-1">({pctCount}%)</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[9px] text-white/55">{fmtCurrency(valor)}</span>
-                        <span className="text-[9px] text-white/40">{pctValor}% do total</span>
+                        <span className="text-[9px] text-slate-500">{fmtCurrency(valor)}</span>
+                        <span className="text-[9px] text-slate-400">{pctValor}% do total</span>
                       </div>
-                      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                        <div className={cn('h-full rounded-full', isSelected ? 'bg-gold-deep' : 'bg-gold-deep/40')} style={{ width: `${pctValor}%` }} />
+                      <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                        <div className={cn('h-full rounded-full', isSelected ? 'bg-gold-deep' : 'bg-gold-deep/50')} style={{ width: `${pctValor}%` }} />
                       </div>
                     </button>
                   );
@@ -415,16 +413,16 @@ export const RenovacoesPage: React.FC = () => {
         </div>
 
         {/* Gráfico: emissões mês a mês */}
-        <div className="bg-brand-black/50 border border-white/5 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-5">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-5 flex-wrap">
             <BarChart2 className="w-4 h-4 text-gold-deep" />
-            <h3 className="text-[10px] font-black text-white/60 uppercase tracking-widest">
+            <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">
               Emissões Mês a Mês
             </h3>
             {selectedSeguradora && seguradoraNome && (
               <div className="flex items-center gap-1.5 bg-gold-deep/10 border border-gold-deep/20 rounded-full px-2 py-0.5">
                 <span className="text-[9px] text-gold-deep font-bold truncate max-w-[100px]">{seguradoraNome}</span>
-                <button onClick={() => setSelectedSeguradora(null)} className="text-gold-deep/60 hover:text-gold-deep transition-colors">
+                <button onClick={() => setSelectedSeguradora(null)} className="text-gold-deep/70 hover:text-gold-deep transition-colors">
                   <X className="w-3 h-3" />
                 </button>
               </div>
@@ -432,17 +430,17 @@ export const RenovacoesPage: React.FC = () => {
             {selectedProduto && (
               <div className="flex items-center gap-1.5 bg-gold-deep/10 border border-gold-deep/20 rounded-full px-2 py-0.5">
                 <span className="text-[9px] text-gold-deep font-bold truncate max-w-[100px]">{selectedProduto}</span>
-                <button onClick={() => setSelectedProduto(null)} className="text-gold-deep/60 hover:text-gold-deep transition-colors">
+                <button onClick={() => setSelectedProduto(null)} className="text-gold-deep/70 hover:text-gold-deep transition-colors">
                   <X className="w-3 h-3" />
                 </button>
               </div>
             )}
-            <div className="ml-auto flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5">
+            <div className="ml-auto flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5">
               <button
                 onClick={() => setChartMetric('valor')}
                 className={cn(
                   'text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md transition-colors',
-                  chartMetric === 'valor' ? 'bg-gold-deep text-brand-black' : 'text-white/40 hover:text-white/70',
+                  chartMetric === 'valor' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600',
                 )}
               >
                 Valor
@@ -451,7 +449,7 @@ export const RenovacoesPage: React.FC = () => {
                 onClick={() => setChartMetric('qtd')}
                 className={cn(
                   'text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md transition-colors',
-                  chartMetric === 'qtd' ? 'bg-gold-deep text-brand-black' : 'text-white/40 hover:text-white/70',
+                  chartMetric === 'qtd' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600',
                 )}
               >
                 Qtd
@@ -461,15 +459,15 @@ export const RenovacoesPage: React.FC = () => {
 
           <ResponsiveContainer width="100%" height={240}>
             <ComposedChart data={chartData} margin={{ top: 30, right: 8, left: 8, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(15,42,74,0.06)" vertical={false} />
               <XAxis
                 dataKey="mes"
-                tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 700 }}
-                axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
+                tick={{ fill: '#5B7591', fontSize: 9, fontWeight: 700 }}
+                axisLine={{ stroke: 'rgba(15,42,74,0.12)' }}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 9 }}
+                tick={{ fill: '#5B7591', fontSize: 9 }}
                 axisLine={false}
                 tickLine={false}
                 allowDecimals={false}
@@ -478,11 +476,11 @@ export const RenovacoesPage: React.FC = () => {
                   : String(v)}
                 width={44}
               />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(15,42,74,0.03)' }} />
               <Bar
                 dataKey={chartMetric === 'valor' ? 'valorTotal' : 'qtd'}
-                fill={chartMetric === 'valor' ? '#D4A94D' : '#34d399'}
-                fillOpacity={0.85}
+                fill={chartMetric === 'valor' ? '#1B4D8F' : '#1F8A4C'}
+                fillOpacity={0.9}
                 radius={[3, 3, 0, 0]}
                 maxBarSize={40}
               >
@@ -499,7 +497,7 @@ export const RenovacoesPage: React.FC = () => {
                         x={Number(x) + Number(width) / 2}
                         y={Number(y) - 5}
                         textAnchor="middle"
-                        fill={chartMetric === 'valor' ? '#D4A94D' : '#34d399'}
+                        fill={chartMetric === 'valor' ? '#1B4D8F' : '#1F8A4C'}
                         fontSize={8}
                         fontWeight={700}
                       >
@@ -516,39 +514,39 @@ export const RenovacoesPage: React.FC = () => {
           <div className="mt-5 overflow-x-auto">
             <table className="w-full text-[9px]" style={{ minWidth: 780 }}>
               <thead>
-                <tr className="border-b border-white/5">
-                  <th className="text-left py-2 px-2 text-white/30 font-black uppercase tracking-widest w-24">Período</th>
+                <tr className="border-b border-slate-100">
+                  <th className="text-left py-2 px-2 text-slate-400 font-black uppercase tracking-widest w-24">Período</th>
                   {tableData.map(m => (
-                    <th key={m.monthKey} className="text-center py-2 px-1 text-white/30 font-black uppercase tracking-widest whitespace-nowrap">
+                    <th key={m.monthKey} className="text-center py-2 px-1 text-slate-400 font-black uppercase tracking-widest whitespace-nowrap">
                       {m.mes}
                     </th>
                   ))}
-                  <th className="text-center py-2 px-2 text-white/30 font-black uppercase tracking-widest whitespace-nowrap border-l border-white/5">Total 12m</th>
-                  <th className="text-center py-2 px-2 text-white/30 font-black uppercase tracking-widest whitespace-nowrap">YTD</th>
+                  <th className="text-center py-2 px-2 text-slate-400 font-black uppercase tracking-widest whitespace-nowrap border-l border-slate-100">Total 12m</th>
+                  <th className="text-center py-2 px-2 text-slate-400 font-black uppercase tracking-widest whitespace-nowrap">YTD</th>
                 </tr>
               </thead>
               <tbody>
                 {/* Crescimento — primeira linha */}
-                <tr className="border-b border-white/3">
-                  <td className="py-2 px-2 text-white/35 font-bold">Crescimento</td>
+                <tr className="border-b border-slate-50">
+                  <td className="py-2 px-2 text-slate-400 font-bold">Crescimento</td>
                   {tableData.map(m => {
                     const pct = chartMetric === 'valor' ? m.crescValor : m.crescQtd;
                     return (
                       <td key={m.monthKey} className="py-2 px-1 text-center">
                         {pct === null
-                          ? <span className="text-white/20">—</span>
-                          : <span className={cn('font-bold', pct >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                          ? <span className="text-slate-300">—</span>
+                          : <span className={cn('font-bold', pct >= 0 ? 'text-[#1F8A4C]' : 'text-[#C0392B]')}>
                               {pct >= 0 ? '+' : ''}{pct.toFixed(0)}%
                             </span>}
                       </td>
                     );
                   })}
-                  <td className="py-2 px-2 text-center border-l border-white/5">
+                  <td className="py-2 px-2 text-center border-l border-slate-100">
                     {(() => {
                       const pct = chartMetric === 'valor' ? tableTotals.cresc12V : tableTotals.cresc12Q;
                       return pct === null
-                        ? <span className="text-white/20">—</span>
-                        : <span className={cn('font-bold', pct >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                        ? <span className="text-slate-300">—</span>
+                        : <span className={cn('font-bold', pct >= 0 ? 'text-[#1F8A4C]' : 'text-[#C0392B]')}>
                             {pct >= 0 ? '+' : ''}{pct.toFixed(0)}%
                           </span>;
                     })()}
@@ -557,22 +555,22 @@ export const RenovacoesPage: React.FC = () => {
                     {(() => {
                       const pct = chartMetric === 'valor' ? tableTotals.crescYtdV : tableTotals.crescYtdQ;
                       return pct === null
-                        ? <span className="text-white/20">—</span>
-                        : <span className={cn('font-bold', pct >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                        ? <span className="text-slate-300">—</span>
+                        : <span className={cn('font-bold', pct >= 0 ? 'text-[#1F8A4C]' : 'text-[#C0392B]')}>
                             {pct >= 0 ? '+' : ''}{pct.toFixed(0)}%
                           </span>;
                     })()}
                   </td>
                 </tr>
                 {/* Ano Atual */}
-                <tr className="border-b border-white/3">
-                  <td className="py-2 px-2 text-white/60 font-bold">Ano Atual</td>
+                <tr className="border-b border-slate-50">
+                  <td className="py-2 px-2 text-slate-600 font-bold">Ano Atual</td>
                   {tableData.map(m => (
-                    <td key={m.monthKey} className="py-2 px-1 text-center text-white/80 font-mono tabular-nums">
+                    <td key={m.monthKey} className="py-2 px-1 text-center text-slate-700 font-mono tabular-nums">
                       {chartMetric === 'valor' ? fmtShort(m.atualValor) : (m.atualQtd || '—')}
                     </td>
                   ))}
-                  <td className="py-2 px-2 text-center text-gold-deep font-bold border-l border-white/5 tabular-nums">
+                  <td className="py-2 px-2 text-center text-gold-deep font-bold border-l border-slate-100 tabular-nums">
                     {chartMetric === 'valor' ? fmtShort(tableTotals.t12V) : (tableTotals.t12Q || '—')}
                   </td>
                   <td className="py-2 px-2 text-center text-gold-deep font-bold tabular-nums">
@@ -581,16 +579,16 @@ export const RenovacoesPage: React.FC = () => {
                 </tr>
                 {/* Ano Anterior */}
                 <tr>
-                  <td className="py-2 px-2 text-white/35 font-bold">Ano Anterior</td>
+                  <td className="py-2 px-2 text-slate-400 font-bold">Ano Anterior</td>
                   {tableData.map(m => (
-                    <td key={m.monthKey} className="py-2 px-1 text-center text-white/35 font-mono tabular-nums">
+                    <td key={m.monthKey} className="py-2 px-1 text-center text-slate-400 font-mono tabular-nums">
                       {chartMetric === 'valor' ? fmtShort(m.antValor) : (m.antQtd || '—')}
                     </td>
                   ))}
-                  <td className="py-2 px-2 text-center text-white/35 border-l border-white/5 tabular-nums">
+                  <td className="py-2 px-2 text-center text-slate-400 border-l border-slate-100 tabular-nums">
                     {chartMetric === 'valor' ? fmtShort(tableTotals.p12V) : (tableTotals.p12Q || '—')}
                   </td>
-                  <td className="py-2 px-2 text-center text-white/35 tabular-nums">
+                  <td className="py-2 px-2 text-center text-slate-400 tabular-nums">
                     {chartMetric === 'valor' ? fmtShort(tableTotals.pytdV) : (tableTotals.pytdQ || '—')}
                   </td>
                 </tr>
@@ -599,16 +597,16 @@ export const RenovacoesPage: React.FC = () => {
           </div>
         </div>
         {/* Tabela de Comissões */}
-        <div className="bg-brand-black/50 border border-white/5 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-5">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-5 flex-wrap">
             <BarChart2 className="w-4 h-4 text-gold-deep" />
-            <h3 className="text-[10px] font-black text-white/60 uppercase tracking-widest">
+            <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">
               Comissões Mês a Mês
             </h3>
             {selectedSeguradora && seguradoraNome && (
               <div className="flex items-center gap-1.5 bg-gold-deep/10 border border-gold-deep/20 rounded-full px-2 py-0.5">
                 <span className="text-[9px] text-gold-deep font-bold truncate max-w-[100px]">{seguradoraNome}</span>
-                <button onClick={() => setSelectedSeguradora(null)} className="text-gold-deep/60 hover:text-gold-deep transition-colors">
+                <button onClick={() => setSelectedSeguradora(null)} className="text-gold-deep/70 hover:text-gold-deep transition-colors">
                   <X className="w-3 h-3" />
                 </button>
               </div>
@@ -616,17 +614,17 @@ export const RenovacoesPage: React.FC = () => {
             {selectedProduto && (
               <div className="flex items-center gap-1.5 bg-gold-deep/10 border border-gold-deep/20 rounded-full px-2 py-0.5">
                 <span className="text-[9px] text-gold-deep font-bold truncate max-w-[100px]">{selectedProduto}</span>
-                <button onClick={() => setSelectedProduto(null)} className="text-gold-deep/60 hover:text-gold-deep transition-colors">
+                <button onClick={() => setSelectedProduto(null)} className="text-gold-deep/70 hover:text-gold-deep transition-colors">
                   <X className="w-3 h-3" />
                 </button>
               </div>
             )}
-            <div className="ml-auto flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5">
+            <div className="ml-auto flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5">
               <button
                 onClick={() => setComissaoMetric('valor')}
                 className={cn(
                   'text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md transition-colors',
-                  comissaoMetric === 'valor' ? 'bg-gold-deep text-brand-black' : 'text-white/40 hover:text-white/70',
+                  comissaoMetric === 'valor' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600',
                 )}
               >
                 Valor
@@ -635,7 +633,7 @@ export const RenovacoesPage: React.FC = () => {
                 onClick={() => setComissaoMetric('pct')}
                 className={cn(
                   'text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md transition-colors',
-                  comissaoMetric === 'pct' ? 'bg-gold-deep text-brand-black' : 'text-white/40 hover:text-white/70',
+                  comissaoMetric === 'pct' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600',
                 )}
               >
                 % Média
@@ -646,41 +644,41 @@ export const RenovacoesPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-[9px]" style={{ minWidth: 780 }}>
               <thead>
-                <tr className="border-b border-white/5">
-                  <th className="text-left py-2 px-2 text-white/30 font-black uppercase tracking-widest w-24">Período</th>
+                <tr className="border-b border-slate-100">
+                  <th className="text-left py-2 px-2 text-slate-400 font-black uppercase tracking-widest w-24">Período</th>
                   {tableComissao.map(m => (
-                    <th key={m.monthKey} className="text-center py-2 px-1 text-white/30 font-black uppercase tracking-widest whitespace-nowrap">
+                    <th key={m.monthKey} className="text-center py-2 px-1 text-slate-400 font-black uppercase tracking-widest whitespace-nowrap">
                       {m.mes}
                     </th>
                   ))}
-                  <th className="text-center py-2 px-2 text-white/30 font-black uppercase tracking-widest whitespace-nowrap border-l border-white/5">Total 12m</th>
-                  <th className="text-center py-2 px-2 text-white/30 font-black uppercase tracking-widest whitespace-nowrap">YTD</th>
+                  <th className="text-center py-2 px-2 text-slate-400 font-black uppercase tracking-widest whitespace-nowrap border-l border-slate-100">Total 12m</th>
+                  <th className="text-center py-2 px-2 text-slate-400 font-black uppercase tracking-widest whitespace-nowrap">YTD</th>
                 </tr>
               </thead>
               <tbody>
                 {/* Crescimento */}
-                <tr className="border-b border-white/3">
-                  <td className="py-2 px-2 text-white/35 font-bold">Crescimento</td>
+                <tr className="border-b border-slate-50">
+                  <td className="py-2 px-2 text-slate-400 font-bold">Crescimento</td>
                   {tableComissao.map(m => {
                     const pct = comissaoMetric === 'valor' ? m.cresc : m.crescPct;
                     const suffix = comissaoMetric === 'pct' ? 'pp' : '%';
                     return (
                       <td key={m.monthKey} className="py-2 px-1 text-center">
                         {pct === null
-                          ? <span className="text-white/20">—</span>
-                          : <span className={cn('font-bold', pct >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                          ? <span className="text-slate-300">—</span>
+                          : <span className={cn('font-bold', pct >= 0 ? 'text-[#1F8A4C]' : 'text-[#C0392B]')}>
                               {pct >= 0 ? '+' : ''}{pct.toFixed(1)}{suffix}
                             </span>}
                       </td>
                     );
                   })}
-                  <td className="py-2 px-2 text-center border-l border-white/5">
+                  <td className="py-2 px-2 text-center border-l border-slate-100">
                     {(() => {
                       const pct = comissaoMetric === 'valor' ? comissaoTotals.cresc12 : comissaoTotals.crescPct12;
                       const suffix = comissaoMetric === 'pct' ? 'pp' : '%';
                       return pct === null
-                        ? <span className="text-white/20">—</span>
-                        : <span className={cn('font-bold', pct >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                        ? <span className="text-slate-300">—</span>
+                        : <span className={cn('font-bold', pct >= 0 ? 'text-[#1F8A4C]' : 'text-[#C0392B]')}>
                             {pct >= 0 ? '+' : ''}{pct.toFixed(1)}{suffix}
                           </span>;
                     })()}
@@ -690,24 +688,24 @@ export const RenovacoesPage: React.FC = () => {
                       const pct = comissaoMetric === 'valor' ? comissaoTotals.crescYtd : comissaoTotals.crescPctYtd;
                       const suffix = comissaoMetric === 'pct' ? 'pp' : '%';
                       return pct === null
-                        ? <span className="text-white/20">—</span>
-                        : <span className={cn('font-bold', pct >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                        ? <span className="text-slate-300">—</span>
+                        : <span className={cn('font-bold', pct >= 0 ? 'text-[#1F8A4C]' : 'text-[#C0392B]')}>
                             {pct >= 0 ? '+' : ''}{pct.toFixed(1)}{suffix}
                           </span>;
                     })()}
                   </td>
                 </tr>
                 {/* Ano Atual */}
-                <tr className="border-b border-white/3">
-                  <td className="py-2 px-2 text-white/60 font-bold">Ano Atual</td>
+                <tr className="border-b border-slate-50">
+                  <td className="py-2 px-2 text-slate-600 font-bold">Ano Atual</td>
                   {tableComissao.map(m => (
-                    <td key={m.monthKey} className="py-2 px-1 text-center text-white/80 font-mono tabular-nums">
+                    <td key={m.monthKey} className="py-2 px-1 text-center text-slate-700 font-mono tabular-nums">
                       {comissaoMetric === 'valor'
                         ? fmtShort(m.atualComissao)
                         : m.atualPct === null ? '—' : `${m.atualPct.toFixed(1)}%`}
                     </td>
                   ))}
-                  <td className="py-2 px-2 text-center text-gold-deep font-bold border-l border-white/5 tabular-nums">
+                  <td className="py-2 px-2 text-center text-gold-deep font-bold border-l border-slate-100 tabular-nums">
                     {comissaoMetric === 'valor'
                       ? fmtShort(comissaoTotals.t12)
                       : comissaoTotals.rate12 === null ? '—' : `${comissaoTotals.rate12.toFixed(1)}%`}
@@ -720,20 +718,20 @@ export const RenovacoesPage: React.FC = () => {
                 </tr>
                 {/* Ano Anterior */}
                 <tr>
-                  <td className="py-2 px-2 text-white/35 font-bold">Ano Anterior</td>
+                  <td className="py-2 px-2 text-slate-400 font-bold">Ano Anterior</td>
                   {tableComissao.map(m => (
-                    <td key={m.monthKey} className="py-2 px-1 text-center text-white/35 font-mono tabular-nums">
+                    <td key={m.monthKey} className="py-2 px-1 text-center text-slate-400 font-mono tabular-nums">
                       {comissaoMetric === 'valor'
                         ? fmtShort(m.antComissao)
                         : m.antPct === null ? '—' : `${m.antPct.toFixed(1)}%`}
                     </td>
                   ))}
-                  <td className="py-2 px-2 text-center text-white/35 border-l border-white/5 tabular-nums">
+                  <td className="py-2 px-2 text-center text-slate-400 border-l border-slate-100 tabular-nums">
                     {comissaoMetric === 'valor'
                       ? fmtShort(comissaoTotals.p12)
                       : comissaoTotals.rateP12 === null ? '—' : `${comissaoTotals.rateP12.toFixed(1)}%`}
                   </td>
-                  <td className="py-2 px-2 text-center text-white/35 tabular-nums">
+                  <td className="py-2 px-2 text-center text-slate-400 tabular-nums">
                     {comissaoMetric === 'valor'
                       ? fmtShort(comissaoTotals.pytd)
                       : comissaoTotals.ratePytd === null ? '—' : `${comissaoTotals.ratePytd.toFixed(1)}%`}

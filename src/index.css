@@ -1,16 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
 @theme {
-  --font-sans: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-  --font-display: "Cinzel", Georgia, Cambria, "Times New Roman", Times, serif;
-  
-  --color-gold-deep: #CFA764;
-  --color-gold-light: #E6D7B3;
+  --font-sans: "Sora", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  --font-display: "Sora", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Marca — dourado, agora reservado a destaque pontual (ver spec do design system) */
+  --color-gold-deep: #C08A3E;
+  --color-gold-light: #E0B87A;
   --color-brand-black: var(--bg-primary);
   --color-brand-dark: var(--bg-secondary);
-  
+
+  /* Paleta "Azul Confiança" — cor de ação/destaque primário (valor real definido em :root/.light, ver abaixo) */
+  --color-primary: var(--action-primary);
+  --color-primary-hover: var(--action-primary-hover);
+  --color-success: #1F8A4C;
+  --color-success-bg: #E4F5EA;
+  --color-warning: #B8860B;
+  --color-warning-bg: #FFF3DC;
+  --color-danger: #C0392B;
+  --color-danger-bg: #FDE4E4;
+
   --color-whatsapp-teal: #075e54;
   --color-whatsapp-green: #25d366;
   --color-whatsapp-light: #dcf8c6;
@@ -34,24 +45,28 @@
      ============================================================ */
 
   :root {
-    /* Backgrounds */
-    --bg-primary:   #0B0B0D;
-    --bg-secondary: #111214;
-    --bg-elevated:  #18191b;
-    --bg-input:     #111214;
+    /* Backgrounds — paleta "Azul Confiança" (dark) */
+    --bg-primary:   #0B1420;
+    --bg-secondary: #0F1B2B;
+    --bg-elevated:  #152234;
+    --bg-input:     #0F1B2B;
     --bg-overlay:   rgba(0, 0, 0, 0.70);
 
     /* Text */
-    --text-primary: #ffffff;
-    --text-muted:   #8E8E93;
-    --text-subtle:  rgba(255, 255, 255, 0.20);
-    --text-inverse: #0B0B0D;
+    --text-primary: #F2F5F9;
+    --text-muted:   #8FA3BC;
+    --text-subtle:  rgba(242, 245, 249, 0.25);
+    --text-inverse: #0B1420;
 
     /* Borders */
-    --border-subtle: rgba(255, 255, 255, 0.05);
-    --border-medium: rgba(255, 255, 255, 0.10);
-    --border-strong: rgba(255, 255, 255, 0.20);
+    --border-subtle: rgba(255, 255, 255, 0.06);
+    --border-medium: rgba(255, 255, 255, 0.12);
+    --border-strong: rgba(255, 255, 255, 0.22);
     --border-main:   var(--border-subtle);   /* alias de compatibilidade */
+
+    /* Ação primária — mais clara que no light, para contraste sobre fundo escuro */
+    --action-primary:       #3E7BC4;
+    --action-primary-hover: #5A93D6;
 
     /* Scrollbar */
     --scrollbar-thumb:       #374151;
@@ -59,24 +74,28 @@
   }
 
   .light {
-    /* Backgrounds */
+    /* Backgrounds — paleta "Azul Confiança" (light) */
     --bg-primary:   #ffffff;
-    --bg-secondary: #f8fafc;
-    --bg-elevated:  #f1f5f9;
-    --bg-input:     #f8fafc;
+    --bg-secondary: #F4F7FB;
+    --bg-elevated:  #F8FAFD;
+    --bg-input:     #ffffff;
     --bg-overlay:   rgba(0, 0, 0, 0.40);
 
     /* Text */
-    --text-primary: #0f172a;
-    --text-muted:   #475569;
-    --text-subtle:  rgba(15, 23, 42, 0.30);
+    --text-primary: #0F2A4A;
+    --text-muted:   #5B7591;
+    --text-subtle:  rgba(15, 42, 74, 0.35);
     --text-inverse: #ffffff;
 
     /* Borders */
-    --border-subtle: rgba(0, 0, 0, 0.08);
-    --border-medium: rgba(0, 0, 0, 0.15);
-    --border-strong: rgba(0, 0, 0, 0.25);
+    --border-subtle: rgba(15, 42, 74, 0.08);
+    --border-medium: rgba(15, 42, 74, 0.15);
+    --border-strong: rgba(15, 42, 74, 0.25);
     --border-main:   var(--border-subtle);
+
+    /* Ação primária */
+    --action-primary:       #1B4D8F;
+    --action-primary-hover: #153E73;
 
     /* Scrollbar */
     --scrollbar-thumb:       #cbd5e1;
@@ -163,7 +182,7 @@
   /* --- Text em superfícies coloridas (botões gold, badge, etc.) - */
   /* text-brand-dark e text-black em botões dourados devem ser escuros em ambos os temas */
   .light .text-brand-dark {
-    color: #0B0B0D !important;
+    color: #0B1420 !important;
   }
 
   /* brand-black como texto = praticamente inexistente, mas cobre o caso */
@@ -174,29 +193,29 @@
   /* Exceções de cor que o nuclear override não deve sobrescrever */
   .light .text-gold-deep,
   .light .text-gold-light {
-    color: #CFA764 !important;
+    color: #C08A3E !important;
   }
 
   .light .text-emerald-400,
   .light .text-emerald-500,
   .light .text-emerald-600 {
-    color: #059669 !important;
+    color: #1F8A4C !important;
   }
 
   .light .text-red-400,
   .light .text-red-500,
   .light .text-red-600 {
-    color: #dc2626 !important;
+    color: #C0392B !important;
   }
 
   .light .text-orange-400,
   .light .text-orange-500 {
-    color: #ea580c !important;
+    color: #B8860B !important;
   }
 
   .light .text-blue-400,
   .light .text-blue-500 {
-    color: #2563eb !important;
+    color: #1B4D8F !important;
   }
 
   .light .text-yellow-400,
@@ -239,16 +258,17 @@
      sozinha pro valor escuro, sem precisar de override por classe (diferente
      do WhatsApp Shell abaixo, que usa hex hardcoded e por isso precisa disso).
      ─────────────────────────────────────────────────────────────── */
+  .sidebar-main,
   .light .sidebar-main {
-    --bg-primary:   #0B0B0D;
-    --bg-secondary: #111214;
-    --bg-elevated:  #18191b;
+    --bg-primary:   #0B1420;
+    --bg-secondary: #0F1B2B;
+    --bg-elevated:  #152234;
     --text-primary: #ffffff;
-    --text-muted:   #8E8E93;
+    --text-muted:   #8FA3BC;
     --text-subtle:  rgba(255, 255, 255, 0.20);
-    --border-subtle: rgba(255, 255, 255, 0.05);
-    --border-medium: rgba(255, 255, 255, 0.10);
-    --border-strong: rgba(255, 255, 255, 0.20);
+    --border-subtle: rgba(255, 255, 255, 0.06);
+    --border-medium: rgba(255, 255, 255, 0.12);
+    --border-strong: rgba(255, 255, 255, 0.22);
     --border-main:   var(--border-subtle);
   }
 
@@ -267,7 +287,7 @@
 
   /* Exceções de cor dentro do shell */
   .light .whatsapp-shell .text-gold-deep,
-  .light .whatsapp-shell .text-gold-light         { color: #CFA764 !important; }
+  .light .whatsapp-shell .text-gold-light         { color: #C08A3E !important; }
   .light .whatsapp-shell .text-emerald-400,
   .light .whatsapp-shell .text-emerald-500        { color: #25d366 !important; }
   .light .whatsapp-shell .text-emerald-300        { color: #86efac !important; }

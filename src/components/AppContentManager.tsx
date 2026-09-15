@@ -5,7 +5,6 @@ import { useLeads } from '../contexts/LeadRealtimeContext';
 import { Permissions, VisualIdentityConfig, AgentConfig, UserProfile } from '../types';
 import { DataService } from '../services/DataService';
 
-const DashboardView      = lazy(() => import('../domains/dashboard/DashboardPage').then(m => ({ default: m.DashboardView })));
 const LeadsView          = lazy(() => import('../domains/leads/LeadsPage').then(m => ({ default: m.LeadsPage })));
 const ChatView           = lazy(() => import('../domains/leads/ChatView').then(m => ({ default: m.ChatView })));
 const SalesPipeline      = lazy(() => import('../domains/leads/SalesPipeline').then(m => ({ default: m.SalesPipeline })));
@@ -81,16 +80,6 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
           />
 
           <Route
-            path="/dashboard"
-            element={
-              <DashboardView
-                visualConfig={visualConfig}
-                setActiveTab={setActiveTab}
-              />
-            }
-          />
-
-          <Route
             path="/leads"
             element={
               <LeadsView
@@ -106,7 +95,7 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
 
           <Route path="/clientes" element={<ClientesPage />} />
           <Route path="/clientes/:id" element={<ClienteDetailPage />} />
-          <Route path="/renovacoes" element={<RenovacoesPage />} />
+          <Route path="/dashboard" element={<RenovacoesPage />} />
           <Route path="/relatorios" element={<RelatoriosPage />} />
           <Route path="/multicalculo" element={<MulticalculoPage />} />
 
