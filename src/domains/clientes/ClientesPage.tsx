@@ -81,7 +81,7 @@ export const ClientesPage: React.FC = () => {
 
   if (showForm) {
     return (
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6">
+      <div className="h-full overflow-y-auto custom-scrollbar bg-slate-50 p-4 md:p-6">
         <ClienteForm
           isOpen={true}
           inline={true}

@@ -7,6 +7,7 @@ import {
 import { cn } from '../../lib/utils';
 import { Cliente, ClienteRelacionamento } from '../../types';
 import { useNavigate } from 'react-router-dom';
+import { Button, Card, EmptyState } from '../../components/ui';
 
 const TIPOS_RELACIONAMENTO = [
   'Pai', 'Mãe', 'Esposo', 'Esposa', 'Filho', 'Filha',
@@ -151,12 +152,12 @@ const AddRelacionamentoModal: React.FC<AddModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-brand-black border border-white/10 rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-[500] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 shrink-0">
-          <h2 className="text-[11px] font-black text-white uppercase tracking-widest">Adicionar Relacionamento</h2>
-          <button onClick={onClose} className="p-1 text-white/30 hover:text-white transition-colors">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+          <h2 className="text-[11px] font-black text-slate-900 uppercase tracking-widest">Adicionar Relacionamento</h2>
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-700 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -165,48 +166,48 @@ const AddRelacionamentoModal: React.FC<AddModalProps> = ({
           {/* Search */}
           {!selected ? (
             <div className="space-y-2">
-              <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">Buscar cliente</label>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Buscar cliente</label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                 <input
                   autoFocus
-                  className="w-full pl-9 pr-3 py-2 bg-brand-dark border border-white/10 rounded-lg text-white text-[11px] font-medium focus:border-gold-deep/40 focus:ring-2 focus:ring-gold-deep/10 transition-all placeholder:text-white/20"
+                  className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 text-[11px] font-medium focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 transition-all placeholder:text-slate-300"
                   placeholder="Nome, CPF ou telefone..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
               </div>
               {search.trim().length >= 2 && filtered.length === 0 && (
-                <p className="text-[10px] text-white/30 text-center py-3">Nenhum cliente encontrado</p>
+                <p className="text-[10px] text-slate-400 text-center py-3">Nenhum cliente encontrado</p>
               )}
               {filtered.map(c => (
                 <button
                   key={c.id}
                   onClick={() => { setSelected(c); setSearch(''); }}
-                  className="w-full flex items-start gap-3 p-3 bg-brand-dark/50 border border-white/5 hover:border-gold-deep/20 rounded-xl transition-all text-left"
+                  className="w-full flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 hover:border-gold-deep/30 rounded-xl transition-all text-left"
                 >
                   <div className="w-7 h-7 rounded-full bg-gold-deep/10 border border-gold-deep/20 flex items-center justify-center shrink-0">
                     <span className="text-[10px] font-black text-gold-deep">{c.nome.charAt(0).toUpperCase()}</span>
                   </div>
                   <div>
-                    <p className="text-[11px] font-bold text-white">{c.nome}</p>
-                    <p className="text-[9px] text-white/30 font-mono">{documentoOuVazio(c)}</p>
+                    <p className="text-[11px] font-bold text-slate-800">{c.nome}</p>
+                    <p className="text-[9px] text-slate-400 font-mono">{documentoOuVazio(c)}</p>
                   </div>
                 </button>
               ))}
             </div>
           ) : (
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">Cliente selecionado</label>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Cliente selecionado</label>
               <div className="flex items-center gap-3 p-3 bg-gold-deep/5 border border-gold-deep/20 rounded-xl">
                 <div className="w-7 h-7 rounded-full bg-gold-deep/10 border border-gold-deep/20 flex items-center justify-center shrink-0">
                   <span className="text-[10px] font-black text-gold-deep">{selected.nome.charAt(0).toUpperCase()}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-bold text-white truncate">{selected.nome}</p>
-                  <p className="text-[9px] text-white/30 font-mono">{documentoOuVazio(selected)}</p>
+                  <p className="text-[11px] font-bold text-slate-800 truncate">{selected.nome}</p>
+                  <p className="text-[9px] text-slate-400 font-mono">{documentoOuVazio(selected)}</p>
                 </div>
-                <button onClick={() => setSelected(null)} className="p-1 text-white/30 hover:text-white transition-colors">
+                <button onClick={() => setSelected(null)} className="p-1 text-slate-400 hover:text-slate-700 transition-colors">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -215,12 +216,12 @@ const AddRelacionamentoModal: React.FC<AddModalProps> = ({
 
           {/* Relationship type */}
           <div className="space-y-1">
-            <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">
+            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
               Tipo de relacionamento
-              <span className="ml-1 text-white/20 normal-case font-medium">(o que {selected?.nome?.split(' ')[0] ?? 'o cliente'} é para {cliente.nome.split(' ')[0]})</span>
+              <span className="ml-1 text-slate-400 normal-case font-medium">(o que {selected?.nome?.split(' ')[0] ?? 'o cliente'} é para {cliente.nome.split(' ')[0]})</span>
             </label>
             <select
-              className="w-full px-3 py-2 bg-brand-dark border border-white/10 rounded-lg text-white text-[11px] font-medium focus:border-gold-deep/40 focus:ring-2 focus:ring-gold-deep/10 transition-all"
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 text-[11px] font-medium focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 transition-all"
               value={tipo}
               onChange={e => setTipo(e.target.value)}
             >
@@ -231,9 +232,9 @@ const AddRelacionamentoModal: React.FC<AddModalProps> = ({
 
           {/* Inverse preview */}
           {selected && tipo && (
-            <div className="flex items-center gap-2 p-3 bg-white/5 border border-white/5 rounded-xl">
-              <span className="text-[9px] text-white/30 flex-1">
-                {selected.nome.split(' ')[0]} verá: <span className="text-gold-light font-bold">
+            <div className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-100 rounded-xl">
+              <span className="text-[9px] text-slate-500 flex-1">
+                {selected.nome.split(' ')[0]} verá: <span className="text-gold-deep font-bold">
                   {cliente.nome.split(' ')[0]} é meu(minha) {getInverseRelationship(tipo, cliente.sexo)}
                 </span>
               </span>
@@ -241,25 +242,20 @@ const AddRelacionamentoModal: React.FC<AddModalProps> = ({
           )}
         </div>
 
-        <div className="px-5 py-4 border-t border-white/5 shrink-0 flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest text-white/50 hover:bg-white/10 transition-all"
-          >
+        <div className="px-5 py-4 border-t border-slate-100 shrink-0 flex gap-3">
+          <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>
             Cancelar
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            className="flex-1"
             onClick={handleSave}
             disabled={!selected || !tipo || saving}
-            className={cn(
-              'flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all',
-              selected && tipo && !saving
-                ? 'bg-gold-deep text-brand-dark hover:bg-gold-light'
-                : 'bg-white/5 text-white/20 cursor-not-allowed',
-            )}
+            loading={saving}
           >
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Salvar'}
-          </button>
+            Salvar
+          </Button>
         </div>
       </div>
     </div>
@@ -317,16 +313,13 @@ export const RelacionamentosTab: React.FC<RelacionamentosTabProps> = ({
   return (
     <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2 border-l-2 border-gold-deep/40 pl-3">
+        <div className="flex items-center gap-2">
           <Users className="w-3.5 h-3.5 text-gold-deep" />
-          <span className="text-[10px] font-black text-gold-light uppercase tracking-[0.2em]">Relacionamentos Familiares</span>
+          <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.2em]">Relacionamentos Familiares</span>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-gold-deep/10 border border-gold-deep/20 rounded-lg text-[9px] font-black uppercase tracking-widest text-gold-light hover:bg-gold-deep/20 transition-colors"
-        >
-          <Plus className="w-3 h-3" /> Adicionar
-        </button>
+        <Button variant="primary" size="sm" icon={Plus} onClick={() => setShowModal(true)}>
+          Adicionar
+        </Button>
       </div>
 
       {loading ? (
@@ -334,33 +327,32 @@ export const RelacionamentosTab: React.FC<RelacionamentosTabProps> = ({
           <Loader2 className="w-5 h-5 text-gold-deep animate-spin" />
         </div>
       ) : relacionamentos.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-16 text-center">
-          <Users className="w-10 h-10 text-white/10" />
-          <p className="text-[11px] text-white/30">Nenhum relacionamento cadastrado</p>
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-gold-deep/10 border border-gold-deep/20 rounded-lg text-[9px] font-black uppercase tracking-widest text-gold-light hover:bg-gold-deep/20 transition-colors mt-1"
-          >
-            <Plus className="w-3 h-3" /> Adicionar relacionamento
-          </button>
-        </div>
+        <EmptyState
+          icon={Users}
+          title="Nenhum relacionamento cadastrado"
+          action={
+            <Button variant="primary" size="sm" icon={Plus} onClick={() => setShowModal(true)}>
+              Adicionar relacionamento
+            </Button>
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {relacionamentos.map(rel => {
             const waNumber = (rel.relatedClienteWhatsapp || rel.relatedClienteTelefone || '').replace(/\D/g, '');
             return (
-              <div key={rel.id} className="bg-brand-black/50 border border-white/5 rounded-xl p-4">
+              <Card key={rel.id} className="p-4">
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div>
-                    <span className="inline-flex px-2 py-0.5 bg-gold-deep/10 border border-gold-deep/20 rounded text-[8px] font-black uppercase tracking-widest text-gold-light">
+                    <span className="inline-flex px-2 py-0.5 bg-gold-deep/10 border border-gold-deep/20 rounded text-[8px] font-black uppercase tracking-widest text-gold-deep">
                       {rel.tipoRelacionamento}
                     </span>
-                    <p className="text-[12px] font-bold text-white mt-1.5">{rel.relatedClienteNome}</p>
+                    <p className="text-[12px] font-bold text-slate-800 mt-1.5">{rel.relatedClienteNome}</p>
                     {rel.relatedClienteCPF && (
-                      <p className="text-[9px] font-mono text-white/30 mt-0.5">{fmtCPFMasked(rel.relatedClienteCPF)}</p>
+                      <p className="text-[9px] font-mono text-slate-400 mt-0.5">{fmtCPFMasked(rel.relatedClienteCPF)}</p>
                     )}
                     {(rel.relatedClienteWhatsapp || rel.relatedClienteTelefone) && (
-                      <p className="text-[9px] text-white/40 mt-0.5">
+                      <p className="text-[9px] text-slate-500 mt-0.5">
                         {fmtPhone(rel.relatedClienteWhatsapp || rel.relatedClienteTelefone)}
                       </p>
                     )}
@@ -368,32 +360,32 @@ export const RelacionamentosTab: React.FC<RelacionamentosTabProps> = ({
                   <button
                     onClick={() => handleDelete(rel)}
                     disabled={deleting === rel.id}
-                    className="p-1 text-white/20 hover:text-red-400 transition-colors shrink-0"
+                    className="p-1 text-slate-300 hover:text-[#C0392B] transition-colors shrink-0"
                   >
                     {deleting === rel.id
                       ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       : <Trash2 className="w-3.5 h-3.5" />}
                   </button>
                 </div>
-                <div className="flex items-center gap-2 pt-3 border-t border-white/5">
+                <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
                   {waNumber && (
                     <a
                       href={`https://wa.me/55${waNumber}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-[8px] font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                      className="flex items-center gap-1 px-2.5 py-1 bg-[#E4F5EA] border border-[#1F8A4C]/20 rounded-lg text-[8px] font-black uppercase tracking-widest text-[#1F8A4C] hover:bg-[#1F8A4C]/20 transition-colors"
                     >
                       <MessageCircle className="w-3 h-3" /> WhatsApp
                     </a>
                   )}
                   <button
                     onClick={() => navigate(`/clientes/${rel.relatedClienteId}`)}
-                    className="flex items-center gap-1 px-2.5 py-1 bg-white/5 border border-white/10 rounded-lg text-[8px] font-black uppercase tracking-widest text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 border border-slate-200 rounded-lg text-[8px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-colors"
                   >
                     <ExternalLink className="w-3 h-3" /> Abrir Cadastro
                   </button>
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>

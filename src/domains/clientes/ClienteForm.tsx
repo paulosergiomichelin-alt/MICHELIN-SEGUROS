@@ -4,6 +4,7 @@ import { Cliente, ClienteDocumento, ClienteDocumentoTipo, UserProfile } from '..
 import { StorageService } from '../../services/StorageService';
 import { cn, formatCPF, generateId, formatCpfCnpjProgressive, detectTipoPessoa, formatCNPJ, validateCNPJ } from '../../lib/utils';
 import { Modal } from '../../components/Modal';
+import { Button, Card } from '../../components/ui';
 import { OCRService } from '../../services/OCRService';
 import { CnpjService } from '../../services/CnpjService';
 import { dataApiClient } from '../../lib/dataApiClient';
@@ -27,23 +28,16 @@ const ESTADOS = [
 
 const ESTADO_CIVIL = ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'União estável'];
 
-const SECTION = ({ label, icon: Icon }: { label: string; icon: React.ElementType }) => (
-  <div className="flex items-center gap-2 border-l-2 border-gold-deep/40 pl-3 mb-3">
-    <Icon className="w-3.5 h-3.5 text-gold-deep" />
-    <span className="text-[10px] font-black text-gold-light uppercase tracking-[0.2em]">{label}</span>
-  </div>
-);
-
 const Field = ({ label, children, required }: { label: string; children: React.ReactNode; required?: boolean }) => (
   <div className="space-y-1">
-    <label className="text-[9px] font-black text-white/40 uppercase tracking-widest ml-0.5">
-      {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-0.5">
+      {label}{required && <span className="text-[#C0392B] ml-0.5">*</span>}
     </label>
     {children}
   </div>
 );
 
-const inputCls = "w-full px-3 py-2 bg-brand-black border border-white/10 rounded-lg text-white text-[11px] font-medium focus:border-gold-deep/40 focus:ring-2 focus:ring-gold-deep/10 transition-all placeholder:text-white/20";
+const inputCls = "w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 text-[11px] font-medium focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 transition-all placeholder:text-slate-300";
 
 function formatPhone(v: string) {
   const n = v.replace(/\D/g, '');
@@ -365,27 +359,22 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
   };
 
   const formBody = (
-    <form onSubmit={handleSubmit} className="p-6 space-y-6">
+    <form onSubmit={handleSubmit} className="p-6 space-y-5 bg-slate-50">
 
         {/* ── Importar da Apólice ─────────────────────────────────────── */}
         {!isEditing && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 border-l-2 border-gold-deep/40 pl-3">
-              <Upload className="w-3.5 h-3.5 text-gold-deep" />
-              <span className="text-[10px] font-black text-gold-light uppercase tracking-[0.2em]">Importar dados da Apólice (PDF)</span>
-            </div>
-
+          <Card title="Importar dados da Apólice (PDF)" icon={Upload}>
             {docImported ? (
-              <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="text-[10px] text-emerald-300 font-medium flex-1">Dados importados. Revise os campos e complete as informações.</span>
-                <button type="button" onClick={() => setDocImported(false)} className="text-white/30 hover:text-white/60 transition-colors">
+              <div className="flex items-center gap-2 p-3 bg-[#E4F5EA] border border-[#1F8A4C]/20 rounded-xl">
+                <CheckCircle2 className="w-4 h-4 text-[#1F8A4C] shrink-0" />
+                <span className="text-[10px] text-[#1F8A4C] font-medium flex-1">Dados importados. Revise os campos e complete as informações.</span>
+                <button type="button" onClick={() => setDocImported(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             ) : (
               <div
-                className={cn('border-2 border-dashed border-white/10 rounded-xl p-5 text-center cursor-pointer transition-all hover:border-gold-deep/30 hover:bg-gold-deep/5', docProcessing && 'pointer-events-none opacity-60')}
+                className={cn('border-2 border-dashed border-slate-200 rounded-xl p-5 text-center cursor-pointer transition-all hover:border-gold-deep/40 hover:bg-gold-deep/5', docProcessing && 'pointer-events-none opacity-60')}
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={e => e.preventDefault()}
                 onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleApoliceImport(f); }}
@@ -395,24 +384,23 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
                 {docProcessing ? (
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 className="w-6 h-6 text-gold-deep animate-spin" />
-                    <p className="text-[10px] text-white/50">Lendo apólice...</p>
+                    <p className="text-[10px] text-slate-500">Lendo apólice...</p>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-2">
-                    <FileText className="w-6 h-6 text-white/20" />
-                    <p className="text-[10px] text-white/50">Arraste o PDF da apólice ou <span className="text-gold-deep font-bold">clique para selecionar</span></p>
-                    <p className="text-[9px] text-white/20">Nome, CPF e data de nascimento serão preenchidos automaticamente</p>
+                    <FileText className="w-6 h-6 text-slate-300" />
+                    <p className="text-[10px] text-slate-500">Arraste o PDF da apólice ou <span className="text-gold-deep font-bold">clique para selecionar</span></p>
+                    <p className="text-[9px] text-slate-400">Nome, CPF e data de nascimento serão preenchidos automaticamente</p>
                   </div>
                 )}
               </div>
             )}
-            {docError && <p className="text-[10px] text-red-400 font-medium">{docError}</p>}
-          </div>
+            {docError && <p className="text-[10px] text-[#C0392B] font-medium mt-2">{docError}</p>}
+          </Card>
         )}
 
         {/* Dados pessoais */}
-        <div>
-          <SECTION label="Dados Pessoais" icon={User} />
+        <Card title="Dados Pessoais" icon={User}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="md:col-span-2">
               <Field label={tipoPessoa === 'juridica' ? 'Nome do responsável' : 'Nome completo'} required>
@@ -442,7 +430,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
                 />
                 {loadingCnpj && <Loader2 className="absolute right-2 top-2 w-4 h-4 text-gold-deep animate-spin" />}
               </div>
-              {cnpjError && <p className="text-[9px] text-red-400 mt-1">{cnpjError}</p>}
+              {cnpjError && <p className="text-[9px] text-[#C0392B] mt-1">{cnpjError}</p>}
             </Field>
             {tipoPessoa === 'fisica' && (<>
               <Field label="RG">
@@ -475,11 +463,10 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
               </Field>
             </>)}
           </div>
-        </div>
+        </Card>
 
         {tipoPessoa === 'juridica' && (
-          <div>
-            <SECTION label="Dados da Empresa" icon={Briefcase} />
+          <Card title="Dados da Empresa" icon={Briefcase}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="md:col-span-2">
                 <Field label="Razão Social" required>
@@ -504,12 +491,11 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
                 </Field>
               </div>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Contato */}
-        <div>
-          <SECTION label="Contato" icon={Phone} />
+        <Card title="Contato" icon={Phone}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Field label="Telefone" required>
               <input className={inputCls} value={form.telefone} onChange={e => set('telefone', formatPhone(e.target.value))} placeholder="(00) 00000-0000" maxLength={15} required />
@@ -523,11 +509,10 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
               </Field>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Endereço */}
-        <div>
-          <SECTION label="Endereço" icon={MapPin} />
+        <Card title="Endereço" icon={MapPin}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <Field label="CEP">
               <div className="relative">
@@ -591,19 +576,19 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
                       : cities;
                     if (filtered.length === 0) return null;
                     return (
-                      <div className="absolute z-50 w-full mt-1 bg-[#0B1120] border border-white/10 rounded-lg shadow-2xl max-h-52 overflow-y-auto custom-scrollbar">
+                      <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-52 overflow-y-auto custom-scrollbar">
                         {filtered.slice(0, 60).map(city => (
                           <button
                             key={city}
                             type="button"
-                            className="w-full px-3 py-2 text-left text-[11px] text-white/70 hover:bg-white/5 hover:text-white transition-colors"
+                            className="w-full px-3 py-2 text-left text-[11px] text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
                             onMouseDown={() => { set('cidade', city); setShowCityDropdown(false); }}
                           >
                             {city}
                           </button>
                         ))}
                         {filtered.length > 60 && (
-                          <p className="px-3 py-2 text-[9px] text-white/20 text-center border-t border-white/5">
+                          <p className="px-3 py-2 text-[9px] text-slate-400 text-center border-t border-slate-100">
                             +{filtered.length - 60} cidades — continue digitando para filtrar
                           </p>
                         )}
@@ -614,11 +599,10 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
               </Field>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Dados internos */}
-        <div>
-          <SECTION label="Dados Internos" icon={Briefcase} />
+        <Card title="Dados Internos" icon={Briefcase}>
           <div className="grid grid-cols-1 gap-3">
             <Field label="Vendedor responsável">
               <div className="relative">
@@ -632,7 +616,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
                   {users.map(u => <option key={u.uid} value={u.uid}>{u.name}</option>)}
                 </select>
                 {!isAdmin && (
-                  <Lock className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-white/25 pointer-events-none" />
+                  <Lock className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-300 pointer-events-none" />
                 )}
               </div>
             </Field>
@@ -645,24 +629,20 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
               />
             </Field>
           </div>
-        </div>
+        </Card>
 
         {/* Documentos */}
-        <div>
-          <div className="flex items-center gap-2 border-l-2 border-gold-deep/40 pl-3 mb-3">
-            <Paperclip className="w-3.5 h-3.5 text-gold-deep" />
-            <span className="text-[10px] font-black text-gold-light uppercase tracking-[0.2em]">Documentos</span>
-          </div>
+        <Card title="Documentos" icon={Paperclip}>
           <div className="space-y-3">
             {documentos.length > 0 && (
               <div className="space-y-1.5">
                 {documentos.map((doc, idx) => (
-                  <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-lg">
+                  <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
                     <FileText className="w-3.5 h-3.5 text-gold-deep shrink-0" />
-                    <span className="text-[10px] text-white/60 flex-1 truncate">{doc.nome}</span>
-                    <span className="text-[9px] text-white/30 uppercase tracking-wider shrink-0">{doc.tipo}</span>
-                    <a href={doc.url} target="_blank" rel="noreferrer" className="text-[9px] text-gold-deep hover:text-gold-light shrink-0">Ver</a>
-                    <button type="button" onClick={() => handleRemoveDoc(idx)} className="text-white/20 hover:text-red-400 transition-colors shrink-0">
+                    <span className="text-[10px] text-slate-600 flex-1 truncate">{doc.nome}</span>
+                    <span className="text-[9px] text-slate-400 uppercase tracking-wider shrink-0">{doc.tipo}</span>
+                    <a href={doc.url} target="_blank" rel="noreferrer" className="text-[9px] text-gold-deep hover:opacity-80 shrink-0">Ver</a>
+                    <button type="button" onClick={() => handleRemoveDoc(idx)} className="text-slate-300 hover:text-[#C0392B] transition-colors shrink-0">
                       <Trash2 className="w-3 h-3" />
                     </button>
                   </div>
@@ -671,7 +651,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
             )}
             <div className="flex items-center gap-2">
               <select
-                className="px-2 py-2 bg-brand-black border border-white/10 rounded-lg text-white text-[11px] font-medium focus:border-gold-deep/40 focus:ring-2 focus:ring-gold-deep/10 transition-all"
+                className="px-2 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 text-[11px] font-medium focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 transition-all"
                 value={selectedDocTipo}
                 onChange={e => setSelectedDocTipo(e.target.value as ClienteDocumentoTipo)}
               >
@@ -692,29 +672,30 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
                 type="button"
                 disabled={uploadingDoc}
                 onClick={() => docUploadRef.current?.click()}
-                className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-white/60 hover:text-white hover:border-white/20 transition-all disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-500 hover:text-slate-800 hover:border-slate-300 transition-all disabled:opacity-50"
               >
                 {uploadingDoc ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                 {uploadingDoc ? 'Enviando...' : 'Anexar arquivo'}
               </button>
             </div>
-            {uploadDocError && <p className="text-[10px] text-red-400 font-medium">{uploadDocError}</p>}
+            {uploadDocError && <p className="text-[10px] text-[#C0392B] font-medium">{uploadDocError}</p>}
           </div>
-        </div>
+        </Card>
 
         {/* Actions */}
-        <div className="flex items-center justify-end gap-3 pt-2 border-t border-white/5">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
+        <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-200">
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancelar
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            disabled={saving || !form.nome || !form.telefone || (tipoPessoa === 'fisica' ? !form.cpf : !pj.razaoSocial)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gold-deep text-brand-dark rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gold-light transition-all disabled:opacity-40"
+            variant="primary"
+            icon={Save}
+            loading={saving}
+            disabled={!form.nome || !form.telefone || (tipoPessoa === 'fisica' ? !form.cpf : !pj.razaoSocial)}
           >
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
             {isEditing ? 'Salvar alterações' : 'Criar cliente'}
-          </button>
+          </Button>
         </div>
       </form>
   );
@@ -726,12 +707,12 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-700 transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Voltar
           </button>
-          <span className="text-white/10">|</span>
-          <h2 className="text-[11px] font-black text-white uppercase tracking-widest">
+          <span className="text-slate-200">|</span>
+          <h2 className="text-[11px] font-black text-slate-900 uppercase tracking-widest">
             {isEditing ? 'Editar Cliente' : 'Novo Cliente'}
           </h2>
         </div>
