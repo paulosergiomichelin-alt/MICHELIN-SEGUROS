@@ -2,9 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Save, Loader2, User, Phone, MapPin, Briefcase, X, ArrowLeft, Upload, FileText, CheckCircle2, Paperclip, Trash2, Lock } from 'lucide-react';
 import { Cliente, ClienteDocumento, ClienteDocumentoTipo, UserProfile } from '../../types';
 import { StorageService } from '../../services/StorageService';
-import { cn, formatCPF, generateId } from '../../lib/utils';
+import { cn, formatCPF, generateId, formatCpfCnpjProgressive, detectTipoPessoa, formatCNPJ, validateCNPJ } from '../../lib/utils';
 import { Modal } from '../../components/Modal';
 import { OCRService } from '../../services/OCRService';
+import { CnpjService } from '../../services/CnpjService';
+import { dataApiClient } from '../../lib/dataApiClient';
+import type { DadosEmpresa, TipoPessoa } from '../../types';
 
 interface ClienteFormProps {
   isOpen: boolean;
@@ -88,6 +91,12 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const citiesCache = useRef<Record<string, string[]>>({});
   const [sexo, setSexo] = useState<'M' | 'F' | ''>('');
+  const [tipoPessoa, setTipoPessoa] = useState<TipoPessoa>('fisica');
+  const [pj, setPj] = useState({
+    cnpj: '', razaoSocial: '', nomeFantasia: '', inscricaoEstadual: '', situacaoCadastral: '', porte: '', cnae: '',
+  });
+  const [loadingCnpj, setLoadingCnpj] = useState(false);
+  const [cnpjError, setCnpjError] = useState('');
   const [form, setForm] = useState({
     nome: '', cpf: '', rg: '', rgDataExpedicao: '', rgOrgaoEmissor: '', dataNascimento: '', estadoCivil: '', profissao: '',
     telefone: '', whatsapp: '', email: '',
@@ -97,6 +106,24 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
 
   useEffect(() => {
     if (cliente) {
+      setTipoPessoa(cliente.tipoPessoa ?? 'fisica');
+      if (cliente.tipoPessoa === 'juridica') {
+        dataApiClient.get('cliente_pessoa_juridica', cliente.id).then((row: any) => {
+          if (row) {
+            setPj({
+              cnpj: formatCNPJ(row.cnpj ?? ''),
+              razaoSocial: row.razaoSocial ?? '',
+              nomeFantasia: row.nomeFantasia ?? '',
+              inscricaoEstadual: row.inscricaoEstadual ?? '',
+              situacaoCadastral: row.situacaoCadastral ?? '',
+              porte: row.porte ?? '',
+              cnae: row.cnae ?? '',
+            });
+          }
+        }).catch(() => {});
+      } else {
+        setPj({ cnpj: '', razaoSocial: '', nomeFantasia: '', inscricaoEstadual: '', situacaoCadastral: '', porte: '', cnae: '' });
+      }
       setForm({
         nome: cliente.nome ?? '',
         cpf: fmtCPF(cliente.cpf ?? ''),
@@ -122,6 +149,8 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
       setSexo(cliente.sexo ?? '');
       setDocumentos(cliente.documentos ?? []);
     } else {
+      setTipoPessoa('fisica');
+      setPj({ cnpj: '', razaoSocial: '', nomeFantasia: '', inscricaoEstadual: '', situacaoCadastral: '', porte: '', cnae: '' });
       setForm({
         nome: '', cpf: '', rg: '', rgDataExpedicao: '', rgOrgaoEmissor: '', dataNascimento: '', estadoCivil: '', profissao: '',
         telefone: '', whatsapp: '', email: '',
@@ -170,6 +199,36 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
       }
     } catch {}
     finally { setLoadingCep(false); }
+  };
+
+  const buscarCnpj = async (digits: string) => {
+    setLoadingCnpj(true);
+    setCnpjError('');
+    try {
+      const data: DadosEmpresa = await CnpjService.lookup(digits);
+      setPj(p => ({
+        ...p,
+        razaoSocial: data.razaoSocial ?? p.razaoSocial,
+        nomeFantasia: data.nomeFantasia ?? p.nomeFantasia,
+        situacaoCadastral: data.situacaoCadastral ?? p.situacaoCadastral,
+        porte: data.porte ?? p.porte,
+        cnae: data.cnae ?? p.cnae,
+      }));
+      setForm(f => ({
+        ...f,
+        cep: data.cep ? `${data.cep.slice(0, 5)}-${data.cep.slice(5)}` : f.cep,
+        rua: data.rua || f.rua,
+        numero: data.numero || f.numero,
+        complemento: data.complemento || f.complemento,
+        bairro: data.bairro || f.bairro,
+        cidade: data.cidade || f.cidade,
+        estado: data.estado || f.estado,
+      }));
+    } catch (err: any) {
+      setCnpjError(err?.message || 'Não foi possível buscar os dados do CNPJ. Preencha manualmente.');
+    } finally {
+      setLoadingCnpj(false);
+    }
   };
 
   const handleApoliceImport = async (file: File) => {
@@ -246,19 +305,24 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nome.trim() || !form.cpf.trim() || !form.telefone.trim()) return;
+    if (!form.nome.trim() || !form.telefone.trim()) return;
+    if (tipoPessoa === 'fisica' && !form.cpf.trim()) return;
+    if (tipoPessoa === 'juridica' && !pj.razaoSocial.trim()) return;
     setSaving(true);
+    const clienteId = cliente?.id ?? generateId();
     try {
       await onSave({
+        id: clienteId,
         nome: form.nome.trim(),
-        cpf: form.cpf.replace(/\D/g, ''),
-        rg: form.rg || undefined,
-        rgDataExpedicao: form.rgDataExpedicao || undefined,
-        rgOrgaoEmissor: form.rgOrgaoEmissor || undefined,
-        dataNascimento: form.dataNascimento || undefined,
-        estadoCivil: form.estadoCivil || undefined,
-        profissao: form.profissao || undefined,
-        sexo: sexo || undefined,
+        cpf: tipoPessoa === 'fisica' ? form.cpf.replace(/\D/g, '') : undefined,
+        tipoPessoa,
+        rg: tipoPessoa === 'fisica' ? (form.rg || undefined) : undefined,
+        rgDataExpedicao: tipoPessoa === 'fisica' ? (form.rgDataExpedicao || undefined) : undefined,
+        rgOrgaoEmissor: tipoPessoa === 'fisica' ? (form.rgOrgaoEmissor || undefined) : undefined,
+        dataNascimento: tipoPessoa === 'fisica' ? (form.dataNascimento || undefined) : undefined,
+        estadoCivil: tipoPessoa === 'fisica' ? (form.estadoCivil || undefined) : undefined,
+        profissao: tipoPessoa === 'fisica' ? (form.profissao || undefined) : undefined,
+        sexo: tipoPessoa === 'fisica' ? (sexo || undefined) : undefined,
         telefone: form.telefone.replace(/\D/g, ''),
         whatsapp: form.whatsapp ? form.whatsapp.replace(/\D/g, '') : undefined,
         email: form.email || undefined,
@@ -277,7 +341,23 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
         produtoAtual: cliente?.produtoAtual,
         dataRenovacao: cliente?.dataRenovacao,
         documentos: documentos.length > 0 ? documentos : undefined,
-      });
+      } as any);
+
+      if (tipoPessoa === 'juridica') {
+        await dataApiClient.save('cliente_pessoa_juridica', clienteId, {
+          cnpj: pj.cnpj.replace(/\D/g, ''),
+          razaoSocial: pj.razaoSocial.trim(),
+          nomeFantasia: pj.nomeFantasia || undefined,
+          inscricaoEstadual: pj.inscricaoEstadual || undefined,
+          situacaoCadastral: pj.situacaoCadastral || undefined,
+          porte: pj.porte || undefined,
+          cnae: pj.cnae || undefined,
+        });
+      } else if (cliente?.tipoPessoa === 'juridica') {
+        // Estava PJ e voltou pra PF nesta edição — remove a linha satélite órfã.
+        await dataApiClient.remove('cliente_pessoa_juridica', clienteId).catch(() => {});
+      }
+
       onClose();
     } finally {
       setSaving(false);
@@ -335,43 +415,97 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
           <SECTION label="Dados Pessoais" icon={User} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="md:col-span-2">
-              <Field label="Nome completo" required>
+              <Field label={tipoPessoa === 'juridica' ? 'Nome do responsável' : 'Nome completo'} required>
                 <input className={inputCls} value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Nome completo" required />
               </Field>
             </div>
-            <Field label="CPF" required>
-              <input className={inputCls} value={form.cpf} onChange={e => set('cpf', fmtCPF(e.target.value))} placeholder="000.000.000-00" maxLength={14} required />
+            <Field label={tipoPessoa === 'juridica' ? 'CNPJ' : 'CPF'} required>
+              <div className="relative">
+                <input
+                  className={inputCls}
+                  value={tipoPessoa === 'juridica' ? pj.cnpj : form.cpf}
+                  onChange={e => {
+                    const formatted = formatCpfCnpjProgressive(e.target.value);
+                    const digits = formatted.replace(/\D/g, '');
+                    const novoTipo = detectTipoPessoa(formatted);
+                    setTipoPessoa(novoTipo);
+                    if (novoTipo === 'juridica') {
+                      setPj(p => ({ ...p, cnpj: formatted }));
+                      if (digits.length === 14) buscarCnpj(digits);
+                    } else {
+                      set('cpf', formatted);
+                    }
+                  }}
+                  placeholder={tipoPessoa === 'juridica' ? '00.000.000/0000-00' : '000.000.000-00'}
+                  maxLength={18}
+                  required
+                />
+                {loadingCnpj && <Loader2 className="absolute right-2 top-2 w-4 h-4 text-gold-deep animate-spin" />}
+              </div>
+              {cnpjError && <p className="text-[9px] text-red-400 mt-1">{cnpjError}</p>}
             </Field>
-            <Field label="RG">
-              <input className={inputCls} value={form.rg} onChange={e => set('rg', e.target.value)} placeholder="RG" />
-            </Field>
-            <Field label="Data de expedição (RG)">
-              <input type="date" className={inputCls} value={form.rgDataExpedicao} onChange={e => set('rgDataExpedicao', e.target.value)} />
-            </Field>
-            <Field label="Órgão emissor (RG)">
-              <input className={inputCls} value={form.rgOrgaoEmissor} onChange={e => set('rgOrgaoEmissor', e.target.value)} placeholder="Ex: SSP/SP" />
-            </Field>
-            <Field label="Data de nascimento">
-              <input type="date" className={inputCls} value={form.dataNascimento} onChange={e => set('dataNascimento', e.target.value)} />
-            </Field>
-            <Field label="Estado civil">
-              <select className={inputCls} value={form.estadoCivil} onChange={e => set('estadoCivil', e.target.value)}>
-                <option value="">Selecionar...</option>
-                {ESTADO_CIVIL.map(e => <option key={e} value={e}>{e}</option>)}
-              </select>
-            </Field>
-            <Field label="Profissão">
-              <input className={inputCls} value={form.profissao} onChange={e => set('profissao', e.target.value)} placeholder="Profissão" />
-            </Field>
-            <Field label="Sexo">
-              <select className={inputCls} value={sexo} onChange={e => setSexo(e.target.value as 'M' | 'F' | '')}>
-                <option value="">Não informado</option>
-                <option value="M">Masculino</option>
-                <option value="F">Feminino</option>
-              </select>
-            </Field>
+            {tipoPessoa === 'fisica' && (<>
+              <Field label="RG">
+                <input className={inputCls} value={form.rg} onChange={e => set('rg', e.target.value)} placeholder="RG" />
+              </Field>
+              <Field label="Data de expedição (RG)">
+                <input type="date" className={inputCls} value={form.rgDataExpedicao} onChange={e => set('rgDataExpedicao', e.target.value)} />
+              </Field>
+              <Field label="Órgão emissor (RG)">
+                <input className={inputCls} value={form.rgOrgaoEmissor} onChange={e => set('rgOrgaoEmissor', e.target.value)} placeholder="Ex: SSP/SP" />
+              </Field>
+              <Field label="Data de nascimento">
+                <input type="date" className={inputCls} value={form.dataNascimento} onChange={e => set('dataNascimento', e.target.value)} />
+              </Field>
+              <Field label="Estado civil">
+                <select className={inputCls} value={form.estadoCivil} onChange={e => set('estadoCivil', e.target.value)}>
+                  <option value="">Selecionar...</option>
+                  {ESTADO_CIVIL.map(e => <option key={e} value={e}>{e}</option>)}
+                </select>
+              </Field>
+              <Field label="Profissão">
+                <input className={inputCls} value={form.profissao} onChange={e => set('profissao', e.target.value)} placeholder="Profissão" />
+              </Field>
+              <Field label="Sexo">
+                <select className={inputCls} value={sexo} onChange={e => setSexo(e.target.value as 'M' | 'F' | '')}>
+                  <option value="">Não informado</option>
+                  <option value="M">Masculino</option>
+                  <option value="F">Feminino</option>
+                </select>
+              </Field>
+            </>)}
           </div>
         </div>
+
+        {tipoPessoa === 'juridica' && (
+          <div>
+            <SECTION label="Dados da Empresa" icon={Briefcase} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="md:col-span-2">
+                <Field label="Razão Social" required>
+                  <input className={inputCls} value={pj.razaoSocial} onChange={e => setPj(p => ({ ...p, razaoSocial: e.target.value }))} placeholder="Razão Social" required />
+                </Field>
+              </div>
+              <Field label="Nome Fantasia">
+                <input className={inputCls} value={pj.nomeFantasia} onChange={e => setPj(p => ({ ...p, nomeFantasia: e.target.value }))} placeholder="Nome Fantasia" />
+              </Field>
+              <Field label="Inscrição Estadual">
+                <input className={inputCls} value={pj.inscricaoEstadual} onChange={e => setPj(p => ({ ...p, inscricaoEstadual: e.target.value }))} placeholder="Inscrição Estadual" />
+              </Field>
+              <Field label="Situação Cadastral">
+                <input className={inputCls} value={pj.situacaoCadastral} onChange={e => setPj(p => ({ ...p, situacaoCadastral: e.target.value }))} placeholder="Ex: ATIVA" />
+              </Field>
+              <Field label="Porte">
+                <input className={inputCls} value={pj.porte} onChange={e => setPj(p => ({ ...p, porte: e.target.value }))} placeholder="Ex: ME, EPP" />
+              </Field>
+              <div className="md:col-span-2">
+                <Field label="Atividade Principal (CNAE)">
+                  <input className={inputCls} value={pj.cnae} onChange={e => setPj(p => ({ ...p, cnae: e.target.value }))} placeholder="Atividade principal" />
+                </Field>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Contato */}
         <div>
@@ -575,7 +709,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
           </button>
           <button
             type="submit"
-            disabled={saving || !form.nome || !form.cpf || !form.telefone}
+            disabled={saving || !form.nome || !form.telefone || (tipoPessoa === 'fisica' ? !form.cpf : !pj.razaoSocial)}
             className="flex items-center gap-2 px-5 py-2.5 bg-gold-deep text-brand-dark rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gold-light transition-all disabled:opacity-40"
           >
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
