@@ -110,88 +110,92 @@ export const MulticalculoPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-5 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 space-y-5 max-w-6xl mx-auto">
       <h1 className="text-lg font-bold text-white uppercase tracking-tight">Multicálculo</h1>
 
-      <Card title="Segurado" icon={UserIcon}>
-        <Field label="Nome Completo"><input className={inputCls} value={nome} onChange={(e) => setNome(e.target.value)} /></Field>
-        <Field label="CPF/CNPJ"><input className={inputCls} value={cpfCnpj} onChange={(e) => setCpfCnpj(formatCpfCnpjProgressive(e.target.value))} /></Field>
-        <Field label="Telefone"><input className={inputCls} value={telefone} onChange={(e) => setTelefone(formatPhone(e.target.value))} /></Field>
-        <Field label="E-mail"><input className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <Card title="Segurado" icon={UserIcon}>
+          <Field label="Nome Completo"><input className={inputCls} value={nome} onChange={(e) => setNome(e.target.value)} /></Field>
+          <Field label="CPF/CNPJ"><input className={inputCls} value={cpfCnpj} onChange={(e) => setCpfCnpj(formatCpfCnpjProgressive(e.target.value))} /></Field>
+          <Field label="Telefone"><input className={inputCls} value={telefone} onChange={(e) => setTelefone(formatPhone(e.target.value))} /></Field>
+          <Field label="E-mail"><input className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
+        </Card>
 
-      <Card title="Veículo" icon={Car}>
-        <Field label="Ano Modelo">
-          <div className="flex gap-2">
-            <input className={inputCls} value={anoModelo} onChange={(e) => setAnoModelo(e.target.value)} placeholder="2023" />
-            <button type="button" onClick={buscarVeiculos} disabled={buscandoVeiculo} className="px-3 bg-gold-deep text-brand-dark rounded-lg shrink-0">
-              {buscandoVeiculo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            </button>
-          </div>
-        </Field>
-        <Field label="Veículo">
-          <select className={inputCls} value={veiculoSelecionado?.idVeiculo ?? ''} onChange={(e) => setVeiculoSelecionado(buscaVeiculo.find((v) => v.idVeiculo === Number(e.target.value)) ?? null)}>
-            <option value="">Busque pelo ano modelo…</option>
-            {buscaVeiculo.map((v) => (
-              <option key={v.idVeiculo} value={v.idVeiculo}>{v.descricaoFabricante} {v.descricaoModelo} ({v.tipoCombustivel})</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Zero KM">
-          <select className={inputCls} value={zeroKm ? 'S' : 'N'} onChange={(e) => setZeroKm(e.target.value === 'S')}>
-            <option value="N">Não</option><option value="S">Sim</option>
-          </select>
-        </Field>
-        <Field label="Valor do Veículo (R$)"><input className={inputCls} value={valorVeiculo} onChange={(e) => setValorVeiculo(e.target.value)} /></Field>
-        <Field label="CEP"><input className={inputCls} value={cep} onChange={(e) => setCep(e.target.value)} /></Field>
-        <Field label="Placa"><input className={inputCls} value={placa} onChange={(e) => setPlaca(e.target.value.toUpperCase())} /></Field>
-        <Field label="Chassi"><input className={inputCls} value={chassi} onChange={(e) => setChassi(e.target.value.toUpperCase())} /></Field>
-      </Card>
-
-      <Card title="Cobertura" icon={ShieldCheck}>
-        <Field label="Classe Bônus"><input className={inputCls} value={classeBonus} onChange={(e) => setClasseBonus(e.target.value)} /></Field>
-        <Field label="Tipo de Seguro">
-          <select className={inputCls} value={tipoSeguro} onChange={(e) => setTipoSeguro(e.target.value as any)}>
-            <option value="1">Novo</option><option value="6">Renovação Congênere</option><option value="7">Renovação Tokio</option>
-          </select>
-        </Field>
-        <Field label="Assistência">
-          <select className={inputCls} value={tipoAssistencia} onChange={(e) => setTipoAssistencia(e.target.value as any)}>
-            <option value="N">Não possui</option><option value="C">Completa</option><option value="V">VIP</option>
-          </select>
-        </Field>
-        <Field label="Isenção Fiscal">
-          <select className={inputCls} value={isencaoFiscal} onChange={(e) => setIsencaoFiscal(e.target.value)}>
-            <option value="24747">Não</option><option value="24748">Sim — PCD</option><option value="24749">Sim — exceto PCD</option>
-          </select>
-        </Field>
-        <Field label="Tipo de Cobertura">
-          <select className={inputCls} value={codigoCobertura} onChange={(e) => setCodigoCobertura(e.target.value)}>
-            <option value="1">Compreensiva</option><option value="2">Incêndio e Roubo</option><option value="3">RCF-V</option>
-            <option value="4">Colisão e Incêndio</option><option value="5">Indenização Integral</option><option value="6">Assistência Exclusiva</option>
-          </select>
-        </Field>
-        {codigoCobertura !== '3' && codigoCobertura !== '6' && (
-          <Field label="Tipo de Modalidade">
-            <select className={inputCls} value={tipoModalidade} onChange={(e) => setTipoModalidade(e.target.value)}>
-              <option value="A">Valor Ajustável</option><option value="D">Valor Determinado</option>
+        <Card title="Veículo" icon={Car}>
+          <Field label="Ano Modelo">
+            <div className="flex gap-2">
+              <input className={inputCls} value={anoModelo} onChange={(e) => setAnoModelo(e.target.value)} placeholder="2023" />
+              <button type="button" onClick={buscarVeiculos} disabled={buscandoVeiculo} className="px-3 bg-gold-deep text-brand-dark rounded-lg shrink-0">
+                {buscandoVeiculo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              </button>
+            </div>
+          </Field>
+          <Field label="Veículo">
+            <select className={inputCls} value={veiculoSelecionado?.idVeiculo ?? ''} onChange={(e) => setVeiculoSelecionado(buscaVeiculo.find((v) => v.idVeiculo === Number(e.target.value)) ?? null)}>
+              <option value="">Busque pelo ano modelo…</option>
+              {buscaVeiculo.map((v) => (
+                <option key={v.idVeiculo} value={v.idVeiculo}>{v.descricaoFabricante} {v.descricaoModelo} ({v.tipoCombustivel})</option>
+              ))}
             </select>
           </Field>
-        )}
-        {codigoCobertura !== '3' && codigoCobertura !== '5' && (
-          <Field label="Franquia">
-            <select className={inputCls} value={codigoFranquia} onChange={(e) => setCodigoFranquia(e.target.value)}>
-              <option value="1">Básica</option><option value="4">50% da Básica</option><option value="6">25% da Básica</option>
-              <option value="7">75% da Básica</option><option value="2">150% da Básica</option><option value="3">200% da Básica</option>
+          <Field label="Zero KM">
+            <select className={inputCls} value={zeroKm ? 'S' : 'N'} onChange={(e) => setZeroKm(e.target.value === 'S')}>
+              <option value="N">Não</option><option value="S">Sim</option>
             </select>
           </Field>
-        )}
-      </Card>
+          <Field label="Valor do Veículo (R$)"><input className={inputCls} value={valorVeiculo} onChange={(e) => setValorVeiculo(e.target.value)} /></Field>
+          <Field label="CEP"><input className={inputCls} value={cep} onChange={(e) => setCep(e.target.value)} /></Field>
+          <Field label="Placa"><input className={inputCls} value={placa} onChange={(e) => setPlaca(e.target.value.toUpperCase())} /></Field>
+          <Field label="Chassi"><input className={inputCls} value={chassi} onChange={(e) => setChassi(e.target.value.toUpperCase())} /></Field>
+        </Card>
+      </div>
 
-      <Card title="Vigência" icon={Calendar}>
-        <Field label="Início"><input type="date" className={inputCls} value={inicioVigencia} onChange={(e) => setInicioVigencia(e.target.value)} /></Field>
-        <Field label="Fim"><input type="date" className={inputCls} value={fimVigencia} onChange={(e) => setFimVigencia(e.target.value)} /></Field>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <Card title="Cobertura" icon={ShieldCheck}>
+          <Field label="Classe Bônus"><input className={inputCls} value={classeBonus} onChange={(e) => setClasseBonus(e.target.value)} /></Field>
+          <Field label="Tipo de Seguro">
+            <select className={inputCls} value={tipoSeguro} onChange={(e) => setTipoSeguro(e.target.value as any)}>
+              <option value="1">Novo</option><option value="6">Renovação Congênere</option><option value="7">Renovação Tokio</option>
+            </select>
+          </Field>
+          <Field label="Assistência">
+            <select className={inputCls} value={tipoAssistencia} onChange={(e) => setTipoAssistencia(e.target.value as any)}>
+              <option value="N">Não possui</option><option value="C">Completa</option><option value="V">VIP</option>
+            </select>
+          </Field>
+          <Field label="Isenção Fiscal">
+            <select className={inputCls} value={isencaoFiscal} onChange={(e) => setIsencaoFiscal(e.target.value)}>
+              <option value="24747">Não</option><option value="24748">Sim — PCD</option><option value="24749">Sim — exceto PCD</option>
+            </select>
+          </Field>
+          <Field label="Tipo de Cobertura">
+            <select className={inputCls} value={codigoCobertura} onChange={(e) => setCodigoCobertura(e.target.value)}>
+              <option value="1">Compreensiva</option><option value="2">Incêndio e Roubo</option><option value="3">RCF-V</option>
+              <option value="4">Colisão e Incêndio</option><option value="5">Indenização Integral</option><option value="6">Assistência Exclusiva</option>
+            </select>
+          </Field>
+          {codigoCobertura !== '3' && codigoCobertura !== '6' && (
+            <Field label="Tipo de Modalidade">
+              <select className={inputCls} value={tipoModalidade} onChange={(e) => setTipoModalidade(e.target.value)}>
+                <option value="A">Valor Ajustável</option><option value="D">Valor Determinado</option>
+              </select>
+            </Field>
+          )}
+          {codigoCobertura !== '3' && codigoCobertura !== '5' && (
+            <Field label="Franquia">
+              <select className={inputCls} value={codigoFranquia} onChange={(e) => setCodigoFranquia(e.target.value)}>
+                <option value="1">Básica</option><option value="4">50% da Básica</option><option value="6">25% da Básica</option>
+                <option value="7">75% da Básica</option><option value="2">150% da Básica</option><option value="3">200% da Básica</option>
+              </select>
+            </Field>
+          )}
+        </Card>
+
+        <Card title="Vigência" icon={Calendar}>
+          <Field label="Início"><input type="date" className={inputCls} value={inicioVigencia} onChange={(e) => setInicioVigencia(e.target.value)} /></Field>
+          <Field label="Fim"><input type="date" className={inputCls} value={fimVigencia} onChange={(e) => setFimVigencia(e.target.value)} /></Field>
+        </Card>
+      </div>
 
       {erroGeral && (
         <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-2 text-red-300 text-[12px]">
@@ -223,9 +227,9 @@ export const MulticalculoPage: React.FC = () => {
                 ) : (
                   r.itens?.[0]?.modalidades.map((m) => (
                     <div key={m.codigoModalidade} className="border-t border-white/5 pt-3 mt-3 first:border-0 first:mt-0 first:pt-0">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
                         <p className="text-white font-bold text-[13px]">{m.descricaoModalidade}</p>
-                        <p className="text-gold-deep font-black text-[15px]">R$ {m.premioLiquido.toFixed(2)}</p>
+                        <p className="text-gold-deep font-black text-[15px] whitespace-nowrap">R$ {m.premioLiquido.toFixed(2)}</p>
                       </div>
                       <button type="button" onClick={() => verPdf(r.itens![0].numeroCalculo)} className="mt-2 flex items-center gap-1.5 text-[10px] font-black uppercase text-white/50 hover:text-gold-deep transition-colors">
                         <FileText className="w-3.5 h-3.5" /> Ver PDF
