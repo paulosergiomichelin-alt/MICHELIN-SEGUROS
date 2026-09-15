@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Modal } from '../../components/Modal';
-import { 
-  GitBranch, 
-  HelpCircle, 
-  Plus, 
-  Trash2, 
-  Edit2, 
-  Search, 
-  Info, 
-  CheckCircle2, 
+import {
+  GitBranch,
+  HelpCircle,
+  Plus,
+  Trash2,
+  Edit2,
+  Search,
+  Info,
+  CheckCircle2,
   XCircle,
   AlertCircle,
   Save,
@@ -30,13 +30,13 @@ import { handleFirestoreError, OperationType } from '../../lib/firestore-utils';
 import { CacheManager } from '../../services/CacheManager';
 
 const ALL_STATUSES: LeadStatus[] = [
-  'Novo Lead', 
-  'Em Atendimento', 
+  'Novo Lead',
+  'Em Atendimento',
   'Aguardando Documento',
   'Em Cotação',
   'Proposta Enviada',
   'Negociação',
-  'Fechado', 
+  'Fechado',
   'Perdido'
 ];
 
@@ -58,11 +58,11 @@ export function FlowEngine() {
     try {
       for (const flow of flows) {
         // Deterministic: no auto-classification
-        await DataService.update('flows', flow.id, { 
+        await DataService.update('flows', flow.id, {
           updatedAt: new Date().toISOString()
         });
       }
-      
+
       // Invalida o cache de flows após migração em massa para que o Orchestrator re-busque
       CacheManager.invalidatePattern('flows:preprocessed');
 
@@ -137,7 +137,7 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
     if ((DataService as any).queryCache) {
       (DataService as any).queryCache.delete(queryKey);
     }
-    
+
     try {
       setLoading(true);
       const data = await DataService.list('flows', [orderBy('priority', 'desc')]);
@@ -151,10 +151,10 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
   };
 
   const filteredFlows = flows.filter(flow => {
-    const matchesSearch = flow.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const matchesSearch = flow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          flow.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterActive === 'all' || 
-                         (filterActive === 'active' && flow.isActive) || 
+    const matchesFilter = filterActive === 'all' ||
+                         (filterActive === 'active' && flow.isActive) ||
                          (filterActive === 'inactive' && !flow.isActive);
     return matchesSearch && matchesFilter;
   });
@@ -178,7 +178,7 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
     if (confirm('Tem certeza que deseja excluir este fluxo?')) {
       try {
         await DataService.delete('flows', id);
-        
+
         // Invalida o cache de flows para que o Orchestrator re-busque os dados atualizados
         CacheManager.invalidatePattern('flows:preprocessed');
         handleRefresh();
@@ -194,7 +194,7 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
     try {
       const id = editingFlow.id || Math.random().toString(36).substring(2, 9);
       const now = new Date().toISOString();
-      
+
       const flowData = {
         ...editingFlow,
         id,
@@ -206,7 +206,7 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
       } else {
         await DataService.create('flows', flowData);
       }
-      
+
       CacheManager.invalidatePattern('flows:preprocessed');
       handleRefresh();
 
@@ -224,50 +224,50 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
       {/* Header & Help */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gold-deep/10 rounded-2xl flex items-center justify-center text-gold-deep shadow-lg shadow-gold-deep/5">
+          <div className="w-12 h-12 bg-gold-deep/10 rounded-2xl flex items-center justify-center text-gold-deep shadow-sm">
             <GitBranch className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-gold-deep uppercase tracking-tight">Flow Engine</h3>
+            <h3 className="text-lg font-bold text-slate-800 uppercase tracking-tight">Flow Engine</h3>
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Motor de Fluxos Inteligentes</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <button 
+          <button
             onClick={migrateFlows}
             disabled={isSaving}
-            className="px-4 py-2.5 bg-brand-black hover:bg-slate-800 text-gold-deep text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-gold-deep/20 flex items-center gap-2 disabled:opacity-50"
+            className="px-4 py-2.5 bg-white hover:border-[#1B4D8F]/40 hover:text-[#1B4D8F] text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-slate-200 flex items-center gap-2 disabled:opacity-50"
             title="Recalcular Todas as Prioridades e Layers"
           >
             <RefreshCcw className={cn("w-4 h-4", isSaving && "animate-spin")} />
             Recalcular Arquitetura
           </button>
-          <button 
+          <button
             onClick={() => setIsExportModalOpen(true)}
-            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all border border-slate-700 flex items-center gap-2"
+            className="px-4 py-2.5 bg-white hover:border-[#1B4D8F]/40 hover:text-[#1B4D8F] text-slate-600 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all border border-slate-200 flex items-center gap-2"
           >
             <Download className="w-4 h-4" />
             Exportar
           </button>
-          <button 
+          <button
             onClick={handleRefresh}
             disabled={loading}
-            className="p-2.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-500/10 rounded-xl transition-all border border-transparent hover:border-emerald-500/20"
+            className="p-2.5 text-slate-400 hover:text-[#1F8A4C] hover:bg-[#E4F5EA] rounded-xl transition-all border border-transparent hover:border-[#1F8A4C]/20"
             title="Atualizar Dados"
           >
             <RefreshCcw className={cn("w-5 h-5", loading && "animate-spin")} />
           </button>
-          <button 
+          <button
             onClick={() => setIsHelpOpen(true)}
             className="p-2.5 text-slate-400 hover:text-gold-deep hover:bg-gold-deep/10 rounded-xl transition-all border border-transparent hover:border-gold-deep/20"
             title="Ajuda"
           >
             <HelpCircle className="w-5 h-5" />
           </button>
-          <button 
+          <button
             onClick={handleCreateNew}
-            className="px-6 py-2.5 bg-gold-deep hover:bg-gold-light text-brand-black text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-gold-deep/20 flex items-center gap-2"
+            className="px-6 py-2.5 bg-[#1B4D8F] hover:bg-[#153E73] text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm shadow-[#1B4D8F]/20 flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             Criar Fluxo
@@ -276,25 +276,25 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4 items-center bg-brand-black/40 p-4 rounded-2xl border border-slate-800">
+      <div className="flex flex-col md:flex-row gap-4 items-center bg-slate-50 p-4 rounded-2xl border border-slate-200">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder="Buscar fluxos por nome ou descrição..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-brand-black border border-slate-700 rounded-xl text-xs text-white focus:ring-2 focus:ring-gold-deep/20 outline-none transition-all"
+            className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all"
           />
         </div>
-        <div className="flex p-1 bg-brand-black border border-slate-700 rounded-xl">
+        <div className="flex p-1 bg-slate-100 border border-slate-200 rounded-xl">
           {(['active', 'inactive', 'all'] as const).map((filter) => (
             <button
               key={filter}
               onClick={() => setFilterActive(filter)}
               className={cn(
                 "px-4 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all",
-                filterActive === filter ? "bg-gold-deep text-brand-black shadow-lg" : "text-slate-500 hover:text-slate-300"
+                filterActive === filter ? "bg-[#1B4D8F] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
               )}
             >
               {filter === 'active' ? 'Ativos' : filter === 'inactive' ? 'Inativos' : 'Todos'}
@@ -307,74 +307,74 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <AnimatePresence mode="popLayout">
           {filteredFlows.map((flow) => (
-            <motion.div 
+            <motion.div
               key={flow.id}
               layout
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               className={cn(
-                "group p-5 bg-brand-dark border transition-all rounded-[2rem] relative overflow-hidden flex flex-col",
-                flow.isActive ? "border-gold-deep/20" : "border-slate-800 opacity-70"
+                "group p-5 bg-white border shadow-sm transition-all rounded-[2rem] relative overflow-hidden flex flex-col",
+                flow.isActive ? "border-[#1F8A4C]/20" : "border-slate-200 opacity-70"
               )}
             >
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "p-2.5 rounded-xl flex items-center justify-center",
-                    flow.isActive ? "bg-gold-deep/10 text-gold-deep shadow-lg shadow-gold-deep/10" : "bg-slate-800 text-slate-500"
+                    flow.isActive ? "bg-gold-deep/10 text-gold-deep shadow-sm" : "bg-slate-100 text-slate-400"
                   )}>
                     <GitBranch className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-white text-sm tracking-tight">{flow.name}</h4>
+                    <h4 className="font-bold text-slate-800 text-sm tracking-tight">{flow.name}</h4>
                     <div className="flex items-center gap-2 mt-1">
                       <span className={cn(
                         "text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border",
-                        flow.layer === 'core' ? "bg-red-500/10 text-red-400 border-red-500/20" :
-                        flow.layer === 'decision' ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
-                        flow.layer === 'sales' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                        "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                        flow.layer === 'core' ? "bg-[#FDE4E4] text-[#C0392B] border-[#C0392B]/20" :
+                        flow.layer === 'decision' ? "bg-[#FFF3DC] text-[#B8860B] border-[#B8860B]/20" :
+                        flow.layer === 'sales' ? "bg-[#E4F5EA] text-[#1F8A4C] border-[#1F8A4C]/20" :
+                        "bg-slate-100 text-slate-600 border-slate-200"
                       )}>
                         {flow.layer || 'behavior'}
                       </span>
                       <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-1.5">
                         Prioridade: {flow.priority}
-                        <span className="w-1 h-1 rounded-full bg-slate-700" />
+                        <span className="w-1 h-1 rounded-full bg-slate-300" />
                         {flow.isActive ? 'Ativo' : 'Pausado'}
                       </span>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                  <button 
+                  <button
                     onClick={() => handleEdit(flow)}
                     className="p-2 text-slate-400 hover:text-gold-deep hover:bg-gold-deep/10 rounded-lg transition-all"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleDelete(flow.id)}
-                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                    className="p-2 text-slate-400 hover:text-[#C0392B] hover:bg-[#FDE4E4] rounded-lg transition-all"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 mb-4 italic font-medium">
+              <p className="text-xs text-slate-500 leading-relaxed line-clamp-3 mb-4 italic font-medium">
                 "{flow.description}"
               </p>
 
-              <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-widest mt-auto pt-4 border-t border-white/5">
-                <span className="text-slate-600">Atualizado em {new Date(new Date().toString() === flow.updatedAt ? flow.updatedAt : flow.updatedAt).toLocaleDateString()}</span>
+              <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-widest mt-auto pt-4 border-t border-slate-100">
+                <span className="text-slate-400">Atualizado em {new Date(new Date().toString() === flow.updatedAt ? flow.updatedAt : flow.updatedAt).toLocaleDateString()}</span>
                 {flow.isActive ? (
-                  <span className="text-emerald-500 flex items-center gap-1">
+                  <span className="text-[#1F8A4C] flex items-center gap-1">
                     <CheckCircle2 className="w-2.5 h-2.5" />
                     Ativo na IA
                   </span>
                 ) : (
-                  <span className="text-slate-500 flex items-center gap-1">
+                  <span className="text-slate-400 flex items-center gap-1">
                     <XCircle className="w-2.5 h-2.5" />
                     Pausado
                   </span>
@@ -385,10 +385,10 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
         </AnimatePresence>
 
         {filteredFlows.length === 0 && !loading && (
-          <div className="col-span-full py-20 text-center bg-brand-black/20 rounded-[3rem] border border-dashed border-slate-800">
-            <GitBranch className="w-16 h-16 text-slate-800 mx-auto mb-4" />
+          <div className="col-span-full py-20 text-center bg-slate-50 rounded-[3rem] border border-dashed border-slate-200">
+            <GitBranch className="w-16 h-16 text-slate-200 mx-auto mb-4" />
             <h4 className="text-xs font-bold text-slate-600 uppercase tracking-widest">Nenhum fluxo encontrado</h4>
-            <p className="text-[10px] text-slate-700 mt-2 max-w-xs mx-auto">Crie seu primeiro fluxo para começar a orientar o comportamento da sua IA de forma inteligente.</p>
+            <p className="text-[10px] text-slate-400 mt-2 max-w-xs mx-auto">Crie seu primeiro fluxo para começar a orientar o comportamento da sua IA de forma inteligente.</p>
           </div>
         )}
       </div>
@@ -400,28 +400,28 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
         title="O que é o Flow Engine?"
         maxWidth="max-w-2xl"
       >
-        <div className="p-8 space-y-6 bg-brand-dark">
-          <div className="space-y-6 max-h-[60vh] overflow-y-auto no-scrollbar pr-4 text-slate-300">
+        <div className="p-8 space-y-6 bg-white">
+          <div className="space-y-6 max-h-[60vh] overflow-y-auto no-scrollbar pr-4 text-slate-600">
             <div className="space-y-3">
               <p className="text-sm leading-relaxed">
                 O <span className="text-gold-deep font-bold">Flow Engine 2.0</span> é o motor de inteligência que orquestra o comportamento da sua IA. Agora com uma arquitetura profissional baseada em camadas e ativação contextual inteligente.
               </p>
-              <div className="p-4 bg-brand-black/50 border-l-4 border-gold-deep rounded-r-xl">
-                <p className="text-[10px] font-medium italic">"A IA não apenas segue regras, ela entende o contexto (temperatura, intenção e estágio) para decidir qual fluxo aplicar no momento exato da venda."</p>
+              <div className="p-4 bg-gold-deep/5 border-l-4 border-gold-deep rounded-r-xl">
+                <p className="text-[10px] font-medium italic text-slate-700">"A IA não apenas segue regras, ela entende o contexto (temperatura, intenção e estágio) para decidir qual fluxo aplicar no momento exato da venda."</p>
               </div>
             </div>
 
             {/* New Features Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-              <div className="p-5 bg-brand-black border border-slate-800 rounded-3xl space-y-2">
+              <div className="p-5 bg-slate-50 border border-slate-200 rounded-3xl space-y-2">
                   <Zap className="w-5 h-5 text-gold-deep mb-2" />
-                  <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Arquitetura em Camadas</h4>
+                  <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Arquitetura em Camadas</h4>
                   <p className="text-[9px] text-slate-500 leading-relaxed font-bold uppercase">CORE • DECISION • SALES • BEHAVIOR</p>
                   <p className="text-[10px] text-slate-500 leading-relaxed font-medium">Os fluxos são organizados por responsabilidade, evitando conflitos e garantindo que segurança esteja acima de vendas.</p>
               </div>
-              <div className="p-5 bg-brand-black border border-slate-800 rounded-3xl space-y-2">
-                  <RefreshCcw className="w-5 h-5 text-emerald-500 mb-2" />
-                  <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Ativação Contextual</h4>
+              <div className="p-5 bg-slate-50 border border-slate-200 rounded-3xl space-y-2">
+                  <RefreshCcw className="w-5 h-5 text-[#1F8A4C] mb-2" />
+                  <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Ativação Contextual</h4>
                   <p className="text-[9px] text-slate-500 leading-relaxed font-bold uppercase">Activation Score (Boost Inteligente)</p>
                   <p className="text-[10px] text-slate-500 leading-relaxed font-medium">Calculamos dinamicamente a relevância de cada fluxo baseado no Status do Lead e intenção da última mensagem.</p>
               </div>
@@ -433,57 +433,57 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
                    Entendendo as Camadas & Limites
                 </h4>
                 <div className="grid grid-cols-1 gap-3 text-[10px]">
-                  <div className="flex flex-col gap-2 p-3 bg-red-500/5 rounded-2xl border border-red-500/10">
+                  <div className="flex flex-col gap-2 p-3 bg-[#FDE4E4]/50 rounded-2xl border border-[#C0392B]/15">
                     <div className="flex justify-between items-center">
-                      <span className="text-red-400 font-bold uppercase">🔴 CORE</span>
-                      <span className="text-[8px] bg-red-500/20 px-2 py-0.5 rounded-full text-red-400 font-black">LIMITE RECOMENDADO: 2</span>
+                      <span className="text-[#C0392B] font-bold uppercase">🔴 CORE</span>
+                      <span className="text-[8px] bg-[#C0392B]/15 px-2 py-0.5 rounded-full text-[#C0392B] font-black">LIMITE RECOMENDADO: 2</span>
                     </div>
-                    <p className="text-slate-400">Regras críticas de segurança. Prioridade: 100.</p>
+                    <p className="text-slate-600">Regras críticas de segurança. Prioridade: 100.</p>
                   </div>
-                  <div className="flex flex-col gap-2 p-3 bg-amber-500/5 rounded-2xl border border-amber-500/10">
+                  <div className="flex flex-col gap-2 p-3 bg-[#FFF3DC]/50 rounded-2xl border border-[#B8860B]/15">
                     <div className="flex justify-between items-center">
-                      <span className="text-amber-400 font-bold uppercase">🟠 DECISION</span>
-                      <span className="text-[8px] bg-amber-500/20 px-2 py-0.5 rounded-full text-amber-400 font-black">LIMITE RECOMENDADO: 4</span>
+                      <span className="text-[#B8860B] font-bold uppercase">🟠 DECISION</span>
+                      <span className="text-[8px] bg-[#B8860B]/15 px-2 py-0.5 rounded-full text-[#B8860B] font-black">LIMITE RECOMENDADO: 4</span>
                     </div>
-                    <p className="text-slate-400">Qualificação, Score e Redução de Atrito. Prioridade: 80.</p>
+                    <p className="text-slate-600">Qualificação, Score e Redução de Atrito. Prioridade: 80.</p>
                   </div>
-                  <div className="flex flex-col gap-2 p-3 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
+                  <div className="flex flex-col gap-2 p-3 bg-[#E4F5EA]/50 rounded-2xl border border-[#1F8A4C]/15">
                     <div className="flex justify-between items-center">
-                      <span className="text-emerald-400 font-bold uppercase">🟢 SALES</span>
-                      <span className="text-[8px] bg-emerald-500/20 px-2 py-0.5 rounded-full text-emerald-400 font-black">LIMITE RECOMENDADO: 5</span>
+                      <span className="text-[#1F8A4C] font-bold uppercase">🟢 SALES</span>
+                      <span className="text-[8px] bg-[#1F8A4C]/15 px-2 py-0.5 rounded-full text-[#1F8A4C] font-black">LIMITE RECOMENDADO: 5</span>
                     </div>
-                    <p className="text-slate-400">Fechamento, Cotação e Objeções. Prioridade: 60.</p>
+                    <p className="text-slate-600">Fechamento, Cotação e Objeções. Prioridade: 60.</p>
                   </div>
-                  <div className="flex flex-col gap-2 p-3 bg-blue-500/5 rounded-2xl border border-blue-500/10">
+                  <div className="flex flex-col gap-2 p-3 bg-slate-100 rounded-2xl border border-slate-200">
                     <div className="flex justify-between items-center">
-                      <span className="text-blue-400 font-bold uppercase">🔵 BEHAVIOR</span>
-                      <span className="text-[8px] bg-blue-500/20 px-2 py-0.5 rounded-full text-blue-400 font-black">LIMITE RECOMENDADO: 2</span>
+                      <span className="text-slate-600 font-bold uppercase">🔵 BEHAVIOR</span>
+                      <span className="text-[8px] bg-slate-200 px-2 py-0.5 rounded-full text-slate-700 font-black">LIMITE RECOMENDADO: 2</span>
                     </div>
-                    <p className="text-slate-400">Humanização, Estilo e Tom de Voz. Prioridade: 30.</p>
+                    <p className="text-slate-600">Humanização, Estilo e Tom de Voz. Prioridade: 30.</p>
                   </div>
                 </div>
               </div>
 
-            <div className="p-5 bg-brand-black rounded-3xl border border-slate-700 space-y-4">
-              <h4 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+            <div className="p-5 bg-slate-50 rounded-3xl border border-slate-200 space-y-4">
+              <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
                   <Zap className="w-4 h-4 text-gold-deep" />
                   Otimização & Cache Inteligente
               </h4>
-              <p className="text-[10px] text-slate-400 leading-relaxed">
-                Para reduzir custos de API e latência, o Flow Engine utiliza <span className="text-white font-bold">Pré-processamento Persistido</span>. As descrições são comprimidas e as palavras-chave extraídas automaticamente.
+              <p className="text-[10px] text-slate-600 leading-relaxed">
+                Para reduzir custos de API e latência, o Flow Engine utiliza <span className="text-slate-800 font-bold">Pré-processamento Persistido</span>. As descrições são comprimidas e as palavras-chave extraídas automaticamente.
               </p>
               <div className="flex items-center gap-4 text-[9px] font-black uppercase text-slate-500">
-                <div className="flex items-center gap-1.5"><Check className="w-3 h-3 text-emerald-500" /> Latência Zero</div>
-                <div className="flex items-center gap-1.5"><Check className="w-3 h-3 text-emerald-500" /> Redução de Tokens</div>
-                <div className="flex items-center gap-1.5"><Check className="w-3 h-3 text-emerald-500" /> Fila de Prioridade</div>
+                <div className="flex items-center gap-1.5"><Check className="w-3 h-3 text-[#1F8A4C]" /> Latência Zero</div>
+                <div className="flex items-center gap-1.5"><Check className="w-3 h-3 text-[#1F8A4C]" /> Redução de Tokens</div>
+                <div className="flex items-center gap-1.5"><Check className="w-3 h-3 text-[#1F8A4C]" /> Fila de Prioridade</div>
               </div>
             </div>
           </div>
 
-          <div className="pt-6 border-t border-white/5">
-            <button 
+          <div className="pt-6 border-t border-slate-100">
+            <button
               onClick={() => setIsHelpOpen(false)}
-              className="w-full py-4 bg-brand-black hover:bg-slate-800 text-white text-xs font-bold uppercase tracking-[0.2em] rounded-2xl transition-all border border-slate-800"
+              className="w-full py-4 bg-[#1B4D8F] hover:bg-[#153E73] text-white text-xs font-bold uppercase tracking-[0.2em] rounded-2xl transition-all shadow-sm shadow-[#1B4D8F]/20"
             >
               Entendi e Quero Começar
             </button>
@@ -498,28 +498,28 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
         title="Exportar Fluxos Ativos"
         maxWidth="max-w-3xl"
       >
-        <div className="flex flex-col max-h-[80vh] bg-brand-dark">
-          <div className="flex-1 overflow-y-auto p-8 bg-brand-black/30">
-            <pre className="text-[11px] font-mono text-emerald-500/90 leading-relaxed whitespace-pre-wrap selection:bg-gold-deep/20">
+        <div className="flex flex-col max-h-[80vh] bg-white">
+          <div className="flex-1 overflow-y-auto p-8 bg-slate-50">
+            <pre className="text-[11px] font-mono text-[#1F8A4C] leading-relaxed whitespace-pre-wrap selection:bg-gold-deep/20">
               {getCompiledFlows()}
             </pre>
           </div>
 
-          <div className="p-8 border-t border-white/5 flex gap-3 bg-brand-dark">
-            <button 
+          <div className="p-8 border-t border-slate-100 flex gap-3 bg-white">
+            <button
               onClick={handleDownload}
-              className="px-6 py-4 bg-brand-black text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-2xl border border-slate-800 flex items-center gap-2 hover:text-white transition-all"
+              className="px-6 py-4 bg-white text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-2xl border border-slate-200 flex items-center gap-2 hover:border-[#1B4D8F]/40 hover:text-[#1B4D8F] transition-all"
             >
               <Download className="w-4 h-4" />
               Baixar .txt
             </button>
-            <button 
+            <button
               onClick={handleCopy}
               className={cn(
-                "flex-1 py-4 text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2",
-                isCopied 
-                  ? "bg-emerald-500 text-brand-black shadow-emerald-500/20" 
-                  : "bg-gold-deep text-brand-black shadow-gold-deep/20 hover:scale-[1.02]"
+                "flex-1 py-4 text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2",
+                isCopied
+                  ? "bg-[#1F8A4C] text-white shadow-[#1F8A4C]/20"
+                  : "bg-[#1B4D8F] text-white shadow-[#1B4D8F]/20 hover:scale-[1.02]"
               )}
             >
               {isCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -536,27 +536,27 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
         title={editingFlow?.id ? 'Editar Fluxo' : 'Novo Fluxo Inteligente'}
         maxWidth="max-w-lg"
       >
-        <div className="p-8 space-y-6 bg-brand-dark">
+        <div className="p-8 space-y-6 bg-white">
           <div className="space-y-5">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Nome do Fluxo</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={editingFlow?.name || ''}
                 onChange={(e) => setEditingFlow(p => ({ ...p!, name: e.target.value }))}
                 placeholder="Ex: Abordagem de Renovação"
-                className="w-full px-5 py-4 bg-brand-black border border-slate-700 rounded-2xl text-sm text-white focus:ring-2 focus:ring-gold-deep/20 outline-none transition-all"
+                className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl text-sm text-slate-800 focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all"
               />
             </div>
 
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Descrição para a IA (O Coração do Fluxo)</label>
-              <textarea 
+              <textarea
                 value={editingFlow?.description || ''}
                 onChange={(e) => setEditingFlow(p => ({ ...p!, description: e.target.value }))}
                 rows={6}
                 placeholder="Explique detalhadamente para a IA como ela deve se comportar neste cenário..."
-                className="w-full p-5 bg-brand-black border border-slate-700 rounded-2xl text-xs text-white leading-relaxed resize-none focus:ring-2 focus:ring-gold-deep/20 outline-none transition-all"
+                className="w-full p-5 bg-white border border-slate-200 rounded-2xl text-xs text-slate-800 leading-relaxed resize-none focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all"
               />
               <p className="text-[8px] text-slate-500 italic font-medium px-2">A IA usará este texto como regra de ouro durante a conversação.</p>
             </div>
@@ -564,13 +564,13 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Camada (Layer)</label>
-                <select 
+                <select
                   value={editingFlow?.layer || 'behavior'}
                   onChange={(e) => {
                     const layer = e.target.value as any;
                     setEditingFlow(p => ({ ...p!, layer }));
                   }}
-                  className="w-full px-5 py-4 bg-brand-black border border-slate-700 rounded-2xl text-[10px] font-bold uppercase tracking-widest text-white focus:ring-2 focus:ring-gold-deep/20 outline-none transition-all appearance-none cursor-pointer"
+                  className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-bold uppercase tracking-widest text-slate-800 focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all appearance-none cursor-pointer"
                 >
                   <option value="core">🔴 CORE (Segurança/Erro)</option>
                   <option value="decision">🟠 DECISION (Qualificação/Score)</option>
@@ -580,11 +580,11 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Prioridade (Autocalculada)</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   value={editingFlow?.priority || 10}
                   onChange={(e) => setEditingFlow(p => ({ ...p!, priority: parseInt(e.target.value) }))}
-                  className="w-full px-5 py-4 bg-brand-black border border-slate-700 rounded-2xl text-sm text-white focus:ring-2 focus:ring-gold-deep/20 outline-none transition-all"
+                  className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl text-sm text-slate-800 focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all"
                 />
               </div>
             </div>
@@ -593,28 +593,28 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex justify-between items-center">
                 <span>Status Aplicáveis (Vazio = Global)</span>
                 {editingFlow?.applicableStatus?.length ? (
-                  <button 
+                  <button
                     onClick={() => setEditingFlow(p => ({ ...p!, applicableStatus: [] }))}
-                    className="text-[8px] text-red-400 hover:text-red-300 transition-colors"
+                    className="text-[8px] text-[#C0392B] hover:text-[#a53225] transition-colors"
                   >
                     Limpar Filtros
                   </button>
                 ) : null}
               </label>
-              <div className="grid grid-cols-2 gap-2 p-4 bg-brand-black border border-slate-700 rounded-2xl max-h-32 overflow-y-auto no-scrollbar">
+              <div className="grid grid-cols-2 gap-2 p-4 bg-slate-50 border border-slate-200 rounded-2xl max-h-32 overflow-y-auto no-scrollbar">
                 {ALL_STATUSES.map(status => {
                   const isSelected = editingFlow?.applicableStatus?.includes(status);
                   return (
-                    <label 
+                    <label
                       key={status}
                       className={cn(
                         "flex items-center gap-2 p-2 rounded-xl border cursor-pointer transition-all",
-                        isSelected 
-                          ? "bg-gold-deep/10 border-gold-deep/30 text-gold-deep shadow-sm"
-                          : "bg-brand-black/50 border-slate-800 text-slate-500 hover:border-slate-700"
+                        isSelected
+                          ? "bg-[#1B4D8F]/10 border-[#1B4D8F]/30 text-[#1B4D8F] shadow-sm"
+                          : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
                       )}
                     >
-                      <input 
+                      <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => {
@@ -628,9 +628,9 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
                       />
                       <div className={cn(
                         "w-3 h-3 rounded-sm border flex items-center justify-center transition-all",
-                        isSelected ? "bg-gold-deep border-gold-deep" : "border-slate-700"
+                        isSelected ? "bg-[#1B4D8F] border-[#1B4D8F]" : "border-slate-300"
                       )}>
-                        {isSelected && <Check className="w-2.5 h-2.5 text-brand-black" />}
+                        {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
                       </div>
                       <span className="text-[9px] font-bold uppercase tracking-tight truncate">{status}</span>
                     </label>
@@ -641,13 +641,13 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
 
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Status</label>
-              <button 
+              <button
                 onClick={() => setEditingFlow(p => ({ ...p!, isActive: !p?.isActive }))}
                 className={cn(
                   "w-full px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border",
-                  editingFlow?.isActive 
-                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
-                    : "bg-slate-800 text-slate-500 border-slate-700"
+                  editingFlow?.isActive
+                    ? "bg-[#E4F5EA] text-[#1F8A4C] border-[#1F8A4C]/20"
+                    : "bg-slate-100 text-slate-500 border-slate-200"
                 )}
               >
                 {editingFlow?.isActive ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
@@ -657,16 +657,16 @@ ${activeFlowsSorted.map((f, index) => `${index + 1}. Nome: ${f.name}
           </div>
 
           <div className="pt-4 flex gap-3">
-            <button 
+            <button
               onClick={() => setIsModalOpen(false)}
-              className="flex-1 py-4 bg-brand-black text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-2xl border border-slate-800"
+              className="flex-1 py-4 bg-white text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-2xl border border-slate-200 hover:border-[#1B4D8F]/40 hover:text-[#1B4D8F] transition-all"
             >
               Descartar
             </button>
-            <button 
+            <button
               onClick={handleSave}
               disabled={isSaving || !editingFlow?.name || !editingFlow?.description}
-              className="flex-1 py-4 bg-gold-deep text-brand-black text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-gold-deep/20 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-4 bg-[#1B4D8F] hover:bg-[#153E73] text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-sm shadow-[#1B4D8F]/20 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isSaving ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {editingFlow?.id ? 'Salvar Fluxo' : 'Publicar Fluxo'}

@@ -38,21 +38,21 @@ const HelpButton = ({ title, description, usage }: { title: string, description:
   
   return (
     <div className="relative inline-block ml-2">
-      <button 
+      <button
         onMouseEnter={() => setIsOpen(true)}
         onMouseLeave={() => setIsOpen(false)}
-        className="p-1.5 text-gold-light/40 hover:text-gold-deep transition-colors bg-brand-black rounded-lg border border-white/5"
+        className="p-1.5 text-slate-400 hover:text-gold-deep transition-colors bg-white rounded-lg border border-slate-200"
       >
         <HelpCircle className="w-3.5 h-3.5" />
       </button>
-      
+
       <AnimatePresence>
         {isOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="absolute z-[100] left-full ml-3 top-0 w-64 p-4 bg-brand-black border border-gold-deep/20 rounded-2xl shadow-2xl backdrop-blur-xl"
+            className="absolute z-[100] left-full ml-3 top-0 w-64 p-4 bg-white border border-slate-200 rounded-2xl shadow-2xl"
           >
             <h4 className="text-[10px] font-black text-gold-deep uppercase tracking-widest mb-2 flex items-center gap-2">
               <Info className="w-3 h-3" /> {title}
@@ -60,11 +60,11 @@ const HelpButton = ({ title, description, usage }: { title: string, description:
             <div className="space-y-3">
               <div>
                 <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tight mb-1">O que é:</p>
-                <p className="text-xs text-slate-300 leading-relaxed font-medium">{description}</p>
+                <p className="text-xs text-slate-600 leading-relaxed font-medium">{description}</p>
               </div>
               <div>
                 <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tight mb-1">Como usar:</p>
-                <p className="text-xs text-slate-400 leading-relaxed italic">{usage}</p>
+                <p className="text-xs text-slate-500 leading-relaxed italic">{usage}</p>
               </div>
             </div>
           </motion.div>
@@ -103,9 +103,9 @@ function EmpresaPerfil({ organizationId }: { organizationId: string }) {
 
   const STATUS_COLORS: Record<string, string> = {
     trial: 'text-[#D4A854] bg-[#D4A854]/10 border-[#D4A854]/20',
-    active: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
-    suspended: 'text-red-400 bg-red-500/10 border-red-500/20',
-    cancelled: 'text-slate-400 bg-slate-500/10 border-slate-500/20',
+    active: 'text-[#1F8A4C] bg-[#E4F5EA] border-[#1F8A4C]/20',
+    suspended: 'text-[#C0392B] bg-[#FDE4E4] border-[#C0392B]/20',
+    cancelled: 'text-slate-500 bg-slate-100 border-slate-200',
   };
 
   const maskCnpj = (v: string) => {
@@ -130,7 +130,7 @@ function EmpresaPerfil({ organizationId }: { organizationId: string }) {
 
   if (!empresa) {
     return (
-      <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+      <div className="flex items-center gap-3 p-4 rounded-xl bg-[#FDE4E4] border border-[#C0392B]/20 text-[#C0392B] text-sm">
         <AlertCircle className="w-4 h-4 flex-shrink-0" />
         Perfil da empresa não encontrado.
       </div>
@@ -138,13 +138,13 @@ function EmpresaPerfil({ organizationId }: { organizationId: string }) {
   }
 
   const Row = ({ label, value, icon: Icon }: { label: string; value: string; icon: React.ElementType }) => (
-    <div className="flex items-center gap-3 py-3 border-b border-white/[0.04] last:border-0">
-      <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0">
-        <Icon className="w-3.5 h-3.5 text-[#8E8E93]/60" />
+    <div className="flex items-center gap-3 py-3 border-b border-slate-100 last:border-0">
+      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+        <Icon className="w-3.5 h-3.5 text-slate-400" />
       </div>
       <div className="flex-1 flex items-baseline justify-between gap-4 min-w-0">
-        <span className="text-[10px] font-bold text-[#8E8E93]/60 uppercase tracking-widest flex-shrink-0">{label}</span>
-        <span className="text-[12px] font-semibold text-white/80 truncate text-right">{value || '—'}</span>
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex-shrink-0">{label}</span>
+        <span className="text-[12px] font-semibold text-slate-800 truncate text-right">{value || '—'}</span>
       </div>
     </div>
   );
@@ -157,15 +157,15 @@ function EmpresaPerfil({ organizationId }: { organizationId: string }) {
           <Building2 className="w-6 h-6 text-[#D4A854]" />
         </div>
         <div className="min-w-0">
-          <h3 className="text-[15px] font-black text-white truncate">{empresa.nomeRazaoSocial}</h3>
+          <h3 className="text-[15px] font-black text-slate-800 truncate">{empresa.nomeRazaoSocial}</h3>
           {empresa.nomeFantasia && (
-            <p className="text-[11px] text-[#8E8E93]/70 truncate">{empresa.nomeFantasia}</p>
+            <p className="text-[11px] text-slate-500 truncate">{empresa.nomeFantasia}</p>
           )}
         </div>
         <div className="ml-auto flex flex-col items-end gap-1.5 flex-shrink-0">
           <span className={cn(
             'text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border',
-            STATUS_COLORS[empresa.status] ?? 'text-slate-400 bg-slate-500/10 border-slate-500/20',
+            STATUS_COLORS[empresa.status] ?? 'text-slate-500 bg-slate-100 border-slate-200',
           )}>
             {STATUS_LABELS[empresa.status] ?? empresa.status}
           </span>
@@ -176,8 +176,8 @@ function EmpresaPerfil({ organizationId }: { organizationId: string }) {
       </div>
 
       {/* Info card */}
-      <div className="rounded-2xl border border-white/[0.06] bg-[#0E0F11]/70 overflow-hidden">
-        <div className="px-5 py-3 border-b border-white/[0.04] bg-gradient-to-r from-[#D4A854]/[0.04] to-transparent">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-slate-100 bg-gradient-to-r from-gold-deep/5 to-transparent">
           <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#D4A854]/80">Dados Cadastrais</p>
         </div>
         <div className="px-5">
@@ -189,28 +189,28 @@ function EmpresaPerfil({ organizationId }: { organizationId: string }) {
       </div>
 
       {/* Plan limits */}
-      <div className="rounded-2xl border border-white/[0.06] bg-[#0E0F11]/70 overflow-hidden">
-        <div className="px-5 py-3 border-b border-white/[0.04] bg-gradient-to-r from-[#D4A854]/[0.04] to-transparent">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-slate-100 bg-gradient-to-r from-gold-deep/5 to-transparent">
           <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#D4A854]/80">Limites do Plano</p>
         </div>
-        <div className="grid grid-cols-3 gap-px bg-white/[0.04] overflow-hidden">
+        <div className="grid grid-cols-3 gap-px bg-slate-100 overflow-hidden">
           {[
             { label: 'Usuários', value: empresa.limiteUsuarios >= 999 ? 'Ilimitado' : String(empresa.limiteUsuarios), icon: Users },
             { label: 'Leads / mês', value: empresa.limiteLeadsMes >= 999999 ? 'Ilimitado' : empresa.limiteLeadsMes.toLocaleString('pt-BR'), icon: Star },
             { label: 'Storage', value: formatStorage(empresa.limiteStorageMb), icon: Database },
           ].map(({ label, value, icon: Icon }) => (
-            <div key={label} className="bg-[#0E0F11]/70 p-4 flex flex-col items-center gap-2">
+            <div key={label} className="bg-white p-4 flex flex-col items-center gap-2">
               <Icon className="w-4 h-4 text-[#D4A854]/60" />
-              <span className="text-[14px] font-black text-white">{value}</span>
-              <span className="text-[9px] font-bold text-[#8E8E93]/50 uppercase tracking-widest">{label}</span>
+              <span className="text-[14px] font-black text-slate-800">{value}</span>
+              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{label}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Dates */}
-      <div className="rounded-2xl border border-white/[0.06] bg-[#0E0F11]/70 overflow-hidden">
-        <div className="px-5 py-3 border-b border-white/[0.04] bg-gradient-to-r from-[#D4A854]/[0.04] to-transparent">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-slate-100 bg-gradient-to-r from-gold-deep/5 to-transparent">
           <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#D4A854]/80">Datas</p>
         </div>
         <div className="px-5">
@@ -221,7 +221,7 @@ function EmpresaPerfil({ organizationId }: { organizationId: string }) {
         </div>
       </div>
 
-      <p className="text-[10px] text-[#8E8E93]/40 text-center">
+      <p className="text-[10px] text-slate-400 text-center">
         Para alterar esses dados, entre em contato com o suporte da plataforma.
       </p>
     </div>
@@ -249,9 +249,9 @@ const WebhookUrlBox: React.FC = () => {
       </h4>
 
       {isLocalhost && (
-        <div className="flex items-start gap-2 p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
-          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-          <p className="text-[9px] text-amber-300 leading-relaxed font-semibold">
+        <div className="flex items-start gap-2 p-3 bg-[#FFF3DC] rounded-xl border border-[#B8860B]/20">
+          <AlertCircle className="w-4 h-4 text-[#B8860B] shrink-0 mt-0.5" />
+          <p className="text-[9px] text-[#B8860B] leading-relaxed font-semibold">
             A Meta não aceita <code className="font-mono">localhost</code>. Use a URL de produção (Vercel) abaixo.
           </p>
         </div>
@@ -264,7 +264,7 @@ const WebhookUrlBox: React.FC = () => {
           title="Copiar URL"
           className="shrink-0 p-1.5 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
         >
-          {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Save className="w-3.5 h-3.5" />}
+          {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-[#1F8A4C]" /> : <Save className="w-3.5 h-3.5" />}
         </button>
       </div>
 
@@ -623,19 +623,19 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
   ];
 
   return (
-    <div className="flex flex-col min-h-full font-sans">
+    <div className="flex flex-col min-h-full font-sans bg-slate-50">
       <SystemDocumentationModal
         isOpen={isDocsModalOpen}
         onClose={() => setIsDocsModalOpen(false)}
       />
 
       {/* Horizontal Tab Bar */}
-      <nav className="flex-shrink-0 sticky top-0 z-10 bg-[#050505] border-b border-white/5 px-2 flex items-center overflow-x-auto">
+      <nav className="flex-shrink-0 sticky top-0 z-10 bg-white border-b border-slate-200 px-2 flex items-center overflow-x-auto">
         <button
           onClick={() => setActiveSubTab('general')}
           className={cn(
             "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
-            activeSubTab === 'general' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+            activeSubTab === 'general' ? "text-[#1B4D8F] border-[#1B4D8F]" : "text-slate-400 hover:text-slate-700 border-transparent"
           )}
         >
           <Cog className="w-3.5 h-3.5 flex-shrink-0" /> Geral
@@ -646,7 +646,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
             onClick={() => setActiveSubTab('seguradoras')}
             className={cn(
               "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
-              activeSubTab === 'seguradoras' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+              activeSubTab === 'seguradoras' ? "text-[#1B4D8F] border-[#1B4D8F]" : "text-slate-400 hover:text-slate-700 border-transparent"
             )}
           >
             <Shield className="w-3.5 h-3.5 flex-shrink-0" /> Seguradoras
@@ -658,7 +658,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
             onClick={() => setActiveSubTab('empresa')}
             className={cn(
               "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
-              activeSubTab === 'empresa' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+              activeSubTab === 'empresa' ? "text-[#1B4D8F] border-[#1B4D8F]" : "text-slate-400 hover:text-slate-700 border-transparent"
             )}
           >
             <Building2 className="w-3.5 h-3.5 flex-shrink-0" /> Empresa
@@ -669,7 +669,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
           onClick={() => setActiveSubTab('ai_ocr')}
           className={cn(
             "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
-            activeSubTab === 'ai_ocr' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+            activeSubTab === 'ai_ocr' ? "text-[#1B4D8F] border-[#1B4D8F]" : "text-slate-400 hover:text-slate-700 border-transparent"
           )}
         >
           <Bot className="w-3.5 h-3.5 flex-shrink-0" /> OCR IA
@@ -679,7 +679,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
           onClick={() => setActiveSubTab('sessoes_wa')}
           className={cn(
             "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
-            activeSubTab === 'sessoes_wa' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+            activeSubTab === 'sessoes_wa' ? "text-[#1B4D8F] border-[#1B4D8F]" : "text-slate-400 hover:text-slate-700 border-transparent"
           )}
         >
           <QrCode className="w-3.5 h-3.5 flex-shrink-0" /> Sessões WA
@@ -689,7 +689,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
           onClick={() => setActiveSubTab('agente_ia')}
           className={cn(
             "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
-            activeSubTab === 'agente_ia' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+            activeSubTab === 'agente_ia' ? "text-[#1B4D8F] border-[#1B4D8F]" : "text-slate-400 hover:text-slate-700 border-transparent"
           )}
         >
           <Bot className="w-3.5 h-3.5 flex-shrink-0" /> Agente de IA
@@ -700,7 +700,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
             onClick={() => setActiveSubTab('diagnostic')}
             className={cn(
               "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
-              activeSubTab === 'diagnostic' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+              activeSubTab === 'diagnostic' ? "text-[#1B4D8F] border-[#1B4D8F]" : "text-slate-400 hover:text-slate-700 border-transparent"
             )}
           >
             <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" /> Diagnóstico
@@ -712,7 +712,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
             onClick={() => setActiveSubTab('health')}
             className={cn(
               "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
-              activeSubTab === 'health' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+              activeSubTab === 'health' ? "text-[#1B4D8F] border-[#1B4D8F]" : "text-slate-400 hover:text-slate-700 border-transparent"
             )}
           >
             <Activity className="w-3.5 h-3.5 flex-shrink-0" /> Saúde
@@ -724,7 +724,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
             onClick={() => setActiveSubTab('admin')}
             className={cn(
               "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
-              activeSubTab === 'admin' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+              activeSubTab === 'admin' ? "text-[#1B4D8F] border-[#1B4D8F]" : "text-slate-400 hover:text-slate-700 border-transparent"
             )}
           >
             <Wrench className="w-3.5 h-3.5 flex-shrink-0" /> Admin
@@ -740,9 +740,9 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
                 exit={{ opacity: 0 }}
                 className={cn(
                   "flex items-center gap-1.5 px-2 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest",
-                  autoSaveStatus === 'saving' ? "bg-brand-black text-gold-deep border-gold-deep/20" :
-                  autoSaveStatus === 'saved' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
-                  "bg-red-500/10 text-red-500 border-red-500/20"
+                  autoSaveStatus === 'saving' ? "bg-slate-100 text-slate-600 border-slate-200" :
+                  autoSaveStatus === 'saved' ? "bg-[#E4F5EA] text-[#1F8A4C] border-[#1F8A4C]/20" :
+                  "bg-[#FDE4E4] text-[#C0392B] border-[#C0392B]/20"
                 )}
               >
                 {autoSaveStatus === 'saving' ? (
@@ -755,12 +755,12 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
               </motion.div>
             )}
           </AnimatePresence>
-          <div className="flex gap-1 p-1 bg-white/5 rounded-xl border border-white/5">
+          <div className="flex gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
             <button
               onClick={() => setAppTheme('light')}
               className={cn(
                 "flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
-                currentTheme === 'light' ? "bg-white text-brand-black shadow-lg" : "text-white/40 hover:text-white"
+                currentTheme === 'light' ? "bg-white text-slate-800 shadow-sm" : "text-slate-400 hover:text-slate-700"
               )}
             >
               <Sun className="w-2.5 h-2.5" /> Light
@@ -769,7 +769,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
               onClick={() => setAppTheme('dark')}
               className={cn(
                 "flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
-                currentTheme === 'dark' ? "bg-slate-800 text-white shadow-xl" : "text-white/40 hover:text-white"
+                currentTheme === 'dark' ? "bg-slate-800 text-white shadow-sm" : "text-slate-400 hover:text-slate-700"
               )}
             >
               <Moon className="w-2.5 h-2.5" /> Dark
@@ -791,11 +791,11 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
             <AggerToolSettings />
 
             {/* Sections for General */}
-            <section className="bg-brand-dark p-6 rounded-[2rem] border border-white/5 shadow-xl space-y-6">
+            <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 border-l-4 border-gold-deep pl-4">
                   <BookOpen className="w-5 h-5 text-gold-deep" />
-                  <h3 className="text-sm font-bold text-gold-light uppercase tracking-widest">Documentação & Auditoria</h3>
+                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Documentação & Auditoria</h3>
                 </div>
                 <div className="px-3 py-1 bg-gold-deep/10 rounded-full border border-gold-deep/20">
                   <span className="text-[8px] font-black text-gold-deep uppercase tracking-widest">v2.5.0 Auto-Gen</span>
@@ -804,13 +804,13 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
 
               <div className="flex flex-col sm:flex-row items-center gap-4">
                 <div className="flex-1">
-                  <p className="text-xs text-white/50 leading-relaxed font-medium">
+                  <p className="text-xs text-slate-500 leading-relaxed font-medium">
                     Visualize a arquitetura completa do sistema, fluxos ativos, regras de extração e o pipeline de IA atualizado em tempo real.
                   </p>
                 </div>
                 <button
                   onClick={() => setIsDocsModalOpen(true)}
-                  className="flex items-center gap-2 px-6 py-3 bg-gold-deep/10 hover:bg-gold-deep/20 text-gold-deep border border-gold-deep/30 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-gold-deep/10"
+                  className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-600 hover:border-[#1B4D8F]/40 hover:text-[#1B4D8F] rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
                 >
                   <FileText size={14} />
                   Documentação do Sistema
@@ -820,10 +820,10 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
 
             <div className="flex flex-col gap-6">
               {/* Identity Section */}
-              <section className="bg-brand-dark p-6 rounded-[2rem] border border-gold-deep/20 shadow-xl space-y-6">
+              <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
                 <div className="flex items-center gap-3 border-l-4 border-gold-deep pl-4">
                   <Palette className="w-5 h-5 text-gold-deep" />
-                  <h3 className="text-sm font-bold text-gold-light uppercase tracking-widest">Identidade Visual Michelin</h3>
+                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Identidade Visual Michelin</h3>
                   <HelpButton 
                     title="Identidade Visual"
                     description="Configure como sua marca aparece para os atendentes e clientes. O sistema suporta logos diferentes para temas claro e escuro."
@@ -839,7 +839,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
                   type="text" 
                   value={localVisualConfig.companyName}
                   onChange={(e) => setLocalVisualConfig(prev => ({ ...prev, companyName: e.target.value }))}
-                  className="w-full px-4 py-3 bg-brand-black border border-white/5 rounded-2xl focus:ring-4 focus:ring-gold-deep/5 focus:border-gold-deep/30 text-slate-100 text-sm font-medium transition-all"
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#1B4D8F]/15 focus:border-[#1B4D8F]/60 text-slate-800 text-sm font-medium transition-all"
                   placeholder="Ex: Michelin Seguros"
                 />
               </div>
@@ -889,7 +889,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
                     {localVisualConfig.logoDark && (
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleRemoveLogo('logo'); }}
-                        className="absolute -top-2 -right-2 p-2 bg-red-500 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        className="absolute -top-2 -right-2 p-2 bg-[#C0392B] text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
@@ -941,7 +941,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
                     {localVisualConfig.logoLight && (
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleRemoveLogo('logoLight'); }}
-                        className="absolute -top-2 -right-2 p-2 bg-red-500 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        className="absolute -top-2 -right-2 p-2 bg-[#C0392B] text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
@@ -957,36 +957,36 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
 
         {/* Column 1: Simulação & Cérebro IA */}
         <div className="space-y-6 w-full">
-          <section className="bg-brand-dark p-6 rounded-[2rem] border border-gold-deep/20 shadow-xl space-y-6">
+          <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
             <div className="flex items-center gap-3 border-l-4 border-gold-deep pl-4 mb-2">
               <ShieldAlert className="w-5 h-5 text-gold-deep" />
-              <h3 className="text-sm font-bold text-gold-light uppercase tracking-widest">Ambiente de Simulação</h3>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Ambiente de Simulação</h3>
             </div>
-            
+
             <div className="space-y-4">
-               <div className="flex items-center justify-between p-4 bg-brand-black/40 rounded-2xl border border-white/5 transition-all hover:border-gold-deep/30">
+               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200 transition-all hover:border-slate-300">
                 <div className="flex items-center gap-4">
                   <div className={cn(
                     "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
-                    isTestMode ? "bg-amber-500/10 text-amber-500" : "bg-slate-500/10 text-slate-500"
+                    isTestMode ? "bg-[#FFF3DC] text-[#B8860B]" : "bg-slate-100 text-slate-500"
                   )}>
                     <RefreshCcw className={cn("w-6 h-6", isTestMode && "animate-spin-slow")} />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-white uppercase tracking-widest">Modo de Teste do chat WhatsApp</p>
+                    <p className="text-xs font-bold text-slate-800 uppercase tracking-widest">Modo de Teste do chat WhatsApp</p>
                     <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
                       Permite simular conversas e extrações de dados sem precisar enviar mensagens reais via WhatsApp API.
                     </p>
                   </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     checked={isTestMode}
                     onChange={(e) => setIsTestMode(e.target.checked)}
-                    className="sr-only peer" 
+                    className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500 transition-all"></div>
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#B8860B] transition-all"></div>
                 </label>
               </div>
             </div>
@@ -995,10 +995,10 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
         </div>
 
         {/* Column 2: Meta Omnichannel */}
-        <section className="bg-brand-dark p-6 rounded-[2rem] border border-white/5 shadow-xl space-y-6 w-full">
+        <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6 w-full">
           <div className="flex items-center gap-3 border-l-4 border-gold-deep pl-4 mb-2">
             <MessageSquare className="w-5 h-5 text-gold-deep" />
-            <h3 className="text-sm font-bold text-gold-light uppercase tracking-widest">Omnichannel (Meta)</h3>
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Omnichannel (Meta)</h3>
           </div>
 
           <div className="space-y-4">
@@ -1011,14 +1011,14 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
               <div key={field.name} className="space-y-2">
                 <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 tracking-widest">{field.label}</label>
                 <div className="relative">
-                  <field.icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gold-deep/40" />
-                  <input 
-                    type={field.type} 
+                  <field.icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type={field.type}
                     name={field.name}
                     value={(config as any)[field.name] || ''}
                     onChange={handleChange}
                     placeholder={field.placeholder}
-                    className="w-full pl-11 pr-4 py-3 bg-brand-black border border-white/5 rounded-2xl focus:ring-4 focus:ring-gold-deep/5 focus:border-gold-deep/30 text-slate-100 text-sm font-bold transition-all"
+                    className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#1B4D8F]/15 focus:border-[#1B4D8F]/60 text-slate-800 text-sm font-bold transition-all"
                   />
                 </div>
               </div>

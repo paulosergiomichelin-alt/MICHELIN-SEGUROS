@@ -413,12 +413,12 @@ CLASSIFICAÇÃO:
   return (
     <div className="flex flex-col min-h-full font-sans">
       {/* Horizontal Tab Bar */}
-      <nav className="flex-shrink-0 sticky top-0 z-10 bg-[#050505] border-b border-white/5 px-2 flex items-center overflow-x-auto">
+      <nav className="flex-shrink-0 sticky top-0 z-10 bg-white border-b border-slate-200 px-2 flex items-center overflow-x-auto">
         <button
           onClick={() => setActiveTab('identity')}
           className={cn(
             "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
-            activeTab === 'identity' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+            activeTab === 'identity' ? "text-gold-deep border-gold-deep" : "text-slate-500 hover:text-slate-800 border-transparent"
           )}
         >
           <User className="w-3.5 h-3.5 flex-shrink-0" /> Identidade
@@ -427,7 +427,7 @@ CLASSIFICAÇÃO:
           onClick={() => setActiveTab('sales')}
           className={cn(
             "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
-            activeTab === 'sales' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+            activeTab === 'sales' ? "text-gold-deep border-gold-deep" : "text-slate-500 hover:text-slate-800 border-transparent"
           )}
         >
           <Brain className="w-3.5 h-3.5 flex-shrink-0" /> Comportamento de Vendas
@@ -436,7 +436,7 @@ CLASSIFICAÇÃO:
           onClick={() => setActiveTab('rules')}
           className={cn(
             "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
-            activeTab === 'rules' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+            activeTab === 'rules' ? "text-gold-deep border-gold-deep" : "text-slate-500 hover:text-slate-800 border-transparent"
           )}
         >
           <Shield className="w-3.5 h-3.5 flex-shrink-0" /> Regras e Limites
@@ -445,7 +445,7 @@ CLASSIFICAÇÃO:
           onClick={() => setActiveTab('template')}
           className={cn(
             "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
-            activeTab === 'template' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+            activeTab === 'template' ? "text-gold-deep border-gold-deep" : "text-slate-500 hover:text-slate-800 border-transparent"
           )}
         >
           <Layers className="w-3.5 h-3.5 flex-shrink-0" /> Template e Segmento
@@ -460,9 +460,9 @@ CLASSIFICAÇÃO:
                 exit={{ opacity: 0 }}
                 className={cn(
                   "flex items-center gap-1.5 px-2 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest",
-                  autoSaveStatus === 'saving' ? "bg-brand-black text-gold-deep border-gold-deep/20" :
-                  autoSaveStatus === 'saved' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
-                  "bg-red-500/10 text-red-500 border-red-500/20"
+                  autoSaveStatus === 'saving' ? "bg-slate-100 text-slate-600 border-slate-200" :
+                  autoSaveStatus === 'saved' ? "bg-[#E4F5EA] text-[#1F8A4C] border-[#1F8A4C]/20" :
+                  "bg-[#FDE4E4] text-[#C0392B] border-[#C0392B]/20"
                 )}
               >
                 {autoSaveStatus === 'saving' ? (
@@ -475,9 +475,9 @@ CLASSIFICAÇÃO:
               </motion.div>
             )}
           </AnimatePresence>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-            <Zap className="w-3 h-3 text-emerald-400 animate-pulse" />
-            <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-widest">Always-On</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#E4F5EA] border border-[#1F8A4C]/20 rounded-xl">
+            <Zap className="w-3 h-3 text-[#1F8A4C] animate-pulse" />
+            <span className="text-[8px] font-bold text-[#1F8A4C] uppercase tracking-widest">Always-On</span>
           </div>
         </div>
       </nav>
@@ -490,11 +490,11 @@ CLASSIFICAÇÃO:
             /* ── ABA 1: IDENTIDADE ─────────────────────────────────────────── */
             <div className="space-y-6">
               {/* LLM mode toggle */}
-              <section className="bg-[#0B0B0D] rounded-3xl border border-white/5 p-6 space-y-4">
+              <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-black text-white uppercase tracking-widest">Modo de Resposta com IA</p>
-                    <p className="text-[9px] text-white/30 mt-0.5">Ativa o AgentBrain — respostas geradas por LLM com guardrails</p>
+                    <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Modo de Resposta com IA</p>
+                    <p className="text-[9px] text-slate-400 mt-0.5">Ativa o AgentBrain — respostas geradas por LLM com guardrails</p>
                   </div>
                   <button
                     onClick={() => setConfig(prev => ({ ...prev, useLLMAgent: !prev.useLLMAgent }))}
@@ -502,7 +502,7 @@ CLASSIFICAÇÃO:
                       "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
                       config.useLLMAgent
                         ? "bg-gold-deep/10 border-gold-deep text-gold-deep"
-                        : "bg-white/5 border-white/10 text-white/40"
+                        : "bg-slate-100 border-slate-200 text-slate-500"
                     )}
                   >
                     {config.useLLMAgent ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
@@ -517,46 +517,46 @@ CLASSIFICAÇÃO:
               </section>
 
               {/* Persona */}
-              <section className="bg-[#0B0B0D] rounded-3xl border border-white/5 p-6 space-y-5">
+              <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-5">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-gold-deep/10 rounded-xl border border-gold-deep/20">
                     <User className="w-4 h-4 text-gold-deep" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-white uppercase tracking-widest">Identidade da Agente</p>
-                    <p className="text-[9px] text-white/30">Quem o cliente vê conversando com ele</p>
+                    <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Identidade da Agente</p>
+                    <p className="text-[9px] text-slate-400">Quem o cliente vê conversando com ele</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">Nome</label>
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Nome</label>
                     <input
                       type="text"
                       value={config.agentPersona?.name ?? 'Ana'}
                       onChange={e => handlePersonaChange('name', e.target.value)}
                       placeholder="Ana"
-                      className="w-full px-4 py-2.5 bg-[#050505] border border-white/5 rounded-xl text-sm text-white font-medium focus:border-gold-deep/30 focus:ring-2 focus:ring-gold-deep/5 outline-none"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:border-gold-deep/30 focus:ring-2 focus:ring-gold-deep/5 outline-none"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">Cargo / Role</label>
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Cargo / Role</label>
                     <input
                       type="text"
                       value={config.agentPersona?.role ?? 'Consultora de Seguros'}
                       onChange={e => handlePersonaChange('role', e.target.value)}
                       placeholder="Consultora de Seguros"
-                      className="w-full px-4 py-2.5 bg-[#050505] border border-white/5 rounded-xl text-sm text-white font-medium focus:border-gold-deep/30 focus:ring-2 focus:ring-gold-deep/5 outline-none"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:border-gold-deep/30 focus:ring-2 focus:ring-gold-deep/5 outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">Tom de Voz</label>
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Tom de Voz</label>
                   <select
                     value={config.agentPersona?.tone ?? 'amigável, consultiva e direta'}
                     onChange={e => handlePersonaChange('tone', e.target.value)}
-                    className="w-full px-4 py-2.5 bg-[#050505] border border-white/5 rounded-xl text-sm text-white font-medium focus:border-gold-deep/30 outline-none appearance-none cursor-pointer"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:border-gold-deep/30 outline-none appearance-none cursor-pointer"
                   >
                     <option value="amigável, consultiva e direta">Amigável e informal</option>
                     <option value="profissional, formal e precisa">Profissional e formal</option>
@@ -564,18 +564,17 @@ CLASSIFICAÇÃO:
                   </select>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-[#050505] rounded-xl border border-white/5">
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
                   <div>
-                    <p className="text-[10px] font-bold text-white">Tratamento Formal</p>
-                    <p className="text-[9px] text-white/30">Usar Senhor/Senhora em vez do nome direto</p>
+                    <p className="text-[10px] font-bold text-slate-800">Tratamento Formal</p>
+                    <p className="text-[9px] text-slate-400">Usar Senhor/Senhora em vez do nome direto</p>
                   </div>
                   <button
                     onClick={() => handlePersonaChange('usesFormalTreatment', !(config.agentPersona?.usesFormalTreatment ?? false))}
                     className={cn(
                       "w-11 h-6 rounded-full border relative transition-all flex-shrink-0",
                       config.agentPersona?.usesFormalTreatment
-                        ? "bg-gold-deep border-gold-deep"
-                        : "bg-white/5 border-white/10"
+                        ? "bg-gold-deep border-gold-deep" : "bg-slate-200 border-slate-200"
                     )}
                   >
                     <span className={cn(
@@ -587,24 +586,24 @@ CLASSIFICAÇÃO:
               </section>
 
               {/* LLM Config */}
-              <section className="bg-[#0B0B0D] rounded-3xl border border-white/5 p-6 space-y-4">
+              <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/5 rounded-xl border border-white/5">
-                    <Brain className="w-4 h-4 text-white/50" />
+                  <div className="p-2 bg-slate-100 rounded-xl border border-slate-200">
+                    <Brain className="w-4 h-4 text-slate-500" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-white uppercase tracking-widest">Modelo de IA (AgentBrain)</p>
-                    <p className="text-[9px] text-white/30">Modelo usado para gerar as respostas da agente</p>
+                    <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Modelo de IA (AgentBrain)</p>
+                    <p className="text-[9px] text-slate-400">Modelo usado para gerar as respostas da agente</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">Modelo</label>
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Modelo</label>
                     <select
                       value={config.llm?.model ?? 'openai/gpt-4o-mini'}
                       onChange={e => setConfig(prev => ({ ...prev, llm: { ...(prev.llm ?? { provider: 'openrouter', maxTokens: 300, temperature: 0.75 }), model: e.target.value } }))}
-                      className="w-full px-4 py-2.5 bg-[#050505] border border-white/5 rounded-xl text-sm text-gold-deep font-bold focus:border-gold-deep/30 outline-none appearance-none cursor-pointer"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-gold-deep font-bold focus:border-gold-deep/30 outline-none appearance-none cursor-pointer"
                     >
                       <optgroup label="Recomendados">
                         <option value="openai/gpt-4o-mini">GPT-4o Mini (Rápido · Custo baixo)</option>
@@ -616,7 +615,7 @@ CLASSIFICAÇÃO:
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
                       Criatividade (Temperature: {config.llm?.temperature ?? 0.75})
                     </label>
                     <input
@@ -625,7 +624,7 @@ CLASSIFICAÇÃO:
                       onChange={e => setConfig(prev => ({ ...prev, llm: { ...(prev.llm ?? { provider: 'openrouter', model: 'openai/gpt-4o-mini', maxTokens: 300 }), temperature: parseFloat(e.target.value) } }))}
                       className="w-full accent-gold-deep"
                     />
-                    <div className="flex justify-between text-[8px] text-white/20 font-bold">
+                    <div className="flex justify-between text-[8px] text-slate-300 font-bold">
                       <span>Mais consistente</span>
                       <span>Mais criativo</span>
                     </div>
@@ -633,16 +632,16 @@ CLASSIFICAÇÃO:
                 </div>
 
                 {/* WhatsApp toggle */}
-                <div className="flex items-center justify-between p-4 bg-[#050505] rounded-xl border border-white/5">
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
                   <div>
-                    <p className="text-[10px] font-bold text-white">WhatsApp Ativo</p>
-                    <p className="text-[9px] text-white/30">Respostas automáticas via WhatsApp Business</p>
+                    <p className="text-[10px] font-bold text-slate-800">WhatsApp Ativo</p>
+                    <p className="text-[9px] text-slate-400">Respostas automáticas via WhatsApp Business</p>
                   </div>
                   <button
                     onClick={() => handleChange({ target: { name: 'whatsappEnabled', type: 'checkbox', checked: !config.whatsappEnabled } } as any)}
                     className={cn(
                       "w-11 h-6 rounded-full border relative transition-all flex-shrink-0",
-                      config.whatsappEnabled ? "bg-gold-deep border-gold-deep" : "bg-white/5 border-white/10"
+                      config.whatsappEnabled ? "bg-gold-deep border-gold-deep" : "bg-slate-200 border-slate-200"
                     )}
                   >
                     <span className={cn(
@@ -664,19 +663,19 @@ CLASSIFICAÇÃO:
                 const isOpen = expandedBlock === key;
                 const content = config.salesBlocks?.[key] ?? DEFAULT_SALES_BLOCKS[key];
                 return (
-                  <div key={key} className="bg-[#0B0B0D] rounded-2xl border border-white/5 overflow-hidden">
+                  <div key={key} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                     <button
                       onClick={() => setExpandedBlock(isOpen ? null : key)}
-                      className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-white/[0.02] transition-colors"
+                      className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-slate-50 transition-colors"
                     >
-                      <div className="p-1.5 bg-white/5 rounded-lg border border-white/5 flex-shrink-0">
-                        <Icon className="w-3.5 h-3.5 text-white/50" />
+                      <div className="p-1.5 bg-slate-100 rounded-lg border border-slate-200 flex-shrink-0">
+                        <Icon className="w-3.5 h-3.5 text-slate-500" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-black text-white uppercase tracking-widest">{label}</p>
-                        <p className="text-[9px] text-white/30 truncate">{description}</p>
+                        <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{label}</p>
+                        <p className="text-[9px] text-slate-400 truncate">{description}</p>
                       </div>
-                      {isOpen ? <ChevronUp className="w-4 h-4 text-white/30 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-white/30 flex-shrink-0" />}
+                      {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />}
                     </button>
 
                     <AnimatePresence>
@@ -688,17 +687,17 @@ CLASSIFICAÇÃO:
                           transition={{ duration: 0.2 }}
                           className="overflow-hidden"
                         >
-                          <div className="px-5 pb-5 space-y-3 border-t border-white/5 pt-4">
+                          <div className="px-5 pb-5 space-y-3 border-t border-slate-100 pt-4">
                             <textarea
                               value={content}
                               onChange={e => handleSalesBlockChange(key, e.target.value)}
                               rows={10}
-                              className="w-full p-4 bg-[#050505] border border-white/5 rounded-xl text-xs text-white/70 font-medium leading-relaxed resize-none focus:border-gold-deep/20 focus:ring-2 focus:ring-gold-deep/5 outline-none"
+                              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 font-medium leading-relaxed resize-none focus:border-gold-deep/20 focus:ring-2 focus:ring-gold-deep/5 outline-none"
                             />
                             <div className="flex items-center justify-end">
                               <button
                                 onClick={() => handleSalesBlockChange(key, DEFAULT_SALES_BLOCKS[key])}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white/60 transition-colors"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
                               >
                                 <RotateCcw className="w-3 h-3" /> Restaurar padrão
                               </button>
@@ -715,14 +714,14 @@ CLASSIFICAÇÃO:
             /* ── ABA 3: REGRAS E LIMITES ──────────────────────────────────────── */
             <div className="space-y-6">
               {/* Hard rules */}
-              <section className="bg-[#0B0B0D] rounded-3xl border border-white/5 p-6 space-y-4">
+              <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-white/5 rounded-xl border border-white/5">
-                    <Shield className="w-4 h-4 text-white/50" />
+                  <div className="p-2 bg-slate-100 rounded-xl border border-slate-200">
+                    <Shield className="w-4 h-4 text-slate-500" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-white uppercase tracking-widest">Validações Hard</p>
-                    <p className="text-[9px] text-white/30">Regras invioláveis que o sistema aplica automaticamente</p>
+                    <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Validações Hard</p>
+                    <p className="text-[9px] text-slate-400">Regras invioláveis que o sistema aplica automaticamente</p>
                   </div>
                 </div>
 
@@ -730,16 +729,16 @@ CLASSIFICAÇÃO:
                   { key: 'blockExpiredLicense' as const, label: 'Bloquear cotação com CNH vencida', desc: 'O agente alerta o cliente e pausa a cotação até regularização' },
                   { key: 'requireCrlvForQuote' as const, label: 'Exigir CRLV antes de enviar proposta', desc: 'Não envia PDF de cotação sem placa e chassis confirmados' },
                 ].map(({ key, label, desc }) => (
-                  <div key={key} className="flex items-center justify-between p-4 bg-[#050505] rounded-xl border border-white/5">
+                  <div key={key} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
                     <div>
-                      <p className="text-[10px] font-bold text-white">{label}</p>
-                      <p className="text-[9px] text-white/30">{desc}</p>
+                      <p className="text-[10px] font-bold text-slate-800">{label}</p>
+                      <p className="text-[9px] text-slate-400">{desc}</p>
                     </div>
                     <button
                       onClick={() => handleHardRuleChange(key, !(config.hardRules?.[key] ?? DEFAULT_HARD_RULES[key]))}
                       className={cn(
                         "w-11 h-6 rounded-full border relative transition-all flex-shrink-0",
-                        (config.hardRules?.[key] ?? DEFAULT_HARD_RULES[key]) ? "bg-gold-deep border-gold-deep" : "bg-white/5 border-white/10"
+                        (config.hardRules?.[key] ?? DEFAULT_HARD_RULES[key]) ? "bg-gold-deep border-gold-deep" : "bg-slate-200 border-slate-200"
                       )}
                     >
                       <span className={cn(
@@ -752,93 +751,93 @@ CLASSIFICAÇÃO:
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
                       Horas de inatividade → Lead Frio
                     </label>
                     <input
                       type="number" min={1} max={48}
                       value={config.hardRules?.maxInactivityHours ?? DEFAULT_HARD_RULES.maxInactivityHours}
                       onChange={e => handleHardRuleChange('maxInactivityHours', parseInt(e.target.value))}
-                      className="w-full px-4 py-2.5 bg-[#050505] border border-white/5 rounded-xl text-sm text-white font-medium focus:border-gold-deep/30 outline-none"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:border-gold-deep/30 outline-none"
                     />
-                    <p className="text-[8px] text-white/20">Após X horas sem resposta, o lead é classificado como frio</p>
+                    <p className="text-[8px] text-slate-300">Após X horas sem resposta, o lead é classificado como frio</p>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
                       Score mínimo para acionar atendente
                     </label>
                     <input
                       type="number" min={1} max={10}
                       value={config.hardRules?.escalateToHumanScore ?? DEFAULT_HARD_RULES.escalateToHumanScore}
                       onChange={e => handleHardRuleChange('escalateToHumanScore', parseInt(e.target.value))}
-                      className="w-full px-4 py-2.5 bg-[#050505] border border-white/5 rounded-xl text-sm text-white font-medium focus:border-gold-deep/30 outline-none"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:border-gold-deep/30 outline-none"
                     />
-                    <p className="text-[8px] text-white/20">Leads com score ≥ X são sinalizados para atendimento humano</p>
+                    <p className="text-[8px] text-slate-300">Leads com score ≥ X são sinalizados para atendimento humano</p>
                   </div>
                 </div>
               </section>
 
               {/* Follow-ups */}
-              <section className="bg-[#0B0B0D] rounded-3xl border border-white/5 p-6 space-y-5">
+              <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/5 rounded-xl border border-white/5">
-                      <History className="w-4 h-4 text-white/50" />
+                    <div className="p-2 bg-slate-100 rounded-xl border border-slate-200">
+                      <History className="w-4 h-4 text-slate-500" />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black text-white uppercase tracking-widest">Sequências de Follow-up</p>
-                      <p className="text-[9px] text-white/30">Mensagens automáticas por atraso e condição de status</p>
+                      <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Sequências de Follow-up</p>
+                      <p className="text-[9px] text-slate-400">Mensagens automáticas por atraso e condição de status</p>
                     </div>
                   </div>
                   <button
                     onClick={handleAddFollowUp}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-gold-deep/10 hover:bg-gold-deep/20 text-gold-deep border border-gold-deep/20 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-[#1B4D8F] hover:bg-[#153E73] text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm shadow-[#1B4D8F]/20"
                   >
                     <Plus className="w-3.5 h-3.5" /> Novo
                   </button>
                 </div>
 
                 {config.followUps.length === 0 ? (
-                  <div className="text-center py-10 border-2 border-dashed border-white/5 rounded-2xl">
-                    <MessageSquare className="w-10 h-10 text-white/10 mx-auto mb-3" />
-                    <p className="text-[10px] text-white/20 font-bold uppercase tracking-widest">Nenhum follow-up configurado</p>
+                  <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-2xl">
+                    <MessageSquare className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                    <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest">Nenhum follow-up configurado</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {config.followUps.map(fu => (
-                      <div key={fu.id} className="p-5 bg-[#050505] border border-white/5 rounded-2xl space-y-4 group relative">
+                      <div key={fu.id} className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4 group relative">
                         <button
                           onClick={() => handleRemoveFollowUp(fu.id)}
-                          className="absolute top-4 right-4 p-1.5 text-white/20 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                          className="absolute top-4 right-4 p-1.5 text-slate-300 hover:text-[#C0392B] hover:bg-[#FDE4E4] rounded-lg transition-all opacity-0 group-hover:opacity-100"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Descrição Interna</label>
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Descrição Interna</label>
                             <input
                               type="text"
                               value={fu.description}
                               onChange={e => handleUpdateFollowUp(fu.id, 'description', e.target.value)}
-                              className="w-full px-3 py-2 bg-[#0B0B0D] border border-white/5 rounded-xl text-xs text-white"
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800"
                             />
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
-                              <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Dias</label>
-                              <input type="number" value={fu.daysDelay} onChange={e => handleUpdateFollowUp(fu.id, 'daysDelay', parseInt(e.target.value))} className="w-full px-3 py-2 bg-[#0B0B0D] border border-white/5 rounded-xl text-xs text-white" />
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Dias</label>
+                              <input type="number" value={fu.daysDelay} onChange={e => handleUpdateFollowUp(fu.id, 'daysDelay', parseInt(e.target.value))} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800" />
                             </div>
                             <div className="space-y-1.5">
-                              <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Horas</label>
-                              <input type="number" value={fu.hoursDelay} onChange={e => handleUpdateFollowUp(fu.id, 'hoursDelay', parseInt(e.target.value))} className="w-full px-3 py-2 bg-[#0B0B0D] border border-white/5 rounded-xl text-xs text-white" />
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Horas</label>
+                              <input type="number" value={fu.hoursDelay} onChange={e => handleUpdateFollowUp(fu.id, 'hoursDelay', parseInt(e.target.value))} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800" />
                             </div>
                           </div>
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Condição de Gatilho</label>
-                          <select value={fu.condition} onChange={e => handleUpdateFollowUp(fu.id, 'condition', e.target.value)} className="w-full px-3 py-2 bg-[#0B0B0D] border border-white/5 rounded-xl text-xs text-gold-deep font-bold">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Condição de Gatilho</label>
+                          <select value={fu.condition} onChange={e => handleUpdateFollowUp(fu.id, 'condition', e.target.value)} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-gold-deep font-bold">
                             <option value="status == 'Novo Lead'">Status: Novo Lead</option>
                             <option value="status == 'Em Atendimento'">Status: Em Atendimento</option>
                             <option value="status == 'Aguardando Documento'">Status: Aguardando Documento</option>
@@ -848,22 +847,22 @@ CLASSIFICAÇÃO:
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-[9px] font-black text-white/30 uppercase tracking-widest">Template da Mensagem</label>
-                          <textarea value={fu.template} onChange={e => handleUpdateFollowUp(fu.id, 'template', e.target.value)} rows={3} className="w-full p-3 bg-[#0B0B0D] border border-white/5 rounded-xl text-xs text-white leading-relaxed resize-none" />
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Template da Mensagem</label>
+                          <textarea value={fu.template} onChange={e => handleUpdateFollowUp(fu.id, 'template', e.target.value)} rows={3} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 leading-relaxed resize-none" />
                         </div>
 
-                        <div className="pt-3 border-t border-white/5">
-                          <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                        <div className="pt-3 border-t border-slate-100">
+                          <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-2 flex items-center gap-1.5">
                             <Clock className="w-3 h-3" /> Janelas de Horário
                           </p>
                           <div className="grid grid-cols-2 gap-2">
                             {fu.windows.map((window, wIdx) => (
-                              <div key={wIdx} className="p-3 bg-[#0B0B0D] border border-white/5 rounded-xl space-y-2">
+                              <div key={wIdx} className="p-3 bg-white border border-slate-200 rounded-xl space-y-2">
                                 <input type="text" value={window.label} onChange={e => handleUpdateFollowUpWindow(fu.id, wIdx, 'label', e.target.value)} className="bg-transparent border-none p-0 text-[8px] font-bold uppercase tracking-widest w-full outline-none text-gold-deep/60" />
                                 <div className="flex items-center gap-2">
-                                  <input type="time" value={window.start} onChange={e => handleUpdateFollowUpWindow(fu.id, wIdx, 'start', e.target.value)} className="bg-transparent border border-white/5 rounded px-1 text-[9px] text-white" />
-                                  <span className="text-white/20 text-[9px]">às</span>
-                                  <input type="time" value={window.end} onChange={e => handleUpdateFollowUpWindow(fu.id, wIdx, 'end', e.target.value)} className="bg-transparent border border-white/5 rounded px-1 text-[9px] text-white" />
+                                  <input type="time" value={window.start} onChange={e => handleUpdateFollowUpWindow(fu.id, wIdx, 'start', e.target.value)} className="bg-transparent border border-slate-200 rounded px-1 text-[9px] text-slate-800" />
+                                  <span className="text-slate-300 text-[9px]">às</span>
+                                  <input type="time" value={window.end} onChange={e => handleUpdateFollowUpWindow(fu.id, wIdx, 'end', e.target.value)} className="bg-transparent border border-slate-200 rounded px-1 text-[9px] text-slate-800" />
                                 </div>
                               </div>
                             ))}
@@ -876,22 +875,22 @@ CLASSIFICAÇÃO:
               </section>
 
               {/* Scheduling */}
-              <section className="bg-[#0B0B0D] rounded-3xl border border-white/5 p-6 space-y-4">
+              <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/5 rounded-xl border border-white/5">
-                      <CalendarRange className="w-4 h-4 text-white/50" />
+                    <div className="p-2 bg-slate-100 rounded-xl border border-slate-200">
+                      <CalendarRange className="w-4 h-4 text-slate-500" />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black text-white uppercase tracking-widest">Agendamento Global</p>
-                      <p className="text-[9px] text-white/30">Fuso horário para follow-ups e janelas de envio</p>
+                      <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Agendamento Global</p>
+                      <p className="text-[9px] text-slate-400">Fuso horário para follow-ups e janelas de envio</p>
                     </div>
                   </div>
                   <button
                     onClick={() => setConfig(prev => ({ ...prev, scheduling: { ...(prev.scheduling || { timezone: 'America/Sao_Paulo' }), enabled: !(prev.scheduling?.enabled ?? true) } }))}
                     className={cn(
                       "w-11 h-6 rounded-full border relative transition-all flex-shrink-0",
-                      (config.scheduling?.enabled ?? true) ? "bg-gold-deep border-gold-deep" : "bg-white/5 border-white/10"
+                      (config.scheduling?.enabled ?? true) ? "bg-gold-deep border-gold-deep" : "bg-slate-200 border-slate-200"
                     )}
                   >
                     <span className={cn(
@@ -901,10 +900,10 @@ CLASSIFICAÇÃO:
                   </button>
                 </div>
 
-                <div className="flex items-center gap-3 p-4 bg-[#050505] rounded-xl border border-white/5">
-                  <Globe className="w-4 h-4 text-white/30" />
+                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <Globe className="w-4 h-4 text-slate-400" />
                   <div className="flex-1">
-                    <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Fuso Horário</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Fuso Horário</p>
                     <select
                       value={config.scheduling?.timezone || 'America/Sao_Paulo'}
                       onChange={e => setConfig(prev => ({ ...prev, scheduling: { ...(prev.scheduling || { enabled: true }), timezone: e.target.value } }))}
@@ -928,7 +927,7 @@ CLASSIFICAÇÃO:
               )}
 
               {templateError && (
-                <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 text-sm">
+                <div className="flex items-center gap-3 p-4 bg-[#FFF3DC] border border-[#B8860B]/20 rounded-xl text-[#B8860B] text-sm">
                   <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                   {templateError}
                 </div>
@@ -936,10 +935,10 @@ CLASSIFICAÇÃO:
 
               {!templateLoading && !resolvedConfig && !templateError && (
                 <div className="text-center py-16 space-y-4">
-                  <Layers className="w-10 h-10 text-white/20 mx-auto" />
+                  <Layers className="w-10 h-10 text-slate-300 mx-auto" />
                   <div>
-                    <p className="text-white/40 text-sm font-medium">Nenhum template configurado</p>
-                    <p className="text-white/20 text-xs mt-1">Complete o wizard de configuração para ativar o agente IA.</p>
+                    <p className="text-slate-500 text-sm font-medium">Nenhum template configurado</p>
+                    <p className="text-slate-300 text-xs mt-1">Complete o wizard de configuração para ativar o agente IA.</p>
                   </div>
                   <button
                     onClick={async () => {
@@ -948,7 +947,7 @@ CLASSIFICAÇÃO:
                       setSeeding(false);
                     }}
                     disabled={seeding}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-gold-deep/10 border border-gold-deep/20 text-gold-deep rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-gold-deep/20 transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#1B4D8F] hover:bg-[#153E73] text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 shadow-sm shadow-[#1B4D8F]/20"
                   >
                     {seeding ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
                     Carregar Templates Padrão
@@ -959,27 +958,27 @@ CLASSIFICAÇÃO:
               {!templateLoading && resolvedConfig && (
                 <>
                   {/* Segment badge */}
-                  <section className="bg-[#0B0B0D] rounded-3xl border border-white/5 p-6 space-y-4">
+                  <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-gold-deep/10 rounded-xl border border-gold-deep/20">
                         <Layers className="w-4 h-4 text-gold-deep" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-white uppercase tracking-widest">Template Ativo</p>
-                        <p className="text-[9px] text-white/30">Modelo de agente em uso para este tenant</p>
+                        <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Template Ativo</p>
+                        <p className="text-[9px] text-slate-400">Modelo de agente em uso para este tenant</p>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between p-4 bg-gold-deep/5 border border-gold-deep/10 rounded-xl">
                       <div>
-                        <p className="text-xs font-bold text-white">
+                        <p className="text-xs font-bold text-slate-800">
                           {SEGMENT_LABELS[resolvedConfig.segment] ?? resolvedConfig.segment}
                         </p>
-                        <p className="text-[9px] text-white/40 mt-0.5">
+                        <p className="text-[9px] text-slate-500 mt-0.5">
                           Template: <span className="text-gold-deep">{resolvedConfig.templateId}</span> · v{resolvedConfig.templateVersion}
                         </p>
                       </div>
-                      <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-bold uppercase tracking-wider rounded-full">
+                      <span className="px-3 py-1 bg-[#E4F5EA] border border-[#1F8A4C]/20 text-[#1F8A4C] text-[9px] font-bold uppercase tracking-wider rounded-full">
                         Ativo
                       </span>
                     </div>
@@ -987,19 +986,19 @@ CLASSIFICAÇÃO:
 
                   {/* Locked fields */}
                   {resolvedConfig.lockedFields.length > 0 && (
-                    <section className="bg-[#0B0B0D] rounded-3xl border border-white/5 p-6 space-y-3">
+                    <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-3">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white/5 rounded-xl border border-white/5">
-                          <Lock className="w-4 h-4 text-white/50" />
+                        <div className="p-2 bg-slate-100 rounded-xl border border-slate-200">
+                          <Lock className="w-4 h-4 text-slate-500" />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-white uppercase tracking-widest">Campos Bloqueados</p>
-                          <p className="text-[9px] text-white/30">Definidos pela plataforma — não podem ser alterados pelo tenant</p>
+                          <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Campos Bloqueados</p>
+                          <p className="text-[9px] text-slate-400">Definidos pela plataforma — não podem ser alterados pelo tenant</p>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {resolvedConfig.lockedFields.map(f => (
-                          <span key={f} className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-mono rounded-lg">
+                          <span key={f} className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#FDE4E4] border border-[#C0392B]/20 text-[#C0392B] text-[9px] font-mono rounded-lg">
                             <Lock className="w-2.5 h-2.5" />{f}
                           </span>
                         ))}
@@ -1008,25 +1007,25 @@ CLASSIFICAÇÃO:
                   )}
 
                   {/* Platform guardrails */}
-                  <section className="bg-[#0B0B0D] rounded-3xl border border-white/5 p-6 space-y-3">
+                  <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-3">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-white/5 rounded-xl border border-white/5">
-                        <ShieldCheck className="w-4 h-4 text-white/50" />
+                      <div className="p-2 bg-slate-100 rounded-xl border border-slate-200">
+                        <ShieldCheck className="w-4 h-4 text-slate-500" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-white uppercase tracking-widest">Guardrails da Plataforma</p>
-                        <p className="text-[9px] text-white/30">Regras invioláveis aplicadas em todos os tenants · v{resolvedConfig.guardrails.version}</p>
+                        <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Guardrails da Plataforma</p>
+                        <p className="text-[9px] text-slate-400">Regras invioláveis aplicadas em todos os tenants · v{resolvedConfig.guardrails.version}</p>
                       </div>
                     </div>
                     <div className="space-y-1.5">
                       {resolvedConfig.guardrails.hardProhibitions.slice(0, 4).map((r, i) => (
-                        <div key={i} className="flex items-start gap-2 text-[9px] text-white/40">
-                          <span className="text-red-400 mt-0.5 flex-shrink-0">✗</span>{r}
+                        <div key={i} className="flex items-start gap-2 text-[9px] text-slate-500">
+                          <span className="text-[#C0392B] mt-0.5 flex-shrink-0">✗</span>{r}
                         </div>
                       ))}
                       {resolvedConfig.guardrails.hardRequirements.slice(0, 3).map((r, i) => (
-                        <div key={i} className="flex items-start gap-2 text-[9px] text-white/40">
-                          <span className="text-emerald-400 mt-0.5 flex-shrink-0">✓</span>{r}
+                        <div key={i} className="flex items-start gap-2 text-[9px] text-slate-500">
+                          <span className="text-[#1F8A4C] mt-0.5 flex-shrink-0">✓</span>{r}
                         </div>
                       ))}
                     </div>
@@ -1034,10 +1033,10 @@ CLASSIFICAÇÃO:
 
                   {/* Seed button for admins */}
                   {(userProfile as any)?.superadmin && (
-                    <section className="bg-[#0B0B0D] rounded-3xl border border-amber-500/10 p-4 flex items-center justify-between gap-4">
+                    <section className="bg-white rounded-3xl border border-[#B8860B]/20 shadow-sm p-4 flex items-center justify-between gap-4">
                       <div>
-                        <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Admin · Re-seed de Templates</p>
-                        <p className="text-[9px] text-white/30">Atualiza os templates padrão no Firestore</p>
+                        <p className="text-[10px] font-black text-[#B8860B] uppercase tracking-widest">Admin · Re-seed de Templates</p>
+                        <p className="text-[9px] text-slate-400">Atualiza os templates padrão no Firestore</p>
                       </div>
                       <button
                         onClick={async () => {
@@ -1046,7 +1045,7 @@ CLASSIFICAÇÃO:
                           setSeeding(false);
                         }}
                         disabled={seeding}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-amber-500/20 transition-all disabled:opacity-50"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-[#FFF3DC] border border-[#B8860B]/20 text-[#B8860B] rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#B8860B]/20 transition-all disabled:opacity-50"
                       >
                         {seeding ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RefreshCcw className="w-3 h-3" />}
                         Re-seed

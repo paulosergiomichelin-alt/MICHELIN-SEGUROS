@@ -33,10 +33,10 @@ export function TechDocs({ onBack }: TechDocsProps) {
 }`;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-brand-black overflow-y-auto scrollbar-thin scrollbar-thumb-gold-deep/20 scrollbar-track-transparent">
+    <div className="fixed inset-0 z-[100] bg-slate-50 overflow-y-auto scrollbar-thin scrollbar-thumb-gold-deep/20 scrollbar-track-transparent">
       <div className="max-w-5xl mx-auto px-8 pt-12 pb-20 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center justify-between">
-          <button 
+          <button
             onClick={onBack}
             className="flex items-center gap-2 text-gold-deep hover:text-gold-light transition-colors group"
           >
@@ -48,17 +48,17 @@ export function TechDocs({ onBack }: TechDocsProps) {
       <header className="space-y-4">
         <div className="space-y-2">
           <h2 className="text-4xl font-bold text-gold-deep font-display uppercase tracking-tight">Centro de Documentação</h2>
-          <p className="text-slate-400 text-sm font-medium">Especificações técnicas, arquitetura de IA e manuais de integração de alta performance.</p>
+          <p className="text-slate-500 text-sm font-medium">Especificações técnicas, arquitetura de IA e manuais de integração de alta performance.</p>
         </div>
 
-        <div className="flex p-1 bg-brand-dark/50 rounded-2xl border border-gold-deep/10 w-fit">
+        <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200 w-fit">
           <button
             onClick={() => setActiveTab('api')}
             className={cn(
               "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
-              activeTab === 'api' 
-                ? "bg-gold-deep text-brand-black shadow-lg shadow-gold-deep/20" 
-                : "text-slate-500 hover:text-gold-light"
+              activeTab === 'api'
+                ? "bg-[#1B4D8F] text-white shadow-sm shadow-[#1B4D8F]/20"
+                : "text-slate-500 hover:text-slate-700"
             )}
           >
             <Code className="w-4 h-4" />
@@ -68,9 +68,9 @@ export function TechDocs({ onBack }: TechDocsProps) {
             onClick={() => setActiveTab('architecture')}
             className={cn(
               "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
-              activeTab === 'architecture' 
-                ? "bg-gold-deep text-brand-black shadow-lg shadow-gold-deep/20" 
-                : "text-slate-500 hover:text-gold-light"
+              activeTab === 'architecture'
+                ? "bg-[#1B4D8F] text-white shadow-sm shadow-[#1B4D8F]/20"
+                : "text-slate-500 hover:text-slate-700"
             )}
           >
             <Layout className="w-4 h-4" />
@@ -82,29 +82,29 @@ export function TechDocs({ onBack }: TechDocsProps) {
       {activeTab === 'api' ? (
         <div className="grid grid-cols-1 gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
         {/* Endpoint Info */}
-        <section className="bg-brand-dark p-8 rounded-[2.5rem] border border-gold-deep/20 shadow-2xl relative overflow-hidden">
+        <section className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 p-8 opacity-5">
             <Globe className="w-32 h-32 text-gold-deep" />
           </div>
-          
+
           <div className="relative space-y-6">
             <div className="flex items-center gap-3 border-l-4 border-gold-deep pl-4">
               <Code className="w-5 h-5 text-gold-deep" />
-              <h3 className="text-sm font-bold text-gold-light uppercase tracking-widest">URL Base do Endpoint</h3>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">URL Base do Endpoint</h3>
             </div>
-            
+
             <div className="bg-black/40 p-5 rounded-2xl border border-gold-deep/10 flex items-center justify-between group">
               <code className="text-gold-deep font-mono text-sm break-all">
                 /api/webhook/lead
               </code>
-              <button 
+              <button
                 onClick={() => copyToClipboard('/api/webhook/lead', 'url')}
                 className="p-2 hover:bg-gold-deep/10 rounded-lg transition-colors text-slate-500 hover:text-gold-deep"
               >
-                {copied === 'url' ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                {copied === 'url' ? <CheckCircle2 className="w-4 h-4 text-[#1F8A4C]" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed italic">
+            <p className="text-xs text-slate-500 leading-relaxed italic">
               * Nota: Utilize a URL completa do seu ambiente de produção (ex: https://seu-crm.run.app/api/webhook/lead)
             </p>
           </div>
@@ -116,23 +116,23 @@ export function TechDocs({ onBack }: TechDocsProps) {
             <RefreshCcw className="w-5 h-5 text-slate-900" />
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Consulta de Existência (GET)</h3>
           </div>
-          
+
           <div className="space-y-4">
             <p className="text-sm text-slate-600 leading-relaxed">
               Utilizado para verificar se um lead já está cadastrado no sistema antes de enviar novos dados. O Telefone é a chave primária.
             </p>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                 <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Parâmetros OBRIGATÓRIOS</p>
                 <div className="flex items-center justify-between font-mono text-xs">
-                  <span className="text-blue-600">phone</span>
+                  <span className="text-gold-deep">phone</span>
                   <span className="text-slate-500">Número limpo (DDI+DDD+Num)</span>
                 </div>
               </div>
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                 <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Resposta Sucesso (200 OK)</p>
-                <code className="text-[10px] text-emerald-600 font-mono italic">
+                <code className="text-[10px] text-[#1F8A4C] font-mono italic">
                   {"{ \"exists\": true, \"lead\": {...} }"}
                 </code>
               </div>
@@ -141,25 +141,25 @@ export function TechDocs({ onBack }: TechDocsProps) {
         </section>
 
         {/* POST Docs */}
-        <section className="bg-brand-dark p-8 rounded-[2.5rem] border border-gold-deep/20 shadow-2xl space-y-6">
+        <section className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 border-l-4 border-gold-deep pl-4">
               <FileText className="w-5 h-5 text-gold-deep" />
-              <h3 className="text-sm font-bold text-gold-light uppercase tracking-widest">Processamento de Lead (POST)</h3>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Processamento de Lead (POST)</h3>
             </div>
             <span className="px-3 py-1 bg-gold-deep/10 text-gold-deep text-[10px] font-bold rounded-full border border-gold-deep/20 uppercase tracking-widest">JSON Body</span>
           </div>
 
           <div className="space-y-4">
-            <p className="text-sm text-slate-400 leading-relaxed">
+            <p className="text-sm text-slate-500 leading-relaxed">
               Cria um novo lead ou atualiza um já existente. Se o telefone enviado coincidir com um lead na base, os campos enviados serão mesclados (Merge) ao registro atual.
             </p>
 
             <div className="relative group">
               <div className="absolute top-4 right-4 z-10">
-                <button 
+                <button
                   onClick={() => copyToClipboard(leadPayload, 'payload')}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-brand-black/80 hover:bg-gold-deep text-slate-400 hover:text-brand-black rounded-lg transition-all text-[10px] font-bold uppercase border border-slate-800"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-black/80 hover:bg-black/60 text-slate-300 hover:text-white rounded-lg transition-all text-[10px] font-bold uppercase border border-white/10"
                 >
                   {copied === 'payload' ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                   {copied === 'payload' ? 'Copiado' : 'Copiar Payload'}
@@ -174,8 +174,8 @@ export function TechDocs({ onBack }: TechDocsProps) {
               <div className="flex items-start gap-3">
                 <Info className="w-5 h-5 text-gold-deep shrink-0" />
                 <div className="space-y-1">
-                  <p className="text-xs font-bold text-gold-light uppercase tracking-tight">Dicas de Formatação</p>
-                  <ul className="list-disc list-inside text-[11px] text-slate-400 space-y-1 italic">
+                  <p className="text-xs font-bold text-slate-800 uppercase tracking-tight">Dicas de Formatação</p>
+                  <ul className="list-disc list-inside text-[11px] text-slate-600 space-y-1 italic">
                     <li>Números de telefone devem conter 55 + DDD + Número.</li>
                     <li>Status permitidos: 'Novo Lead', 'Em Atendimento', 'Aguardando Documento', etc.</li>
                     <li>Campos vazios no JSON não sobrescrevem dados existentes na atualização.</li>
@@ -192,10 +192,10 @@ export function TechDocs({ onBack }: TechDocsProps) {
           <section className="space-y-6">
             <div className="flex items-center gap-3 border-l-4 border-gold-deep pl-4">
               <Zap className="w-5 h-5 text-gold-deep" />
-              <h3 className="text-sm font-bold text-gold-light uppercase tracking-widest">Pipeline de Execução e Ordem de Ação</h3>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Pipeline de Execução e Ordem de Ação</h3>
             </div>
-            
-            <div className="bg-brand-dark p-8 rounded-[3rem] border border-gold-deep/20 shadow-2xl relative overflow-hidden">
+
+            <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-10">
                 <Layout className="w-32 h-32 text-gold-deep" />
               </div>
@@ -203,11 +203,11 @@ export function TechDocs({ onBack }: TechDocsProps) {
               <div className="relative space-y-8">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-1">[ARQUITETURA PRINCIPAL] — Ciclo de Vida do Evento</h4>
-                    <p className="text-[10px] text-slate-400">Como cada componente executa sua ação no fluxo de CRM.</p>
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-widest mb-1">[ARQUITETURA PRINCIPAL] — Ciclo de Vida do Evento</h4>
+                    <p className="text-[10px] text-slate-500">Como cada componente executa sua ação no fluxo de CRM.</p>
                   </div>
-                  <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest animate-pulse">Live Pipeline</span>
+                  <div className="px-3 py-1 bg-[#E4F5EA] border border-[#1F8A4C]/20 rounded-full">
+                    <span className="text-[10px] font-bold text-[#1F8A4C] uppercase tracking-widest animate-pulse">Live Pipeline</span>
                   </div>
                 </div>
 
@@ -228,9 +228,9 @@ export function TechDocs({ onBack }: TechDocsProps) {
                           {i < 4 && <div className="w-px h-full bg-gold-deep/10 my-1" />}
                         </div>
                         <div className="pb-4">
-                          <h5 className="text-[10px] font-bold text-slate-200 uppercase tracking-widest">{item.name}</h5>
+                          <h5 className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">{item.name}</h5>
                           <p className="text-[10px] text-slate-500 mb-1">{item.desc}</p>
-                          <p className="text-[10px] text-gold-light italic">Impacto: {item.action}</p>
+                          <p className="text-[10px] text-gold-deep italic">Impacto: {item.action}</p>
                         </div>
                       </div>
                     ))}
@@ -246,55 +246,55 @@ export function TechDocs({ onBack }: TechDocsProps) {
                     ].map((item, i) => (
                       <div key={i} className="flex gap-4 group">
                         <div className="flex flex-col items-center">
-                          <div className="w-6 h-6 rounded-full bg-slate-800 border border-white/5 flex items-center justify-center text-[10px] font-bold text-slate-400 group-hover:border-gold-deep/30 transition-colors">
+                          <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500 group-hover:border-gold-deep/30 transition-colors">
                             {item.step}
                           </div>
-                          {i < 4 && <div className="w-px h-full bg-white/5 my-1" />}
+                          {i < 4 && <div className="w-px h-full bg-slate-200 my-1" />}
                         </div>
                         <div className="pb-4">
-                          <h5 className="text-[10px] font-bold text-slate-200 uppercase tracking-widest">{item.name}</h5>
+                          <h5 className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">{item.name}</h5>
                           <p className="text-[10px] text-slate-500 mb-1">{item.desc}</p>
-                          <p className="text-[10px] text-gold-light italic">Impacto: {item.action}</p>
+                          <p className="text-[10px] text-gold-deep italic">Impacto: {item.action}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="pt-6 border-t border-white/5">
-                  <div className="bg-brand-black/60 p-4 rounded-2xl border border-white/5">
+                <div className="pt-6 border-t border-slate-100">
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
                     <div className="flex items-center gap-2 mb-2">
-                      <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                      <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Protocolo de Confirmação (ACK)</span>
+                      <ShieldCheck className="w-4 h-4 text-[#1F8A4C]" />
+                      <span className="text-[10px] font-bold text-[#1F8A4C] uppercase tracking-widest">Protocolo de Confirmação (ACK)</span>
                     </div>
-                    <p className="text-[10px] text-slate-400 leading-relaxed italic">
+                    <p className="text-[10px] text-slate-600 leading-relaxed italic">
                       "O Agente de Vendas (AI) só é invocado após o ack funcional do pipeline de extração. Se a extração falhar ou o lock estiver ativo, o Execution Guard bloqueia a IA de vendas para evitar respostas fora de sincronia ou redundantes."
                     </p>
                   </div>
                 </div>
               </div>
             </div>
-            
-            <div className="bg-brand-dark p-8 rounded-[3rem] border border-gold-deep/20 shadow-2xl">
+
+            <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm">
               <div className="flex flex-wrap items-center justify-center gap-4">
                 {[
                   { name: 'INPUT', icon: Globe, color: 'text-blue-400' },
                   { name: 'EVENT_QUEUE', icon: History, color: 'text-purple-400' },
-                  { name: 'DOCUMENT_AI', icon: FileSearch, color: 'text-amber-400' },
-                  { name: 'LEAD_UPDATE', icon: Database, color: 'text-emerald-400' },
+                  { name: 'DOCUMENT_AI', icon: FileSearch, color: 'text-[#B8860B]' },
+                  { name: 'LEAD_UPDATE', icon: Database, color: 'text-[#1F8A4C]' },
                   { name: 'STATUS_ENGINE', icon: Layout, color: 'text-indigo-400' },
                   { name: 'STEP_ENGINE', icon: RefreshCcw, color: 'text-cyan-400' },
                   { name: 'FLOW_ENGINE', icon: Cpu, color: 'text-gold-deep' },
                   { name: 'AI', icon: Bot, color: 'text-rose-400' },
-                  { name: 'EXECUTION_GUARD', icon: ShieldCheck, color: 'text-emerald-500' },
+                  { name: 'EXECUTION_GUARD', icon: ShieldCheck, color: 'text-[#1F8A4C]' },
                   { name: 'OUTPUT', icon: Send, color: 'text-sky-400' },
                 ].map((step, i) => (
                   <React.Fragment key={step.name}>
-                    <div className="flex flex-col items-center gap-2 p-4 bg-brand-black/40 rounded-2xl border border-white/5 min-w-[120px] group hover:border-gold-deep/30 transition-all">
+                    <div className="flex flex-col items-center gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-200 min-w-[120px] group hover:border-gold-deep/30 transition-all">
                       <step.icon className={cn("w-6 h-6 mb-1", step.color)} />
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{step.name}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">{step.name}</span>
                     </div>
-                    {i < 9 && <ChevronRight className="w-4 h-4 text-slate-700 hidden lg:block" />}
+                    {i < 9 && <ChevronRight className="w-4 h-4 text-slate-300 hidden lg:block" />}
                   </React.Fragment>
                 ))}
               </div>
@@ -305,9 +305,9 @@ export function TechDocs({ onBack }: TechDocsProps) {
           <section className="space-y-6">
             <div className="flex items-center gap-3 border-l-4 border-gold-deep pl-4">
               <RefreshCcw className="w-5 h-5 text-gold-deep" />
-              <h3 className="text-sm font-bold text-gold-light uppercase tracking-widest">Matriz de Decisão do Sistema</h3>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Matriz de Decisão do Sistema</h3>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[
                 { cond: "Recebeu CNH", action: "Extrair + Salvar + Atualizar Lead", impact: "Avanço automático de funil" },
@@ -316,15 +316,15 @@ export function TechDocs({ onBack }: TechDocsProps) {
                 { cond: "Dado já existe", action: "Bloquear pergunta redundante", impact: "Melhora percepção de marca" },
                 { cond: "Evento crítico na fila", action: "Bloquear IA até conclusão", impact: "Evita respostas dessincronizadas" },
               ].map((item, i) => (
-                <div key={i} className="bg-brand-dark/50 p-6 rounded-3xl border border-gold-deep/10 flex items-start gap-4">
+                <div key={i} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-start gap-4">
                   <div className="w-8 h-8 rounded-full bg-gold-deep/10 flex items-center justify-center shrink-0">
                     <span className="text-gold-deep text-[10px] font-bold">IF</span>
                   </div>
                   <div className="space-y-2">
-                    <p className="text-sm font-bold text-slate-200">{item.cond}</p>
+                    <p className="text-sm font-bold text-slate-800">{item.cond}</p>
                     <div className="flex items-center gap-2">
                       <ArrowRight className="w-3 h-3 text-gold-deep" />
-                      <p className="text-xs text-gold-light italic">{item.action}</p>
+                      <p className="text-xs text-gold-deep italic">{item.action}</p>
                     </div>
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium">Auto-Impacto: {item.impact}</p>
                   </div>
@@ -336,37 +336,37 @@ export function TechDocs({ onBack }: TechDocsProps) {
           {/* Deep Tech Specs */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Event Queue */}
-            <section className="bg-brand-dark p-8 rounded-[2.5rem] border border-gold-deep/20 space-y-6">
+            <section className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-6">
               <div className="flex items-center gap-3">
                 <History className="w-5 h-5 text-gold-deep" />
-                <h4 className="text-xs font-bold text-gold-light uppercase tracking-widest">Event Queue — Consistência</h4>
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Event Queue — Consistência</h4>
               </div>
-              <div className="space-y-4 text-xs text-slate-400 leading-relaxed">
+              <div className="space-y-4 text-xs text-slate-600 leading-relaxed">
                 <p>O <code className="text-gold-deep">EventQueueService</code> garante que o processamento seja atômico e sem concorrência por lead.</p>
                 <ul className="space-y-2 list-disc list-inside">
-                  <li><span className="text-slate-200 font-bold">Prioridade:</span> DOCUMENT &gt; LEAD_UPDATE &gt; MESSAGE</li>
-                  <li><span className="text-slate-200 font-bold">Locks:</span> Processamento bloqueado por Lead ID enquanto IA está ativa.</li>
-                  <li><span className="text-slate-200 font-bold">Retry:</span> 3 tentativas com backoff exponencial para APIs externas.</li>
-                  <li><span className="text-slate-200 font-bold">IA Paused:</span> A IA é suspensa durante a análise de documentos (OCR).</li>
+                  <li><span className="text-slate-800 font-bold">Prioridade:</span> DOCUMENT &gt; LEAD_UPDATE &gt; MESSAGE</li>
+                  <li><span className="text-slate-800 font-bold">Locks:</span> Processamento bloqueado por Lead ID enquanto IA está ativa.</li>
+                  <li><span className="text-slate-800 font-bold">Retry:</span> 3 tentativas com backoff exponencial para APIs externas.</li>
+                  <li><span className="text-slate-800 font-bold">IA Paused:</span> A IA é suspensa durante a análise de documentos (OCR).</li>
                 </ul>
               </div>
             </section>
 
             {/* Flow Engine */}
-            <section className="bg-brand-dark p-8 rounded-[2.5rem] border border-gold-deep/20 space-y-6">
+            <section className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-6">
               <div className="flex items-center gap-3">
                 <Cpu className="w-5 h-5 text-gold-deep" />
-                <h4 className="text-xs font-bold text-gold-light uppercase tracking-widest">Flow Engine — Detalhamento</h4>
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Flow Engine — Detalhamento</h4>
               </div>
-              <div className="space-y-4 text-xs text-slate-400 leading-relaxed">
+              <div className="space-y-4 text-xs text-slate-600 leading-relaxed">
                 <p>Orquestra o tom e a estratégia através do <code className="text-gold-deep">activationScore</code>.</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="p-3 bg-brand-black/40 rounded-xl border border-white/5">
-                    <p className="text-white font-bold">CORE (100)</p>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <p className="text-slate-800 font-bold">CORE (100)</p>
                     <p className="text-[10px]">Segurança/Regras</p>
                   </div>
-                  <div className="p-3 bg-brand-black/40 rounded-xl border border-white/5">
-                    <p className="text-white font-bold">DECISION (80)</p>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <p className="text-slate-800 font-bold">DECISION (80)</p>
                     <p className="text-[10px]">Lógica de Qualificação</p>
                   </div>
                 </div>
@@ -382,7 +382,7 @@ export function TechDocs({ onBack }: TechDocsProps) {
           <section className="space-y-6">
             <div className="flex items-center gap-3 border-l-4 border-gold-deep pl-4">
               <TrendingUp className="w-5 h-5 text-gold-deep" />
-              <h3 className="text-sm font-bold text-gold-light uppercase tracking-widest">Métricas de Negócio e KPIs Reais</h3>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Métricas de Negócio e KPIs Reais</h3>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               {[
@@ -402,32 +402,32 @@ export function TechDocs({ onBack }: TechDocsProps) {
           </section>
 
           {/* Commercial Bottlenecks */}
-          <section className="bg-red-50 p-8 rounded-[3rem] border border-red-100 space-y-6">
+          <section className="bg-[#FDE4E4] p-8 rounded-[3rem] border border-[#C0392B]/15 space-y-6">
             <div className="flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-red-500" />
-              <h4 className="text-sm font-bold text-red-900 uppercase tracking-widest">Gargalos Comerciais Identificados</h4>
+              <AlertTriangle className="w-5 h-5 text-[#C0392B]" />
+              <h4 className="text-sm font-bold text-[#C0392B] uppercase tracking-widest">Gargalos Comerciais Identificados</h4>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <p className="text-xs font-bold text-red-800">Status: "Aguardando Documento"</p>
-                <p className="text-xs text-red-600/80 leading-relaxed">Ponto de maior abandono (35%). Leads hesitam em enviar fotos da CNH/CRLV sem reforço de segurança.</p>
+                <p className="text-xs font-bold text-[#C0392B]">Status: "Aguardando Documento"</p>
+                <p className="text-xs text-[#C0392B]/80 leading-relaxed">Ponto de maior abandono (35%). Leads hesitam em enviar fotos da CNH/CRLV sem reforço de segurança.</p>
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-bold text-red-800">Tempo Médio Parado</p>
-                <p className="text-xs text-red-600/80 leading-relaxed">Leads que ficam mais de 4h sem interação têm 60% menos chance de conversão.</p>
+                <p className="text-xs font-bold text-[#C0392B]">Tempo Médio Parado</p>
+                <p className="text-xs text-[#C0392B]/80 leading-relaxed">Leads que ficam mais de 4h sem interação têm 60% menos chance de conversão.</p>
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-bold text-red-800">Impacto na Conversão</p>
-                <p className="text-xs text-red-600/80 leading-relaxed">A falta de follow-up em 5min reduz a conversão de leads "quentes" pela metade.</p>
+                <p className="text-xs font-bold text-[#C0392B]">Impacto na Conversão</p>
+                <p className="text-xs text-[#C0392B]/80 leading-relaxed">A falta de follow-up em 5min reduz a conversão de leads "quentes" pela metade.</p>
               </div>
             </div>
           </section>
 
           {/* Validation Checklist */}
-          <section className="p-8 bg-emerald-50/50 rounded-[3rem] border border-emerald-100">
+          <section className="p-8 bg-[#E4F5EA]/50 rounded-[3rem] border border-[#1F8A4C]/15">
             <div className="flex items-center gap-3 mb-6">
-              <ShieldCheck className="w-5 h-5 text-emerald-600" />
-              <h4 className="text-sm font-bold text-emerald-900 uppercase tracking-widest">Validação de Integridade (Checklist)</h4>
+              <ShieldCheck className="w-5 h-5 text-[#1F8A4C]" />
+              <h4 className="text-sm font-bold text-[#1F8A4C] uppercase tracking-widest">Validação de Integridade (Checklist)</h4>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
@@ -436,11 +436,11 @@ export function TechDocs({ onBack }: TechDocsProps) {
                 "Status do lead avançou automaticamente?",
                 "A IA respeitou o contexto e o tom de voz Michelin?",
               ].map((check, i) => (
-                <div key={i} className="flex items-center gap-3 bg-white/60 p-4 rounded-2xl border border-emerald-100/50">
-                  <div className="w-5 h-5 rounded border border-emerald-300 flex items-center justify-center">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                <div key={i} className="flex items-center gap-3 bg-white/60 p-4 rounded-2xl border border-[#1F8A4C]/15">
+                  <div className="w-5 h-5 rounded border border-[#1F8A4C]/40 flex items-center justify-center">
+                    <CheckCircle2 className="w-3 h-3 text-[#1F8A4C]" />
                   </div>
-                  <span className="text-xs text-emerald-900 font-medium">{check}</span>
+                  <span className="text-xs text-[#1F8A4C] font-medium">{check}</span>
                 </div>
               ))}
             </div>
@@ -448,7 +448,7 @@ export function TechDocs({ onBack }: TechDocsProps) {
         </div>
       )}
       </div>
-      
+
       <div className="p-12 text-center border-t border-gold-deep/10">
         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.4em]">Michelin Seguros &copy; 2026 - Tecnologia e Inovação</p>
       </div>

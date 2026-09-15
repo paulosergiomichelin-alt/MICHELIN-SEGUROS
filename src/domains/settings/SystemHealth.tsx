@@ -112,8 +112,8 @@ export const SystemHealth = () => {
             </div>
             <div className={cn(
               "px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2",
-              connection === ConnectionState.OPEN ? "bg-emerald-50 text-emerald-600" : 
-              connection === ConnectionState.RECONNECTING ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-600"
+              connection === ConnectionState.OPEN ? "bg-[#E4F5EA] text-[#1F8A4C]" :
+              connection === ConnectionState.RECONNECTING ? "bg-[#FFF3DC] text-[#B8860B]" : "bg-[#FDE4E4] text-[#C0392B]"
             )}>
               <Wifi size={16} />
               {connection}
@@ -145,14 +145,14 @@ export const SystemHealth = () => {
             title="Pipeline Total" 
             value={`${getMetricValue('total_processing_latency')}ms`} 
             subtitle="End-to-End Latency"
-            icon={<Zap className="text-amber-500" />}
+            icon={<Zap className="text-[#B8860B]" />}
           />
           <MetricCard 
             id="metric-ws-retry"
             title="Fallback Rate" 
             value={`${getMetricValue('ws_fallback', 'count')}`} 
             subtitle="Sessões via Polling"
-            icon={<AlertTriangle className={cn(getMetricValue('ws_fallback', 'count') > 0 ? "text-red-500" : "text-slate-300")} />}
+            icon={<AlertTriangle className={cn(getMetricValue('ws_fallback', 'count') > 0 ? "text-[#C0392B]" : "text-slate-300")} />}
           />
         </div>
 
@@ -217,11 +217,11 @@ export const SystemHealth = () => {
                 </div>
               ) : (
                 getAlerts().map((a) => (
-                  <div key={a.id} className="p-3 bg-red-50 border border-red-100 rounded-xl flex gap-3">
-                    <AlertTriangle className="text-red-500 shrink-0" size={18} />
+                  <div key={a.id} className="p-3 bg-[#FDE4E4] border border-[#C0392B]/15 rounded-xl flex gap-3">
+                    <AlertTriangle className="text-[#C0392B] shrink-0" size={18} />
                     <div>
-                      <p className="text-xs font-bold text-red-700">{a.name.toUpperCase()}</p>
-                      <p className="text-[10px] text-red-600">{new Date(a.timestamp).toLocaleString()}</p>
+                      <p className="text-xs font-bold text-[#C0392B]">{a.name.toUpperCase()}</p>
+                      <p className="text-[10px] text-[#C0392B]">{new Date(a.timestamp).toLocaleString()}</p>
                     </div>
                   </div>
                 ))
