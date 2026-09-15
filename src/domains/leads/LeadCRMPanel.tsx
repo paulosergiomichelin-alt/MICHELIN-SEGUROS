@@ -25,9 +25,9 @@ interface LeadCRMPanelProps {
 }
 
 const TEMPS: Record<string, { label: string; color: string }> = {
-  quente: { label: 'Quente', color: 'bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.3)]' },
+  quente: { label: 'Quente', color: 'bg-[#C0392B] text-white shadow-[0_0_10px_rgba(192,57,43,0.3)]' },
   morno:  { label: 'Morno',  color: 'bg-gold-deep text-brand-dark shadow-[0_0_10px_rgba(212,169,77,0.3)]' },
-  frio:   { label: 'Frio',   color: 'bg-blue-500 text-white shadow-[0_0_10px_rgba(59,130,246,0.3)]' },
+  frio:   { label: 'Frio',   color: 'bg-slate-400 text-white shadow-[0_0_10px_rgba(100,116,139,0.3)]' },
 };
 
 const STATUS_OPTIONS = [
@@ -42,8 +42,8 @@ const ORIGINS = [
 
 const CIVIL_STATUS = ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'União Estável'];
 
-const inputCls = "w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white placeholder-white/20 outline-none focus:border-gold-deep/50 focus:ring-1 focus:ring-gold-deep/20 transition-all [color-scheme:dark]";
-const labelCls = "text-[9px] font-black text-white/30 uppercase tracking-widest";
+const inputCls = "w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 placeholder-slate-300 outline-none focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 transition-all";
+const labelCls = "text-[9px] font-black text-slate-400 uppercase tracking-widest";
 
 // ─── Section header ────────────────────────────────────────────────────────
 const Section = ({
@@ -58,17 +58,17 @@ const Section = ({
         type="button"
         onClick={() => collapsible && setOpen(o => !o)}
         className={cn(
-          "w-full flex items-center justify-between border-b border-white/5 pb-2",
+          "w-full flex items-center justify-between border-b border-slate-200 pb-2",
           collapsible && "cursor-pointer hover:opacity-80"
         )}
       >
         <div className="flex items-center gap-2.5">
           <Icon className="w-3.5 h-3.5 text-gold-deep" />
-          <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">{title}</h4>
+          <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.2em]">{title}</h4>
         </div>
         {collapsible && (open
-          ? <ChevronUp className="w-3 h-3 text-white/20" />
-          : <ChevronDown className="w-3 h-3 text-white/20" />
+          ? <ChevronUp className="w-3 h-3 text-slate-400" />
+          : <ChevronDown className="w-3 h-3 text-slate-400" />
         )}
       </button>
       <AnimatePresence initial={false}>
@@ -167,9 +167,9 @@ export const LeadCRMPanel = React.memo(({
   };
 
   if (loading) return (
-    <div className="flex-1 flex flex-col items-center justify-center space-y-4 p-8 bg-brand-dark/50">
+    <div className="flex-1 flex flex-col items-center justify-center space-y-4 p-8 bg-slate-50">
       <Loader2 className="w-8 h-8 text-gold-deep animate-spin" />
-      <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Carregando...</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Carregando...</p>
     </div>
   );
 
@@ -181,16 +181,16 @@ export const LeadCRMPanel = React.memo(({
 
   return (
     <div className={cn(
-      "flex flex-col h-full bg-[#111b21] border-l border-white/5 overflow-hidden transition-all duration-300",
+      "flex flex-col h-full bg-white border-l border-slate-200 overflow-hidden transition-all duration-300",
       isOpen ? "w-full md:w-[360px]" : "w-0 overflow-hidden"
     )}>
       {/* ── Header ── */}
-      <div className="h-[50px] flex items-center justify-between px-4 bg-[#202c33] border-b border-white/5 shrink-0">
+      <div className="h-[50px] flex items-center justify-between px-4 bg-slate-50 border-b border-slate-200 shrink-0">
         <h3 className="text-[10px] font-black text-gold-deep uppercase tracking-[0.15rem] flex items-center gap-2">
           <ClipboardList className="w-3.5 h-3.5" />
           Detalhes do Lead
         </h3>
-        <button onClick={onClose} className="p-1.5 text-white/30 hover:text-white transition-colors">
+        <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-800 transition-colors">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -201,13 +201,13 @@ export const LeadCRMPanel = React.memo(({
         <section className="flex flex-col items-center text-center">
           <div className="w-16 h-16 rounded-full bg-gold-deep/10 flex items-center justify-center border-2 border-gold-deep/20 mb-3 text-xl font-black text-gold-deep relative">
             {(lead.name || '?').charAt(0)}
-            <div className={cn("absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full border-2 border-[#111b21] flex items-center justify-center", tempCfg.color)}>
+            <div className={cn("absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center", tempCfg.color)}>
               <Flame className="w-2.5 h-2.5" />
             </div>
           </div>
-          <h2 className="text-base font-bold text-white tracking-tight leading-tight">{lead.name}</h2>
-          <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.1em] mt-0.5">{maskPhone(lead.phone)}</p>
-          <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest mt-1.5">
+          <h2 className="text-base font-bold text-slate-800 tracking-tight leading-tight">{lead.name}</h2>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] mt-0.5">{maskPhone(lead.phone)}</p>
+          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">
             Criado em {new Date(lead.createdAt).toLocaleDateString()}
           </p>
         </section>
@@ -221,7 +221,7 @@ export const LeadCRMPanel = React.memo(({
               onChange={e => updateLeadField('status', e.target.value)}
               className={inputCls}
             >
-              {STATUS_OPTIONS.map(o => <option key={o} value={o} className="bg-[#202c33]">{o}</option>)}
+              {STATUS_OPTIONS.map(o => <option key={o} value={o} className="bg-white">{o}</option>)}
             </select>
           </div>
           <div className="space-y-1.5">
@@ -238,48 +238,48 @@ export const LeadCRMPanel = React.memo(({
                 }}
                 className={cn(inputCls, !isAdmin && "opacity-50 cursor-not-allowed")}
               >
-                <option value="" className="bg-[#202c33]">— Nenhum —</option>
+                <option value="" className="bg-white">— Nenhum —</option>
                 {users.map(u => {
                   const uid = u.uid || (u as any).id || '';
-                  return <option key={uid} value={uid} className="bg-[#202c33]">{u.name || u.email}</option>;
+                  return <option key={uid} value={uid} className="bg-white">{u.name || u.email}</option>;
                 })}
               </select>
-              {!isAdmin && <Lock className="absolute right-2.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-white/20" />}
+              {!isAdmin && <Lock className="absolute right-2.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-slate-300" />}
             </div>
           </div>
         </div>
 
         {/* ── Atendimento ── */}
-        <section className="bg-white/[0.02] border border-white/5 rounded-xl p-4 space-y-4">
+        <section className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-[10px] font-black text-gold-deep uppercase tracking-widest">Atendimento</h4>
             <ShieldCheck className="w-3.5 h-3.5 text-gold-deep" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="p-2.5 bg-white/5 rounded-lg border border-white/5">
-              <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest mb-1.5">Fervor</p>
+            <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+              <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Fervor</p>
               <div className="flex flex-wrap gap-1">
                 {Object.entries(TEMPS).map(([t, cfg]) => (
                   <button key={t} onClick={() => updateLeadField('temperature', t)}
                     className={cn("px-1.5 py-0.5 rounded text-[8px] font-black uppercase transition-all",
-                      lead.temperature === t ? cfg.color : "bg-white/5 text-white/20 hover:text-white")}
+                      lead.temperature === t ? cfg.color : "bg-slate-100 text-slate-400 hover:text-slate-700")}
                   >{cfg.label}</button>
                 ))}
               </div>
             </div>
-            <div className="p-2.5 bg-white/5 rounded-lg border border-white/5">
-              <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest mb-1">Score IA</p>
+            <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+              <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1">Score IA</p>
               <div className="flex items-baseline gap-1">
-                <span className="text-lg font-black text-emerald-500">{lead.score || 0}</span>
-                <span className="text-[8px] font-bold text-white/20">/100</span>
+                <span className="text-lg font-black text-[#1F8A4C]">{lead.score || 0}</span>
+                <span className="text-[8px] font-bold text-slate-400">/100</span>
               </div>
             </div>
           </div>
 
           <Field label="Origem do Contato">
             <select value={lead.origin || ''} onChange={e => updateLeadField('origin', e.target.value)} className={inputCls}>
-              {ORIGINS.map(o => <option key={o} value={o} className="bg-[#202c33]">{o}</option>)}
+              {ORIGINS.map(o => <option key={o} value={o} className="bg-white">{o}</option>)}
             </select>
           </Field>
 
@@ -290,7 +290,7 @@ export const LeadCRMPanel = React.memo(({
                   className={cn("flex-1 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-tight border transition-all",
                     lead.profileType === p.toLowerCase()
                       ? "bg-gold-deep text-brand-dark border-gold-deep"
-                      : "bg-white/5 text-white/30 border-white/5 hover:border-white/20")}
+                      : "bg-slate-100 text-slate-400 border-slate-200 hover:border-slate-300")}
                 >{p}</button>
               ))}
             </div>
@@ -299,12 +299,12 @@ export const LeadCRMPanel = React.memo(({
           {/* IA toggle */}
           <div className="flex items-center justify-between pt-1">
             <div className="flex items-center gap-2">
-              <Bot className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">IA Ativa</span>
+              <Bot className="w-3.5 h-3.5 text-[#1F8A4C]" />
+              <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">IA Ativa</span>
             </div>
             <button onClick={() => updateLeadField('iaActive', !lead.iaActive)}
               className={cn("w-10 h-5 rounded-full transition-all relative border",
-                lead.iaActive ? "bg-emerald-500 border-emerald-500" : "bg-white/10 border-white/10")}
+                lead.iaActive ? "bg-[#1F8A4C] border-[#1F8A4C]" : "bg-slate-200 border-slate-200")}
             >
               <div className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all",
                 lead.iaActive ? "left-5" : "left-0.5")} />
@@ -352,8 +352,8 @@ export const LeadCRMPanel = React.memo(({
                 onChange={e => updateLeadField('maritalStatus', e.target.value)}
                 className={inputCls}
               >
-                <option value="" className="bg-[#202c33]">— Selecione —</option>
-                {CIVIL_STATUS.map(s => <option key={s} value={s} className="bg-[#202c33]">{s}</option>)}
+                <option value="" className="bg-white">— Selecione —</option>
+                {CIVIL_STATUS.map(s => <option key={s} value={s} className="bg-white">{s}</option>)}
               </select>
             </Field>
           </div>
@@ -437,11 +437,11 @@ export const LeadCRMPanel = React.memo(({
         {/* ── Seguro ── */}
         <Section icon={ShieldCheck} title="Seguro" collapsible>
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/5">
-              <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Já possui seguro ativo?</span>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Já possui seguro ativo?</span>
               <button onClick={() => updateLeadField('possuiSeguro', !possuiSeguro)}
                 className={cn("w-10 h-5 rounded-full transition-all relative border",
-                  possuiSeguro ? "bg-gold-deep border-gold-deep" : "bg-white/10 border-white/10")}
+                  possuiSeguro ? "bg-gold-deep border-gold-deep" : "bg-slate-200 border-slate-200")}
               >
                 <div className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all",
                   possuiSeguro ? "left-5" : "left-0.5")} />
@@ -492,18 +492,18 @@ export const LeadCRMPanel = React.memo(({
                 className={cn("w-full flex items-center gap-3 p-3 rounded-xl border transition-all",
                   (lead as any)[item.key]
                     ? "bg-gold-deep/10 border-gold-deep/20"
-                    : "bg-white/5 border-white/5 opacity-50 hover:opacity-100")}
+                    : "bg-slate-100 border-slate-200 opacity-60 hover:opacity-100")}
               >
                 <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0",
-                  (lead as any)[item.key] ? "bg-gold-deep text-brand-dark" : "bg-white/5 text-white/30")}>
+                  (lead as any)[item.key] ? "bg-gold-deep text-brand-dark" : "bg-slate-100 text-slate-400")}>
                   <item.icon className="w-4 h-4" />
                 </div>
                 <span className={cn("text-[10px] font-black uppercase tracking-tight text-left",
-                  (lead as any)[item.key] ? "text-white" : "text-white/30")}>{item.label}</span>
+                  (lead as any)[item.key] ? "text-slate-800" : "text-slate-400")}>{item.label}</span>
                 <div className="ml-auto shrink-0">
                   {(lead as any)[item.key]
-                    ? <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                    : <div className="w-4 h-4 rounded-full border border-white/10" />}
+                    ? <CheckCircle2 className="w-4 h-4 text-[#1F8A4C]" />
+                    : <div className="w-4 h-4 rounded-full border border-slate-300" />}
                 </div>
               </button>
             ))}
@@ -513,7 +513,7 @@ export const LeadCRMPanel = React.memo(({
             {!lead.isOwnerDriver && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }} className="overflow-hidden mt-3">
-                <div className="p-4 bg-black/40 border border-gold-deep/20 rounded-xl space-y-3">
+                <div className="p-4 bg-gold-deep/5 border border-gold-deep/20 rounded-xl space-y-3">
                   <p className="text-[9px] font-black text-gold-deep uppercase tracking-widest flex items-center gap-2">
                     <User className="w-3 h-3" /> Dados do Proprietário
                   </p>
@@ -567,8 +567,8 @@ export const LeadCRMPanel = React.memo(({
                     className={cn(
                       "relative cursor-pointer p-4 h-36 border-2 border-dashed rounded-2xl transition-all flex flex-col items-center justify-center text-center gap-2.5 overflow-hidden",
                       hasFile
-                        ? "border-[#25D36630] bg-[#25D36605]"
-                        : "border-white/5 bg-white/[0.02] hover:border-gold-deep/40 hover:bg-gold-deep/[0.04]"
+                        ? "border-[#1F8A4C]/20 bg-[#1F8A4C]/5"
+                        : "border-slate-200 bg-slate-50 hover:border-gold-deep/40 hover:bg-gold-deep/[0.04]"
                     )}
                   >
                     {isUploading ? (
@@ -581,14 +581,14 @@ export const LeadCRMPanel = React.memo(({
                         <div className={cn(
                           "w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-all duration-300",
                           hasFile
-                            ? "bg-[#25D366] text-white scale-110"
-                            : "bg-white/5 text-white/30 group-hover:bg-gold-deep group-hover:text-black group-hover:rotate-6"
+                            ? "bg-[#1F8A4C] text-white scale-110"
+                            : "bg-slate-100 text-slate-400 group-hover:bg-gold-deep group-hover:text-black group-hover:rotate-6"
                         )}>
                           {hasFile ? <CheckCircle2 className="w-5 h-5" /> : <doc.icon className="w-5 h-5" />}
                         </div>
                         <div className="space-y-0.5 w-full px-1">
-                          <span className="text-[9px] font-black uppercase tracking-widest block text-white/90 truncate">{doc.label}</span>
-                          <p className="text-[7.5px] text-white/30 font-bold uppercase tracking-wider truncate">
+                          <span className="text-[9px] font-black uppercase tracking-widest block text-slate-800 truncate">{doc.label}</span>
+                          <p className="text-[7.5px] text-slate-400 font-bold uppercase tracking-wider truncate">
                             {hasFile ? 'Digitalizado' : 'Clique para subir'}
                           </p>
                         </div>
@@ -620,7 +620,7 @@ export const LeadCRMPanel = React.memo(({
                         <button
                           type="button"
                           onClick={e => { e.stopPropagation(); updateLeadField('documents', { ...(lead.documents || {}), [doc.id]: null }); }}
-                          className="p-2.5 bg-red-500/10 hover:bg-red-500 text-white rounded-xl transition-all shadow-xl"
+                          className="p-2.5 bg-[#C0392B]/10 hover:bg-[#C0392B] text-white rounded-xl transition-all shadow-xl"
                           title="Remover arquivo"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -636,19 +636,19 @@ export const LeadCRMPanel = React.memo(({
           {/* ── Cotações geradas pelo sistema ── */}
           {(lead.cotacaoFiles ?? []).length > 0 && (
             <div className="space-y-2 pt-1">
-              <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Cotações Geradas</p>
+              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Cotações Geradas</p>
               {lead.cotacaoFiles!.map((file, idx) => (
                 <div
                   key={file.url || idx}
-                  className="p-3 bg-white/[0.03] border border-white/5 rounded-xl flex items-center justify-between group hover:border-gold-deep/20 transition-all"
+                  className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between group hover:border-gold-deep/30 transition-all"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-8 h-8 rounded-lg bg-gold-deep/10 flex items-center justify-center text-gold-deep shrink-0">
                       <FileText className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-black text-white/90 truncate">{file.fileName}</p>
-                      <p className="text-[7.5px] text-white/30 font-bold uppercase tracking-widest mt-0.5">
+                      <p className="text-[10px] font-black text-slate-800 truncate">{file.fileName}</p>
+                      <p className="text-[7.5px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
                         {file.uploadedAt ? format(new Date(file.uploadedAt), 'dd/MM/yy HH:mm') : '—'}
                       </p>
                     </div>
@@ -656,7 +656,7 @@ export const LeadCRMPanel = React.memo(({
                   <div className="flex items-center gap-1 shrink-0 ml-2">
                     <button
                       onClick={() => window.open(file.url, '_blank', 'noopener,noreferrer')}
-                      className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:bg-gold-deep hover:text-black transition-all"
+                      className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-gold-deep hover:text-black transition-all"
                       title="Ver cotação"
                     >
                       <Eye className="w-3.5 h-3.5" />
@@ -666,7 +666,7 @@ export const LeadCRMPanel = React.memo(({
                       download={file.fileName}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:bg-gold-deep hover:text-black transition-all"
+                      className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-gold-deep hover:text-black transition-all"
                       title="Baixar cotação"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -677,7 +677,7 @@ export const LeadCRMPanel = React.memo(({
                         updated.splice(idx, 1);
                         updateLeadField('cotacaoFiles', updated);
                       }}
-                      className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:bg-red-500 hover:text-white transition-all"
+                      className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-[#C0392B] hover:text-white transition-all"
                       title="Remover cotação"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

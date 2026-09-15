@@ -123,21 +123,21 @@ export const ChatControls = React.memo(({
     <div className="p-3 md:p-4 bg-white/95 backdrop-blur-md flex flex-col gap-3 shrink-0 border-t border-slate-200 z-[40]">
       <div className="flex items-center gap-2 px-2">
         {isTestMode && (
-          <div className="flex items-center gap-2 mb-1 p-1 bg-amber-50 rounded-lg border border-amber-200">
-            <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest px-2">Modo Simulação</span>
-            <button 
+          <div className="flex items-center gap-2 mb-1 p-1 bg-[#FFF3DC] rounded-lg border border-[#B8860B]/25">
+            <span className="text-[10px] font-black text-[#B8860B] uppercase tracking-widest px-2">Modo Simulação</span>
+            <button
               onClick={() => setIsSimulatingLead(!isSimulatingLead)}
               className={cn(
                 "flex items-center gap-2 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all",
-                isSimulatingLead 
-                  ? "bg-amber-500 text-white shadow-sm" 
-                  : "bg-white text-slate-400 hover:text-amber-600 border border-amber-200"
+                isSimulatingLead
+                  ? "bg-[#B8860B] text-white shadow-sm"
+                  : "bg-white text-slate-400 hover:text-[#B8860B] border border-[#B8860B]/25"
               )}
             >
               <Users className="w-3 h-3" />
               {isSimulatingLead ? "Simulando Cliente" : "Simular Cliente"}
             </button>
-            <div className="text-[9px] text-amber-600/60 font-medium italic">
+            <div className="text-[9px] text-[#B8860B]/70 font-medium italic">
               {isSimulatingLead ? "Suas mensagens aparecerão como se fossem do Lead" : "Suas mensagens aparecerão como Corretor"}
             </div>
           </div>
@@ -162,20 +162,20 @@ export const ChatControls = React.memo(({
 
         {/* AI Suggestion Button removed as per user request */}
         {isRecording ? (
-          <div className="flex-1 flex items-center gap-4 bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-2 animate-in fade-in slide-in-from-bottom-2">
-            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-sm font-bold text-emerald-700 font-mono">{formatDuration(recordDuration)}</span>
-            <span className="text-xs text-emerald-600 font-medium">Gravando áudio...</span>
+          <div className="flex-1 flex items-center gap-4 bg-[#E4F5EA] border border-[#1F8A4C]/20 rounded-2xl px-4 py-2 animate-in fade-in slide-in-from-bottom-2">
+            <div className="w-2 h-2 rounded-full bg-[#C0392B] animate-pulse" />
+            <span className="text-sm font-bold text-[#1F8A4C] font-mono">{formatDuration(recordDuration)}</span>
+            <span className="text-xs text-[#1F8A4C] font-medium">Gravando áudio...</span>
             <div className="flex-1" />
-            <button 
+            <button
               onClick={() => stopRecording(false)}
-              className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-all"
+              className="p-2 text-[#C0392B] hover:bg-[#FDE4E4] rounded-full transition-all"
             >
               <Trash2 className="w-5 h-5" />
             </button>
-            <button 
+            <button
               onClick={() => stopRecording(true)}
-              className="w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-emerald-600 transition-all"
+              className="w-10 h-10 bg-[#1F8A4C] text-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#186f3e] transition-all"
             >
               <Square className="w-4 h-4" />
             </button>
@@ -199,17 +199,17 @@ export const ChatControls = React.memo(({
             </div>
             
             {newMessage.trim() ? (
-              <button 
+              <button
                 id="chat-send-btn"
                 onClick={handleSendMessage}
-                className="w-12 h-12 bg-brand-dark text-gold-deep rounded-2xl shadow-lg shadow-gold-deep/10 flex items-center justify-center hover:bg-brand-black transition-all border border-gold-deep/30"
+                className="w-12 h-12 bg-[#1B4D8F] text-white rounded-2xl shadow-sm shadow-[#1B4D8F]/20 flex items-center justify-center hover:bg-[#153E73] transition-all"
               >
                 <Send className="w-6 h-6" />
               </button>
             ) : (
-              <button 
+              <button
                 onClick={startRecording}
-                className="w-12 h-12 bg-slate-800 text-gold-deep rounded-2xl shadow-lg flex items-center justify-center hover:bg-brand-black transition-all border border-gold-deep/20"
+                className="w-12 h-12 bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center hover:bg-gold-deep/10 hover:text-gold-deep transition-all border border-slate-200"
                 title="Gravar Mensagem de Áudio"
               >
                 <Mic className="w-6 h-6" />

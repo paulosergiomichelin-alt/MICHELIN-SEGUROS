@@ -67,7 +67,7 @@ export const LeadDetailsSidebar = React.memo(({
       {/* Lead Details Sidebar (Right) */}
       <div 
         className={cn(
-          "bg-brand-dark border-l border-white/5 overflow-y-auto shrink-0 font-sans shadow-2xl z-[60] lg:z-10 transition-all duration-300 lead-details-panel",
+          "bg-white border-l border-slate-200 overflow-y-auto shrink-0 font-sans shadow-2xl z-[60] lg:z-10 transition-all duration-300 lead-details-panel",
           "fixed inset-y-0 right-0 w-full md:w-[400px] lg:relative lg:block",
           isOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0 lg:w-[var(--right-width-px)]",
           !isOpen && "hidden lg:block"
@@ -75,15 +75,15 @@ export const LeadDetailsSidebar = React.memo(({
         style={{ '--right-width-px': `${rightWidth}px` } as any}
       >
         <div className="p-5 md:p-6 pb-24 md:pb-20">
-          <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
+          <div className="flex items-center justify-between mb-6 border-b border-slate-200 pb-4">
             <h3 className="text-xs font-black text-gold-deep flex items-center gap-2 uppercase tracking-[0.2em]">
                <FileText className="w-4 h-4" />
                Ficha do Lead
                {selectedLeadForChat.isTest && (
-                 <span className="ml-2 px-1.5 py-0.5 bg-amber-500 text-brand-dark text-[8px] font-black uppercase rounded tracking-tighter">Teste</span>
+                 <span className="ml-2 px-1.5 py-0.5 bg-[#B8860B] text-white text-[8px] font-black uppercase rounded tracking-tighter">Teste</span>
                )}
             </h3>
-            <button onClick={onClose} className="lg:hidden p-2 text-white/30 hover:text-gold-deep transition-colors">
+            <button onClick={onClose} className="lg:hidden p-2 text-slate-400 hover:text-gold-deep transition-colors">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -108,7 +108,7 @@ export const LeadDetailsSidebar = React.memo(({
                <ExternalLink className="w-4 h-4" />
                Cotar no Agger
              </button>
-             <p className="mt-2 text-[9px] font-medium text-white/30 uppercase tracking-widest text-center">
+             <p className="mt-2 text-[9px] font-medium text-slate-400 uppercase tracking-widest text-center">
                Abre o Aggilizador e preenche os dados deste lead
              </p>
           </div>
@@ -123,33 +123,33 @@ export const LeadDetailsSidebar = React.memo(({
                    </div>
                    <div>
                      <p className="text-[10px] font-black text-gold-deep uppercase tracking-widest leading-none">Inteligência Michelin</p>
-                     <p className="text-[8px] text-white/30 font-bold uppercase tracking-tight mt-0.5">Análise de Comportamento</p>
+                     <p className="text-[8px] text-slate-500 font-bold uppercase tracking-tight mt-0.5">Análise de Comportamento</p>
                    </div>
                  </div>
                  <div className={cn(
                    "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.1em] shadow-sm",
-                   selectedLeadForChat.temperature === 'quente' ? "bg-red-500 text-white" :
+                   selectedLeadForChat.temperature === 'quente' ? "bg-[#C0392B] text-white" :
                    selectedLeadForChat.temperature === 'morno' ? "bg-gold-deep text-brand-dark" :
-                   "bg-blue-500 text-white"
+                   "bg-slate-400 text-white"
                  )}>
                    {selectedLeadForChat.temperature || 'Frio'}
                  </div>
                </div>
-               
+
                <div className="space-y-2">
-                 <div className="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/10">
-                   <span className="text-[10px] font-bold text-white/40 uppercase">Score de Engagement</span>
-                   <span className="text-sm font-black text-white">{selectedLeadForChat.score ?? 0}/10</span>
+                 <div className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-200">
+                   <span className="text-[10px] font-bold text-slate-500 uppercase">Score de Engagement</span>
+                   <span className="text-sm font-black text-slate-800">{selectedLeadForChat.score ?? 0}/10</span>
                  </div>
-                 
+
                  {selectedLeadForChat.profileType && (
-                   <div className="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/10">
-                     <span className="text-[10px] font-bold text-white/40 uppercase">Perfil Comportamental</span>
+                   <div className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-200">
+                     <span className="text-[10px] font-bold text-slate-500 uppercase">Perfil Comportamental</span>
                      <span className={cn(
                        "text-[10px] font-black uppercase tracking-tight px-2 py-0.5 rounded-lg",
-                       selectedLeadForChat.profileType === 'direto' ? "bg-red-500/20 text-red-500 border border-red-500/30" :
-                       selectedLeadForChat.profileType === 'indeciso' ? "bg-amber-500/20 text-amber-500 border border-amber-500/30" :
-                       "bg-blue-500/20 text-blue-500 border border-blue-500/30"
+                       selectedLeadForChat.profileType === 'direto' ? "bg-[#FDE4E4] text-[#C0392B] border border-[#C0392B]/30" :
+                       selectedLeadForChat.profileType === 'indeciso' ? "bg-[#FFF3DC] text-[#B8860B] border border-[#B8860B]/30" :
+                       "bg-slate-100 text-slate-500 border border-slate-300"
                      )}>
                        {selectedLeadForChat.profileType === 'direto' ? '⚡ Direto' :
                         selectedLeadForChat.profileType === 'indeciso' ? '🤔 Indeciso' :
@@ -159,9 +159,9 @@ export const LeadDetailsSidebar = React.memo(({
                  )}
 
                  {selectedLeadForChat.classificationReason && (
-                   <div className="p-2.5 bg-black/20 rounded-xl border border-white/5">
-                     <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest mb-1">Motivo da Análise</p>
-                     <p className="text-[10px] font-medium text-white/70 leading-relaxed italic">
+                   <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Motivo da Análise</p>
+                     <p className="text-[10px] font-medium text-slate-600 leading-relaxed italic">
                        "{selectedLeadForChat.classificationReason}"
                      </p>
                    </div>
@@ -190,7 +190,7 @@ export const LeadDetailsSidebar = React.memo(({
                 </div>
               )}
 
-              <label className="text-[10px] font-black text-white/30 uppercase tracking-widest">Status do Processo</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status do Processo</label>
                <div className="mt-2">
                   <StatusBadge status={selectedLeadForChat.status} />
                </div>
@@ -200,17 +200,17 @@ export const LeadDetailsSidebar = React.memo(({
              <div className="flex flex-col chat-dynamic-spacing">
                <p className="text-[10px] font-black text-gold-deep uppercase tracking-widest border-b border-gold-deep/20 pb-1">Informações Pessoais</p>
                <div>
-                  <p className="text-[10px] font-bold text-white/30 uppercase mb-1">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
                     {selectedLeadForChat.tipoPessoa === 'juridica' ? 'Nome do Responsável' : 'Nome Completo'}
                   </p>
-                  <p className="text-sm font-black text-white">{selectedLeadForChat.name}</p>
+                  <p className="text-sm font-black text-slate-800">{selectedLeadForChat.name}</p>
                </div>
                <div className="grid grid-cols-2 gap-4">
                   <div>
-                     <p className="text-[10px] font-bold text-white/30 uppercase mb-1">
+                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
                        {selectedLeadForChat.tipoPessoa === 'juridica' ? 'CNPJ' : 'CPF'}
                      </p>
-                     <div className="text-sm font-black text-white">
+                     <div className="text-sm font-black text-slate-800">
                        <SensitiveContent
                          value={selectedLeadForChat.cpf}
                          maskFn={selectedLeadForChat.tipoPessoa === 'juridica' ? maskCNPJ : maskCPF}
@@ -219,69 +219,69 @@ export const LeadDetailsSidebar = React.memo(({
                      </div>
                   </div>
                   <div>
-                     <p className="text-[10px] font-bold text-white/30 uppercase mb-1">Nascimento</p>
-                     <p className="text-sm font-black text-white">{selectedLeadForChat.birthDate}</p>
+                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Nascimento</p>
+                     <p className="text-sm font-black text-slate-800">{selectedLeadForChat.birthDate}</p>
                   </div>
                </div>
                <div className="grid grid-cols-2 gap-4">
                   <div>
-                     <p className="text-[10px] font-bold text-white/30 uppercase mb-1">Telefone</p>
-                     <div className="text-sm font-black text-white">
-                       <SensitiveContent 
-                         value={selectedLeadForChat.phone} 
-                         maskFn={maskPhone} 
-                         canView={permissions.canReadAllLeads} 
+                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Telefone</p>
+                     <div className="text-sm font-black text-slate-800">
+                       <SensitiveContent
+                         value={selectedLeadForChat.phone}
+                         maskFn={maskPhone}
+                         canView={permissions.canReadAllLeads}
                        />
                      </div>
                      {selectedLeadForChat.phone2 && (
-                       <div className="text-sm font-black text-white/60 border-t border-white/5 mt-1 pt-1">
-                          <SensitiveContent 
-                            value={selectedLeadForChat.phone2} 
-                            maskFn={maskPhone} 
-                            canView={permissions.canReadAllLeads} 
+                       <div className="text-sm font-black text-slate-500 border-t border-slate-100 mt-1 pt-1">
+                          <SensitiveContent
+                            value={selectedLeadForChat.phone2}
+                            maskFn={maskPhone}
+                            canView={permissions.canReadAllLeads}
                           />
                        </div>
                      )}
                   </div>
                   <div>
-                     <p className="text-[10px] font-bold text-white/30 uppercase mb-1">Estado Civil</p>
-                     <p className="text-sm font-black text-white">{selectedLeadForChat.civilStatus}</p>
+                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Estado Civil</p>
+                     <p className="text-sm font-black text-slate-800">{selectedLeadForChat.civilStatus}</p>
                   </div>
                </div>
              </div>
 
              {/* Lead Source */}
-             <div className="p-4 bg-white/5 border border-white/10 rounded-xl mb-4">
-               <p className="text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest flex items-center gap-2">
+             <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl mb-4">
+               <p className="text-[10px] font-black text-slate-500 uppercase mb-3 tracking-widest flex items-center gap-2">
                   <TrendingUp className="w-3.5 h-3.5 text-gold-deep" /> Aquisição
                </p>
                <div className="space-y-2">
                  <div>
-                    <p className="text-[9px] font-bold text-white/30 uppercase leading-none">Origem</p>
-                    <p className="mt-1.5 text-xs font-black text-white uppercase tracking-tight">{selectedLeadForChat.origin}</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Origem</p>
+                    <p className="mt-1.5 text-xs font-black text-slate-800 uppercase tracking-tight">{selectedLeadForChat.origin}</p>
                  </div>
                  {selectedLeadForChat.originDetails && (
-                   <div className="pt-2 border-t border-white/5">
-                      <p className="text-[9px] font-bold text-white/30 uppercase leading-none">Detalhes</p>
-                      <p className="mt-1.5 text-[10px] font-medium text-white/50 line-clamp-2 italic">"{selectedLeadForChat.originDetails}"</p>
+                   <div className="pt-2 border-t border-slate-200">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase leading-none">Detalhes</p>
+                      <p className="mt-1.5 text-[10px] font-medium text-slate-500 line-clamp-2 italic">"{selectedLeadForChat.originDetails}"</p>
                    </div>
                  )}
                </div>
              </div>
 
              {/* Vehicle Info */}
-             <div className="p-4 bg-gold-deep/5 border border-gold-deep/20 rounded-xl shadow-lg shadow-black/20">
+             <div className="p-4 bg-gold-deep/5 border border-gold-deep/20 rounded-xl shadow-sm">
                 <p className="text-[10px] font-black text-gold-deep uppercase mb-3 tracking-widest">Veículo</p>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center bg-brand-dark/40 p-2.5 rounded-xl border border-white/5">
-                     <span className="text-[9px] font-black text-white/30 uppercase tracking-tighter">Placa</span>
-                     <span className="text-sm font-black text-white tracking-[0.2em] font-mono">{selectedLeadForChat.plate}</span>
+                  <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200">
+                     <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Placa</span>
+                     <span className="text-sm font-black text-slate-800 tracking-[0.2em] font-mono">{selectedLeadForChat.plate}</span>
                   </div>
                   <div className="space-y-1 px-1">
                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Chassis</span>
                      <p className="text-xs font-mono text-slate-600 break-all leading-tight">{selectedLeadForChat.chassis}</p>
                   </div>
-                  <div className="flex justify-between items-center border-t border-gold-deep/5 pt-2 px-1">
+                  <div className="flex justify-between items-center border-t border-gold-deep/15 pt-2 px-1">
                      <span className="text-[9px] font-bold text-slate-400 uppercase">Alienação Fiduciária</span>
                      <span className="text-[10px] font-bold text-slate-600">{selectedLeadForChat.fiduciaryAlienation ? 'Sim' : 'Não'}</span>
                   </div>
@@ -294,39 +294,39 @@ export const LeadDetailsSidebar = React.memo(({
                 <div className="space-y-3">
                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                         <p className="text-[10px] font-bold text-white/30 uppercase mb-1">CEP Pernoite</p>
-                         <p className="text-sm font-black text-white">{selectedLeadForChat.zipCodeOvernight}</p>
+                         <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">CEP Pernoite</p>
+                         <p className="text-sm font-black text-slate-800">{selectedLeadForChat.zipCodeOvernight}</p>
                       </div>
                       <div>
-                         <p className="text-[10px] font-bold text-white/30 uppercase mb-1">Nº</p>
-                         <p className="text-sm font-black text-white">{selectedLeadForChat.numberOvernight || '-'}</p>
+                         <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Nº</p>
+                         <p className="text-sm font-black text-slate-800">{selectedLeadForChat.numberOvernight || '-'}</p>
                       </div>
                    </div>
                    <div>
-                      <p className="text-[10px] font-bold text-white/30 uppercase mb-1">Endereço Pernoite</p>
-                      <p className="text-sm font-black text-white/80">{selectedLeadForChat.addressOvernight || 'Não informado'}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Endereço Pernoite</p>
+                      <p className="text-sm font-black text-slate-800">{selectedLeadForChat.addressOvernight || 'Não informado'}</p>
                    </div>
-                   
+
                    <div className="pt-2">
-                      <p className="text-[10px] font-bold text-white/30 uppercase mb-1">Residência diferente do pernoite?</p>
-                      <p className="text-sm font-black text-white/80">{selectedLeadForChat.isDifferentResidenceZip ? 'Sim' : 'Não'}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Residência diferente do pernoite?</p>
+                      <p className="text-sm font-black text-slate-800">{selectedLeadForChat.isDifferentResidenceZip ? 'Sim' : 'Não'}</p>
                    </div>
 
                    {selectedLeadForChat.isDifferentResidenceZip && (
-                     <div className="p-3 bg-white/5 rounded-xl space-y-3 border border-white/5">
+                     <div className="p-3 bg-slate-50 rounded-xl space-y-3 border border-slate-200">
                         <div className="grid grid-cols-2 gap-4">
                            <div>
-                              <p className="text-[10px] font-bold text-white/30 uppercase mb-1">CEP Residência</p>
-                              <p className="text-sm font-black text-white">{selectedLeadForChat.zipCodeResidence}</p>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">CEP Residência</p>
+                              <p className="text-sm font-black text-slate-800">{selectedLeadForChat.zipCodeResidence}</p>
                            </div>
                            <div>
-                              <p className="text-[10px] font-bold text-white/30 uppercase mb-1">Nº</p>
-                              <p className="text-sm font-black text-white">{selectedLeadForChat.numberResidence || '-'}</p>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Nº</p>
+                              <p className="text-sm font-black text-slate-800">{selectedLeadForChat.numberResidence || '-'}</p>
                            </div>
                         </div>
                         <div>
-                           <p className="text-[10px] font-bold text-white/30 uppercase mb-1">Endereço Residência</p>
-                           <p className="text-sm font-black text-white/80">{selectedLeadForChat.addressResidence || 'Não informado'}</p>
+                           <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Endereço Residência</p>
+                           <p className="text-sm font-black text-slate-800">{selectedLeadForChat.addressResidence || 'Não informado'}</p>
                         </div>
                      </div>
                    )}
@@ -338,12 +338,12 @@ export const LeadDetailsSidebar = React.memo(({
                 <p className="text-[10px] font-black text-gold-deep uppercase tracking-widest border-b border-gold-deep/20 pb-1">Uso do Veículo</p>
                 <div className="space-y-2">
                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-white/40 font-bold uppercase tracking-tight">Uso p/ trabalho (2+ dias/sem)</span>
-                      <span className="font-black text-white">{selectedLeadForChat.serviceUsage ? 'Sim' : 'Não'}</span>
+                      <span className="text-slate-500 font-bold uppercase tracking-tight">Uso p/ trabalho (2+ dias/sem)</span>
+                      <span className="font-black text-slate-800">{selectedLeadForChat.serviceUsage ? 'Sim' : 'Não'}</span>
                    </div>
                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-white/40 font-bold uppercase tracking-tight">Residente 18-24 anos</span>
-                      <span className="font-black text-white">{selectedLeadForChat.youngDriverHousehold ? 'Sim' : 'Não'}</span>
+                      <span className="text-slate-500 font-bold uppercase tracking-tight">Residente 18-24 anos</span>
+                      <span className="font-black text-slate-800">{selectedLeadForChat.youngDriverHousehold ? 'Sim' : 'Não'}</span>
                    </div>
                 </div>
              </div>
@@ -353,18 +353,18 @@ export const LeadDetailsSidebar = React.memo(({
                 <p className="text-[10px] font-black text-gold-deep uppercase tracking-widest border-b border-gold-deep/20 pb-1">Proprietário do Veículo</p>
                 <div className="space-y-3">
                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-white/40 font-bold uppercase tracking-tight">O lead é o proprietário?</span>
-                      <span className="font-black text-white">{selectedLeadForChat.isOwnerDriver ? 'Sim' : 'Não'}</span>
+                      <span className="text-slate-500 font-bold uppercase tracking-tight">O lead é o proprietário?</span>
+                      <span className="font-black text-slate-800">{selectedLeadForChat.isOwnerDriver ? 'Sim' : 'Não'}</span>
                    </div>
                    {!selectedLeadForChat.isOwnerDriver && (
-                     <div className="p-3 bg-white/5 rounded-xl space-y-3 border border-white/5">
+                     <div className="p-3 bg-slate-50 rounded-xl space-y-3 border border-slate-200">
                         <div>
-                           <p className="text-[10px] font-bold text-white/30 uppercase mb-1">Nome do Proprietário</p>
-                           <p className="text-sm font-black text-white">{selectedLeadForChat.ownerName}</p>
+                           <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Nome do Proprietário</p>
+                           <p className="text-sm font-black text-slate-800">{selectedLeadForChat.ownerName}</p>
                         </div>
                         <div>
-                           <p className="text-[10px] font-bold text-white/30 uppercase mb-1">CPF/CNPJ</p>
-                           <p className="text-sm font-black text-white font-mono">{selectedLeadForChat.ownerCpfCnpj}</p>
+                           <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">CPF/CNPJ</p>
+                           <p className="text-sm font-black text-slate-800 font-mono">{selectedLeadForChat.ownerCpfCnpj}</p>
                         </div>
                      </div>
                    )}
@@ -374,27 +374,27 @@ export const LeadDetailsSidebar = React.memo(({
               {/* Insurance info */}
              <div>
                 <p className="text-[10px] font-black text-gold-deep uppercase mb-3 tracking-widest">Seguro Atual</p>
-                <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl">
+                <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
                   {selectedLeadForChat.hasInsurance ? (
                     <>
-                      <CheckCircle2 className="text-emerald-500 w-5 h-5 shadow-sm shadow-emerald-500/20" />
+                      <CheckCircle2 className="text-[#1F8A4C] w-5 h-5 shadow-sm shadow-[#1F8A4C]/20" />
                       <div>
-                        <p className="text-[10px] font-black text-white uppercase tracking-tight">Possui Seguro</p>
-                        <p className="text-[9px] text-white/40 font-bold uppercase">Expira em: {selectedLeadForChat.insuranceExpiry}</p>
+                        <p className="text-[10px] font-black text-slate-800 uppercase tracking-tight">Possui Seguro</p>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase">Expira em: {selectedLeadForChat.insuranceExpiry}</p>
                       </div>
                     </>
                   ) : (
                     <>
-                      <X className="text-red-500 w-5 h-5 shadow-sm shadow-red-500/20" />
-                      <p className="text-[10px] font-black text-white uppercase tracking-tight">Não possui seguro</p>
+                      <X className="text-[#C0392B] w-5 h-5 shadow-sm shadow-[#C0392B]/20" />
+                      <p className="text-[10px] font-black text-slate-800 uppercase tracking-tight">Não possui seguro</p>
                     </>
                   )}
                 </div>
              </div>
 
              {/* Documents */}
-             <div className="space-y-3 pt-4 border-t border-white/5">
-                <p className="text-[10px] font-bold text-white/30 uppercase mb-2 tracking-widest">Documentos Anexados</p>
+             <div className="space-y-3 pt-4 border-t border-slate-200">
+                <p className="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Documentos Anexados</p>
                 <div className="grid grid-cols-1 gap-2">
                   {[
                     { label: 'CNH', key: 'cnh' },
@@ -419,24 +419,24 @@ export const LeadDetailsSidebar = React.memo(({
                         }}
                         className={cn(
                           "flex items-center justify-between p-3 border rounded-xl transition-all group",
-                          hasDoc ? "border-white/10 bg-white/5 hover:bg-white/10 cursor-pointer" : "border-white/5 opacity-40 cursor-not-allowed"
+                          hasDoc ? "border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer" : "border-slate-100 opacity-40 cursor-not-allowed"
                         )}
                       >
                         <div className="flex items-center gap-3">
                            <div className={cn(
                              "p-2 rounded-lg transition-colors",
-                             hasDoc ? "bg-white/5 group-hover:bg-gold-light/20" : "bg-white/5"
+                             hasDoc ? "bg-slate-100 group-hover:bg-gold-light/20" : "bg-slate-100"
                            )}>
                               <FileText className={cn(
                                 "w-4 h-4 transition-colors",
-                                hasDoc ? "text-white/30 group-hover:text-gold-deep" : "text-white/20"
+                                hasDoc ? "text-slate-400 group-hover:text-gold-deep" : "text-slate-300"
                               )} />
                            </div>
-                           <span className="text-[10px] font-black text-white/70 uppercase tracking-widest">{doc.label}</span>
+                           <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{doc.label}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          {hasDoc && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />}
-                          <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-gold-deep group-hover:translate-x-1 transition-all" />
+                          {hasDoc && <div className="w-1.5 h-1.5 rounded-full bg-[#1F8A4C] shadow-[0_0_8px_rgba(31,138,76,0.5)]" />}
+                          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-gold-deep group-hover:translate-x-1 transition-all" />
                         </div>
                       </button>
                     );

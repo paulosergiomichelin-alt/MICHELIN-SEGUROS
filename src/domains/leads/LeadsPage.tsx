@@ -290,11 +290,11 @@ export const LeadsPage = React.memo(({
           title="Confirmar Exclusão"
         >
           <div className="space-y-4 p-4">
-            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <div className="p-4 bg-[#FDE4E4] border border-[#C0392B]/20 rounded-xl flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-[#C0392B] shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-bold text-red-500 uppercase tracking-tight">ATENÇÃO: Ação irreversível!</p>
-                <p className="text-xs text-white/50 mt-1">
+                <p className="text-sm font-bold text-[#C0392B] uppercase tracking-tight">ATENÇÃO: Ação irreversível!</p>
+                <p className="text-xs text-slate-500 mt-1">
                   Isso apagará permanentemente {selectedLeadIds.size} lead{selectedLeadIds.size === 1 ? '' : 's'} selecionado{selectedLeadIds.size === 1 ? '' : 's'}.
                 </p>
               </div>
@@ -303,14 +303,14 @@ export const LeadsPage = React.memo(({
             {isBulkDeleting && (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest">
-                  <span className="text-white/50">Excluindo {deleteProgress.done} de {deleteProgress.total}...</span>
-                  <span className="text-red-400">
+                  <span className="text-slate-500">Excluindo {deleteProgress.done} de {deleteProgress.total}...</span>
+                  <span className="text-[#C0392B]">
                     {deleteProgress.total > 0 ? Math.round((deleteProgress.done / deleteProgress.total) * 100) : 0}%
                   </span>
                 </div>
-                <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-red-500 transition-all duration-200 ease-out"
+                    className="h-full bg-[#C0392B] transition-all duration-200 ease-out"
                     style={{ width: `${deleteProgress.total > 0 ? (deleteProgress.done / deleteProgress.total) * 100 : 0}%` }}
                   />
                 </div>
@@ -321,14 +321,14 @@ export const LeadsPage = React.memo(({
               <button
                 onClick={() => setShowDeleteSelectedConfirm(false)}
                 disabled={isBulkDeleting}
-                className="px-4 py-2 text-white/40 font-bold text-[10px] uppercase tracking-widest hover:text-white transition-colors disabled:opacity-30"
+                className="px-4 py-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-slate-700 transition-colors disabled:opacity-30"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleDeleteSelected}
                 disabled={isBulkDeleting}
-                className="px-6 py-2 bg-red-600 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 disabled:opacity-50"
+                className="px-6 py-2 bg-[#C0392B] text-white rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-sm shadow-[#C0392B]/20 disabled:opacity-50"
               >
                 {isBulkDeleting ? `Excluindo... ${deleteProgress.total > 0 ? Math.round((deleteProgress.done / deleteProgress.total) * 100) : 0}%` : `Sim, Excluir ${selectedLeadIds.size}`}
               </button>

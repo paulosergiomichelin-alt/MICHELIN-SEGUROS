@@ -189,7 +189,7 @@ export const ChatSettings: React.FC<{ isOpen: boolean; onClose: () => void }> = 
         {/* Restore Defaults */}
         <button 
           onClick={resetPreferences}
-          className="w-full py-3 bg-brand-dark hover:bg-brand-black text-gold-deep text-[9px] font-black uppercase rounded-2xl transition-all border border-gold-deep/20 flex items-center justify-center gap-2 tracking-[0.2em]"
+          className="w-full py-3 bg-gold-deep/10 hover:bg-gold-deep/20 text-gold-deep text-[9px] font-black uppercase rounded-2xl transition-all border border-gold-deep/25 flex items-center justify-center gap-2 tracking-[0.2em]"
         >
           <RotateCcw className="w-3 h-3" />
           Restaurar Padrão

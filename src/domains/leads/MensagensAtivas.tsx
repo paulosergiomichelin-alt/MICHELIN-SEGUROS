@@ -285,7 +285,7 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
     <div className="flex flex-col min-h-full font-sans">
 
       {/* ── Step Bar ─────────────────────────────────────────────────────── */}
-      <nav className="flex-shrink-0 sticky top-0 z-10 bg-[#050505] border-b border-white/5 px-4 flex items-center overflow-x-auto">
+      <nav className="flex-shrink-0 sticky top-0 z-10 bg-white border-b border-slate-200 px-4 flex items-center overflow-x-auto">
         {[
           { id: 'leads',    label: 'Seleção de Leads',    icon: Users },
           { id: 'config',   label: 'Configuração',         icon: Bot },
@@ -298,28 +298,28 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
               <div className={cn(
                 'flex items-center gap-2 px-4 py-3 border-b-2 whitespace-nowrap transition-all',
                 isActive    ? 'border-gold-deep text-gold-deep' :
-                isCompleted ? 'border-emerald-500 text-emerald-400' :
-                              'border-transparent text-white/30',
+                isCompleted ? 'border-[#1F8A4C] text-[#1F8A4C]' :
+                              'border-transparent text-slate-400',
               )}>
                 <div className={cn(
                   'w-5 h-5 rounded-full flex items-center justify-center border flex-shrink-0',
                   isActive    ? 'bg-gold-deep/10 border-gold-deep text-gold-deep' :
-                  isCompleted ? 'bg-emerald-500 border-emerald-500 text-white' :
-                                'bg-white/5 border-white/10 text-white/30',
+                  isCompleted ? 'bg-[#1F8A4C] border-[#1F8A4C] text-white' :
+                                'bg-slate-100 border-slate-200 text-slate-400',
                 )}>
                   {isCompleted ? <CheckCircle2 className="w-3 h-3" /> : <step.icon className="w-3 h-3" />}
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-widest">{step.label}</span>
               </div>
-              {i < 2 && <div className="w-6 h-px bg-white/10 flex-shrink-0 self-center" />}
+              {i < 2 && <div className="w-6 h-px bg-slate-200 flex-shrink-0 self-center" />}
             </React.Fragment>
           );
         })}
 
         <div className="ml-auto flex items-center gap-2 pl-4 py-2 flex-shrink-0">
-          <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Público Alvo</p>
+          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Público Alvo</p>
           <p className="text-sm font-black text-gold-deep">{targetLeads.length}</p>
-          <p className="text-[9px] text-white/30 font-medium">leads</p>
+          <p className="text-[9px] text-slate-400 font-medium">leads</p>
         </div>
       </nav>
 
@@ -338,17 +338,17 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                 className="grid grid-cols-1 lg:grid-cols-12 gap-6"
               >
                 <div className="lg:col-span-4 space-y-6">
-                  <div className="bg-[#0B0B0D] p-6 rounded-3xl border border-white/5">
+                  <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                     <div className="flex items-center gap-3 mb-6">
                       <div className="p-2 bg-gold-deep/10 rounded-xl">
                         <Filter className="w-5 h-5 text-gold-deep" />
                       </div>
-                      <h3 className="font-bold text-white uppercase text-xs tracking-widest">Filtros Inteligentes</h3>
+                      <h3 className="font-bold text-slate-800 uppercase text-xs tracking-widest">Filtros Inteligentes</h3>
                     </div>
 
                     <div className="space-y-4">
                       <div>
-                        <label className="text-[10px] font-bold text-white/40 uppercase mb-2 block">Status do Lead</label>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase mb-2 block">Status do Lead</label>
                         <div className="flex flex-wrap gap-2">
                           {['Novo Lead', 'Em Atendimento', 'Aguardando Documento', 'Em Cotação', 'Perdido'].map(s => (
                             <button
@@ -363,7 +363,7 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                                 'px-3 py-1 rounded-full text-[9px] font-bold border transition-all',
                                 filters.status.includes(s as LeadStatus)
                                   ? 'bg-gold-deep text-brand-black border-gold-deep'
-                                  : 'bg-white/5 text-white/40 border-white/10 hover:border-gold-deep/30',
+                                  : 'bg-slate-100 text-slate-500 border-slate-200 hover:border-gold-deep/30',
                               )}
                             >{s}</button>
                           ))}
@@ -371,7 +371,7 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-bold text-white/40 uppercase mb-2 block">Temperatura</label>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase mb-2 block">Temperatura</label>
                         <div className="flex gap-2">
                           {['quente', 'morno', 'frio'].map(t => (
                             <button
@@ -385,10 +385,10 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                               className={cn(
                                 'flex-1 py-1.5 rounded-xl text-[9px] font-bold border transition-all uppercase tracking-widest',
                                 filters.temperature.includes(t as LeadTemperature)
-                                  ? t === 'quente' ? 'bg-red-500 text-white border-red-500'
-                                  : t === 'morno'  ? 'bg-amber-500 text-white border-amber-500'
-                                  :                  'bg-blue-500 text-white border-blue-500'
-                                  : 'bg-white/5 text-white/40 border-white/10',
+                                  ? t === 'quente' ? 'bg-[#C0392B] text-white border-[#C0392B]'
+                                  : t === 'morno'  ? 'bg-[#B8860B] text-white border-[#B8860B]'
+                                  :                  'bg-slate-400 text-white border-slate-400'
+                                  : 'bg-slate-100 text-slate-500 border-slate-200',
                               )}
                             >{t}</button>
                           ))}
@@ -396,7 +396,7 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-bold text-white/40 uppercase mb-2 block">Limite de Envio</label>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase mb-2 block">Limite de Envio</label>
                         <div className="grid grid-cols-3 gap-2">
                           {[50, 100, 150].map(v => (
                             <button
@@ -406,23 +406,23 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                                 'py-2 rounded-xl text-[10px] font-extrabold border transition-all',
                                 limit === v
                                   ? 'bg-gold-deep/10 text-gold-deep border-gold-deep/40'
-                                  : 'bg-white/5 text-white/40 border-white/10 hover:border-white/20',
+                                  : 'bg-slate-100 text-slate-500 border-slate-200 hover:border-slate-300',
                               )}
                             >{v} Leads</button>
                           ))}
                         </div>
                       </div>
 
-                      <div className="pt-4 border-t border-white/5 space-y-3">
+                      <div className="pt-4 border-t border-slate-200 space-y-3">
                         <div>
-                          <label className="text-[10px] font-bold text-white/40 uppercase mb-2 block">Campanhas</label>
+                          <label className="text-[10px] font-bold text-slate-500 uppercase mb-2 block">Campanhas</label>
                           <button
                             onClick={() => setFilters(prev => ({ ...prev, noCampaignOnly: !prev.noCampaignOnly }))}
                             className={cn(
                               'w-full px-3 py-2 rounded-xl text-[9px] font-bold border transition-all uppercase tracking-widest',
                               filters.noCampaignOnly
                                 ? 'bg-gold-deep text-brand-black border-gold-deep'
-                                : 'bg-white/5 text-white/40 border-white/10 hover:border-gold-deep/30',
+                                : 'bg-slate-100 text-slate-500 border-slate-200 hover:border-gold-deep/30',
                             )}
                           >
                             Sem Campanha
@@ -430,13 +430,13 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                         </div>
                         <button
                           onClick={() => setFilters({ status: [], temperature: [], origin: [], noResponseOnly: false, noCampaignOnly: false })}
-                          className="w-full py-2.5 text-[9px] font-bold uppercase tracking-[0.2em] text-white/30 hover:text-white/60 transition-colors"
+                          className="w-full py-2.5 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 transition-colors"
                         >Limpar Filtros</button>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-brand-dark p-6 rounded-3xl border border-gold-deep/20 shadow-xl shadow-gold-deep/5">
+                  <div className="bg-gold-deep/5 p-6 rounded-3xl border border-gold-deep/20 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex flex-col">
                         <span className="text-[9px] font-black text-gold-deep/50 uppercase tracking-[0.2em]">Público Alvo</span>
@@ -457,17 +457,17 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                   </div>
                 </div>
 
-                <div className="lg:col-span-8 bg-[#0B0B0D] rounded-3xl border border-white/5 overflow-hidden flex flex-col">
-                  <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                <div className="lg:col-span-8 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                  <div className="p-6 border-b border-slate-200 flex items-center justify-between">
                     <div>
-                      <h3 className="font-bold text-white text-sm">Seleção de Leads</h3>
-                      <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">
+                      <h3 className="font-bold text-slate-800 text-sm">Seleção de Leads</h3>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">
                         {filteredLeads.length} leads encontrados
                       </p>
                     </div>
                     <button
                       onClick={selectAll}
-                      className="px-4 py-2 bg-white/5 text-white/60 rounded-xl text-[9px] font-bold uppercase tracking-widest border border-white/10 hover:border-white/20 transition-all"
+                      className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-[9px] font-bold uppercase tracking-widest border border-slate-200 hover:border-slate-300 transition-all"
                     >
                       {selectedLeads.length === filteredLeads.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
                     </button>
@@ -475,49 +475,49 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
 
                   <div className="flex-1 overflow-y-auto max-h-[500px]">
                     <table className="w-full text-left">
-                      <thead className="bg-white/[0.03] sticky top-0 z-10">
+                      <thead className="bg-slate-50 sticky top-0 z-10">
                         <tr>
                           <th className="p-4 w-10" />
-                          <th className="p-4 text-[9px] font-bold text-white/40 uppercase">Nome</th>
-                          <th className="p-4 text-[9px] font-bold text-white/40 uppercase">Status</th>
-                          <th className="p-4 text-[9px] font-bold text-white/40 uppercase">Temperatura</th>
-                          <th className="p-4 text-[9px] font-bold text-white/40 uppercase">Última Campanha</th>
-                          <th className="p-4 text-[9px] font-bold text-white/40 uppercase text-right">Origem</th>
+                          <th className="p-4 text-[9px] font-bold text-slate-400 uppercase">Nome</th>
+                          <th className="p-4 text-[9px] font-bold text-slate-400 uppercase">Status</th>
+                          <th className="p-4 text-[9px] font-bold text-slate-400 uppercase">Temperatura</th>
+                          <th className="p-4 text-[9px] font-bold text-slate-400 uppercase">Última Campanha</th>
+                          <th className="p-4 text-[9px] font-bold text-slate-400 uppercase text-right">Origem</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-white/[0.04]">
+                      <tbody className="divide-y divide-slate-100">
                         {filteredLeads.map(lead => (
                           <tr
                             key={lead.id}
                             onClick={() => toggleLeadSelection(lead.id)}
                             className={cn(
                               'cursor-pointer transition-colors',
-                              selectedLeads.includes(lead.id) ? 'bg-gold-deep/5' : 'hover:bg-white/[0.03]',
+                              selectedLeads.includes(lead.id) ? 'bg-gold-deep/5' : 'hover:bg-slate-50',
                             )}
                           >
                             <td className="p-4">
                               <div className={cn(
                                 'w-5 h-5 rounded border flex items-center justify-center transition-all',
-                                selectedLeads.includes(lead.id) ? 'bg-gold-deep border-gold-deep' : 'border-white/20',
+                                selectedLeads.includes(lead.id) ? 'bg-gold-deep border-gold-deep' : 'border-slate-300',
                               )}>
                                 {selectedLeads.includes(lead.id) && <CheckCircle2 className="w-3 h-3 text-brand-black" />}
                               </div>
                             </td>
                             <td className="p-4">
-                              <p className="text-sm font-bold text-white">{lead.name}</p>
-                              <p className="text-[10px] text-white/40">{lead.phone}</p>
+                              <p className="text-sm font-bold text-slate-800">{lead.name}</p>
+                              <p className="text-[10px] text-slate-400">{lead.phone}</p>
                             </td>
                             <td className="p-4">
-                              <span className="px-2 py-0.5 rounded-full text-[8px] font-bold bg-white/5 text-white/60 border border-white/10 uppercase">
+                              <span className="px-2 py-0.5 rounded-full text-[8px] font-bold bg-slate-100 text-slate-600 border border-slate-200 uppercase">
                                 {lead.status}
                               </span>
                             </td>
                             <td className="p-4">
                               <span className={cn(
                                 'px-2 py-0.5 rounded-full text-[8px] font-bold border uppercase',
-                                lead.temperature === 'quente' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                                lead.temperature === 'morno'  ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                                                                'bg-blue-500/10 text-blue-400 border-blue-500/20',
+                                lead.temperature === 'quente' ? 'bg-[#FDE4E4] text-[#C0392B] border-[#C0392B]/20' :
+                                lead.temperature === 'morno'  ? 'bg-[#FFF3DC] text-[#B8860B] border-[#B8860B]/20' :
+                                                                'bg-slate-100 text-slate-500 border-slate-200',
                               )}>
                                 {lead.temperature}
                               </span>
@@ -528,10 +528,10 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                                   {lead.ultimaCampanha}
                                 </span>
                               ) : (
-                                <span className="text-[9px] text-white/20">—</span>
+                                <span className="text-[9px] text-slate-300">—</span>
                               )}
                             </td>
-                            <td className="p-4 text-right text-[10px] font-bold text-white/40 uppercase">
+                            <td className="p-4 text-right text-[10px] font-bold text-slate-400 uppercase">
                               {lead.origin}
                             </td>
                           </tr>
@@ -557,7 +557,7 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                     <MessageSquare className="w-7 h-7" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-white tracking-tight">Construtor de Campanha</h2>
+                    <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Construtor de Campanha</h2>
                     <p className="text-[10px] font-black uppercase text-gold-deep/70 tracking-[0.2em] mt-0.5">
                       Configuração do Agente de Disparo Ativo
                     </p>
@@ -572,7 +572,7 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
 
                     {/* Nome da Campanha */}
                     <div>
-                      <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2 block">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">
                         Nome da Campanha
                       </label>
                       <input
@@ -580,28 +580,28 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                         value={campaignName}
                         onChange={e => setCampaignName(e.target.value)}
                         placeholder="Ex: Campanha Renovação Junho 2026"
-                        className="w-full px-5 py-4 bg-black/30 border border-white/5 rounded-2xl focus:ring-2 focus:ring-gold-deep/20 focus:border-gold-deep/30 outline-none text-sm font-bold text-white placeholder:text-white/20 transition-all"
+                        className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#1B4D8F]/15 focus:border-[#1B4D8F]/60 outline-none text-sm font-bold text-slate-800 placeholder:text-slate-300 transition-all"
                       />
                     </div>
 
                     {/* Sessão WhatsApp */}
                     <div>
-                      <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2 block">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">
                         Sessão WhatsApp (Evolution API)
                       </label>
                       {activeSessions.length === 0 ? (
-                        <div className="w-full px-5 py-4 bg-black/30 border border-red-500/20 rounded-2xl text-sm text-red-400/70 font-medium">
+                        <div className="w-full px-5 py-4 bg-[#FDE4E4] border border-[#C0392B]/20 rounded-2xl text-sm text-[#C0392B] font-medium">
                           Nenhuma sessão conectada. Conecte uma instância em WhatsApp → Sessões.
                         </div>
                       ) : (
                         <select
                           value={sessionName}
                           onChange={e => setSessionName(e.target.value)}
-                          className="w-full px-5 py-4 bg-black/30 border border-white/5 rounded-2xl focus:ring-2 focus:ring-gold-deep/20 outline-none text-sm font-bold text-white appearance-none transition-all"
+                          className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#1B4D8F]/15 focus:border-[#1B4D8F]/60 outline-none text-sm font-bold text-slate-800 appearance-none transition-all"
                         >
-                          <option value="" className="bg-[#0B0B0D]">Selecione uma sessão...</option>
+                          <option value="" className="bg-white">Selecione uma sessão...</option>
                           {activeSessions.map(s => (
-                            <option key={s.sessionName} value={s.sessionName} className="bg-[#0B0B0D]">{s.sessionName}</option>
+                            <option key={s.sessionName} value={s.sessionName} className="bg-white">{s.sessionName}</option>
                           ))}
                         </select>
                       )}
@@ -609,7 +609,7 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
 
                     {/* Mensagem da Campanha */}
                     <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
                         Mensagem da Campanha
                       </label>
                       <textarea
@@ -618,15 +618,15 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                         value={message}
                         onChange={e => setMessage(e.target.value)}
                         placeholder={`Olá {{primeiroNome}}, tudo bem?\n\nEstou fazendo uma parceria com a Flex Intermediações e conseguimos condições especiais em seguros.\n\nGostaria de fazer uma cotação sem compromisso?`}
-                        className="w-full px-5 py-4 bg-black/30 border border-white/5 rounded-2xl focus:ring-2 focus:ring-gold-deep/20 focus:border-gold-deep/30 outline-none text-sm font-medium text-white/85 placeholder:text-white/15 resize-none leading-relaxed transition-all"
+                        className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#1B4D8F]/15 focus:border-[#1B4D8F]/60 outline-none text-sm font-medium text-slate-700 placeholder:text-slate-300 resize-none leading-relaxed transition-all"
                       />
                       <div className="flex items-center justify-between px-1">
-                        <p className="text-[10px] text-white/25">
+                        <p className="text-[10px] text-slate-400">
                           Use os botões ao lado para inserir variáveis personalizadas
                         </p>
                         <p className={cn(
                           'text-[10px] font-bold tabular-nums',
-                          message.length > 900 ? 'text-red-400' : 'text-white/25',
+                          message.length > 900 ? 'text-[#C0392B]' : 'text-slate-400',
                         )}>
                           {message.length} / 1024
                         </p>
@@ -635,14 +635,14 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
 
                     {/* Upload de Imagem (opcional) */}
                     <div>
-                      <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2 block">
-                        Imagem da Mensagem <span className="text-white/20 normal-case font-normal">(opcional)</span>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">
+                        Imagem da Mensagem <span className="text-slate-400 normal-case font-normal">(opcional)</span>
                       </label>
 
                       {!imageFile ? (
-                        <label className="flex flex-col items-center justify-center gap-3 w-full py-8 bg-black/30 border border-dashed border-white/10 rounded-2xl cursor-pointer hover:border-gold-deep/30 hover:bg-gold-deep/5 transition-all group">
-                          <ImagePlus className="w-6 h-6 text-white/25 group-hover:text-gold-deep/60 transition-colors" />
-                          <span className="text-[11px] font-medium text-white/30 group-hover:text-white/50 transition-colors">
+                        <label className="flex flex-col items-center justify-center gap-3 w-full py-8 bg-slate-50 border border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-gold-deep/30 hover:bg-gold-deep/5 transition-all group">
+                          <ImagePlus className="w-6 h-6 text-slate-400 group-hover:text-gold-deep/60 transition-colors" />
+                          <span className="text-[11px] font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
                             Clique para selecionar uma foto
                           </span>
                           <input
@@ -662,7 +662,7 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                         </label>
                       ) : (
                         <div className="space-y-3">
-                          <div className="relative rounded-2xl overflow-hidden border border-white/10">
+                          <div className="relative rounded-2xl overflow-hidden border border-slate-200">
                             <img src={imagePreview} alt="Prévia" className="w-full max-h-48 object-cover" />
                             <button
                               onClick={() => { setImageFile(null); setImagePreview(''); }}
@@ -676,8 +676,8 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                           </div>
 
                           {/* Pergunta de ordem */}
-                          <div className="bg-black/30 rounded-2xl p-4 border border-white/5">
-                            <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-3">
+                          <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
                               Enviar a foto antes ou depois da mensagem?
                             </p>
                             <div className="grid grid-cols-2 gap-2">
@@ -689,7 +689,7 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                                     'py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all',
                                     imageOrder === opt
                                       ? 'bg-gold-deep/15 text-gold-deep border-gold-deep/40'
-                                      : 'bg-white/5 text-white/30 border-white/10 hover:border-white/20',
+                                      : 'bg-slate-100 text-slate-400 border-slate-200 hover:border-slate-300',
                                   )}
                                 >
                                   {opt === 'before' ? 'Antes' : 'Depois'}
@@ -706,13 +706,13 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                   <div className="space-y-5">
 
                     {/* Inserir Variável */}
-                    <div className="bg-[#0B0B0D] rounded-2xl p-5 border border-white/5">
+                    <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
                       <div className="flex items-center gap-2 mb-4">
                         <div className="p-1.5 bg-gold-deep/10 rounded-lg">
                           <Tag className="w-3.5 h-3.5 text-gold-deep" />
                         </div>
-                        <h4 className="text-[10px] font-black text-white/60 uppercase tracking-widest">Inserir Variável</h4>
-                        <span className="ml-auto text-[9px] text-white/20">clique para inserir no cursor</span>
+                        <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Inserir Variável</h4>
+                        <span className="ml-auto text-[9px] text-slate-300">clique para inserir no cursor</span>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         {VARIABLES.map(v => (
@@ -720,10 +720,10 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                             key={v.tpl}
                             onClick={() => insertVariable(v.tpl)}
                             title={v.tpl}
-                            className="flex flex-col items-center gap-1 px-2 py-3 bg-black/30 hover:bg-gold-deep/10 border border-white/5 hover:border-gold-deep/30 rounded-xl transition-all group"
+                            className="flex flex-col items-center gap-1 px-2 py-3 bg-slate-50 hover:bg-gold-deep/10 border border-slate-200 hover:border-gold-deep/30 rounded-xl transition-all group"
                           >
                             <span className="text-base leading-none">{v.emoji}</span>
-                            <span className="text-[8px] font-bold text-white/40 group-hover:text-gold-deep/80 uppercase tracking-tight text-center leading-tight transition-colors">
+                            <span className="text-[8px] font-bold text-slate-400 group-hover:text-gold-deep/80 uppercase tracking-tight text-center leading-tight transition-colors">
                               {v.label}
                             </span>
                           </button>
@@ -732,13 +732,13 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                     </div>
 
                     {/* Pré-visualização */}
-                    <div className="bg-[#0B0B0D] rounded-2xl p-5 border border-white/5">
+                    <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                           <div className="p-1.5 bg-gold-deep/10 rounded-lg">
                             <Eye className="w-3.5 h-3.5 text-gold-deep" />
                           </div>
-                          <h4 className="text-[10px] font-black text-white/60 uppercase tracking-widest">Pré-visualização</h4>
+                          <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Pré-visualização</h4>
                         </div>
                         <button
                           onClick={generatePreview}
@@ -772,10 +772,10 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                       </div>
 
                       {previewLead && previewMsg && (
-                        <p className="text-[10px] text-white/25 mt-2 px-1">
-                          Exemplo com: <span className="text-white/40 font-semibold">{previewLead.name}</span>
+                        <p className="text-[10px] text-slate-400 mt-2 px-1">
+                          Exemplo com: <span className="text-slate-500 font-semibold">{previewLead.name}</span>
                           {targetLeads.length > 1 && (
-                            <span className="text-white/20"> · {previewLeadIndex % targetLeads.length + 1}/{targetLeads.length}</span>
+                            <span className="text-slate-300"> · {previewLeadIndex % targetLeads.length + 1}/{targetLeads.length}</span>
                           )}
                         </p>
                       )}
@@ -791,18 +791,18 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                       </div>
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-[10px] font-bold text-white/50 uppercase tracking-tight">Tempo mínimo entre cada mensagem</p>
-                          <p className="text-[9px] text-white/25 mt-0.5">Evita bloqueio por spam</p>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Tempo mínimo entre cada mensagem</p>
+                          <p className="text-[9px] text-slate-400 mt-0.5">Evita bloqueio por spam</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => setInterval(Math.max(5, interval - 5))}
-                            className="w-8 h-8 bg-white/5 rounded-lg border border-white/10 flex items-center justify-center text-white/50 hover:border-gold-deep/30 hover:text-gold-deep transition-all text-lg leading-none"
+                            className="w-8 h-8 bg-white rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:border-gold-deep/30 hover:text-gold-deep transition-all text-lg leading-none"
                           >−</button>
-                          <span className="text-sm font-bold text-white w-10 text-center">{interval}s</span>
+                          <span className="text-sm font-bold text-slate-800 w-10 text-center">{interval}s</span>
                           <button
                             onClick={() => setInterval(interval + 5)}
-                            className="w-8 h-8 bg-white/5 rounded-lg border border-white/10 flex items-center justify-center text-white/50 hover:border-gold-deep/30 hover:text-gold-deep transition-all text-lg leading-none"
+                            className="w-8 h-8 bg-white rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:border-gold-deep/30 hover:text-gold-deep transition-all text-lg leading-none"
                           >+</button>
                         </div>
                       </div>
@@ -811,22 +811,22 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                 </div>
 
                 {/* ── Bottom Actions ───────────────────────────────────── */}
-                <div className="mt-8 pt-6 border-t border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
-                    <p className="text-lg font-bold text-white">
+                    <p className="text-lg font-bold text-slate-800">
                       {targetLeads.length}
-                      <span className="text-white/40 font-normal text-sm ml-2">leads selecionados</span>
+                      <span className="text-slate-400 font-normal text-sm ml-2">leads selecionados</span>
                     </p>
-                    <p className="text-[11px] text-white/30 mt-0.5">
+                    <p className="text-[11px] text-slate-400 mt-0.5">
                       Tempo estimado de envio:&nbsp;
-                      <span className="text-white/50 font-semibold">{formatEstimatedTime(targetLeads.length, interval)}</span>
+                      <span className="text-slate-600 font-semibold">{formatEstimatedTime(targetLeads.length, interval)}</span>
                     </p>
                   </div>
 
                   <div className="flex items-center gap-3 w-full sm:w-auto">
                     <button
                       onClick={() => setActiveStep('leads')}
-                      className="flex-1 sm:flex-none px-6 py-4 bg-white/5 text-white/50 rounded-2xl font-bold uppercase text-[10px] tracking-widest border border-white/10 hover:border-white/20 transition-all"
+                      className="flex-1 sm:flex-none px-6 py-4 bg-slate-100 text-slate-500 rounded-2xl font-bold uppercase text-[10px] tracking-widest border border-slate-200 hover:border-slate-300 transition-all"
                     >
                       ← Voltar
                     </button>
@@ -855,12 +855,12 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                 className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-12"
               >
                 <div className="lg:col-span-5 space-y-6">
-                  <div className="bg-[#0B0B0D] p-8 rounded-[2.5rem] border border-white/5 overflow-hidden relative">
+                  <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden relative">
                     <div className="flex items-center gap-4 mb-8">
                       <div className={cn(
                         'w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg border transition-all',
                         activeCampaign.status === 'running'
-                          ? 'bg-emerald-500 text-white border-emerald-400 animate-pulse'
+                          ? 'bg-[#1F8A4C] text-white border-[#1F8A4C]/80 animate-pulse'
                           : 'bg-gold-deep/10 text-gold-deep border-gold-deep/20',
                       )}>
                         {activeCampaign.status === 'running'
@@ -868,44 +868,44 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                           : <Pause className="w-6 h-6 fill-current" />}
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold text-white tracking-tight">{activeCampaign.name}</h2>
+                        <h2 className="text-xl font-bold text-slate-800 tracking-tight">{activeCampaign.name}</h2>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className={cn(
                             'text-[8px] font-black uppercase px-2 py-0.5 rounded-full border tracking-widest',
-                            activeCampaign.status === 'running'   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                            activeCampaign.status === 'paused'    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                                                                    'bg-white/5 text-white/40 border-white/10',
+                            activeCampaign.status === 'running'   ? 'bg-[#E4F5EA] text-[#1F8A4C] border-[#1F8A4C]/20' :
+                            activeCampaign.status === 'paused'    ? 'bg-[#FFF3DC] text-[#B8860B] border-[#B8860B]/20' :
+                                                                    'bg-slate-100 text-slate-500 border-slate-200',
                           )}>
                             {activeCampaign.status}
                           </span>
-                          <span className="text-[10px] text-white/30 font-bold uppercase tracking-widest">Michelin Seguros</span>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Michelin Seguros</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-8">
-                      <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                        <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Enviados</p>
-                        <p className="text-2xl font-bold text-white">
-                          {activeCampaign.sentCount} / <span className="text-white/40">{activeCampaign.totalLeads}</span>
+                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Enviados</p>
+                        <p className="text-2xl font-bold text-slate-800">
+                          {activeCampaign.sentCount} / <span className="text-slate-400">{activeCampaign.totalLeads}</span>
                         </p>
-                        <div className="w-full h-1.5 bg-white/10 rounded-full mt-3 overflow-hidden">
+                        <div className="w-full h-1.5 bg-slate-200 rounded-full mt-3 overflow-hidden">
                           <div
                             className="h-full bg-gold-deep transition-all duration-500"
                             style={{ width: `${(activeCampaign.sentCount / activeCampaign.totalLeads) * 100}%` }}
                           />
                         </div>
                       </div>
-                      <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                        <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Taxa de Sucesso</p>
-                        <p className="text-2xl font-bold text-emerald-400">
+                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Taxa de Sucesso</p>
+                        <p className="text-2xl font-bold text-[#1F8A4C]">
                           {activeCampaign.sentCount > 0
                             ? Math.round(((activeCampaign.sentCount - activeCampaign.errorCount) / activeCampaign.sentCount) * 100)
                             : 100}%
                         </p>
                         <div className="flex items-center gap-1.5 mt-3">
-                          <TrendingUp className="w-3 h-3 text-emerald-400" />
-                          <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-tighter">Conexão Estável</span>
+                          <TrendingUp className="w-3 h-3 text-[#1F8A4C]" />
+                          <span className="text-[9px] font-bold text-[#1F8A4C] uppercase tracking-tighter">Conexão Estável</span>
                         </div>
                       </div>
                     </div>
@@ -914,7 +914,7 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                       {activeCampaign.status === 'running' ? (
                         <button
                           onClick={pauseCampaign}
-                          className="w-full py-4 bg-amber-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-amber-500/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
+                          className="w-full py-4 bg-[#B8860B] text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-[#B8860B]/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
                         >
                           <Pause className="w-4 h-4 fill-current" />
                           Pausar Disparo
@@ -923,7 +923,7 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                         <button
                           onClick={startCampaign}
                           disabled={activeCampaign.status === 'completed'}
-                          className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale"
+                          className="w-full py-4 bg-[#1F8A4C] text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-[#1F8A4C]/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale"
                         >
                           <Play className="w-4 h-4 fill-current" />
                           Retomar Disparo
@@ -935,7 +935,7 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                             DataService.update('campaign', activeCampaign.id, { status: 'cancelled' });
                           }
                         }}
-                        className="w-full py-4 bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl font-bold uppercase text-[10px] tracking-widest hover:bg-red-500/20 transition-all flex items-center justify-center gap-3"
+                        className="w-full py-4 bg-[#FDE4E4] text-[#C0392B] border border-[#C0392B]/20 rounded-2xl font-bold uppercase text-[10px] tracking-widest hover:bg-[#C0392B]/20 transition-all flex items-center justify-center gap-3"
                       >
                         <Square className="w-3.5 h-3.5 fill-current" />
                         Cancelar Campanha
@@ -943,47 +943,47 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                     </div>
                   </div>
 
-                  <div className="bg-brand-dark p-6 rounded-[2rem] border border-gold-deep/20 shadow-xl overflow-hidden">
+                  <div className="bg-gold-deep/5 p-6 rounded-[2rem] border border-gold-deep/20 shadow-sm overflow-hidden">
                     <div className="flex items-center gap-3 mb-4">
                       <TrendingUp className="w-5 h-5 text-gold-deep" />
                       <h3 className="text-[10px] font-black text-gold-deep uppercase tracking-[0.2em]">Estimativas de Conversão</h3>
                     </div>
                     <div className="space-y-4">
                       <div className="flex justify-between items-end border-b border-gold-deep/10 pb-2">
-                        <span className="text-[10px] font-bold text-gold-light/40 uppercase">Aberturas Previstas</span>
-                        <span className="text-lg font-bold text-gold-light">{Math.round(activeCampaign.totalLeads * 0.8)}</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">Aberturas Previstas</span>
+                        <span className="text-lg font-bold text-gold-deep">{Math.round(activeCampaign.totalLeads * 0.8)}</span>
                       </div>
                       <div className="flex justify-between items-end border-b border-gold-deep/10 pb-2">
-                        <span className="text-[10px] font-bold text-gold-light/40 uppercase">Respostas Sugeridas</span>
-                        <span className="text-lg font-bold text-gold-light">{Math.round(activeCampaign.totalLeads * 0.15)}</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">Respostas Sugeridas</span>
+                        <span className="text-lg font-bold text-gold-deep">{Math.round(activeCampaign.totalLeads * 0.15)}</span>
                       </div>
                       <div className="flex justify-between items-end border-b border-gold-deep/10 pb-2">
-                        <span className="text-[10px] font-bold text-gold-light/40 uppercase">Leads Reengajados</span>
-                        <span className="text-lg font-bold text-emerald-400">Alto</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">Leads Reengajados</span>
+                        <span className="text-lg font-bold text-[#1F8A4C]">Alto</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="lg:col-span-7">
-                  <div className="bg-[#0B0B0D] rounded-[2.5rem] border border-white/5 overflow-hidden flex flex-col h-full min-h-[600px]">
-                    <div className="p-6 md:p-8 border-b border-white/5 flex items-center justify-between bg-[#0B0B0D] sticky top-0 z-10">
+                  <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full min-h-[600px]">
+                    <div className="p-6 md:p-8 border-b border-slate-200 flex items-center justify-between bg-white sticky top-0 z-10">
                       <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
-                          <LayoutDashboard className="w-5 h-5 text-white/40" />
+                        <div className="p-3 bg-slate-100 rounded-2xl border border-slate-200">
+                          <LayoutDashboard className="w-5 h-5 text-slate-500" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-white text-sm md:text-base">Monitoramento em Tempo Real</h3>
+                          <h3 className="font-bold text-slate-800 text-sm md:text-base">Monitoramento em Tempo Real</h3>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Logs de Processamento</p>
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#1F8A4C] animate-pulse" />
+                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Logs de Processamento</p>
                           </div>
                         </div>
                       </div>
                       <div className="hidden md:flex items-center gap-3">
                         <div className="text-right">
-                          <p className="text-[9px] font-black text-white/30 uppercase leading-none">Processamento</p>
-                          <p className="text-xs font-bold text-white/50 mt-1">1.2s avg/msg</p>
+                          <p className="text-[9px] font-black text-slate-400 uppercase leading-none">Processamento</p>
+                          <p className="text-xs font-bold text-slate-500 mt-1">1.2s avg/msg</p>
                         </div>
                       </div>
                     </div>
@@ -991,8 +991,8 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                     <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
                       {logs.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-20">
-                          <Search className="w-12 h-12 mb-4 text-white/20" />
-                          <p className="text-xs font-black uppercase tracking-[0.2em] text-white/40">Inicie o disparo para ver os logs</p>
+                          <Search className="w-12 h-12 mb-4 text-slate-300" />
+                          <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Inicie o disparo para ver os logs</p>
                         </div>
                       ) : (
                         logs.map((log, i) => (
@@ -1003,17 +1003,17 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                             transition={{ delay: i * 0.02 }}
                             className={cn(
                               'p-5 rounded-[1.5rem] border flex flex-col md:flex-row md:items-center justify-between gap-4',
-                              log.status === 'sent'  ? 'bg-emerald-500/5 border-emerald-500/10' :
-                              log.status === 'error' ? 'bg-red-500/5 border-red-500/10' :
-                                                       'bg-white/[0.03] border-white/5',
+                              log.status === 'sent'  ? 'bg-[#E4F5EA]/50 border-[#1F8A4C]/20' :
+                              log.status === 'error' ? 'bg-[#FDE4E4]/50 border-[#C0392B]/20' :
+                                                       'bg-slate-50 border-slate-200',
                             )}
                           >
                             <div className="flex items-center gap-4">
                               <div className={cn(
                                 'w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border',
-                                log.status === 'sent'  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                                log.status === 'error' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                                                         'bg-white/5 text-white/30 border-white/10',
+                                log.status === 'sent'  ? 'bg-[#E4F5EA] text-[#1F8A4C] border-[#1F8A4C]/20' :
+                                log.status === 'error' ? 'bg-[#FDE4E4] text-[#C0392B] border-[#C0392B]/20' :
+                                                         'bg-slate-100 text-slate-400 border-slate-200',
                               )}>
                                 {log.status === 'sent'  ? <CheckCircle2 className="w-5 h-5" /> :
                                  log.status === 'error' ? <AlertCircle className="w-5 h-5" /> :
@@ -1021,40 +1021,40 @@ export const MensagensAtivas = ({ leads, visualConfig }: MensagensAtivasProps) =
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <p className="text-sm font-bold text-white">{log.leadName}</p>
-                                  <span className="text-[10px] text-white/20 font-medium">| {format(new Date(log.timestamp), 'HH:mm:ss')}</span>
+                                  <p className="text-sm font-bold text-slate-800">{log.leadName}</p>
+                                  <span className="text-[10px] text-slate-300 font-medium">| {format(new Date(log.timestamp), 'HH:mm:ss')}</span>
                                 </div>
                                 <p className={cn(
                                   'text-[11px] mt-1 line-clamp-1',
-                                  log.status === 'sent' ? 'text-white/50 italic' : 'text-red-400 font-bold',
+                                  log.status === 'sent' ? 'text-slate-500 italic' : 'text-[#C0392B] font-bold',
                                 )}>
                                   {log.status === 'sent' ? `"${log.message}"` : `ERRO: ${log.error || 'Falha na conexão'}`}
                                 </p>
                               </div>
                             </div>
                             <div className="flex items-center justify-end gap-2">
-                              <button className="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[9px] font-bold text-white/40 hover:text-gold-deep transition-all uppercase">Ver Detalhes</button>
-                              <ChevronRight className="w-4 h-4 text-white/20" />
+                              <button className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-[9px] font-bold text-slate-500 hover:text-gold-deep transition-all uppercase">Ver Detalhes</button>
+                              <ChevronRight className="w-4 h-4 text-slate-300" />
                             </div>
                           </motion.div>
                         ))
                       )}
                     </div>
 
-                    <div className="p-6 bg-white/[0.02] border-t border-white/5 flex items-center justify-between">
-                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
+                    <div className="p-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                         Exibindo os últimos 50 eventos
                       </p>
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                          <span className="text-[9px] font-bold text-white/40 uppercase tracking-tighter">
+                          <div className="w-2 h-2 rounded-full bg-[#1F8A4C]" />
+                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">
                             Enviados: {activeCampaign.sentCount - activeCampaign.errorCount}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 rounded-full bg-red-500" />
-                          <span className="text-[9px] font-bold text-white/40 uppercase tracking-tighter">
+                          <div className="w-2 h-2 rounded-full bg-[#C0392B]" />
+                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">
                             Erros: {activeCampaign.errorCount}
                           </span>
                         </div>

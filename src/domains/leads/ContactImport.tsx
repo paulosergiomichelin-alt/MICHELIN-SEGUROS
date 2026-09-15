@@ -224,7 +224,7 @@ export function ContactImport({ onImport, onCancel, isImporting, importProgress 
 
         <button 
           onClick={onCancel}
-          className="text-xs font-bold text-slate-400 hover:text-red-500 uppercase tracking-widest transition-colors"
+          className="text-xs font-bold text-slate-400 hover:text-[#C0392B] uppercase tracking-widest transition-colors"
         >
           Cancelar Importação
         </button>
@@ -253,7 +253,7 @@ export function ContactImport({ onImport, onCancel, isImporting, importProgress 
           </button>
           <button 
             onClick={() => onImport(previewLeads)}
-            className="flex-1 sm:flex-none px-6 py-3 bg-brand-dark text-gold-deep border border-gold-deep rounded-xl text-[10px] font-bold uppercase hover:bg-brand-black transition-all shadow-lg shadow-gold-deep/10"
+            className="flex-1 sm:flex-none px-6 py-3 bg-gold-deep/10 text-gold-deep border border-gold-deep/30 rounded-xl text-[10px] font-bold uppercase hover:bg-gold-deep/20 transition-all shadow-sm shadow-gold-deep/10"
           >
             Aceitar
           </button>
@@ -280,7 +280,7 @@ export function ContactImport({ onImport, onCancel, isImporting, importProgress 
                 </td>
                 <td className="px-5 py-4 text-center">
                    {lead.iaActive !== false ? (
-                      <div className="w-6 h-6 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-100" title="IA Ativa">
+                      <div className="w-6 h-6 bg-[#E4F5EA] text-[#1F8A4C] rounded-full flex items-center justify-center mx-auto border border-[#1F8A4C]/20" title="IA Ativa">
                         <Check className="w-3.5 h-3.5" />
                       </div>
                    ) : (

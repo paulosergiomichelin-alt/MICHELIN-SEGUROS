@@ -137,7 +137,7 @@ export const LeadsView = React.memo(({
   }, [leads, stats]);
 
   return (
-    <div className="flex h-full bg-[#0B0B0D] text-white">
+    <div className="flex h-full bg-slate-50 text-slate-800">
       {/* AREA CENTRAL */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {/* HEADER */}
@@ -160,20 +160,20 @@ export const LeadsView = React.memo(({
         <div className="px-4 md:px-6 mb-3 md:mb-3.5 space-y-2 md:space-y-2.5">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <div className="flex-1 relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20 w-3 h-3 transition-colors group-focus-within:text-gold-deep" />
-              <input 
-                type="text" 
-                placeholder="Pesquisar..." 
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3 h-3 transition-colors group-focus-within:text-slate-500" />
+              <input
+                type="text"
+                placeholder="Pesquisar..."
                 value={searchLeads}
                 onChange={(e) => setSearchLeads(e.target.value)}
-                className="w-full bg-[#111214] border border-white/5 rounded-xl py-1.5 px-8 text-[11px] outline-none focus:border-gold-deep/30 focus:ring-4 focus:ring-gold-deep/5 transition-all placeholder:text-[10px]"
+                className="w-full bg-white border border-slate-200 rounded-xl py-1.5 px-8 text-[11px] text-slate-800 outline-none focus:border-slate-300 focus:ring-4 focus:ring-slate-100 transition-all placeholder:text-slate-300 placeholder:text-[10px]"
               />
             </div>
-            <button 
+            <button
               onClick={() => setShowFilters(!showFilters)}
               className={cn(
                 "flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all text-[9.5px] font-black uppercase tracking-widest sm:w-auto",
-                showFilters ? "bg-white/10 border-white/20" : "bg-[#111214] border-white/5 hover:bg-[#18191b]"
+                showFilters ? "bg-slate-100 border-slate-300 text-slate-800" : "bg-white border-slate-200 hover:bg-slate-50 text-slate-500"
               )}
             >
               <Filter className="w-3 h-3" />
@@ -191,31 +191,31 @@ export const LeadsView = React.memo(({
               <PlusCircle className="w-2.5 h-2.5 md:w-3 md:h-3" />
               Lead
             </button>
-            <button onClick={() => setShowImport(true)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#111214] border border-white/5 text-white/50 whitespace-nowrap text-[7.5px] md:text-[8.5px] font-black uppercase tracking-widest shrink-0">
+            <button onClick={() => setShowImport(true)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 whitespace-nowrap text-[7.5px] md:text-[8.5px] font-black uppercase tracking-widest shrink-0">
               <Upload className="w-2.5 h-2.5 md:w-3 md:h-3" />
               Importar
             </button>
-            <button onClick={handleExportLeads} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#111214] border border-white/5 text-white/50 whitespace-nowrap text-[7.5px] md:text-[8.5px] font-black uppercase tracking-widest shrink-0">
+            <button onClick={handleExportLeads} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 whitespace-nowrap text-[7.5px] md:text-[8.5px] font-black uppercase tracking-widest shrink-0">
               <Download className="w-2.5 h-2.5 md:w-3 md:h-3" />
               Exportar
             </button>
-            <button onClick={clearFilters} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/5 border border-red-500/10 text-red-500 whitespace-nowrap text-[7.5px] md:text-[8.5px] font-black uppercase tracking-widest shrink-0">
+            <button onClick={clearFilters} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#FDE4E4] border border-[#C0392B]/20 text-[#C0392B] whitespace-nowrap text-[7.5px] md:text-[8.5px] font-black uppercase tracking-widest shrink-0">
               <Trash2 className="w-2.5 h-2.5 md:w-3 md:h-3" />
               Limpar
             </button>
             {!selectionMode ? (
-              <button onClick={() => setSelectionMode(true)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#111214] border border-white/5 text-white/50 whitespace-nowrap text-[7.5px] md:text-[8.5px] font-black uppercase tracking-widest shrink-0">
+              <button onClick={() => setSelectionMode(true)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 whitespace-nowrap text-[7.5px] md:text-[8.5px] font-black uppercase tracking-widest shrink-0">
                 <CheckCircle2 className="w-2.5 h-2.5 md:w-3 md:h-3" />
                 Selecionar
               </button>
             ) : (
               <>
-                <button onClick={exitSelectionMode} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#111214] border border-white/5 text-white/50 whitespace-nowrap text-[7.5px] md:text-[8.5px] font-black uppercase tracking-widest shrink-0">
+                <button onClick={exitSelectionMode} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 whitespace-nowrap text-[7.5px] md:text-[8.5px] font-black uppercase tracking-widest shrink-0">
                   <X className="w-2.5 h-2.5 md:w-3 md:h-3" />
                   Cancelar
                 </button>
                 {someLoadedSelected && (
-                  <button onClick={() => setShowDeleteSelectedConfirm(true)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500 text-white whitespace-nowrap text-[7.5px] md:text-[8.5px] font-black uppercase tracking-widest shrink-0">
+                  <button onClick={() => setShowDeleteSelectedConfirm(true)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#C0392B] text-white whitespace-nowrap text-[7.5px] md:text-[8.5px] font-black uppercase tracking-widest shrink-0">
                     <Trash2 className="w-2.5 h-2.5 md:w-3 md:h-3" />
                     Excluir Selecionados ({selectedLeadIds.size})
                   </button>
@@ -227,11 +227,11 @@ export const LeadsView = React.memo(({
 
         {/* TABLE */}
         <div className="flex-1 overflow-auto px-4 md:px-6 pb-4 custom-scrollbar">
-          <div className="bg-[#111214] rounded-xl border border-white/5 overflow-hidden">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[600px] md:min-w-0">
               <thead>
-                <tr className="border-b border-white/5 text-[7.5px] md:text-[8.5px] font-black uppercase tracking-wider text-white/20">
+                <tr className="border-b border-slate-200 text-[7.5px] md:text-[8.5px] font-black uppercase tracking-wider text-slate-400">
                   {selectionMode && (
                     <th className="px-4 py-2.5 w-8">
                       <input
@@ -252,13 +252,13 @@ export const LeadsView = React.memo(({
                   <th className="px-4 py-2.5 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.02]">
+              <tbody className="divide-y divide-slate-100">
                 {leads.map((lead) => (
                   <tr
                     key={lead.id}
                     onClick={() => selectionMode ? toggleLeadSelected(lead.id) : handleEditLead(lead)}
                     className={cn(
-                      "group cursor-pointer transition-colors hover:bg-white/[0.02]",
+                      "group cursor-pointer transition-colors hover:bg-slate-50",
                       selectionMode && selectedLeadIds.has(lead.id) && "bg-gold-deep/5"
                     )}
                   >
@@ -275,12 +275,12 @@ export const LeadsView = React.memo(({
                     )}
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center font-bold text-[9px] shrink-0 bg-gradient-to-br from-slate-700 to-slate-800">
+                        <div className="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center font-bold text-[9px] text-white shrink-0 bg-gradient-to-br from-slate-700 to-slate-800">
                           {lead.name.substring(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0">
                           <p className="text-[11px] font-bold truncate group-hover:text-gold-deep transition-colors">{lead.name}</p>
-                          <div className="text-[8.5px] text-white/20 font-bold mt-0 flex items-center gap-1">
+                          <div className="text-[8.5px] text-slate-400 font-bold mt-0 flex items-center gap-1">
                             <span className="hidden sm:inline">{lead.tipoPessoa === 'juridica' ? 'CNPJ:' : 'CPF:'}</span>
                             <SensitiveContent value={lead.cpf} maskFn={lead.tipoPessoa === 'juridica' ? maskCNPJ : maskCPF} canView={permissions.canReadAllLeads} />
                           </div>
@@ -289,14 +289,14 @@ export const LeadsView = React.memo(({
                     </td>
                     <td className="px-4 py-2.5 hidden sm:table-cell">
                       <div className="flex flex-col">
-                        <div className="flex items-center gap-1 text-white/70 font-bold text-[9px]">
+                        <div className="flex items-center gap-1 text-slate-600 font-bold text-[9px]">
                           <SensitiveContent value={lead.phone} maskFn={maskPhone} canView={permissions.canReadAllLeads} />
                         </div>
-                        <div className="text-[7.5px] font-bold text-emerald-500/60 uppercase">WhatsApp</div>
+                        <div className="text-[7.5px] font-bold text-[#1F8A4C]/60 uppercase">WhatsApp</div>
                       </div>
                     </td>
                     <td className="px-4 py-2.5">
-                      <div className="px-2 py-0.5 bg-white/5 border border-white/5 rounded-md inline-block">
+                      <div className="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded-md inline-block">
                         <span className="text-[7.5px] font-black uppercase text-gold-deep tracking-wider">{lead.status}</span>
                       </div>
                     </td>
@@ -304,9 +304,9 @@ export const LeadsView = React.memo(({
                       <div className="flex justify-center">
                         <div className={cn(
                           "px-2 py-0.5 rounded-lg text-[7.5px] font-black uppercase tracking-widest flex items-center gap-1 w-max border border-transparent transition-all",
-                          lead.temperature === 'quente' ? "bg-red-500/10 text-red-500 border-red-500/20" :
-                          lead.temperature === 'morno' ? "bg-orange-500/10 text-orange-500 border-orange-500/20" :
-                          "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                          lead.temperature === 'quente' ? "bg-[#FDE4E4] text-[#C0392B] border-[#C0392B]/20" :
+                          lead.temperature === 'morno' ? "bg-[#FFF3DC] text-[#B8860B] border-[#B8860B]/20" :
+                          "bg-slate-100 text-slate-500 border-slate-200"
                         )}>
                           <Flame className="w-2.5 h-2.5" />
                           <span className="hidden sm:inline">{lead.temperature || 'Frio'}</span>
@@ -317,9 +317,9 @@ export const LeadsView = React.memo(({
                       <div className="flex justify-center">
                         <div className={cn(
                           "w-6 h-6 rounded-full border flex items-center justify-center font-black text-[8px]",
-                          (lead.score || 0) > 7 ? "border-emerald-500/40 text-emerald-500 bg-emerald-500/5 shadow-inner" : 
-                          (lead.score || 0) > 4 ? "border-orange-500/40 text-orange-500 bg-orange-500/5" : 
-                          "border-red-500/40 text-red-500 bg-red-500/5"
+                          (lead.score || 0) > 7 ? "border-[#1F8A4C]/40 text-[#1F8A4C] bg-[#1F8A4C]/5 shadow-inner" :
+                          (lead.score || 0) > 4 ? "border-[#B8860B]/40 text-[#B8860B] bg-[#B8860B]/5" :
+                          "border-[#C0392B]/40 text-[#C0392B] bg-[#C0392B]/5"
                         )}>
                           {lead.score?.toFixed(1) || '0,0'}
                         </div>
@@ -332,36 +332,36 @@ export const LeadsView = React.memo(({
                         const displayName = lead.responsibleAgentName || user?.name || user?.email || 'Sem agente';
                         return (
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-slate-800 overflow-hidden border border-white/10 flex items-center justify-center shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-slate-800 overflow-hidden border border-slate-200 flex items-center justify-center shrink-0">
                               {user?.photoURL
                                 ? <img src={user.photoURL} alt={displayName} className="w-full h-full object-cover" />
-                                : <span className="text-[10px] font-bold text-white/40">{displayName.charAt(0).toUpperCase()}</span>
+                                : <span className="text-[10px] font-bold text-white/70">{displayName.charAt(0).toUpperCase()}</span>
                               }
                             </div>
-                            <span className="text-[9px] font-bold text-white/50 truncate max-w-[90px]">{displayName}</span>
+                            <span className="text-[9px] font-bold text-slate-500 truncate max-w-[90px]">{displayName}</span>
                           </div>
                         );
                       })()}
                     </td>
                     <td className="px-4 py-2.5 hidden xl:table-cell">
                       <div className="flex flex-col">
-                        <span className="text-[8.5px] font-bold text-white/50">
+                        <span className="text-[8.5px] font-bold text-slate-500">
                           {lead.lastInteraction ? new Date(lead.lastInteraction).toLocaleDateString() : '---'}
                         </span>
                       </div>
                     </td>
                     <td className="px-4 py-2.5 text-right">
                        <div className="flex items-center justify-end gap-2">
-                         <button 
+                         <button
                            onClick={(e) => {
                              e.stopPropagation();
                              handleDeleteLead(lead.id);
                            }}
-                           className="p-1.5 hover:bg-red-500/10 rounded-lg transition-all text-white/10 hover:text-red-500 group/del"
+                           className="p-1.5 hover:bg-[#FDE4E4] rounded-lg transition-all text-slate-300 hover:text-[#C0392B] group/del"
                          >
                            <Trash2 className="w-3 h-3" />
                          </button>
-                         <ChevronRight className="w-3 h-3 text-white/20" />
+                         <ChevronRight className="w-3 h-3 text-slate-300" />
                        </div>
                     </td>
                   </tr>

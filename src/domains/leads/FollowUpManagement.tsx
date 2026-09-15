@@ -117,13 +117,13 @@ export const FollowUpManagement: React.FC<FollowUpManagementProps> = ({ leadId, 
     const isOverdue = status === 'pending' && isAfter(new Date(), parseISO(scheduledAt));
     
     switch (status) {
-      case 'executed': return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
-      case 'cancelled': return 'bg-white/5 text-white/30 border-white/5';
-      case 'pending': 
-        return isOverdue 
-          ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 animate-pulse' 
+      case 'executed': return 'bg-[#E4F5EA] text-[#1F8A4C] border-[#1F8A4C]/20';
+      case 'cancelled': return 'bg-slate-100 text-slate-400 border-slate-200';
+      case 'pending':
+        return isOverdue
+          ? 'bg-[#FFF3DC] text-[#B8860B] border-[#B8860B]/20 animate-pulse'
           : 'bg-gold-deep/10 text-gold-deep border-gold-deep/20';
-      default: return 'bg-white/5 text-white/30';
+      default: return 'bg-slate-100 text-slate-400';
     }
   };
 
@@ -140,7 +140,7 @@ export const FollowUpManagement: React.FC<FollowUpManagementProps> = ({ leadId, 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-[10px] font-black text-white/30 uppercase tracking-widest flex items-center gap-2">
+        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
           <History className="w-3 h-3" /> Agenda de Retornos
         </h3>
         <button 
@@ -159,34 +159,34 @@ export const FollowUpManagement: React.FC<FollowUpManagementProps> = ({ leadId, 
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3 shadow-inner mb-4">
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 mb-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-white/40 uppercase tracking-tight">Data</label>
-                  <input 
-                    type="date" 
-                    value={newDate} 
+                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-tight">Data</label>
+                  <input
+                    type="date"
+                    value={newDate}
                     onChange={e => setNewDate(e.target.value)}
-                    className="w-full text-xs p-2 rounded-xl border border-white/10 outline-none focus:ring-2 focus:ring-gold-deep/20 bg-brand-dark/40 text-white"
+                    className="w-full text-xs p-2 rounded-xl border border-slate-200 outline-none focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 bg-white text-slate-800"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-white/40 uppercase tracking-tight">Hora</label>
-                  <input 
-                    type="time" 
-                    value={newTime} 
+                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-tight">Hora</label>
+                  <input
+                    type="time"
+                    value={newTime}
                     onChange={e => setNewTime(e.target.value)}
-                    className="w-full text-xs p-2 rounded-xl border border-white/10 outline-none focus:ring-2 focus:ring-gold-deep/20 bg-brand-dark/40 text-white"
+                    className="w-full text-xs p-2 rounded-xl border border-slate-200 outline-none focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 bg-white text-slate-800"
                   />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] font-bold text-white/40 uppercase tracking-tight">Motivo / Contexto</label>
-                <textarea 
+                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-tight">Motivo / Contexto</label>
+                <textarea
                   placeholder="Ex: Cliente parou para reunião, quer retomar cotação às 14h."
                   value={newContext}
                   onChange={e => setNewContext(e.target.value)}
-                  className="w-full text-xs p-3 rounded-xl border border-white/10 outline-none focus:ring-2 focus:ring-gold-deep/20 bg-brand-dark/20 text-white min-h-[60px] resize-none placeholder:text-white/20"
+                  className="w-full text-xs p-3 rounded-xl border border-slate-200 outline-none focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 bg-white text-slate-800 min-h-[60px] resize-none placeholder:text-slate-300"
                 />
               </div>
               <button 
@@ -203,14 +203,14 @@ export const FollowUpManagement: React.FC<FollowUpManagementProps> = ({ leadId, 
 
       <div className="space-y-2">
         {followUps.length === 0 && !loading && (
-          <div className="text-center py-6 border-2 border-dashed border-white/5 rounded-2xl">
-            <Calendar className="w-8 h-8 text-white/5 mx-auto mb-2" />
-            <p className="text-[10px] text-white/20 font-bold uppercase tracking-widest italic">Nenhum agendamento ativo</p>
+          <div className="text-center py-6 border-2 border-dashed border-slate-200 rounded-2xl">
+            <Calendar className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest italic">Nenhum agendamento ativo</p>
           </div>
         )}
 
         {followUps.map((fu) => (
-          <div key={fu.id} className="bg-white/5 border border-white/10 rounded-2xl p-3 shadow-lg hover:shadow-gold-deep/5 transition-all relative group overflow-hidden">
+          <div key={fu.id} className="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all relative group overflow-hidden">
             <div className="flex items-start justify-between gap-3 relative z-10">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1.5">
@@ -223,13 +223,13 @@ export const FollowUpManagement: React.FC<FollowUpManagementProps> = ({ leadId, 
                      fu.status === 'pending' ? 'Pendente' : 
                      fu.status === 'executed' ? 'Realizado' : 'Cancelado'}
                   </span>
-                  <span className="text-[10px] font-bold text-white/30 flex items-center gap-1">
+                  <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
                     {format(parseISO(fu.scheduledAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                   </span>
                 </div>
-                
-                <p className="text-[11px] text-white/80 leading-relaxed line-clamp-2">
+
+                <p className="text-[11px] text-slate-800 leading-relaxed line-clamp-2">
                   <span className="font-black text-gold-deep mr-1 uppercase text-[9px]">
                     {fu.origin === 'ai' ? <Bot className="w-3 h-3 inline mr-0.5" /> : <User className="w-3 h-3 inline mr-0.5" />}
                     {fu.origin}:
@@ -241,7 +241,7 @@ export const FollowUpManagement: React.FC<FollowUpManagementProps> = ({ leadId, 
               {fu.status === 'pending' && (
                 <button 
                   onClick={() => cancelFollowUp(fu.id)}
-                  className="p-1.5 text-white/20 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                  className="p-1.5 text-slate-300 hover:text-[#C0392B] hover:bg-[#FDE4E4] rounded-lg transition-all"
                   title="Cancelar Agendamento"
                 >
                   <XCircle className="w-4 h-4" />

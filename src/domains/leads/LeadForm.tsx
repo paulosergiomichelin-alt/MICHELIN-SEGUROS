@@ -155,20 +155,20 @@ const formatCountdownToNext = (targetDate?: string | null, options: { recurringY
 // --- UI COMPONENTS ---
 
 const PremiumSection = React.memo(({ title, subtitle, icon: Icon, children, badge }: any) => (
-  <div className="relative rounded-[20px] border border-white/[0.06] bg-[#0E0F11]/85 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.35)] overflow-hidden mb-5 transition-colors hover:border-[#D4A854]/20 ring-1 ring-[#D4A854]/[0.04]">
+  <div className="relative rounded-[20px] border border-slate-200 bg-white shadow-sm overflow-hidden mb-5 transition-colors hover:border-gold-deep/30">
     {/* Subtle gold gradient sheen on the very top edge for premium feel */}
-    <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#D4A854]/30 to-transparent" />
-    <div className="px-5 py-3.5 flex items-center justify-between border-b border-white/[0.04] bg-gradient-to-r from-[#D4A854]/[0.03] to-transparent">
+    <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold-deep/30 to-transparent" />
+    <div className="px-5 py-3.5 flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-gold-deep/[0.03] to-transparent">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-[#D4A854]/[0.08] text-[#D4A854] ring-1 ring-[#D4A854]/15 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-lg bg-gold-deep/10 text-gold-deep ring-1 ring-gold-deep/20 flex items-center justify-center">
           <Icon className="w-3.5 h-3.5" />
         </div>
         <div className="flex flex-col leading-tight">
-          <h4 className="text-[10.5px] font-black uppercase tracking-[0.22em] text-[#D4A854]/95 flex items-center gap-2">
+          <h4 className="text-[10.5px] font-black uppercase tracking-[0.22em] text-gold-deep flex items-center gap-2">
             {title}
           </h4>
           {subtitle && (
-            <p className="text-[8.5px] text-[#8E8E93]/70 font-semibold uppercase tracking-[0.18em] mt-0.5">
+            <p className="text-[8.5px] text-slate-400 font-semibold uppercase tracking-[0.18em] mt-0.5">
               {subtitle}
             </p>
           )}
@@ -184,45 +184,45 @@ const PremiumSection = React.memo(({ title, subtitle, icon: Icon, children, badg
 
 const PremiumInput = React.memo(({ label, icon: Icon, required, readOnly, ...props }: any) => (
   <div className="space-y-1 w-full group">
-    <label className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] ml-0.5 group-focus-within:text-[#D4A854] transition-colors">
-      {label} {required && <span className="text-red-500/80">*</span>}
+    <label className="text-[8.5px] font-bold text-slate-500 uppercase tracking-[0.18em] ml-0.5 group-focus-within:text-[#1B4D8F] transition-colors">
+      {label} {required && <span className="text-[#C0392B]/80">*</span>}
     </label>
     <div className="relative">
       <input
         {...props}
         className={cn(
-          "w-full h-10 bg-[#16181B] border border-white/[0.07] rounded-lg px-3.5 text-[12px] font-medium text-white transition-all duration-200 focus:ring-2 focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40 focus:shadow-[0_0_0_4px_rgba(212,168,84,0.04)] hover:border-white/15 placeholder:text-white/15 outline-none",
+          "w-full h-10 bg-white border border-slate-200 rounded-lg px-3.5 text-[12px] font-medium text-slate-800 transition-all duration-200 focus:ring-2 focus:ring-[#1B4D8F]/15 focus:border-[#1B4D8F]/60 hover:border-slate-300 placeholder:text-slate-300 outline-none",
           props.className,
           Icon && "pl-10",
-          readOnly && "opacity-60 cursor-not-allowed bg-white/[0.015]"
+          readOnly && "opacity-60 cursor-not-allowed bg-slate-50"
         )}
         readOnly={readOnly}
       />
-      {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8E8E93]/40 group-focus-within:text-[#D4A854]/70 transition-colors pointer-events-none" />}
+      {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-focus-within:text-[#1B4D8F]/70 transition-colors pointer-events-none" />}
     </div>
   </div>
 ));
 
 const PremiumSelect = React.memo(({ label, icon: Icon, required, options, ...props }: any) => (
   <div className="space-y-1 w-full group">
-    <label className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] ml-0.5 group-focus-within:text-[#D4A854] transition-colors">
-      {label} {required && <span className="text-red-500/80">*</span>}
+    <label className="text-[8.5px] font-bold text-slate-500 uppercase tracking-[0.18em] ml-0.5 group-focus-within:text-[#1B4D8F] transition-colors">
+      {label} {required && <span className="text-[#C0392B]/80">*</span>}
     </label>
     <div className="relative">
       <select
         {...props}
         className={cn(
-          "w-full h-10 bg-[#16181B] border border-white/[0.07] rounded-lg px-3.5 pr-9 text-[12px] font-medium text-white transition-all duration-200 focus:ring-2 focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40 focus:shadow-[0_0_0_4px_rgba(212,168,84,0.04)] hover:border-white/15 outline-none appearance-none cursor-pointer",
+          "w-full h-10 bg-white border border-slate-200 rounded-lg px-3.5 pr-9 text-[12px] font-medium text-slate-800 transition-all duration-200 focus:ring-2 focus:ring-[#1B4D8F]/15 focus:border-[#1B4D8F]/60 hover:border-slate-300 outline-none appearance-none cursor-pointer",
           props.className,
           Icon && "pl-10"
         )}
       >
         {options.map((opt: any) => (
-          <option key={opt.value} value={opt.value} className="bg-[#111214]">{opt.label}</option>
+          <option key={opt.value} value={opt.value} className="bg-white">{opt.label}</option>
         ))}
       </select>
-      {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8E8E93]/40 group-focus-within:text-[#D4A854]/70 transition-colors pointer-events-none" />}
-      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8E8E93]/40 pointer-events-none" />
+      {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-focus-within:text-[#1B4D8F]/70 transition-colors pointer-events-none" />}
+      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
     </div>
   </div>
 ));
@@ -247,15 +247,15 @@ const PremiumCpfCnpjInput = React.memo(({ label, name, value, onChange, onBlur, 
 
   return (
     <div className="space-y-1 w-full group">
-      <label className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] ml-0.5 group-focus-within:text-[#D4A854] transition-colors flex items-center gap-2">
-        <span>{label} {required && <span className="text-red-500/80">*</span>}</span>
+      <label className="text-[8.5px] font-bold text-slate-500 uppercase tracking-[0.18em] ml-0.5 group-focus-within:text-[#1B4D8F] transition-colors flex items-center gap-2">
+        <span>{label} {required && <span className="text-[#C0392B]/80">*</span>}</span>
         {status === 'valid' && (
-          <span className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full bg-emerald-500/10 text-[8px] font-bold uppercase tracking-wide text-emerald-300/90 border border-emerald-500/20">
+          <span className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full bg-[#E4F5EA] text-[8px] font-bold uppercase tracking-wide text-[#1F8A4C] border border-[#1F8A4C]/20">
             <CheckCircle2 className="w-2.5 h-2.5" /> OK
           </span>
         )}
         {status === 'invalid' && (
-          <span className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full bg-red-500/10 text-[8px] font-bold uppercase tracking-wide text-red-300/90 border border-red-500/20">
+          <span className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full bg-[#FDE4E4] text-[8px] font-bold uppercase tracking-wide text-[#C0392B] border border-[#C0392B]/20">
             <AlertCircle className="w-2.5 h-2.5" /> Inválido
           </span>
         )}
@@ -272,18 +272,18 @@ const PremiumCpfCnpjInput = React.memo(({ label, name, value, onChange, onBlur, 
           autoComplete="off"
           maxLength={18}
           className={cn(
-            'w-full h-10 bg-[#16181B] border rounded-lg px-3.5 pr-9 text-[12px] font-medium text-white tracking-wider transition-all duration-200 focus:ring-2 outline-none placeholder:text-white/15 hover:border-white/15',
-            status === 'idle' && 'border-white/[0.07] focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40 focus:shadow-[0_0_0_4px_rgba(212,168,84,0.04)]',
-            status === 'partial' && 'border-white/[0.07] focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40 focus:shadow-[0_0_0_4px_rgba(212,168,84,0.04)]',
-            status === 'valid' && 'border-emerald-500/50 focus:ring-emerald-500/25 focus:shadow-[0_0_0_4px_rgba(16,185,129,0.06)]',
-            status === 'invalid' && 'border-red-500/50 focus:ring-red-500/25 focus:shadow-[0_0_0_4px_rgba(239,68,68,0.06)]'
+            'w-full h-10 bg-white border rounded-lg px-3.5 pr-9 text-[12px] font-medium text-slate-800 tracking-wider transition-all duration-200 focus:ring-2 outline-none placeholder:text-slate-300 hover:border-slate-300',
+            status === 'idle' && 'border-slate-200 focus:ring-[#1B4D8F]/15 focus:border-[#1B4D8F]/60',
+            status === 'partial' && 'border-slate-200 focus:ring-[#1B4D8F]/15 focus:border-[#1B4D8F]/60',
+            status === 'valid' && 'border-[#1F8A4C]/50 focus:ring-[#1F8A4C]/25',
+            status === 'invalid' && 'border-[#C0392B]/50 focus:ring-[#C0392B]/25'
           )}
         />
         {status === 'valid' && (
-          <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-emerald-400" />
+          <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#1F8A4C]" />
         )}
         {status === 'invalid' && (
-          <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-red-400" />
+          <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#C0392B]" />
         )}
       </div>
     </div>
@@ -298,12 +298,12 @@ const PremiumComputedField = React.memo(({ label, value, icon: Icon, tone = 'gol
   const isEmpty = !value;
   return (
     <div className="space-y-1 w-full">
-      <label className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] ml-0.5">{label}</label>
+      <label className="text-[8.5px] font-bold text-slate-500 uppercase tracking-[0.18em] ml-0.5">{label}</label>
       <div
         className={cn(
           'w-full h-10 rounded-lg px-3.5 flex items-center justify-between gap-2 border transition-colors',
-          tone === 'gold' && 'bg-[#D4A854]/[0.05] border-[#D4A854]/15',
-          tone === 'mint' && 'bg-emerald-500/[0.06] border-emerald-500/15',
+          tone === 'gold' && 'bg-gold-deep/5 border-gold-deep/15',
+          tone === 'mint' && 'bg-[#1F8A4C]/5 border-[#1F8A4C]/15',
           tone === 'sky' && 'bg-sky-500/[0.06] border-sky-500/15',
           isEmpty && 'opacity-50'
         )}
@@ -313,24 +313,24 @@ const PremiumComputedField = React.memo(({ label, value, icon: Icon, tone = 'gol
             <Icon
               className={cn(
                 'w-3 h-3 shrink-0',
-                tone === 'gold' && 'text-[#D4A854]',
-                tone === 'mint' && 'text-emerald-400',
-                tone === 'sky' && 'text-sky-400'
+                tone === 'gold' && 'text-gold-deep',
+                tone === 'mint' && 'text-[#1F8A4C]',
+                tone === 'sky' && 'text-sky-500'
               )}
             />
           )}
           <span
             className={cn(
               'text-[11.5px] font-bold tracking-wide truncate',
-              tone === 'gold' && 'text-[#D4A854]',
-              tone === 'mint' && 'text-emerald-300',
-              tone === 'sky' && 'text-sky-300'
+              tone === 'gold' && 'text-gold-deep',
+              tone === 'mint' && 'text-[#1F8A4C]',
+              tone === 'sky' && 'text-sky-600'
             )}
           >
             {value || emptyLabel || '—'}
           </span>
         </div>
-        <LockIcon className="w-2.5 h-2.5 text-white/15 shrink-0" />
+        <LockIcon className="w-2.5 h-2.5 text-slate-300 shrink-0" />
       </div>
     </div>
   );
@@ -343,16 +343,16 @@ const PremiumComputedField = React.memo(({ label, value, icon: Icon, tone = 'gol
 const PremiumInlineSelect = React.memo(({ label, icon: Icon, name, value, onChange, options, accent }: any) => (
   <div
     className={cn(
-      'h-11 bg-[#0E0F11]/85 backdrop-blur-xl border border-white/[0.06] rounded-xl px-3 flex items-center gap-2.5 transition-all hover:border-[#D4A854]/20 shadow-[0_4px_18px_rgba(0,0,0,0.25)] ring-1 ring-[#D4A854]/[0.03]',
+      'h-11 bg-white border border-slate-200 rounded-xl px-3 flex items-center gap-2.5 transition-all hover:border-gold-deep/30 shadow-sm',
       accent
     )}
   >
     {Icon && (
-      <div className="w-6 h-6 rounded-md bg-[#D4A854]/[0.1] text-[#D4A854] flex items-center justify-center shrink-0 ring-1 ring-[#D4A854]/15">
+      <div className="w-6 h-6 rounded-md bg-gold-deep/10 text-gold-deep flex items-center justify-center shrink-0 ring-1 ring-gold-deep/20">
         <Icon className="w-3 h-3" />
       </div>
     )}
-    <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#D4A854]/85 whitespace-nowrap">
+    <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-gold-deep whitespace-nowrap">
       {label}
     </span>
     <div className="relative flex-1 min-w-0">
@@ -360,13 +360,13 @@ const PremiumInlineSelect = React.memo(({ label, icon: Icon, name, value, onChan
         name={name}
         value={value}
         onChange={onChange}
-        className="w-full h-8 bg-[#16181B] border border-white/[0.07] rounded-md pl-2.5 pr-7 text-[11.5px] font-semibold text-white outline-none appearance-none cursor-pointer transition-all focus:ring-2 focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40 hover:border-white/15"
+        className="w-full h-8 bg-white border border-slate-200 rounded-md pl-2.5 pr-7 text-[11.5px] font-semibold text-slate-800 outline-none appearance-none cursor-pointer transition-all focus:ring-2 focus:ring-[#1B4D8F]/15 focus:border-[#1B4D8F]/60 hover:border-slate-300"
       >
         {options.map((opt: any) => (
-          <option key={opt.value} value={opt.value} className="bg-[#111214]">{opt.label}</option>
+          <option key={opt.value} value={opt.value} className="bg-white">{opt.label}</option>
         ))}
       </select>
-      <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#8E8E93]/60 pointer-events-none" />
+      <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
     </div>
   </div>
 ));
@@ -377,25 +377,25 @@ const PremiumCardToggle = React.memo(({ label, description, icon: Icon, active, 
     onClick={() => onChange(!active)}
     aria-pressed={!!active}
     className={cn(
-      "p-4 rounded-2xl border transition-all flex items-start gap-3 cursor-pointer group select-none relative overflow-hidden text-left h-[120px] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4A85460]",
+      "p-4 rounded-2xl border transition-all flex items-start gap-3 cursor-pointer group select-none relative overflow-hidden text-left h-[120px] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-deep/40",
       active
-        ? "bg-[#D4A85408] border-[#D4A85440] ring-1 ring-[#D4A85420] shadow-[0_0_20px_rgba(212,168,84,0.05)]"
-        : "bg-[#1A1C1E] border-white/5 hover:border-white/10 hover:bg-[#1C1E20]"
+        ? "bg-gold-deep/5 border-gold-deep/25 ring-1 ring-gold-deep/15 shadow-sm"
+        : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
     )}
   >
     <div className={cn(
       "w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 shrink-0",
-      active ? "bg-[#D4A854] text-black scale-105" : "bg-white/5 text-[#8E8E93]/40 group-hover:bg-white/10"
+      active ? "bg-gold-deep text-black scale-105" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200"
     )}>
       <Icon className="w-4.5 h-4.5" />
     </div>
     <div className="flex-1 min-w-0 pr-7">
-      <p className={cn("text-[10.5px] font-black uppercase tracking-tight transition-colors leading-tight", active ? "text-[#D4A854]" : "text-white")}>{label}</p>
-      <p className="text-[9px] text-[#8E8E93] font-medium leading-snug mt-1 opacity-70 line-clamp-3">{description}</p>
+      <p className={cn("text-[10.5px] font-black uppercase tracking-tight transition-colors leading-tight", active ? "text-gold-deep" : "text-slate-800")}>{label}</p>
+      <p className="text-[9px] text-slate-500 font-medium leading-snug mt-1 opacity-70 line-clamp-3">{description}</p>
     </div>
     <div className={cn(
       "absolute top-4 right-4 w-5 h-5 rounded-md border transition-all flex items-center justify-center",
-      active ? "bg-[#D4A854] border-[#D4A854]" : "border-white/10 bg-black/20"
+      active ? "bg-gold-deep border-gold-deep" : "border-slate-300 bg-slate-100"
     )}>
       {active && <CheckCircle2 className="w-3 h-3 text-black" strokeWidth={3} />}
     </div>
@@ -409,57 +409,57 @@ const DocUploadCard = React.memo(({ label, type, icon: Icon, hasFile, fileName, 
   <div 
     onClick={() => !hasFile && !loading && onUpload(type)}
     className={cn(
-      "relative group cursor-pointer p-5 h-36 border-2 border-dashed rounded-2xl transition-all flex flex-col items-center justify-center text-center gap-3 overflow-hidden", 
-      error ? "border-red-500/50 bg-red-500/5 shadow-inner" :
-      hasFile 
-        ? "border-[#25D36630] bg-[#25D36605] shadow-inner" 
-        : "border-white/5 bg-[#1A1C1E] hover:border-[#D4A85440] hover:bg-[#D4A85408]"
+      "relative group cursor-pointer p-5 h-36 border-2 border-dashed rounded-2xl transition-all flex flex-col items-center justify-center text-center gap-3 overflow-hidden",
+      error ? "border-[#C0392B]/50 bg-[#C0392B]/5" :
+      hasFile
+        ? "border-[#1F8A4C]/20 bg-[#1F8A4C]/5"
+        : "border-slate-200 bg-slate-50 hover:border-gold-deep/30 hover:bg-gold-deep/5"
     )}
   >
     {loading ? (
       <div className="flex flex-col items-center gap-2">
-        <Loader2 className="w-10 h-10 animate-spin text-[#D4A854]" />
-        <span className="text-[8px] font-black uppercase text-[#D4A854] animate-pulse">Processando...</span>
+        <Loader2 className="w-10 h-10 animate-spin text-gold-deep" />
+        <span className="text-[8px] font-black uppercase text-gold-deep animate-pulse">Processando...</span>
       </div>
     ) : error ? (
       <div className="flex flex-col items-center gap-1">
-        <AlertCircle className="w-8 h-8 text-red-500 mb-1" />
-        <span className="text-[7px] font-black uppercase text-red-500 leading-tight">Falha Técnica</span>
-        <p className="text-[6px] text-red-400 font-bold uppercase tracking-tighter max-w-[100px] line-clamp-2">{error}</p>
+        <AlertCircle className="w-8 h-8 text-[#C0392B] mb-1" />
+        <span className="text-[7px] font-black uppercase text-[#C0392B] leading-tight">Falha Técnica</span>
+        <p className="text-[6px] text-[#C0392B] font-bold uppercase tracking-tighter max-w-[100px] line-clamp-2">{error}</p>
       </div>
     ) : (
       <>
         <div className={cn(
-          "w-12 h-12 rounded-xl flex items-center justify-center shadow-lg transition-all duration-500", 
-          hasFile ? "bg-[#25D366] text-white scale-110" : "bg-white/5 text-[#8E8E93] group-hover:bg-[#D4A854] group-hover:text-black group-hover:rotate-6"
+          "w-12 h-12 rounded-xl flex items-center justify-center shadow-lg transition-all duration-500",
+          hasFile ? "bg-[#1F8A4C] text-white scale-110" : "bg-slate-100 text-slate-400 group-hover:bg-gold-deep group-hover:text-black group-hover:rotate-6"
         )}>
            {hasFile ? <CheckCircle2 className="w-6 h-6" /> : <Icon className="w-6 h-6" />}
         </div>
         <div className="space-y-1 w-full px-2">
-          <span className="text-[10px] font-black uppercase tracking-widest block text-white/90 truncate">{label}</span>
-          <p className="text-[8px] text-[#8E8E93] font-bold uppercase tracking-[0.2em] truncate">
+          <span className="text-[10px] font-black uppercase tracking-widest block text-slate-800 truncate">{label}</span>
+          <p className="text-[8px] text-slate-400 font-bold uppercase tracking-[0.2em] truncate">
             {hasFile ? (fileName || 'Digitalizado') : 'Clique para subir'}
           </p>
         </div>
       </>
     )}
-    
+
     {hasFile && !loading && (
       <div className="absolute inset-0 flex items-center justify-center bg-black/90 opacity-0 group-hover:opacity-100 transition-all z-10 backdrop-blur-sm gap-2">
-        <button type="button" onClick={() => onView(type)} className="p-2.5 bg-white/10 hover:bg-[#D4A854] hover:text-black rounded-xl text-white transition-all shadow-xl">
+        <button type="button" onClick={() => onView(type)} className="p-2.5 bg-white/10 hover:bg-gold-deep hover:text-black rounded-xl text-white transition-all shadow-xl">
           <Eye className="w-5 h-5" />
         </button>
-        <a 
-          href={fileUrl} 
-          download={fileName || 'document'} 
-          target="_blank" 
+        <a
+          href={fileUrl}
+          download={fileName || 'document'}
+          target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="p-2.5 bg-white/10 hover:bg-[#D4A854] hover:text-black rounded-xl text-white transition-all shadow-xl"
+          className="p-2.5 bg-white/10 hover:bg-gold-deep hover:text-black rounded-xl text-white transition-all shadow-xl"
         >
           <Download className="w-5 h-5" />
         </a>
-        <button type="button" onClick={(e) => onDelete(e, type)} className="p-2.5 bg-red-500/10 hover:bg-red-500 text-white rounded-xl transition-all shadow-xl">
+        <button type="button" onClick={(e) => onDelete(e, type)} className="p-2.5 bg-[#C0392B]/10 hover:bg-[#C0392B] text-white rounded-xl transition-all shadow-xl">
           <Trash2 className="w-5 h-5" />
         </button>
       </div>
@@ -484,56 +484,56 @@ const PremiumUserSelect = ({ label, required, users, value, onChange, disabled }
 
   return (
     <div className="space-y-1.5 w-full group relative" ref={containerRef}>
-      <label className="text-[9px] font-bold text-[#8E8E93] uppercase tracking-widest ml-1 group-focus-within:text-[#D4A854] transition-colors">
-        {label} {required && <span className="text-red-500">*</span>}
+      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest ml-1 group-focus-within:text-[#1B4D8F] transition-colors">
+        {label} {required && <span className="text-[#C0392B]">*</span>}
       </label>
-      
-      <div 
+
+      <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={cn(
-          "w-full h-11 bg-[#1A1C1E] border border-white/10 rounded-xl px-4 flex items-center justify-between cursor-pointer transition-all hover:border-white/20",
-          disabled && "opacity-50 cursor-not-allowed bg-white/[0.02]",
-          isOpen && "ring-2 ring-[#D4A85420] border-[#D4A85440]"
+          "w-full h-11 bg-white border border-slate-200 rounded-xl px-4 flex items-center justify-between cursor-pointer transition-all hover:border-slate-300",
+          disabled && "opacity-50 cursor-not-allowed bg-slate-50",
+          isOpen && "ring-2 ring-gold-deep/20 border-gold-deep/40"
         )}
       >
         <div className="flex items-center gap-3 overflow-hidden">
           {selectedUser ? (
             <>
               {selectedUser.photoURL ? (
-                <img src={selectedUser.photoURL} alt="" className="w-6 h-6 rounded-lg object-cover ring-1 ring-white/10" />
+                <img src={selectedUser.photoURL} alt="" className="w-6 h-6 rounded-lg object-cover ring-1 ring-slate-200" />
               ) : (
-                <div className="w-6 h-6 rounded-lg bg-[#D4A85420] flex items-center justify-center text-[#D4A854]">
+                <div className="w-6 h-6 rounded-lg bg-gold-deep/20 flex items-center justify-center text-gold-deep">
                   <UserIcon className="w-3.5 h-3.5" />
                 </div>
               )}
-              <span className="text-[12px] font-medium text-white truncate">{selectedUser.name || selectedUser.email}</span>
+              <span className="text-[12px] font-medium text-slate-800 truncate">{selectedUser.name || selectedUser.email}</span>
             </>
           ) : (
             <>
-              <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center text-[#8E8E93]/40">
+              <div className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
                 <UserIcon className="w-3.5 h-3.5" />
               </div>
-              <span className="text-[12px] font-medium text-[#8E8E93]/40 tracking-wide uppercase">Selecione...</span>
+              <span className="text-[12px] font-medium text-slate-400 tracking-wide uppercase">Selecione...</span>
             </>
           )}
         </div>
-        <ChevronDown className={cn("w-4 h-4 text-[#8E8E93]/40 transition-transform duration-300", isOpen && "rotate-180")} />
+        <ChevronDown className={cn("w-4 h-4 text-slate-400 transition-transform duration-300", isOpen && "rotate-180")} />
       </div>
 
       <AnimatePresence>
         {isOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            className="absolute top-full left-0 right-0 mt-2 z-50 bg-[#1A1C1E] border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden backdrop-blur-xl"
+            className="absolute top-full left-0 right-0 mt-2 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden"
           >
             <div className="max-h-60 overflow-y-auto custom-scrollbar p-1.5">
               {users.length === 0 && (
-                <div className="p-4 text-center text-[10px] text-[#8E8E93] uppercase font-bold tracking-widest">Nenhum usuário encontrado</div>
+                <div className="p-4 text-center text-[10px] text-slate-400 uppercase font-bold tracking-widest">Nenhum usuário encontrado</div>
               )}
               {users.map((user: any) => (
-                <div 
+                <div
                   key={user.uid}
                   onClick={() => {
                     onChange(user.uid);
@@ -541,30 +541,30 @@ const PremiumUserSelect = ({ label, required, users, value, onChange, disabled }
                   }}
                   className={cn(
                     "flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer group/item",
-                    value === user.uid ? "bg-[#D4A854] text-black" : "hover:bg-white/5 text-white"
+                    value === user.uid ? "bg-gold-deep text-black" : "hover:bg-slate-50 text-slate-800"
                   )}
                 >
                   {user.photoURL ? (
-                    <img src={user.photoURL} alt="" className="w-8 h-8 rounded-lg object-cover ring-1 ring-white/10" />
+                    <img src={user.photoURL} alt="" className="w-8 h-8 rounded-lg object-cover ring-1 ring-slate-200" />
                   ) : (
                     <div className={cn(
                       "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
-                      value === user.uid ? "bg-black/20 text-black" : "bg-white/5 text-[#D4A854] group-hover/item:bg-[#D4A85420]"
+                      value === user.uid ? "bg-black/20 text-black" : "bg-slate-100 text-gold-deep group-hover/item:bg-gold-deep/20"
                     )}>
                       <UserIcon className="w-4.5 h-4.5" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className={cn("text-[11px] font-black uppercase tracking-tight truncate", value === user.uid ? "text-black" : "text-white")}>{user.name || user.email}</p>
-                    <p className={cn("text-[8px] font-bold uppercase tracking-widest opacity-60 truncate", value === user.uid ? "text-black/80" : "text-[#8E8E93]")}>{user.role || 'Vendedor'}</p>
+                    <p className={cn("text-[11px] font-black uppercase tracking-tight truncate", value === user.uid ? "text-black" : "text-slate-800")}>{user.name || user.email}</p>
+                    <p className={cn("text-[8px] font-bold uppercase tracking-widest opacity-60 truncate", value === user.uid ? "text-black/80" : "text-slate-400")}>{user.role || 'Vendedor'}</p>
                   </div>
                   {value === user.uid && <CheckCircle2 className="w-4 h-4 text-black" />}
                 </div>
               ))}
             </div>
             {auth.currentUser?.email !== 'paulosergio.michelin@gmail.com' && auth.currentUser?.uid !== 'paulomichelin' && (
-              <div className="p-3 bg-black/40 border-t border-white/5">
-                <p className="text-[8px] text-center text-[#8E8E93] font-bold uppercase tracking-widest">Apenas administradores podem alterar este campo.</p>
+              <div className="p-3 bg-slate-50 border-t border-slate-200">
+                <p className="text-[8px] text-center text-slate-400 font-bold uppercase tracking-widest">Apenas administradores podem alterar este campo.</p>
               </div>
             )}
           </motion.div>
@@ -594,39 +594,39 @@ const getDocName = (doc: any, fallback: string = 'Digitalizado'): string => {
 const QuoteItem = React.memo(({ file, index, onPreview, onDelete }: any) => {
   console.log('[QUOTE_RENDERED]', file.fileName);
   return (
-    <div className="p-4 bg-[#111214] border border-white/5 rounded-2xl flex items-center justify-between group hover:border-[#D4A85420] transition-all">
+    <div className="p-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-between group hover:border-gold-deep/30 shadow-sm transition-all">
       <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-xl bg-[#D4A85410] flex items-center justify-center text-[#D4A854]">
+        <div className="w-10 h-10 rounded-xl bg-gold-deep/10 flex items-center justify-center text-gold-deep">
           <FileText className="w-5 h-5" />
         </div>
         <div>
-          <p className="text-[11px] font-black uppercase tracking-tight text-white/90 truncate max-w-[200px]">{file.fileName}</p>
-          <p className="text-[8px] text-[#8E8E93] font-bold uppercase tracking-widest mt-1">
+          <p className="text-[11px] font-black uppercase tracking-tight text-slate-800 truncate max-w-[200px]">{file.fileName}</p>
+          <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1">
             {file.uploadedAt ? format(new Date(file.uploadedAt), 'dd/MM/yyyy HH:mm') : 'Data desconhecida'}
           </p>
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <button 
-          type="button" 
+        <button
+          type="button"
           onClick={() => onPreview(file)}
-          className="p-2 rounded-lg bg-white/5 text-white/40 hover:bg-[#D4A854] hover:text-black transition-all"
+          className="p-2 rounded-lg bg-slate-100 text-slate-500 hover:bg-gold-deep hover:text-black transition-all"
         >
           <Eye className="w-4 h-4" />
         </button>
-        <a 
-          href={file.url} 
+        <a
+          href={file.url}
           download={file.fileName}
           target="_blank"
           rel="noopener noreferrer"
-          className="p-2 rounded-lg bg-white/5 text-white/40 hover:bg-[#D4A854] hover:text-black transition-all"
+          className="p-2 rounded-lg bg-slate-100 text-slate-500 hover:bg-gold-deep hover:text-black transition-all"
         >
           <Download className="w-4 h-4" />
         </a>
-        <button 
-          type="button" 
+        <button
+          type="button"
           onClick={() => onDelete(index)}
-          className="p-2 rounded-lg bg-white/5 text-white/40 hover:bg-red-500 hover:text-white transition-all"
+          className="p-2 rounded-lg bg-slate-100 text-slate-500 hover:bg-[#C0392B] hover:text-white transition-all"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -1293,7 +1293,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
         exit={{ opacity: 0 }}
         transition={{ duration: 0.18 }}
         className={pageMode
-          ? "flex-1 flex flex-col bg-[#050505] text-white overflow-hidden relative"
+          ? "flex-1 flex flex-col bg-slate-50 text-slate-800 overflow-hidden relative"
           : "fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-6"
         }
       >
@@ -1301,7 +1301,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
         {!pageMode && (
           <div
             onClick={() => isDirty ? setShowExitConfirm(true) : onCancel()}
-            className="absolute inset-0 bg-black/70 backdrop-blur-md cursor-pointer"
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-md cursor-pointer"
             aria-hidden="true"
           />
         )}
@@ -1313,25 +1313,25 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
           exit={{ opacity: 0, y: 18, scale: 0.985 }}
           transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
           className={pageMode
-            ? "flex-1 flex flex-col bg-[#050505] text-white overflow-hidden"
-            : "relative w-full max-w-[1100px] max-h-[92vh] flex flex-col bg-[#050505] text-white rounded-3xl border border-white/10 shadow-[0_50px_120px_rgba(0,0,0,0.75)] overflow-hidden isolate"
+            ? "flex-1 flex flex-col bg-slate-50 text-slate-800 overflow-hidden"
+            : "relative w-full max-w-[1100px] max-h-[92vh] flex flex-col bg-slate-50 text-slate-800 rounded-3xl border border-slate-200 shadow-2xl overflow-hidden isolate"
           }
         >
       {/* Header - Always Fixed at Top */}
-      <div className="shrink-0 h-16 border-b border-white/5 bg-[#0B0B0D]/90 backdrop-blur-2xl px-6 md:px-8 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.8)] z-50">
+      <div className="shrink-0 h-16 border-b border-slate-200 bg-white/90 backdrop-blur-2xl px-6 md:px-8 flex items-center justify-between shadow-sm z-50">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4A854] to-[#B8860B] flex items-center justify-center shadow-[0_0_20px_rgba(212,168,84,0.3)] border border-white/10">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gold-deep to-[#B8860B] flex items-center justify-center shadow-[0_0_20px_rgba(212,168,84,0.3)] border border-slate-200">
             <UserIcon className="w-5 h-5 text-black" />
           </div>
           <div className="flex flex-col -space-y-1">
-            <h2 className="text-[11px] font-black uppercase tracking-[0.4em] font-display text-[#D4A854] drop-shadow-sm">{lead?.id ? 'Editar Lead' : 'Novo Cadastro'}</h2>
-            <p className="text-[9px] text-[#8E8E93] font-bold uppercase tracking-widest opacity-60">CRM Michelin Seguros</p>
+            <h2 className="text-[11px] font-black uppercase tracking-[0.4em] font-display text-gold-deep drop-shadow-sm">{lead?.id ? 'Editar Lead' : 'Novo Cadastro'}</h2>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest opacity-60">CRM Michelin Seguros</p>
           </div>
         </div>
-        <button 
+        <button
           type="button"
           onClick={() => isDirty ? setShowExitConfirm(true) : onCancel()}
-          className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all duration-300 text-white/40 hover:text-white group border border-white/5 hover:border-white/20 active:scale-95"
+          className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-all duration-300 text-slate-400 hover:text-slate-800 group border border-slate-200 hover:border-slate-300 active:scale-95"
         >
           <X className="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" />
         </button>
@@ -1341,7 +1341,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
       <form
         id="lead-form"
         onSubmit={handleSubmit}
-        className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar bg-[#050505] selection:bg-[#D4A85420] selection:text-[#D4A854] min-h-0"
+        className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar bg-slate-50 selection:bg-gold-deep/20 selection:text-gold-deep min-h-0"
       >
         <div className="w-full py-6 px-5 md:px-7 lg:px-9 space-y-5 pb-20">
           
@@ -1349,23 +1349,23 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
             <motion.div
               initial={{ opacity: 0, y: -12, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-between gap-4 shadow-[0_8px_30px_rgba(245,158,11,0.08)]"
+              className="p-4 bg-[#FFF3DC] border border-[#B8860B]/30 rounded-2xl flex items-center justify-between gap-4 shadow-sm"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="shrink-0 w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
-                  <AlertCircle className="w-4 h-4 text-amber-400" />
+                <div className="shrink-0 w-8 h-8 rounded-lg bg-[#B8860B]/15 flex items-center justify-center">
+                  <AlertCircle className="w-4 h-4 text-[#B8860B]" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-400">Lead duplicado detectado</p>
-                  <p className="text-[9.5px] text-amber-300/70 font-medium mt-0.5 truncate">
-                    Já existe um lead com {duplicateAlert.field === 'phone' ? 'este telefone' : 'este CPF'}: <span className="font-bold text-amber-300">{duplicateAlert.lead.name}</span>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#B8860B]">Lead duplicado detectado</p>
+                  <p className="text-[9.5px] text-[#B8860B]/80 font-medium mt-0.5 truncate">
+                    Já existe um lead com {duplicateAlert.field === 'phone' ? 'este telefone' : 'este CPF'}: <span className="font-bold text-[#B8860B]">{duplicateAlert.lead.name}</span>
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => { onNavigateToLead?.(duplicateAlert.lead); }}
-                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 text-[9px] font-black uppercase tracking-[0.15em] rounded-lg transition-all"
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-[#B8860B]/20 hover:bg-[#B8860B]/30 border border-[#B8860B]/30 text-[#B8860B] text-[9px] font-black uppercase tracking-[0.15em] rounded-lg transition-all"
               >
                 Editar lead <ArrowRight className="w-3 h-3" />
               </button>
@@ -1376,18 +1376,18 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
             <motion.div
               initial={{ opacity: 0, y: -20, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              className="p-6 bg-red-500/10 border border-red-500/20 rounded-3xl flex items-start gap-5 shadow-[0_10px_40px_rgba(239,68,68,0.1)] backdrop-blur-md"
+              className="p-6 bg-[#FDE4E4] border border-[#C0392B]/20 rounded-3xl flex items-start gap-5 shadow-sm backdrop-blur-md"
             >
-              <div className="p-2 bg-red-500/20 rounded-xl">
-                <AlertCircle className="w-6 h-6 text-red-500 shrink-0" />
+              <div className="p-2 bg-[#C0392B]/20 rounded-xl">
+                <AlertCircle className="w-6 h-6 text-[#C0392B] shrink-0" />
               </div>
               <div className="space-y-1">
-                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-red-500">Erros de Validação Detectados</p>
-                <p className="text-[10px] text-red-400/70 font-medium tracking-wide">Por favor, corrija os itens abaixo para prosseguir com o salvamento:</p>
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#C0392B]">Erros de Validação Detectados</p>
+                <p className="text-[10px] text-[#C0392B]/70 font-medium tracking-wide">Por favor, corrija os itens abaixo para prosseguir com o salvamento:</p>
                 <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1 mt-3">
                   {errors.map((e, idx) => (
-                    <li key={idx} className="text-[10px] text-red-400 font-bold uppercase tracking-tight flex items-center gap-2">
-                       <span className="w-1 h-1 rounded-full bg-red-500/40" />
+                    <li key={idx} className="text-[10px] text-[#C0392B] font-bold uppercase tracking-tight flex items-center gap-2">
+                       <span className="w-1 h-1 rounded-full bg-[#C0392B]/40" />
                        {e.message}
                     </li>
                   ))}
@@ -1438,7 +1438,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                       type="date"
                       value={formData.birthDate || ''}
                       onChange={handleChange}
-                      className="[color-scheme:dark]"
+                      className="[color-scheme:light]"
                     />
                     <PremiumComputedField
                       label="Idade"
@@ -1475,7 +1475,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                     type="date"
                     value={formData.rgDataExpedicao || ''}
                     onChange={handleChange}
-                    className="[color-scheme:dark]"
+                    className="[color-scheme:light]"
                   />
                   <PremiumInput
                     label="Órgão Emissor (RG)"
@@ -1531,8 +1531,8 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                 <>
                   {/* Linha 4: Endereço desmembrado (pernoite do veículo — distinto do endereço da empresa, abaixo) */}
                   <div className="flex items-center gap-1.5 pt-1">
-                    <Car className="w-3 h-3 text-[#D4A854]/60" />
-                    <span className="text-[8.5px] font-bold uppercase tracking-[0.18em] text-[#D4A854]/60">
+                    <Car className="w-3 h-3 text-gold-deep/70" />
+                    <span className="text-[8.5px] font-bold uppercase tracking-[0.18em] text-gold-deep/70">
                       Endereço de Pernoite do Veículo
                     </span>
                   </div>
@@ -1598,7 +1598,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                 <PremiumInput label="Cidade" name="pjCidade" value={pj.cidade} onChange={(e: any) => setPj(p => ({ ...p, cidade: e.target.value }))} icon={MapPin} />
                 <PremiumInput label="Estado" name="pjEstado" value={pj.estado} onChange={(e: any) => setPj(p => ({ ...p, estado: e.target.value }))} icon={MapPin} />
               </div>
-              {cnpjError && <p className="text-[10px] text-red-400 mt-2">{cnpjError}</p>}
+              {cnpjError && <p className="text-[10px] text-[#C0392B] mt-2">{cnpjError}</p>}
             </PremiumSection>
           )}
 
@@ -1667,17 +1667,17 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
               icon={TrendingUp}
             />
             <div className="space-y-1">
-              <label className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] ml-0.5">IA Inteligente</label>
-              <div className="h-10 flex items-center justify-between px-3 bg-[#16181B] border border-white/[0.07] rounded-lg group hover:border-[#D4A854]/30 transition-all">
+              <label className="text-[8.5px] font-bold text-slate-500 uppercase tracking-[0.18em] ml-0.5">IA Inteligente</label>
+              <div className="h-10 flex items-center justify-between px-3 bg-white border border-slate-200 rounded-lg group hover:border-gold-deep/30 transition-all">
                 <div className="flex items-center gap-1.5">
-                  <Bot className={cn('w-3 h-3 transition-colors', (formData.iaEnabled ?? formData.iaActive) ? 'text-[#D4A854]' : 'text-white/30')} />
-                  <span className={cn('text-[9.5px] font-bold uppercase tracking-wider transition-colors', (formData.iaEnabled ?? formData.iaActive) ? 'text-[#D4A854]' : 'text-white/40')}>
+                  <Bot className={cn('w-3 h-3 transition-colors', (formData.iaEnabled ?? formData.iaActive) ? 'text-gold-deep' : 'text-slate-400')} />
+                  <span className={cn('text-[9.5px] font-bold uppercase tracking-wider transition-colors', (formData.iaEnabled ?? formData.iaActive) ? 'text-gold-deep' : 'text-slate-500')}>
                     {(formData.iaEnabled ?? formData.iaActive) ? 'Ativada' : 'Desativada'}
                   </span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" name="iaEnabled" checked={!!(formData.iaEnabled ?? formData.iaActive)} onChange={handleChange} className="sr-only peer" />
-                  <div className="w-8 h-4 bg-white/5 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-[#D4A854] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-[#D4A854]" />
+                  <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-gold-deep after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-gold-deep" />
                 </label>
               </div>
             </div>
@@ -1686,10 +1686,10 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
           {/* Justificativa — textarea refinada */}
           <div className="space-y-1">
             <div className="flex items-center justify-between px-0.5">
-              <label className="text-[8.5px] font-bold text-[#8E8E93]/80 uppercase tracking-[0.18em] flex items-center gap-1.5">
+              <label className="text-[8.5px] font-bold text-slate-500 uppercase tracking-[0.18em] flex items-center gap-1.5">
                 <ClipboardList className="w-3 h-3" /> Justificativa da Classificação
               </label>
-              <span className="text-[8px] text-[#8E8E93]/40 font-mono tabular-nums">
+              <span className="text-[8px] text-slate-400 font-mono tabular-nums">
                 {(formData.justificativa || '').length}/500
               </span>
             </div>
@@ -1700,7 +1700,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
               rows={3}
               maxLength={500}
               placeholder="Descreva brevemente o motivo da pontuação e temperatura atribuídas…"
-              className="w-full p-3.5 bg-[#16181B] border border-white/[0.07] rounded-xl text-[12px] font-medium text-white leading-relaxed transition-all duration-200 focus:ring-2 focus:ring-[#D4A854]/20 focus:border-[#D4A854]/40 focus:shadow-[0_0_0_4px_rgba(212,168,84,0.04)] hover:border-white/15 outline-none placeholder:text-white/15 resize-none"
+              className="w-full p-3.5 bg-white border border-slate-200 rounded-xl text-[12px] font-medium text-slate-800 leading-relaxed transition-all duration-200 focus:ring-2 focus:ring-[#1B4D8F]/15 focus:border-[#1B4D8F]/60 hover:border-slate-300 outline-none placeholder:text-slate-300 resize-none"
             />
           </div>
 
@@ -1718,13 +1718,13 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
               </div>
             )}
 
-            <div className="mt-5 flex items-center justify-between p-3.5 bg-white/[0.02] border border-white/5 rounded-2xl transition-colors hover:border-[#D4A85420]">
+            <div className="mt-5 flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-2xl transition-colors hover:border-gold-deep/30">
               <div className="flex items-center gap-3">
                 <div className={cn(
                   "w-2 h-2 rounded-full transition-all",
-                  possuiSeguro ? "bg-[#D4A854] shadow-[0_0_10px_rgba(212,168,84,0.6)]" : "bg-white/10"
+                  possuiSeguro ? "bg-gold-deep shadow-[0_0_10px_rgba(212,168,84,0.6)]" : "bg-slate-300"
                 )} />
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Já possui seguro ativo?</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 opacity-80">Já possui seguro ativo?</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -1734,7 +1734,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                   onChange={handleChange}
                   className="sr-only peer"
                 />
-                <div className="w-10 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-[#D4A854] after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-[#D4A854]" />
+                <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-gold-deep after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-gold-deep" />
               </label>
             </div>
 
@@ -1749,8 +1749,8 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                   transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-4 p-5 bg-[#0E0F11] border border-[#D4A85420] rounded-2xl space-y-5">
-                    <div className="flex items-center gap-2 text-[#D4A854]">
+                  <div className="mt-4 p-5 bg-gold-deep/5 border border-gold-deep/20 rounded-2xl space-y-5">
+                    <div className="flex items-center gap-2 text-gold-deep">
                       <ShieldCheck className="w-3.5 h-3.5" />
                       <p className="text-[9px] font-black uppercase tracking-[0.2em]">Apólice Vigente</p>
                     </div>
@@ -1779,7 +1779,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                         name="startDate"
                         value={formData.startDate || ''}
                         onChange={handleChange}
-                        className="[color-scheme:dark]"
+                        className="[color-scheme:light]"
                       />
                       <PremiumInput
                         label="Fim da Vigência"
@@ -1787,7 +1787,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                         name="insuranceExpiry"
                         value={formData.insuranceExpiry || ''}
                         onChange={handleChange}
-                        className="[color-scheme:dark]"
+                        className="[color-scheme:light]"
                       />
                       <PremiumComputedField
                         label="Falta para o Fim da Vigência"
@@ -1845,7 +1845,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-6 p-6 bg-white/[0.02] border border-white/5 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="mt-6 p-6 bg-slate-50 border border-slate-200 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-6">
                     <PremiumInput label="Nome do Proprietário" name="nomeProprietario" value={formData.nomeProprietario || formData.ownerName || ''} onChange={handleChange} placeholder="Digite o nome completo do proprietário" />
                     <PremiumInput label="CPF/CNPJ do Proprietário" name="cpfProprietario" value={formData.cpfProprietario || formData.ownerCpfCnpj || ''} onChange={handleChange} placeholder="000.000.000-00" />
                   </div>
@@ -1863,7 +1863,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                 name="proximoRetorno" 
                 value={formData.proximoRetorno ? formData.proximoRetorno.substring(0, 16) : ''} 
                 onChange={handleChange} 
-                className="[color-scheme:dark]"
+                className="[color-scheme:light]"
                 icon={Clock}
               />
               <PremiumUserSelect 
@@ -1892,10 +1892,10 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-[#D4A854]" />
-                <p className="text-[10px] font-black uppercase tracking-widest">Documentação e Extração IA</p>
+                <FileText className="w-5 h-5 text-gold-deep" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-800">Documentação e Extração IA</p>
               </div>
-              <span className="text-[9px] font-bold text-[#8E8E93] uppercase">{Object.keys(formData.documents || {}).length} anexos</span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase">{Object.keys(formData.documents || {}).length} anexos</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <input type="file" id="crv" ref={crvInputRef} className="hidden" onChange={handleDocUpload} accept="image/*,application/pdf" />
@@ -1948,22 +1948,22 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-3">
-                <TrendingUp className="w-5 h-5 text-[#D4A854]" />
-                <p className="text-[10px] font-black uppercase tracking-widest">Cotação apresentada ao cliente</p>
+                <TrendingUp className="w-5 h-5 text-gold-deep" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-800">Cotação apresentada ao cliente</p>
               </div>
-              <span className="text-[9px] font-bold text-[#8E8E93] uppercase">{formData.cotacaoFiles?.length || 0} anexos</span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase">{formData.cotacaoFiles?.length || 0} anexos</span>
             </div>
             <div
               onClick={() => quoteInputRef.current?.click()}
-              className="h-32 border-2 border-dashed border-white/5 bg-[#1A1C1E] hover:border-[#D4A85440] hover:bg-[#D4A85408] rounded-2xl flex flex-col items-center justify-center gap-2 transition-all group cursor-pointer"
+              className="h-32 border-2 border-dashed border-slate-200 bg-slate-50 hover:border-gold-deep/30 hover:bg-gold-deep/5 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all group cursor-pointer"
             >
               <input type="file" ref={quoteInputRef} className="hidden" onChange={handleQuoteUpload} accept="image/*,application/pdf" />
-              <div className="w-11 h-11 bg-white/5 rounded-xl flex items-center justify-center text-[#8E8E93] group-hover:bg-[#D4A854] group-hover:text-black transition-all">
+              <div className="w-11 h-11 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-gold-deep group-hover:text-black transition-all">
                 <FilePlus className="w-5 h-5" />
               </div>
               <div className="text-center">
-                <p className="text-[10px] font-black uppercase text-white tracking-widest">Anexar Nova Cotação</p>
-                <p className="text-[8px] text-[#8E8E93] font-bold uppercase tracking-[0.2em] mt-1">PDF, JPG ou PNG até 10MB</p>
+                <p className="text-[10px] font-black uppercase text-slate-800 tracking-widest">Anexar Nova Cotação</p>
+                <p className="text-[8px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">PDF, JPG ou PNG até 10MB</p>
               </div>
             </div>
             {(formData.cotacaoFiles?.length ?? 0) > 0 && (
@@ -1974,13 +1974,13 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
           </div>
 
           {/* Form Actions */}
-          <section className="pt-6 border-t border-white/5">
+          <section className="pt-6 border-t border-slate-200">
             <AggerQuoteButton formData={formData} />
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
                 onClick={() => onCancel()}
-                className="flex-1 h-12 bg-[#1A1C1E] border border-white/5 rounded-xl text-[#8E8E93] font-black uppercase text-[10px] tracking-[0.3em] hover:bg-[#1C1E20] hover:text-white transition-all active:scale-[0.99]"
+                className="flex-1 h-12 bg-white border border-slate-200 rounded-xl text-slate-500 font-black uppercase text-[10px] tracking-[0.3em] hover:bg-slate-50 hover:text-slate-800 transition-all active:scale-[0.99]"
               >
                 Cancelar
               </button>
@@ -1994,7 +1994,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
               </button>
             </div>
-            <p className="text-center text-[9px] text-[#8E8E93]/40 font-bold uppercase tracking-[0.3em] mt-4">CRM Michelin Seguros • v1.0 • 2026</p>
+            <p className="text-center text-[9px] text-slate-300 font-bold uppercase tracking-[0.3em] mt-4">CRM Michelin Seguros • v1.0 • 2026</p>
           </section>
         </div>
       </form>
@@ -2017,12 +2017,12 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.94, y: 12 }}
                 transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-                className="bg-[#0B0B0D] border border-white/10 rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl"
+                className="bg-white border border-slate-200 rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl"
                 onClick={e => e.stopPropagation()}
               >
-                <AlertCircle className="w-12 h-12 text-amber-400 mx-auto mb-4" />
-                <p className="text-sm font-black text-white uppercase tracking-widest">Alterações não salvas</p>
-                <p className="text-[11px] text-[#8E8E93] mt-2 mb-8 leading-relaxed">
+                <AlertCircle className="w-12 h-12 text-[#B8860B] mx-auto mb-4" />
+                <p className="text-sm font-black text-slate-800 uppercase tracking-widest">Alterações não salvas</p>
+                <p className="text-[11px] text-slate-400 mt-2 mb-8 leading-relaxed">
                   Campos foram alterados mas não foram salvos.<br />Deseja sair sem salvar?
                 </p>
                 <div className="flex flex-col gap-3">
@@ -2034,7 +2034,7 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
                   </button>
                   <button
                     onClick={() => { setShowExitConfirm(false); onCancel(); }}
-                    className="h-12 bg-white/5 border border-white/10 text-red-400 font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-red-500/10 hover:border-red-500/30 transition-all active:scale-[0.98]"
+                    className="h-12 bg-[#FDE4E4] border border-[#C0392B]/20 text-[#C0392B] font-bold uppercase text-[10px] tracking-widest rounded-xl hover:bg-[#C0392B]/20 hover:border-[#C0392B]/30 transition-all active:scale-[0.98]"
                   >
                     Sair sem salvar
                   </button>
@@ -2111,7 +2111,7 @@ const AggerQuoteButton: React.FC<{ formData: Partial<Lead> }> = ({ formData }) =
           "w-full h-12 rounded-xl font-black uppercase text-[11px] tracking-[0.3em] flex items-center justify-center gap-2.5 transition-all border-b-2",
           canQuote && !sending
             ? "bg-gradient-to-r from-amber-500 to-gold-deep text-brand-dark border-amber-700 hover:brightness-110 active:scale-[0.99] shadow-[0_8px_30px_rgba(212,168,84,0.18)]"
-            : "bg-white/5 text-white/30 border-transparent cursor-not-allowed"
+            : "bg-slate-100 text-slate-400 border-transparent cursor-not-allowed"
         )}
         title={
           !canQuote
@@ -2125,7 +2125,7 @@ const AggerQuoteButton: React.FC<{ formData: Partial<Lead> }> = ({ formData }) =
         <span>{sending ? 'Enviando...' : 'Cotar no Agger'}</span>
       </button>
       {!installed && canQuote && (
-        <p className="text-center text-[9px] text-amber-300/60 font-bold uppercase tracking-[0.2em] mt-2">
+        <p className="text-center text-[9px] text-[#B8860B]/80 font-bold uppercase tracking-[0.2em] mt-2">
           Instale a extensão Michelin Seguros no Chrome para preenchimento automático
         </p>
       )}

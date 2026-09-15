@@ -55,21 +55,21 @@ const STAGES: LeadStatus[] = [
 ];
 
 const STAGE_CONFIG: Record<string, { color: string; icon: any }> = {
-  'Novo Lead':             { color: 'text-white/60 bg-white/5',       icon: History      },
+  'Novo Lead':             { color: 'text-slate-500 bg-slate-100',       icon: History      },
   'Em Atendimento':        { color: 'text-blue-500 bg-blue-500/10',    icon: MessageSquare },
-  'Aguardando Documento':  { color: 'text-orange-500 bg-orange-500/10',icon: FileSearch   },
+  'Aguardando Documento':  { color: 'text-[#B8860B] bg-[#FFF3DC]',icon: FileSearch   },
   'Em Cotação':            { color: 'text-gold-deep bg-gold-deep/10',  icon: Clock        },
   'Proposta Enviada':      { color: 'text-indigo-500 bg-indigo-500/10',icon: Send         },
-  'Fechado':               { color: 'text-emerald-500 bg-emerald-500/10',icon: CheckCircle2},
-  'Perdido':               { color: 'text-red-500 bg-red-500/10',      icon: X            },
+  'Fechado':               { color: 'text-[#1F8A4C] bg-[#E4F5EA]',icon: CheckCircle2},
+  'Perdido':               { color: 'text-[#C0392B] bg-[#FDE4E4]',      icon: X            },
 };
 
 const TemperatureBadge = ({ temp }: { temp?: LeadTemperature }) => {
   if (!temp) return null;
   const configs = {
-    quente: { color: 'text-white bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]',        icon: Flame,       label: 'QUENTE' },
+    quente: { color: 'text-white bg-[#C0392B] shadow-[0_0_10px_rgba(192,57,43,0.3)]',        icon: Flame,       label: 'QUENTE' },
     morno:  { color: 'text-brand-dark bg-gold-deep shadow-[0_0_10px_rgba(207,167,100,0.3)]',icon: Thermometer, label: 'MORNO'  },
-    frio:   { color: 'text-white bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)]',       icon: Snowflake,   label: 'FRIO'   },
+    frio:   { color: 'text-white bg-slate-400 shadow-[0_0_10px_rgba(100,116,139,0.3)]',       icon: Snowflake,   label: 'FRIO'   },
   };
   const { color, icon: Icon, label } = configs[temp];
   return (
@@ -101,24 +101,24 @@ const CardContent = ({
   return (
     <div
       onClick={() => onEditLead(lead)}
-      className="bg-[#111214] p-3 rounded-xl border border-white/5 hover:border-gold-deep/20 transition-colors group/card select-none hover:shadow-[0_0_20px_rgba(207,167,100,0.03)]"
+      className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm hover:border-gold-deep/30 transition-colors group/card select-none"
     >
       <div className="flex flex-col gap-2">
-        <h4 className="text-[10px] font-black text-white leading-tight group-hover/card:text-gold-deep transition-colors uppercase tracking-wide truncate">
+        <h4 className="text-[10px] font-black text-slate-800 leading-tight group-hover/card:text-gold-deep transition-colors uppercase tracking-wide truncate">
           {lead.name}
         </h4>
 
         <div className="flex items-center gap-1.5">
           <TemperatureBadge temp={lead.temperature} />
-          {lead.iaActive !== false && <Zap className="w-3 h-3 text-emerald-500" />}
+          {lead.iaActive !== false && <Zap className="w-3 h-3 text-[#1F8A4C]" />}
         </div>
 
-        <div className="flex items-center gap-2 text-white/30">
+        <div className="flex items-center gap-2 text-slate-400">
           <Activity className="w-3 h-3 text-gold-deep" />
           <span className="text-[9px] font-bold">{maskPhone(lead.phone)}</span>
         </div>
 
-        <div className="flex items-center justify-between pt-2.5 mt-0.5 border-t border-white/5">
+        <div className="flex items-center justify-between pt-2.5 mt-0.5 border-t border-slate-100">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-gold-deep/10 border border-gold-deep/20 flex items-center justify-center overflow-hidden">
               {user?.photoURL
@@ -126,13 +126,13 @@ const CardContent = ({
                 : <span className="text-[8px] font-black text-gold-deep">{initials}</span>
               }
             </div>
-            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest truncate max-w-[70px]">
+            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest truncate max-w-[70px]">
               {displayName}
             </span>
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); onOpenChat(lead.id); }}
-            className="w-7 h-7 rounded-lg bg-white/5 text-white/20 hover:bg-gold-deep/10 hover:text-gold-deep transition-all flex items-center justify-center border border-white/5"
+            className="w-7 h-7 rounded-lg bg-slate-100 text-slate-400 hover:bg-gold-deep/10 hover:text-gold-deep transition-all flex items-center justify-center border border-slate-200"
           >
             <MessageSquare className="w-3.5 h-3.5" />
           </button>
@@ -217,8 +217,8 @@ const PipelineStage = React.memo(({
           <Icon className="w-3 h-3" />
         </div>
         <div className="flex flex-col">
-          <h3 className="text-[9px] font-black uppercase tracking-widest text-white leading-none">{stage}</h3>
-          <span className="text-[8px] font-bold text-white/15 mt-0.5 uppercase tracking-tighter">
+          <h3 className="text-[9px] font-black uppercase tracking-widest text-slate-800 leading-none">{stage}</h3>
+          <span className="text-[8px] font-bold text-slate-400 mt-0.5 uppercase tracking-tighter">
             {stageLeads.length} items
           </span>
         </div>
@@ -230,7 +230,7 @@ const PipelineStage = React.memo(({
           'flex-1 rounded-2xl p-2.5 flex flex-col border border-dashed transition-all duration-200 overflow-y-auto scrollbar-hide',
           isOver && isDragging
             ? 'bg-gold-deep/[0.06] border-gold-deep/40 shadow-[0_0_20px_rgba(207,167,100,0.08)]'
-            : 'bg-white/[0.015] border-white/5'
+            : 'bg-slate-50 border-slate-200'
         )}
       >
         {stageLeads.map((lead) => (
@@ -246,11 +246,11 @@ const PipelineStage = React.memo(({
 
         {stageLeads.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-            <div className="w-16 h-16 bg-white/[0.03] rounded-full flex items-center justify-center mb-4 border border-white/5">
-              <PlusCircle className="w-8 h-8 text-white/10" />
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 border border-slate-200">
+              <PlusCircle className="w-8 h-8 text-slate-300" />
             </div>
-            <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] mb-1">Nenhum lead nesta etapa</p>
-            <p className="text-[9px] font-bold text-white/10 uppercase tracking-widest">Arraste um lead para cá</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Nenhum lead nesta etapa</p>
+            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Arraste um lead para cá</p>
           </div>
         )}
       </div>
@@ -355,20 +355,20 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="flex flex-col h-full bg-[#0B0B0D] text-white font-sans overflow-hidden">
+      <div className="flex flex-col h-full bg-slate-50 text-slate-800 font-sans overflow-hidden">
 
         {/* HEADER */}
-        <header className="px-4 md:px-6 py-2.5 md:py-3 flex items-center justify-between border-b border-white/5 bg-[#0B0B0D]/50 backdrop-blur-xl z-20">
+        <header className="px-4 md:px-6 py-2.5 md:py-3 flex items-center justify-between border-b border-slate-200 bg-white/80 backdrop-blur-xl z-20">
           <div>
             <h1 className="text-base md:text-lg font-black tracking-tighter flex items-center gap-2 md:gap-2.5 uppercase">
               <BarChart3 className="w-5 h-5 md:w-6 md:h-6 text-gold-deep" />
               PIPELINE
             </h1>
             <div className="flex items-center gap-2 md:gap-2.5 mt-0.5">
-              <p className="text-[7px] md:text-[8px] font-bold text-white/30 uppercase tracking-widest hidden sm:block">Gestão de funil</p>
+              <p className="text-[7px] md:text-[8px] font-bold text-slate-400 uppercase tracking-widest hidden sm:block">Gestão de funil</p>
               <div className="flex items-center gap-1">
-                <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                <span className="text-[7px] md:text-[8px] font-bold text-emerald-500/80 uppercase tracking-widest">Live</span>
+                <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-[#1F8A4C] animate-pulse shadow-[0_0_8px_rgba(31,138,76,0.5)]" />
+                <span className="text-[7px] md:text-[8px] font-bold text-[#1F8A4C]/80 uppercase tracking-widest">Live</span>
               </div>
             </div>
           </div>
@@ -377,7 +377,7 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
             <button
               onClick={() => { setIsRefreshing(true); setTimeout(() => setIsRefreshing(false), 800); }}
               className={cn(
-                'p-1.5 md:px-3 md:py-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-all font-black text-[9px] uppercase tracking-widest text-white/60',
+                'p-1.5 md:px-3 md:py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 transition-all font-black text-[9px] uppercase tracking-widest text-slate-500',
                 isRefreshing && 'opacity-50 pointer-events-none'
               )}
             >
@@ -394,32 +394,32 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
         </header>
 
         {/* FILTER BAR */}
-        <div className="px-4 md:px-6 py-2 flex items-center justify-between border-b border-white/5 bg-[#0B0B0D]">
+        <div className="px-4 md:px-6 py-2 flex items-center justify-between border-b border-slate-200 bg-white">
           <div className="flex items-center gap-3 md:gap-5">
             <div className="flex flex-col">
               <span className="text-base md:text-lg font-black leading-none">{leads.length}</span>
-              <span className="text-[7px] md:text-[8px] font-bold text-white/20 uppercase tracking-widest mt-0.5">Leads</span>
+              <span className="text-[7px] md:text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Leads</span>
             </div>
 
-            <div className="h-4 md:h-5 w-px bg-white/10" />
+            <div className="h-4 md:h-5 w-px bg-slate-200" />
 
-            <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-lg border border-white/5 max-w-[100px] md:max-w-none">
-              <span className="px-2 text-[8px] md:text-[9px] font-bold text-white/30 uppercase tracking-widest">Responsáveis</span>
-              <ChevronDown className="w-3 h-3 text-white/20" />
+            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg border border-slate-200 max-w-[100px] md:max-w-none">
+              <span className="px-2 text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest">Responsáveis</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
             </div>
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">
-            <button className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 rounded-xl bg-white/5 border border-white/5 text-white/40 font-bold text-[10px] uppercase tracking-widest hover:text-white transition-all">
+            <button className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 rounded-xl bg-white border border-slate-200 text-slate-500 font-bold text-[10px] uppercase tracking-widest hover:text-slate-800 transition-all">
               <Filter className="w-3.5 h-3.5 md:w-4 md:h-4 text-gold-deep" />
               <span className="hidden sm:inline">Filtros</span>
             </button>
 
-            <div className="flex items-center p-1 bg-white/5 rounded-xl border border-white/5">
+            <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200">
               <button className="p-1.5 md:p-2 rounded-lg bg-gold-deep text-brand-dark shadow-lg">
                 <LayoutGrid className="w-3.5 h-3.5 md:w-4 md:h-4" />
               </button>
-              <button className="p-1.5 md:p-2 rounded-lg text-white/20 hover:text-white/60 transition-all">
+              <button className="p-1.5 md:p-2 rounded-lg text-slate-400 hover:text-slate-600 transition-all">
                 <List className="w-3.5 h-3.5 md:w-4 md:h-4" />
               </button>
             </div>
@@ -427,12 +427,12 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
         </div>
 
         {/* KANBAN BOARD */}
-        <div className="flex-1 overflow-x-auto overflow-y-hidden bg-[#0B0B0D] scrollbar-hide snap-x snap-mandatory relative">
+        <div className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-50 scrollbar-hide snap-x snap-mandatory relative">
           {leadsLoading && leads.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center z-10 bg-[#0B0B0D]/80 backdrop-blur-sm">
+            <div className="absolute inset-0 flex items-center justify-center z-10 bg-slate-50/80 backdrop-blur-sm">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-8 h-8 border-2 border-gold-deep/30 border-t-gold-deep rounded-full animate-spin" />
-                <span className="text-[9px] font-bold text-white/30 uppercase tracking-[0.2em]">Carregando leads...</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">Carregando leads...</span>
               </div>
             </div>
           )}
@@ -454,21 +454,21 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
         </div>
 
         {/* FOOTER */}
-        <footer className="px-8 py-3 bg-[#0B0B0D] border-t border-white/5 flex items-center justify-between z-20">
+        <footer className="px-8 py-3 bg-white border-t border-slate-200 flex items-center justify-between z-20">
           <div className="flex items-center gap-6">
-            <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em]">Prioridade:</span>
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Prioridade:</span>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
-                <span className="text-[10px] font-bold text-white/40 uppercase">Quente</span>
+                <div className="w-2 h-2 rounded-full bg-[#C0392B] shadow-[0_0_8px_rgba(192,57,43,0.5)]" />
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Quente</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-gold-deep shadow-[0_0_8px_rgba(207,167,100,0.5)]" />
-                <span className="text-[10px] font-bold text-white/40 uppercase">Morno</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Morno</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-                <span className="text-[10px] font-bold text-white/40 uppercase">Frio</span>
+                <div className="w-2 h-2 rounded-full bg-slate-400 shadow-[0_0_8px_rgba(100,116,139,0.5)]" />
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Frio</span>
               </div>
             </div>
           </div>
@@ -480,8 +480,8 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
             </div>
             <div className="w-1 h-1 rounded-full bg-gold-deep/40" />
             <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span className="text-[9px] font-bold text-white/60 uppercase tracking-widest">ON-LINE</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-[#1F8A4C]" />
+              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">ON-LINE</span>
             </div>
           </div>
         </footer>
