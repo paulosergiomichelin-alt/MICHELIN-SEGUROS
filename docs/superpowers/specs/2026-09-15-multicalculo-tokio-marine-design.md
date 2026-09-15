@@ -18,7 +18,8 @@ Construir a infraestrutura de **multicálculo** (cotação multi-seguradora) com
 
 - Cliente SOAP para o serviço `cotar` (`/TmsWS/Auto/Cotacao?wsdl`), que é o núcleo do cálculo.
 - Cliente REST para os lookups mínimos necessários para montar uma requisição de cotação válida: busca de veículo (`/modelos`) e CPF Emissor (`/consultas/cpfEmissor`).
-- Uma **tela nova e separada** (`/multicalculo`), fora do fluxo do LeadForm, onde o usuário informa os dados do veículo/segurado (com opção de pré-carregar de um Lead existente) e recebe o resultado da cotação.
+- Uma **tela nova e separada** (`/multicalculo`), fora do fluxo do LeadForm, onde o usuário informa os dados do veículo/segurado (com opção de pré-carregar de um Lead existente) e recebe o resultado da cotação — layout em cards inspirado no formulário do Agger (ver §4).
+- Uma tela de **Configurações → Seguradoras** onde o usuário cadastra/atualiza as credenciais de cada seguradora pela interface (sem precisar de env var/redeploy), criptografadas no banco (ver ADR-6, §4.1).
 - Uma abstração de "provider de seguradora" desenhada para múltiplas seguradoras desde o início, mesmo com só uma implementada agora — para que adicionar a 2ª seguradora no futuro não exija redesenhar a tela nem o contrato da API interna.
 - Impressão do PDF da cotação (`/TmsWS/Auto/impressao` → `/cotacao/{numeroCalculo}`), já que a doc é explícita: "Não terão validade os cálculos/propostas que não apresentarem o layout/PDF da Tokio Marine".
 
@@ -85,8 +86,9 @@ _api/insurers/
   types.ts              # CotacaoInput/CotacaoResultado genéricos (ADR-2)
   router.ts             # POST /cotar, GET /cotacao/:numeroCalculo/pdf, GET /veiculos (busca)
   registry.ts           # lista de providers habilitados
+  credentials.ts         # GET/PUT/validar credenciais por provider — cifra via emailEncryption.ts, grava em `settings` (ADR-6)
   tokioMarine/
-    config.ts           # lê env vars, monta URL base por ambiente
+    config.ts           # lê credenciais de `settings` (via credentials.ts), monta URL base por ambiente
     soapClient.ts        # fetch + template XML + parse (fast-xml-parser) — genérico p/ qualquer op SOAP da TM
     restClient.ts        # fetch JSON — genérico p/ qualquer consulta REST da TM
     mapper.ts             # CotacaoInput -> XML de entrada do `cotar`; resposta -> CotacaoResultado
@@ -100,15 +102,19 @@ A doc deixa claro que o `cotar` espera `IdVeiculo` já resolvido (campo antigo `
 **ADR-5 — Formato de resposta de `/modelos` confirmado (atualizado 2026-09-15).**
 Contrato completo: entrada `{ codigoCorretor, codigoUsuario, codigoOperadora, codigoProduto, anoModelo, codigoFIPE?, tipoCombustivel?, inicioVigencia? }` (só um filtro de busca por vez, conforme a introdução do serviço); saída `{ veiculos: [{ idVeiculo, codigoProduto, nomeProduto, codigoFipe, codigoMolicar, categoria, codigoFabricante, descricaoFabricante, codigoModelo, descricaoModelo, lotacao, lotacaoMaxima, tipoCombustivel }], erros: { mensagens } }`. `idVeiculo` é o campo que resolve `IdVeiculo` no `cotar`. `restClient.ts` ainda isola essa chamada atrás de uma função só (`buscarVeiculos(params)`), mas agora com o formato real, não mais um placeholder.
 
-**ADR-6 — Credenciais via env vars no Railway, nunca no navegador.**
-```
-TOKIO_MARINE_ENV=aceite-w | aceite-y | producao   # escolhe a URL base
-TOKIO_MARINE_CODIGO_CORRETOR=...
-TOKIO_MARINE_CODIGO_USUARIO=...
-TOKIO_MARINE_CODIGO_OPERADORA=...
-TOKIO_MARINE_CPF_EMISSOR=...                       # CPF emissor padrão (ver §4.3)
-```
-Segue exatamente o padrão de `EVOLUTION_API_URL`/`EVOLUTION_API_KEY`: getter que lança erro claro se a env var não estiver definida, nunca hardcoded, nunca exposta a uma rota que o navegador possa ler diretamente.
+**ADR-6 — Credenciais gerenciadas por tela (Configurações → Seguradoras), criptografadas no banco — não por env var (revisado 2026-09-15).**
+Decisão original (env var no Railway) foi trocada a pedido do usuário: ele precisa poder atualizar a senha da Tokio Marine (e das próximas seguradoras) direto pela interface, sem depender de mexer em variável de ambiente e redeployar toda vez que uma credencial muda ou vence.
+
+Reaproveita o **mesmo mecanismo de criptografia que `email_accounts` já usa em produção** (`_api/lib/emailEncryption.ts`, `encrypt`/`decrypt` com AES-256-CBC, chave em `EMAIL_ENCRYPTION_KEY`) — só a chave de criptografia continua sendo env var; as credenciais em si (usuário, senha/operadora) ficam no Postgres, cifradas, nunca em texto puro.
+
+Armazenamento: reaproveita a tabela genérica `settings` já existente (`_api/db/schema/settings.ts` — chave composta `"{organizationId}::{id}"`, `data: jsonb`), com `id = "${organizationId}::insurers"` e `data = { tokio: { ativa, ambiente, codigoCorretor, codigoUsuario, codigoOperadoraEnc, cpfEmissor } }` — um objeto por seguradora dentro do mesmo documento, extensível conforme novos providers entram.
+
+**Não** passa pela rota genérica `/api/data/settings/:id` (que não sabe cifrar/decifrar nem mascarar senha na resposta) — ganha rotas dedicadas:
+- `GET /api/insurers/credenciais` — devolve config de cada seguradora com a credencial **mascarada** (ex.: `"••••••••"`), nunca o valor real.
+- `PUT /api/insurers/credenciais/:providerId` — salva (cifra antes de gravar); campo de senha vazio no payload = "não alterar a senha atual".
+- `POST /api/insurers/credenciais/:providerId/validar` — testa a credencial chamando um serviço leve da seguradora (ex.: `/codigoProduto` da Tokio Marine, que só exige autenticação, sem side-effect) e devolve ok/erro — mesmo conceito do botão "Validar acesso" do Agger.
+
+Ambas exigem `requireAuth` **e** checam `req.userRole === 'admin'` (populado por `tenantMiddleware.ts`) — restrição nova para essa rota específica, já que é a primeira vez que o backend expõe um endpoint de escrita de credencial de API externa; não existe um "requireAdmin" genérico reutilizável ainda no `_api/`, então esse check entra inline no handler.
 
 **ADR-7 — Rota `/api/insurers/cotar` exige `requireAuth`, igual à rota de CNPJ.**
 Nenhuma chamada à Tokio Marine é feita sem usuário autenticado do CRM — mesmo padrão já estabelecido pela rota de CNPJ (`server.ts:360`), evitando repetir o débito de rotas antigas do módulo de e-mail que ficaram sem autenticação.
@@ -161,15 +167,33 @@ A doc trazida pelo usuário em 2026-09-15 confirma, com o texto exato de cada se
 - **Campos com serviço de consulta marcado "DESCONTINUADO" na própria doc** (confirma o que já vínhamos assumindo pelo nome do campo no `cotar`): `GaragemForaServico` (`/garagemQuandoForaServico`), `PrincipalCondutorResideEm` (`/principalCondutorResideEm`).
 - **Fora do escopo desta fase por não fazerem parte do fluxo de cotação em si** (são de pagamento/efetivação/outros produtos, não aparecem no payload do `cotar`): `Bancos`, `País`, `Vencimento 1ª Parcela`, `Escolaridade`, `Bandeiras Cartão`, `Profissões`, `Tipo Envio Apólice`, `Titular Cartão`, `Titular Conta`, `Renda Mensal`, `Grupo Segurado` ("exclusivo para operações previamente acordadas com a Tokio Marine" — não se aplica por padrão).
 
-## 4. Fluxo da tela `/multicalculo`
+## 4. Telas
+
+Layout de referência: prints do Agger fornecidos pelo usuário (2026-09-15) — formulário longo dividido em cards por seção, mesma ordem/agrupamento, adaptado aos campos que a Tokio Marine realmente consome (ver ressalvas no início desta seção sobre o que **não** é replicado). Tela nova, fora do fluxo do LeadForm.
+
+### 4.1 Configurações → Seguradoras (pré-requisito, uma vez só)
+
+Nova aba em `SettingsPage.tsx`, um card por seguradora com provider implementado (hoje: só Tokio Marine) — mesma ideia do modal "Configurações da seguradora" do Agger, simplificada (sem "Individualizar por usuário" nem "Habilitar/Desabilitar Ramos", que não se aplicam ao nosso caso de uma credencial única por organização):
+- Toggle "Seguradora ativa".
+- Ambiente: Aceite W / Aceite Y / Produção (`select`).
+- Campos: Código Corretor, Código Usuário, Código Operadora (senha — campo tipo password com olho pra mostrar/ocultar, igual o Agger), CPF Emissor (com botão de buscar via `/cpfEmissor` pra listar os cadastrados e escolher, em vez de digitar).
+- Botão "Validar credenciais" → `POST /api/insurers/credenciais/tokio/validar`.
+- Botão "Salvar" → `PUT /api/insurers/credenciais/tokio` (ADR-6). Campo de senha em branco = mantém a senha já salva.
+- Sem credencial salva e ativa, o botão "Cotar" da tela de multicálculo fica desabilitado com uma mensagem apontando pra essa tela.
+
+### 4.2 `/multicalculo` — formulário de cotação
 
 1. Usuário abre `/multicalculo`. Pode opcionalmente escolher um Lead existente (autocomplete) para pré-carregar nome/CPF/telefone/e-mail/placa/ano do veículo — ou preencher tudo do zero.
-2. Campo de veículo: usuário digita a descrição (marca/modelo) ou informa código FIPE/Molicar se souber; sistema chama `GET /api/insurers/veiculos` e mostra os resultados pra escolher — resolve o `idVeiculoTokio`.
-3. Formulário com os campos mínimos exigidos (ano, zero km, valor, CEP, classe bônus, tipo de seguro, assistência, vigência) — `TipoSeguro`, `TipoAssistencia`, `IsencaoFiscal`, `CodigoCobertura`, `TipoModalidade`, `CodigoFranquia`, `FranquiaIndenizacaoIntegral`, `PrincipalCondutor`, `GaragemPrincipalCondutor` e `CoberturaPessoasResidentes1825Anos` já entram como `<select>` (domínios confirmados, ver §0/ADR-5/ADR-9/ADR-10); só `CoberturaPessoas1825Anos` (sem "Resid") continua como texto livre por falta de domínio confirmado (ver §5).
-4. Botão "Cotar" → `POST /api/insurers/cotar` com o `CotacaoInput` → aguarda `CotacaoResultado[]` (hoje: 1 item) → mostra card(s) com modalidade, prêmio líquido, coberturas e parcelas — usando a cor/logo de `src/lib/seguradoras.ts` pra identidade visual de cada seguradora.
-5. Cada resultado (sucesso ou erro) é salvo em `cotacoes` (ADR-8), vinculado ao lead se a cotação partiu de um lead existente.
-6. Botão "Ver PDF" por resultado → `GET /api/insurers/cotacao/:numeroCalculo/pdf?providerId=tokio` → abre o PDF (base64 decodificado) numa nova aba, reusando o `PDFViewer`/`UniversalDocumentViewer` que o projeto já tem.
-7. Erros de negócio da Tokio Marine (tag `<Erros><Mensagem>`) aparecem como mensagem amigável no card daquele provider, sem quebrar os outros.
+2. **Card "Segurado":** nome, CPF/CNPJ (com detecção de tipo de pessoa, mesmo componente já usado em `LeadForm`/`ClienteForm`), telefone, e-mail.
+3. **Card "Veículo":** placa, chassi, ano modelo, zero km, valor do veículo, CEP. Campo de busca de veículo (marca/modelo ou código FIPE) → chama `GET /api/insurers/veiculos`, mostra os resultados num dropdown de seleção — resolve o `idVeiculoTokio`. Sem escolher um veículo da lista, não dá pra cotar.
+4. **Card "Cobertura":** classe bônus, tipo de seguro, assistência, isenção fiscal, tipo de cobertura, tipo de modalidade, franquia, principal condutor, garagem do principal condutor — os campos com domínio confirmado (ver §0/ADR-5/ADR-9/ADR-10) como `<select>`; só `CoberturaPessoas1825Anos` (sem "Resid") como texto livre por enquanto (ver §5).
+5. **Card "Vigência":** início e fim de vigência.
+6. Botão "Cotar" → `POST /api/insurers/cotar` com o `CotacaoInput` → aguarda `CotacaoResultado[]` (hoje: 1 item, Tokio Marine) → mostra card de resultado com modalidade, prêmio líquido, coberturas e parcelas — usando a cor/logo de `src/lib/seguradoras.ts` pra identidade visual de cada seguradora (mesmo estilo dos cards de seguradora do Agger, um por resultado).
+7. Cada resultado (sucesso ou erro) é salvo em `cotacoes` (ADR-8), vinculado ao lead se a cotação partiu de um lead existente.
+8. Botão "Ver PDF" por resultado → `GET /api/insurers/cotacao/:numeroCalculo/pdf?providerId=tokio` → abre o PDF (base64 decodificado) numa nova aba, reusando o `PDFViewer`/`UniversalDocumentViewer` que o projeto já tem.
+9. Erros de negócio da Tokio Marine (tag `<Erros><Mensagem>`) aparecem como mensagem amigável no card daquele provider, sem quebrar os outros.
+
+**Não replicado do Agger nesta fase** (ver ressalva no início da conversa sobre essas telas): o modal de credenciais por seguradora com "Individualizar"/"Habilitar Ramos" (substituído pela versão simplificada em §4.1); a seleção de múltiplas seguradoras com comissão/desconto por card (só faz sentido com 2+ providers reais — entra quando a 2ª seguradora for implementada); a tela de conversão em proposta (cartão de crédito, endereço de pernoite, ocupação/renda) — isso é efetivação, fase 2.
 
 ## 5. O que fica pendente de confirmação (não bloqueia o início da implementação)
 
@@ -184,6 +208,7 @@ Nesta fase, esses dois campos entram como texto livre no formulário (o usuário
 ## 6. Testes
 
 - Testes unitários do `mapper.ts` (Tokio Marine): `CotacaoInput` → XML esperado (comparar contra os exemplos exatos da doc), e XML de resposta de exemplo → `CotacaoResultado` esperado. Não dependem de rede.
+- Testes unitários de `credentials.ts`: salvar cifra, ler mascarado, nunca devolve o valor real — mock de `encrypt`/`decrypt`.
 - Teste de integração manual contra o ambiente de Aceite (W ou Y) antes de considerar a fase pronta — não há como automatizar isso sem credenciais reais em CI.
 - `soapClient.ts`/`restClient.ts` testados com mocks de `fetch`, igual ao padrão já usado em `CnpjService.test.ts`.
 
@@ -191,9 +216,11 @@ Nesta fase, esses dois campos entram como texto livre no formulário (o usuário
 
 1. Dependência nova (`fast-xml-parser`) + `_api/insurers/types.ts` + `registry.ts` vazio.
 2. Tabela `cotacoes` (ADR-8) + `db:push` em produção + registro em `entityMap.ts`/`DataService`.
-3. `tokioMarine/config.ts` + `soapClient.ts` genérico + teste unitário do parser contra os exemplos de XML da doc.
-4. `tokioMarine/mapper.ts` (`cotar`) + `provider.ts` + teste unitário do mapper.
-5. `tokioMarine/restClient.ts` (`/modelos`, `/cpfEmissor`, `/coberturasAdicionais`, `/franquiaIndenizacaoIntegral`, `/principalCondutor`, `/principalCondutorGaragem`, `/coberturaResidentes1825Anos`, `/codigoProduto` — todos com contrato confirmado, ADR-5/ADR-9).
-6. `_api/insurers/router.ts` (`POST /cotar` — já salvando em `cotacoes`, `GET /veiculos`, `GET /cotacao/:numeroCalculo/pdf`) + registro em `server.ts`.
-7. Tela `/multicalculo` (frontend): formulário + busca de veículo + card de resultado + visualizador de PDF.
-8. Teste manual ponta a ponta contra o Aceite com credenciais reais do usuário.
+3. `_api/insurers/credentials.ts` (ADR-6) + rotas `GET/PUT /api/insurers/credenciais`, `POST /api/insurers/credenciais/:providerId/validar` + registro em `server.ts`.
+4. Tela Configurações → Seguradoras (frontend, §4.1): card de credenciais da Tokio Marine.
+5. `tokioMarine/config.ts` (lê de `credentials.ts`) + `soapClient.ts` genérico + teste unitário do parser contra os exemplos de XML da doc.
+6. `tokioMarine/mapper.ts` (`cotar`) + `provider.ts` + teste unitário do mapper.
+7. `tokioMarine/restClient.ts` (`/modelos`, `/cpfEmissor`, `/coberturasAdicionais`, `/franquiaIndenizacaoIntegral`, `/principalCondutor`, `/principalCondutorGaragem`, `/coberturaResidentes1825Anos`, `/codigoProduto` — todos com contrato confirmado, ADR-5/ADR-9).
+8. `_api/insurers/router.ts` (`POST /cotar` — já salvando em `cotacoes`, `GET /veiculos`, `GET /cotacao/:numeroCalculo/pdf`) + registro em `server.ts`.
+9. Tela `/multicalculo` (frontend, §4.2): cards Segurado/Veículo/Cobertura/Vigência + busca de veículo + card de resultado + visualizador de PDF.
+10. Teste manual ponta a ponta contra o Aceite: salvar credenciais pela tela, validar, cotar, ver PDF.
