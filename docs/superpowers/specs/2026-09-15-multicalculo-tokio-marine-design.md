@@ -10,6 +10,7 @@
 - O formulário de Lead (`LeadForm.tsx`) já tem uma seção "Veículo e Seguro" com Placa/Chassi/Ano/Valor e uma seção "Perfil de Uso" com boa parte dos dados de perfil de condução (uso comercial, condutor jovem, proprietário é condutor, alienação fiduciária) — esses dados já existem no `Lead` e podem alimentar o formulário de multicálculo quando a cotação partir de um lead existente.
 - O tipo `Lead` (`src/types.ts`) não tem nenhum campo equivalente a `IdVeiculo`, `ClasseBonus`, `CodigoCobertura`, `RegiaoCirculacao` ou qualquer outro campo específico da Tokio Marine — esses são conceitos novos, exclusivos da cotação, que não pertencem ao modelo de dados do Lead.
 - **Lacuna de documentação conhecida:** a doc fornecida pelo usuário para o serviço REST `/modelos` (busca de veículo, que resolve o `IdVeiculo` obrigatório para cotar) tem a seção de **resposta** claramente trocada com a de outro endpoint ("Coberturas Adicionais") — os parâmetros de entrada fazem sentido, mas o formato de saída documentado é o errado. Da mesma forma, vários outros serviços REST de "Consultas" mencionados na doc (Valor Mercado, Bancos, Franquia, Região Circulação, Coberturas Adicionais em si, etc.) foram citados só pelo nome, sem contrato de entrada/saída. Essa spec assume formatos razoáveis onde necessário e isola essas incertezas atrás de uma interface só (ver §4.4 e §8).
+- **Fonte secundária não confiável identificada:** o material colado pelo usuário termina com um bloco em formato de resposta conversacional ("Olá! Fico feliz em ajudar você..."), estruturalmente diferente de todas as tabelas de doc oficial que vêm antes — tudo indica ser a resposta de um outro assistente de IA sobre a doc, não a doc em si. Esse bloco é a **única** fonte dos domínios `TipoSeguro` (1/6/7), `TipoAssistencia` (N/C/V), `IsencaoFiscal` (3 códigos) e de várias "regras importantes" (ex.: relação entre `TipoVeiculo` Táxi e `IsencaoFiscal`) — nenhuma tabela oficial da doc lista esses valores. Essa spec trata esses domínios como **não confirmados**, no mesmo nível dos outros campos pendentes (ver §5), não como dado confiável.
 
 ## 1. Escopo desta fase
 
@@ -108,20 +109,43 @@ Segue exatamente o padrão de `EVOLUTION_API_URL`/`EVOLUTION_API_KEY`: getter qu
 **ADR-7 — Rota `/api/insurers/cotar` exige `requireAuth`, igual à rota de CNPJ.**
 Nenhuma chamada à Tokio Marine é feita sem usuário autenticado do CRM — mesmo padrão já estabelecido pela rota de CNPJ (`server.ts:360`), evitando repetir o débito de rotas antigas do módulo de e-mail que ficaram sem autenticação.
 
+**ADR-8 — Cotações são persistidas numa tabela nova (`cotacoes`), vinculada ao lead, com `ON DELETE CASCADE` desde o início.**
+Cada chamada bem-sucedida (ou com erro de negócio) ao `POST /api/insurers/cotar` grava uma linha, para virar histórico visível na ficha do lead depois. Diferente de `lead_pessoa_juridica` (1-para-1, chave primária é o `leadId`), aqui é 1-para-N — um lead pode ter várias cotações ao longo do tempo — então a tabela tem `id` próprio e `leadId` como FK comum, consultada pelo mecanismo genérico de coleções (`entityMap.ts` + `DataService`, mesmo padrão de `cliente_relacionamentos`).
+```ts
+// _api/db/schema/leads.ts (ou arquivo novo _api/db/schema/cotacoes.ts)
+export const cotacoes = pgTable('cotacoes', {
+  id: text('id').primaryKey(),
+  organizationId: text('organization_id').references(() => organizations.id),
+  leadId: text('lead_id').references(() => leads.id, { onDelete: 'cascade' }), // nulo se cotação feita sem lead vinculado
+  providerId: text('provider_id').notNull(),        // 'tokio'
+  numeroCalculo: text('numero_calculo'),             // nulo se a cotação falhou antes de gerar número
+  status: text('status').notNull(),                  // 'ok' | 'erro'
+  resultado: jsonb('resultado'),                     // snapshot do CotacaoResultadoItem completo
+  erro: text('erro'),
+  createdBy: text('created_by'),                     // uid do usuário que rodou a cotação
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_cotacoes_lead').on(t.leadId),
+]);
+```
+`leadId` **já nasce com `onDelete: 'cascade'`** — essa mesma sessão encontrou dois bugs em produção (`lead_pessoa_juridica` e `campaign_log`) causados exatamente por FKs pra `leads.id` sem essa configuração, quebrando a exclusão de lead com erro 500. Não repetir o erro aqui.
+
 ## 4. Fluxo da tela `/multicalculo`
 
 1. Usuário abre `/multicalculo`. Pode opcionalmente escolher um Lead existente (autocomplete) para pré-carregar nome/CPF/telefone/e-mail/placa/ano do veículo — ou preencher tudo do zero.
 2. Campo de veículo: usuário digita a descrição (marca/modelo) ou informa código FIPE/Molicar se souber; sistema chama `GET /api/insurers/veiculos` e mostra os resultados pra escolher — resolve o `idVeiculoTokio`.
-3. Formulário com os campos mínimos exigidos (ano, zero km, valor, CEP, classe bônus, tipo de seguro, assistência, vigência) — usando os domínios fixos já conhecidos pela doc (`TipoSeguro`: 1/6/7, `TipoAssistencia`: N/C/V, `IsencaoFiscal`: 3 códigos) como `<select>`, e texto livre pros campos sem domínio confirmado ainda.
+3. Formulário com os campos mínimos exigidos (ano, zero km, valor, CEP, classe bônus, tipo de seguro, assistência, vigência) — todos os campos sem domínio confirmado pela doc oficial (o que inclui `TipoSeguro`, `TipoAssistencia` e `IsencaoFiscal`, ver §0) entram como texto livre nesta fase, não `<select>`; viram dropdown assim que o valor for confirmado testando contra o Aceite.
 4. Botão "Cotar" → `POST /api/insurers/cotar` com o `CotacaoInput` → aguarda `CotacaoResultado[]` (hoje: 1 item) → mostra card(s) com modalidade, prêmio líquido, coberturas e parcelas — usando a cor/logo de `src/lib/seguradoras.ts` pra identidade visual de cada seguradora.
-5. Botão "Ver PDF" por resultado → `GET /api/insurers/cotacao/:numeroCalculo/pdf?providerId=tokio` → abre o PDF (base64 decodificado) numa nova aba, reusando o `PDFViewer`/`UniversalDocumentViewer` que o projeto já tem.
-6. Erros de negócio da Tokio Marine (tag `<Erros><Mensagem>`) aparecem como mensagem amigável no card daquele provider, sem quebrar os outros.
+5. Cada resultado (sucesso ou erro) é salvo em `cotacoes` (ADR-8), vinculado ao lead se a cotação partiu de um lead existente.
+6. Botão "Ver PDF" por resultado → `GET /api/insurers/cotacao/:numeroCalculo/pdf?providerId=tokio` → abre o PDF (base64 decodificado) numa nova aba, reusando o `PDFViewer`/`UniversalDocumentViewer` que o projeto já tem.
+7. Erros de negócio da Tokio Marine (tag `<Erros><Mensagem>`) aparecem como mensagem amigável no card daquele provider, sem quebrar os outros.
 
 ## 5. O que fica pendente de confirmação (não bloqueia o início da implementação)
 
 - Formato real de resposta de `/modelos` (ADR-5) — implementar com melhor esforço, ajustar quando testar contra o Aceite de verdade ou quando a doc certa chegar.
 - Contrato exato dos demais lookups REST de domínio (Franquia, Região Circulação, Coberturas Adicionais, etc.) — nesta fase, os campos que não têm domínio confirmado entram como texto livre no formulário (o usuário digita o código, se souber) em vez de `<select>`; viram dropdown assim que o contrato for confirmado.
 - Código exato de `CodigoProduto` para Automóvel — precisa ser confirmado testando o lookup "Código Produto" contra o Aceite, ou perguntando ao suporte da Tokio Marine.
+- Domínios de `TipoSeguro`, `TipoAssistencia` e `IsencaoFiscal` (e as "regras importantes" associadas, tipo Táxi × isenção PCD) — só têm origem numa fonte secundária não oficial (ver §0); tratar como pista útil pra implementar mais rápido, mas validar de verdade contra o Aceite antes de confiar.
 
 ## 6. Testes
 
@@ -132,9 +156,10 @@ Nenhuma chamada à Tokio Marine é feita sem usuário autenticado do CRM — mes
 ## 7. Plano de implementação (visão geral — detalhado no plano de execução)
 
 1. Dependência nova (`fast-xml-parser`) + `_api/insurers/types.ts` + `registry.ts` vazio.
-2. `tokioMarine/config.ts` + `soapClient.ts` genérico + teste unitário do parser contra os exemplos de XML da doc.
-3. `tokioMarine/mapper.ts` (`cotar`) + `provider.ts` + teste unitário do mapper.
-4. `tokioMarine/restClient.ts` (`/modelos`, `/cpfEmissor`) com o disclaimer do ADR-5.
-5. `_api/insurers/router.ts` (`POST /cotar`, `GET /veiculos`, `GET /cotacao/:numeroCalculo/pdf`) + registro em `server.ts`.
-6. Tela `/multicalculo` (frontend): formulário + busca de veículo + card de resultado + visualizador de PDF.
-7. Teste manual ponta a ponta contra o Aceite com credenciais reais do usuário.
+2. Tabela `cotacoes` (ADR-8) + `db:push` em produção + registro em `entityMap.ts`/`DataService`.
+3. `tokioMarine/config.ts` + `soapClient.ts` genérico + teste unitário do parser contra os exemplos de XML da doc.
+4. `tokioMarine/mapper.ts` (`cotar`) + `provider.ts` + teste unitário do mapper.
+5. `tokioMarine/restClient.ts` (`/modelos`, `/cpfEmissor`) com o disclaimer do ADR-5.
+6. `_api/insurers/router.ts` (`POST /cotar` — já salvando em `cotacoes`, `GET /veiculos`, `GET /cotacao/:numeroCalculo/pdf`) + registro em `server.ts`.
+7. Tela `/multicalculo` (frontend): formulário + busca de veículo + card de resultado + visualizador de PDF.
+8. Teste manual ponta a ponta contra o Aceite com credenciais reais do usuário.
