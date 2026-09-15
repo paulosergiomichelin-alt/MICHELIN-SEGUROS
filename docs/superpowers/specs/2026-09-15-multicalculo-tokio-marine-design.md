@@ -44,7 +44,7 @@ export interface CotacaoInput {
   veiculo: { idVeiculoTokio?: number /* opcional no tipo genérico — cada provider decide o que exige; o mapper da Tokio Marine rejeita com erro claro se faltar, ver ADR-4 */; anoModelo: number; zeroKm: boolean; valorVeiculo: number; cep: string; placa?: string; chassi?: string };
   cobertura: {
     classeBonus?: number; tipoSeguro: '1' | '6' | '7'; tipoAssistencia: 'N' | 'C' | 'V';
-    codigoCobertura?: string; tipoModalidade?: string; codigoFranquia?: string; // domínio pendente, ver §5 — texto livre por enquanto
+    codigoCobertura?: string; tipoModalidade?: string; codigoFranquia?: string; // domínio confirmado, ver ADR-10
     codigoFranquiaIndenizacaoIntegral?: string; principalCondutor?: string; garagemPrincipalCondutor?: string; coberturaPessoasResidentes1825Anos?: string; // domínio confirmado, ver ADR-5
   }; // regiaoCirculacao NÃO entra aqui — confirmado exclusivo Caminhão/Utilitário, ver ADR-9
   vigencia: { inicio: string; fim: string };
@@ -134,6 +134,26 @@ export const cotacoes = pgTable('cotacoes', {
 ```
 `leadId` **já nasce com `onDelete: 'cascade'`** — essa mesma sessão encontrou dois bugs em produção (`lead_pessoa_juridica` e `campaign_log`) causados exatamente por FKs pra `leads.id` sem essa configuração, quebrando a exclusão de lead com erro 500. Não repetir o erro aqui.
 
+**ADR-10 — Domínios de `CodigoCobertura`, `TipoModalidade` e `CodigoFranquia` (parcial) confirmados (2026-09-15).**
+```
+CodigoCobertura (obrigatório, numérico):
+  1 Compreensiva · 2 Incêndio e Roubo · 3 RCF-V · 4 Colisão e Incêndio
+  5 Indenização Integral (colisão, incêndio, roubo/furto) · 6 Assistência Exclusiva
+  — "6" só se usa pra parceiro que ainda não tem o produto Sugestão.
+
+TipoModalidade (obrigatório, alfanumérico):
+  A Valor Ajustável · D Valor Determinado
+  — Reboque/Semi-Reboque sempre "D". Não obrigatório em cotação "sem casco"
+    (RCF isolado ou Assistência Exclusiva).
+
+CodigoFranquia — franquia de indenização PARCIAL (obrigatório, numérico; distinto
+de CodigoFranquiaIndenizacaoIntegral, que já tinha domínio próprio confirmado):
+  1 Básica · 2 150% da Básica · 3 200% da Básica · 4 50% da Básica
+  6 25% da Básica · 7 75% da Básica
+  — Não se aplica quando CodigoCobertura é 3 (RCF-V) ou 5 (Indenização Integral).
+```
+O mapper da Tokio Marine (`tokioMarine/mapper.ts`) aplica essas regras condicionais na montagem do XML — não manda `CodigoFranquia` quando `CodigoCobertura` for 3 ou 5, não exige `TipoModalidade` em cotação sem casco, etc. — em vez de empurrar essa lógica pro formulário do frontend.
+
 **ADR-9 — Campos/serviços confirmados como fora do produto Automóvel Pessoa Física não entram no formulário do MVP (atualizado 2026-09-15).**
 A doc trazida pelo usuário em 2026-09-15 confirma, com o texto exato de cada serviço, que os seguintes são exclusivos de outro produto ou tipo de pessoa — não fazem parte do formulário de `/multicalculo` nesta fase:
 - **Exclusivo Caminhão / Reboque / Utilitário Carga** (não Automóvel passeio): `Carroceria`/`TipoCarroceria` (`/tipoCarroceria`, "Serviço exclusivo para Caminhão"), `CabineSuplementar` (`/cabineSuplementar`, "exclusivo para Caminhão/Reboque e Semi-reboque"), `RegiaoCirculacao` (`/regiaoCirculacao`, "exclusivo para Caminhão/Utilitário Carga"). `CargasTransportadas` não teve contrato fornecido ainda, mas segue o mesmo padrão de nome/contexto — tratado como mesmo grupo até confirmação.
@@ -145,7 +165,7 @@ A doc trazida pelo usuário em 2026-09-15 confirma, com o texto exato de cada se
 
 1. Usuário abre `/multicalculo`. Pode opcionalmente escolher um Lead existente (autocomplete) para pré-carregar nome/CPF/telefone/e-mail/placa/ano do veículo — ou preencher tudo do zero.
 2. Campo de veículo: usuário digita a descrição (marca/modelo) ou informa código FIPE/Molicar se souber; sistema chama `GET /api/insurers/veiculos` e mostra os resultados pra escolher — resolve o `idVeiculoTokio`.
-3. Formulário com os campos mínimos exigidos (ano, zero km, valor, CEP, classe bônus, tipo de seguro, assistência, vigência) — `TipoSeguro`, `TipoAssistencia`, `IsencaoFiscal`, `FranquiaIndenizacaoIntegral`, `PrincipalCondutor`, `GaragemPrincipalCondutor` e `CoberturaPessoasResidentes1825Anos` já entram como `<select>` (domínios confirmados, ver §0/ADR-5/ADR-9); os campos ainda sem domínio confirmado (`CodigoCobertura`, `TipoModalidade`, `CodigoFranquia` parcial, `CoberturaPessoas1825Anos` sem "Resid") entram como texto livre nesta fase, viram dropdown assim que o contrato for confirmado (ver §5).
+3. Formulário com os campos mínimos exigidos (ano, zero km, valor, CEP, classe bônus, tipo de seguro, assistência, vigência) — `TipoSeguro`, `TipoAssistencia`, `IsencaoFiscal`, `CodigoCobertura`, `TipoModalidade`, `CodigoFranquia`, `FranquiaIndenizacaoIntegral`, `PrincipalCondutor`, `GaragemPrincipalCondutor` e `CoberturaPessoasResidentes1825Anos` já entram como `<select>` (domínios confirmados, ver §0/ADR-5/ADR-9/ADR-10); só `CoberturaPessoas1825Anos` (sem "Resid") continua como texto livre por falta de domínio confirmado (ver §5).
 4. Botão "Cotar" → `POST /api/insurers/cotar` com o `CotacaoInput` → aguarda `CotacaoResultado[]` (hoje: 1 item) → mostra card(s) com modalidade, prêmio líquido, coberturas e parcelas — usando a cor/logo de `src/lib/seguradoras.ts` pra identidade visual de cada seguradora.
 5. Cada resultado (sucesso ou erro) é salvo em `cotacoes` (ADR-8), vinculado ao lead se a cotação partiu de um lead existente.
 6. Botão "Ver PDF" por resultado → `GET /api/insurers/cotacao/:numeroCalculo/pdf?providerId=tokio` → abre o PDF (base64 decodificado) numa nova aba, reusando o `PDFViewer`/`UniversalDocumentViewer` que o projeto já tem.
@@ -153,16 +173,13 @@ A doc trazida pelo usuário em 2026-09-15 confirma, com o texto exato de cada se
 
 ## 5. O que fica pendente de confirmação (não bloqueia o início da implementação)
 
-**Resolvido em 2026-09-15** (usuário forneceu o contrato completo): `/modelos` (resposta), `/coberturasAdicionais` (entrada), `/valorMercado`, `/franquiaIndenizacaoIntegral`, `/principalCondutor`, `/principalCondutorGaragem`, `/coberturaResidentes1825Anos`, `/codigoProduto` (mecanismo pra obter o valor — chamar sem filtro e localizar "Automóvel" na lista retornada). Confirmado também que `/tipoCarroceria`, `/cabineSuplementar` e `/regiaoCirculacao` são exclusivos de Caminhão/Utilitário e não entram no formulário de Automóvel (ver ADR-9).
+**Resolvido em 2026-09-15** (usuário forneceu o contrato completo): `/modelos` (resposta), `/coberturasAdicionais` (entrada), `/valorMercado`, `/franquiaIndenizacaoIntegral`, `/principalCondutor`, `/principalCondutorGaragem`, `/coberturaResidentes1825Anos`, `/codigoProduto` (mecanismo pra obter o valor — chamar sem filtro e localizar "Automóvel" na lista retornada), e os domínios de `CodigoCobertura`, `TipoModalidade` e `CodigoFranquia` parcial (ver ADR-10). Confirmado também que `/tipoCarroceria`, `/cabineSuplementar` e `/regiaoCirculacao` são exclusivos de Caminhão/Utilitário e não entram no formulário de Automóvel (ver ADR-9).
 
-**Ainda pendente — sem nenhum serviço de consulta identificado em toda a doc fornecida até agora:**
-- Domínio de `CodigoCobertura` ("tipo de cobertura para contratação": Compreensiva, Incêndio+Roubo, RCF isolado etc.) — campo essencial pra cotar, nenhum lookup encontrado.
-- Domínio de `TipoModalidade` — mesma situação, campo essencial sem lookup.
-- Domínio de `CodigoFranquia` (franquia de indenização **parcial** — diferente de `CodigoFranquiaIndenizacaoIntegral`, que já tem lookup confirmado).
-- Domínio de `CoberturaPessoas1825Anos` (a versão **sem** "Resid" do campo — só a variante "Residentes" foi documentada, ver `/coberturaResidentes1825Anos`; a versão simples ficou de fora desta última leva de doc).
-- Quais valores `codigoCategoria` aceita na entrada do serviço SOAP "Tipo Veículo v2" (`consultarTipoVeiculo2`) — endpoint já documentado, mas esse parâmetro específico não.
+**Ainda pendente:**
+- Domínio de `CoberturaPessoas1825Anos` (a versão **sem** "Resid" do campo — só a variante "Residentes" foi documentada, ver `/coberturaResidentes1825Anos`; a versão simples nunca veio em nenhuma leva de doc até agora).
+- Quais valores `codigoCategoria` aceita na entrada do serviço SOAP "Tipo Veículo v2" (`consultarTipoVeiculo2`) — a última resposta sobre esse campo só repetiu a metadados que já tínhamos (obrigatório, numérico, "Código da categoria"), sem listar os valores válidos. A pergunta continua em aberto: **quais números `codigoCategoria` aceita?**
 
-Nesta fase, todo campo sem domínio confirmado entra como texto livre no formulário (o usuário digita o código, se souber) em vez de `<select>`; vira dropdown assim que o contrato for confirmado.
+Nesta fase, esses dois campos entram como texto livre no formulário (o usuário digita o código, se souber) em vez de `<select>`; viram dropdown assim que o contrato for confirmado.
 
 ## 6. Testes
 
