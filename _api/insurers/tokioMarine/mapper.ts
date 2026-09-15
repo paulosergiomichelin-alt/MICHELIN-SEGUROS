@@ -7,7 +7,7 @@ function toNum(v: any): number {
 }
 
 export function buildCotarBody(input: CotacaoInput, config: Pick<TokioMarineCredentials, 'cpfEmissor'>, codigoProduto: number): Record<string, any> {
-  const { segurado, veiculo, cobertura, vigencia } = input;
+  const { segurado, veiculo, condutor, cobertura, vigencia, renovacao } = input;
 
   const item: Record<string, any> = {
     IdVeiculo: veiculo.idVeiculoTokio,
@@ -17,6 +17,14 @@ export function buildCotarBody(input: CotacaoInput, config: Pick<TokioMarineCred
     CEP: veiculo.cep,
     Placa: veiculo.placa,
     Chassi: veiculo.chassi,
+    PercentualAjuste: veiculo.percentualAjuste,
+    Blindagem: veiculo.blindado !== undefined ? (veiculo.blindado ? 'S' : 'N') : undefined,
+    LmiBlindagem: veiculo.lmiBlindagem,
+    KitGas: veiculo.kitGas !== undefined ? (veiculo.kitGas ? 'S' : 'N') : undefined,
+    LmiKitGas: veiculo.lmiKitGas,
+    NomeCondutor: condutor?.nome,
+    CPFCondutor: condutor?.cpf,
+    EstadoCivilCondutor: condutor?.estadoCivil,
     CodigoCobertura: cobertura.codigoCobertura,
     ClasseBonus: cobertura.classeBonus,
     InicioVigencia: vigencia.inicio,
@@ -28,6 +36,12 @@ export function buildCotarBody(input: CotacaoInput, config: Pick<TokioMarineCred
     GaragemPrincipalCondutor: cobertura.garagemPrincipalCondutor,
     CoberturaPessoasResidentes1825Anos: cobertura.coberturaPessoasResidentes1825Anos,
     CodigoFranquiaIndenizacaoIntegral: cobertura.codigoFranquiaIndenizacaoIntegral,
+    DanosMateriais: cobertura.danosMateriais,
+    DanosCorporais: cobertura.danosCorporais,
+    DanosMorais: cobertura.danosMorais,
+    AppMorte: cobertura.appMorte,
+    AppInvalidez: cobertura.appInvalidez,
+    AppDmho: cobertura.appDmho,
   };
 
   // TipoModalidade não é obrigatório em cotação "sem casco" (RCF-V isolado ou Assistência
@@ -40,6 +54,18 @@ export function buildCotarBody(input: CotacaoInput, config: Pick<TokioMarineCred
   // Integral (5) — ADR-10 da spec.
   if (cobertura.codigoCobertura !== '3' && cobertura.codigoCobertura !== '5') {
     item.CodigoFranquia = cobertura.codigoFranquia;
+  }
+
+  // Dados de renovação: CodigoSeguradoraAnterior obrigatório em renovação de congênere (6),
+  // NumeroApoliceAnterior obrigatório em renovação Tokio (7) — conforme doc da Tokio Marine.
+  if (cobertura.tipoSeguro === '6') {
+    item.CodigoSeguradoraAnterior = renovacao?.codigoSeguradoraAnterior;
+  }
+  if (cobertura.tipoSeguro === '7') {
+    item.NumeroApoliceAnterior = renovacao?.numeroApoliceAnterior;
+  }
+  if (cobertura.tipoSeguro === '6' || cobertura.tipoSeguro === '7') {
+    item.DataVencimentoApoliceAnterior = renovacao?.dataVencimentoApoliceAnterior;
   }
 
   return {

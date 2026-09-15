@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Car, User as UserIcon, ShieldCheck, Calendar, Search, Loader2, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Car, User as UserIcon, ShieldCheck, Calendar, Search, Loader2, FileText, AlertCircle, HeartPulse, RefreshCw, UserCheck } from 'lucide-react';
 import { formatCpfCnpjProgressive, detectTipoPessoa, formatPhone } from '../../lib/utils';
 import { getSeguradora } from '../../lib/seguradoras';
 import { InsurerService, CotacaoInput, CotacaoResultado, VeiculoTokioMarine } from '../../services/InsurerService';
@@ -25,21 +25,37 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, 
 const inputCls = "w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-[12px] font-medium focus:border-gold-deep/40 focus:ring-2 focus:ring-gold-deep/10 transition-all";
 
 export const MulticalculoPage: React.FC = () => {
+  // Segurado
   const [nome, setNome] = useState('');
   const [cpfCnpj, setCpfCnpj] = useState('');
   const [telefone, setTelefone] = useState('');
   const [email, setEmail] = useState('');
 
+  // Veículo
   const [anoModelo, setAnoModelo] = useState('');
   const [buscaVeiculo, setBuscaVeiculo] = useState<VeiculoTokioMarine[]>([]);
   const [veiculoSelecionado, setVeiculoSelecionado] = useState<VeiculoTokioMarine | null>(null);
   const [buscandoVeiculo, setBuscandoVeiculo] = useState(false);
   const [zeroKm, setZeroKm] = useState(false);
   const [valorVeiculo, setValorVeiculo] = useState('');
+  const [percentualAjuste, setPercentualAjuste] = useState('');
   const [cep, setCep] = useState('');
   const [placa, setPlaca] = useState('');
   const [chassi, setChassi] = useState('');
+  const [blindado, setBlindado] = useState(false);
+  const [lmiBlindagem, setLmiBlindagem] = useState('');
+  const [kitGas, setKitGas] = useState(false);
+  const [lmiKitGas, setLmiKitGas] = useState('');
 
+  // Condutor
+  const [nomeCondutor, setNomeCondutor] = useState('');
+  const [cpfCondutor, setCpfCondutor] = useState('');
+  const [estadoCivilCondutor, setEstadoCivilCondutor] = useState('');
+  const [principalCondutor, setPrincipalCondutor] = useState('');
+  const [garagemPrincipalCondutor, setGaragemPrincipalCondutor] = useState('');
+  const [coberturaJovem1825, setCoberturaJovem1825] = useState('');
+
+  // Cobertura
   const [classeBonus, setClasseBonus] = useState('0');
   const [tipoSeguro, setTipoSeguro] = useState<'1' | '6' | '7'>('1');
   const [tipoAssistencia, setTipoAssistencia] = useState<'N' | 'C' | 'V'>('C');
@@ -47,9 +63,21 @@ export const MulticalculoPage: React.FC = () => {
   const [codigoCobertura, setCodigoCobertura] = useState('1');
   const [tipoModalidade, setTipoModalidade] = useState('A');
   const [codigoFranquia, setCodigoFranquia] = useState('1');
+  const [codigoFranquiaIntegral, setCodigoFranquiaIntegral] = useState('');
 
+  // RCF / APP
+  const [danosMateriais, setDanosMateriais] = useState('');
+  const [danosCorporais, setDanosCorporais] = useState('');
+  const [danosMorais, setDanosMorais] = useState('');
+  const [appMorte, setAppMorte] = useState('');
+  const [appInvalidez, setAppInvalidez] = useState('');
+
+  // Vigência / Renovação
   const [inicioVigencia, setInicioVigencia] = useState('');
   const [fimVigencia, setFimVigencia] = useState('');
+  const [codigoSeguradoraAnterior, setCodigoSeguradoraAnterior] = useState('');
+  const [numeroApoliceAnterior, setNumeroApoliceAnterior] = useState('');
+  const [dataVencimentoApoliceAnterior, setDataVencimentoApoliceAnterior] = useState('');
 
   const [cotando, setCotando] = useState(false);
   const [resultados, setResultados] = useState<CotacaoResultado[] | null>(null);
@@ -57,6 +85,7 @@ export const MulticalculoPage: React.FC = () => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   const tipoPessoa = detectTipoPessoa(cpfCnpj.replace(/\D/g, ''));
+  const isRenovacao = tipoSeguro === '6' || tipoSeguro === '7';
 
   const buscarVeiculos = async () => {
     if (!anoModelo) return;
@@ -88,12 +117,34 @@ export const MulticalculoPage: React.FC = () => {
         veiculo: {
           idVeiculoTokio: veiculoSelecionado.idVeiculo, anoModelo: Number(anoModelo), zeroKm,
           valorVeiculo: Number(valorVeiculo), cep: cep.replace(/\D/g, ''), placa, chassi,
+          percentualAjuste: percentualAjuste ? Number(percentualAjuste) : undefined,
+          blindado, lmiBlindagem: blindado && lmiBlindagem ? Number(lmiBlindagem) : undefined,
+          kitGas, lmiKitGas: kitGas && lmiKitGas ? Number(lmiKitGas) : undefined,
         },
+        condutor: (nomeCondutor || cpfCondutor || estadoCivilCondutor)
+          ? { nome: nomeCondutor || undefined, cpf: cpfCondutor.replace(/\D/g, '') || undefined, estadoCivil: estadoCivilCondutor || undefined }
+          : undefined,
         cobertura: {
           classeBonus: Number(classeBonus), tipoSeguro, tipoAssistencia, isencaoFiscal,
           codigoCobertura, tipoModalidade, codigoFranquia,
+          codigoFranquiaIndenizacaoIntegral: codigoFranquiaIntegral || undefined,
+          principalCondutor: principalCondutor || undefined,
+          garagemPrincipalCondutor: garagemPrincipalCondutor || undefined,
+          coberturaPessoasResidentes1825Anos: coberturaJovem1825 || undefined,
+          danosMateriais: danosMateriais ? Number(danosMateriais) : undefined,
+          danosCorporais: danosCorporais ? Number(danosCorporais) : undefined,
+          danosMorais: danosMorais ? Number(danosMorais) : undefined,
+          appMorte: appMorte ? Number(appMorte) : undefined,
+          appInvalidez: appInvalidez ? Number(appInvalidez) : undefined,
         },
         vigencia: { inicio: dataParaTM(inicioVigencia), fim: dataParaTM(fimVigencia) },
+        renovacao: isRenovacao
+          ? {
+              codigoSeguradoraAnterior: codigoSeguradoraAnterior || undefined,
+              numeroApoliceAnterior: numeroApoliceAnterior || undefined,
+              dataVencimentoApoliceAnterior: dataVencimentoApoliceAnterior ? dataParaTM(dataVencimentoApoliceAnterior) : undefined,
+            }
+          : undefined,
       };
       const result = await InsurerService.cotar(input);
       setResultados(result);
@@ -115,8 +166,8 @@ export const MulticalculoPage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <Card title="Segurado" icon={UserIcon}>
-          <Field label="Nome Completo"><input className={inputCls} value={nome} onChange={(e) => setNome(e.target.value)} /></Field>
           <Field label="CPF/CNPJ"><input className={inputCls} value={cpfCnpj} onChange={(e) => setCpfCnpj(formatCpfCnpjProgressive(e.target.value))} /></Field>
+          <Field label="Nome Completo"><input className={inputCls} value={nome} onChange={(e) => setNome(e.target.value)} /></Field>
           <Field label="Telefone"><input className={inputCls} value={telefone} onChange={(e) => setTelefone(formatPhone(e.target.value))} /></Field>
           <Field label="E-mail"><input className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
         </Card>
@@ -130,7 +181,7 @@ export const MulticalculoPage: React.FC = () => {
               </button>
             </div>
           </Field>
-          <Field label="Veículo">
+          <Field label="Modelo">
             <select className={inputCls} value={veiculoSelecionado?.idVeiculo ?? ''} onChange={(e) => setVeiculoSelecionado(buscaVeiculo.find((v) => v.idVeiculo === Number(e.target.value)) ?? null)}>
               <option value="">Busque pelo ano modelo…</option>
               {buscaVeiculo.map((v) => (
@@ -138,36 +189,76 @@ export const MulticalculoPage: React.FC = () => {
               ))}
             </select>
           </Field>
+          <Field label="Placa"><input className={inputCls} value={placa} onChange={(e) => setPlaca(e.target.value.toUpperCase())} /></Field>
+          <Field label="Chassi"><input className={inputCls} value={chassi} onChange={(e) => setChassi(e.target.value.toUpperCase())} /></Field>
           <Field label="Zero KM">
             <select className={inputCls} value={zeroKm ? 'S' : 'N'} onChange={(e) => setZeroKm(e.target.value === 'S')}>
               <option value="N">Não</option><option value="S">Sim</option>
             </select>
           </Field>
-          <Field label="Valor do Veículo (R$)"><input className={inputCls} value={valorVeiculo} onChange={(e) => setValorVeiculo(e.target.value)} /></Field>
+          <Field label="Valor Referenciado (R$)"><input className={inputCls} value={valorVeiculo} onChange={(e) => setValorVeiculo(e.target.value)} /></Field>
+          <Field label="Fipe (%)"><input className={inputCls} value={percentualAjuste} onChange={(e) => setPercentualAjuste(e.target.value)} placeholder="100" /></Field>
           <Field label="CEP"><input className={inputCls} value={cep} onChange={(e) => setCep(e.target.value)} /></Field>
-          <Field label="Placa"><input className={inputCls} value={placa} onChange={(e) => setPlaca(e.target.value.toUpperCase())} /></Field>
-          <Field label="Chassi"><input className={inputCls} value={chassi} onChange={(e) => setChassi(e.target.value.toUpperCase())} /></Field>
+
+          <Field label="Blindado">
+            <select className={inputCls} value={blindado ? 'S' : 'N'} onChange={(e) => setBlindado(e.target.value === 'S')}>
+              <option value="N">Não</option><option value="S">Sim</option>
+            </select>
+          </Field>
+          {blindado && (
+            <Field label="Valor da Blindagem (R$)"><input className={inputCls} value={lmiBlindagem} onChange={(e) => setLmiBlindagem(e.target.value)} /></Field>
+          )}
+          <Field label="Kit Gás">
+            <select className={inputCls} value={kitGas ? 'S' : 'N'} onChange={(e) => setKitGas(e.target.value === 'S')}>
+              <option value="N">Não</option><option value="S">Sim</option>
+            </select>
+          </Field>
+          {kitGas && (
+            <Field label="Valor do Kit Gás (R$)"><input className={inputCls} value={lmiKitGas} onChange={(e) => setLmiKitGas(e.target.value)} /></Field>
+          )}
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <Card title="Condutor" icon={UserCheck}>
+          <Field label="Condutor Principal">
+            <select className={inputCls} value={principalCondutor} onChange={(e) => setPrincipalCondutor(e.target.value)}>
+              <option value="">Selecione…</option>
+              <option value="Próprio">Próprio</option>
+              <option value="Cônjuge">Cônjuge</option>
+              <option value="Filho(a)">Filho(a)</option>
+              <option value="Terceiro">Terceiro</option>
+            </select>
+          </Field>
+          <Field label="Garagem na Residência">
+            <select className={inputCls} value={garagemPrincipalCondutor} onChange={(e) => setGaragemPrincipalCondutor(e.target.value)}>
+              <option value="">Selecione…</option>
+              <option value="Com portão manual">Com portão manual</option>
+              <option value="Com portão automático">Com portão automático</option>
+              <option value="Sem garagem">Sem garagem</option>
+            </select>
+          </Field>
+          <Field label="Nome Completo"><input className={inputCls} value={nomeCondutor} onChange={(e) => setNomeCondutor(e.target.value)} /></Field>
+          <Field label="CPF"><input className={inputCls} value={cpfCondutor} onChange={(e) => setCpfCondutor(formatCpfCnpjProgressive(e.target.value))} /></Field>
+          <Field label="Estado Civil">
+            <select className={inputCls} value={estadoCivilCondutor} onChange={(e) => setEstadoCivilCondutor(e.target.value)}>
+              <option value="">Selecione…</option>
+              <option value="Solteiro">Solteiro(a)</option>
+              <option value="Casado">Casado(a)</option>
+              <option value="Divorciado">Divorciado(a)</option>
+              <option value="Viuvo">Viúvo(a)</option>
+            </select>
+          </Field>
+          <Field label="Jovem Condutor (17 a 25 anos)?">
+            <select className={inputCls} value={coberturaJovem1825} onChange={(e) => setCoberturaJovem1825(e.target.value)}>
+              <option value="">Selecione…</option>
+              <option value="N">Não</option>
+              <option value="S">Sim</option>
+            </select>
+          </Field>
+        </Card>
+
         <Card title="Cobertura" icon={ShieldCheck}>
-          <Field label="Classe Bônus"><input className={inputCls} value={classeBonus} onChange={(e) => setClasseBonus(e.target.value)} /></Field>
-          <Field label="Tipo de Seguro">
-            <select className={inputCls} value={tipoSeguro} onChange={(e) => setTipoSeguro(e.target.value as any)}>
-              <option value="1">Novo</option><option value="6">Renovação Congênere</option><option value="7">Renovação Tokio</option>
-            </select>
-          </Field>
-          <Field label="Assistência">
-            <select className={inputCls} value={tipoAssistencia} onChange={(e) => setTipoAssistencia(e.target.value as any)}>
-              <option value="N">Não possui</option><option value="C">Completa</option><option value="V">VIP</option>
-            </select>
-          </Field>
-          <Field label="Isenção Fiscal">
-            <select className={inputCls} value={isencaoFiscal} onChange={(e) => setIsencaoFiscal(e.target.value)}>
-              <option value="24747">Não</option><option value="24748">Sim — PCD</option><option value="24749">Sim — exceto PCD</option>
-            </select>
-          </Field>
           <Field label="Tipo de Cobertura">
             <select className={inputCls} value={codigoCobertura} onChange={(e) => setCodigoCobertura(e.target.value)}>
               <option value="1">Compreensiva</option><option value="2">Incêndio e Roubo</option><option value="3">RCF-V</option>
@@ -182,20 +273,61 @@ export const MulticalculoPage: React.FC = () => {
             </Field>
           )}
           {codigoCobertura !== '3' && codigoCobertura !== '5' && (
-            <Field label="Franquia">
+            <Field label="Tipo de Franquia">
               <select className={inputCls} value={codigoFranquia} onChange={(e) => setCodigoFranquia(e.target.value)}>
                 <option value="1">Básica</option><option value="4">50% da Básica</option><option value="6">25% da Básica</option>
                 <option value="7">75% da Básica</option><option value="2">150% da Básica</option><option value="3">200% da Básica</option>
               </select>
             </Field>
           )}
+          {codigoCobertura === '5' && (
+            <Field label="Franquia Indenização Integral"><input className={inputCls} value={codigoFranquiaIntegral} onChange={(e) => setCodigoFranquiaIntegral(e.target.value)} /></Field>
+          )}
+          <Field label="Classe Bônus"><input className={inputCls} value={classeBonus} onChange={(e) => setClasseBonus(e.target.value)} /></Field>
+          <Field label="Assistência">
+            <select className={inputCls} value={tipoAssistencia} onChange={(e) => setTipoAssistencia(e.target.value as any)}>
+              <option value="N">Não possui</option><option value="C">Completa</option><option value="V">VIP</option>
+            </select>
+          </Field>
+          <Field label="Isenção Fiscal">
+            <select className={inputCls} value={isencaoFiscal} onChange={(e) => setIsencaoFiscal(e.target.value)}>
+              <option value="24747">Não</option><option value="24748">Sim — PCD</option><option value="24749">Sim — exceto PCD</option>
+            </select>
+          </Field>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <Card title="RCF / APP" icon={HeartPulse}>
+          <Field label="Danos Materiais (R$)"><input className={inputCls} value={danosMateriais} onChange={(e) => setDanosMateriais(e.target.value)} /></Field>
+          <Field label="Danos Corporais (R$)"><input className={inputCls} value={danosCorporais} onChange={(e) => setDanosCorporais(e.target.value)} /></Field>
+          <Field label="Danos Morais (R$)"><input className={inputCls} value={danosMorais} onChange={(e) => setDanosMorais(e.target.value)} /></Field>
+          <Field label="APP Morte (R$)"><input className={inputCls} value={appMorte} onChange={(e) => setAppMorte(e.target.value)} /></Field>
+          <Field label="APP Invalidez (R$)"><input className={inputCls} value={appInvalidez} onChange={(e) => setAppInvalidez(e.target.value)} /></Field>
         </Card>
 
         <Card title="Vigência" icon={Calendar}>
           <Field label="Início"><input type="date" className={inputCls} value={inicioVigencia} onChange={(e) => setInicioVigencia(e.target.value)} /></Field>
           <Field label="Fim"><input type="date" className={inputCls} value={fimVigencia} onChange={(e) => setFimVigencia(e.target.value)} /></Field>
+          <Field label="Tipo de Seguro">
+            <select className={inputCls} value={tipoSeguro} onChange={(e) => setTipoSeguro(e.target.value as any)}>
+              <option value="1">Novo</option><option value="6">Renovação Congênere</option><option value="7">Renovação Tokio</option>
+            </select>
+          </Field>
         </Card>
       </div>
+
+      {isRenovacao && (
+        <Card title="Renovação" icon={RefreshCw}>
+          {tipoSeguro === '6' && (
+            <Field label="Código da Seguradora Anterior"><input className={inputCls} value={codigoSeguradoraAnterior} onChange={(e) => setCodigoSeguradoraAnterior(e.target.value)} /></Field>
+          )}
+          {tipoSeguro === '7' && (
+            <Field label="Número da Apólice Anterior"><input className={inputCls} value={numeroApoliceAnterior} onChange={(e) => setNumeroApoliceAnterior(e.target.value)} /></Field>
+          )}
+          <Field label="Final Vigência Anterior"><input type="date" className={inputCls} value={dataVencimentoApoliceAnterior} onChange={(e) => setDataVencimentoApoliceAnterior(e.target.value)} /></Field>
+        </Card>
+      )}
 
       {erroGeral && (
         <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-2 text-red-300 text-[12px]">

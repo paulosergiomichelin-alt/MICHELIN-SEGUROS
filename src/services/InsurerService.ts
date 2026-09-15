@@ -3,13 +3,20 @@ import { authHeader } from '../lib/dataApiClient';
 export interface CotacaoInput {
   leadId?: string;
   segurado: { nome: string; cpfCnpj: string; tipoPessoa: 'fisica' | 'juridica'; telefone?: string; email?: string };
-  veiculo: { idVeiculoTokio?: number; anoModelo: number; zeroKm: boolean; valorVeiculo: number; cep: string; placa?: string; chassi?: string };
+  veiculo: {
+    idVeiculoTokio?: number; anoModelo: number; zeroKm: boolean; valorVeiculo: number; cep: string; placa?: string; chassi?: string;
+    percentualAjuste?: number; blindado?: boolean; lmiBlindagem?: number; kitGas?: boolean; lmiKitGas?: number;
+  };
+  condutor?: { nome?: string; cpf?: string; estadoCivil?: string };
   cobertura: {
     classeBonus?: number; tipoSeguro: '1' | '6' | '7'; tipoAssistencia: 'N' | 'C' | 'V'; isencaoFiscal?: string;
     codigoCobertura: string; tipoModalidade?: string; codigoFranquia?: string; codigoFranquiaIndenizacaoIntegral?: string;
     principalCondutor?: string; garagemPrincipalCondutor?: string; coberturaPessoasResidentes1825Anos?: string;
+    danosMateriais?: number; danosCorporais?: number; danosMorais?: number;
+    appMorte?: number; appInvalidez?: number; appDmho?: number;
   };
   vigencia: { inicio: string; fim: string };
+  renovacao?: { codigoSeguradoraAnterior?: string; numeroApoliceAnterior?: string; dataVencimentoApoliceAnterior?: string };
 }
 
 export interface CotacaoResultado {

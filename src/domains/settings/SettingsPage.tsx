@@ -641,6 +641,18 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
           <Cog className="w-3.5 h-3.5 flex-shrink-0" /> Geral
         </button>
 
+        {canManageUsers && (
+          <button
+            onClick={() => setActiveSubTab('seguradoras')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
+              activeSubTab === 'seguradoras' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
+            )}
+          >
+            <Shield className="w-3.5 h-3.5 flex-shrink-0" /> Seguradoras
+          </button>
+        )}
+
         {userProfile?.organizationId && !userProfile.superadmin && (
           <button
             onClick={() => setActiveSubTab('empresa')}
@@ -682,18 +694,6 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
         >
           <Bot className="w-3.5 h-3.5 flex-shrink-0" /> Agente de IA
         </button>
-
-        {canManageUsers && (
-          <button
-            onClick={() => setActiveSubTab('seguradoras')}
-            className={cn(
-              "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
-              activeSubTab === 'seguradoras' ? "text-gold-deep border-gold-deep" : "text-white/40 hover:text-white border-transparent"
-            )}
-          >
-            <Shield className="w-3.5 h-3.5 flex-shrink-0" /> Seguradoras
-          </button>
-        )}
 
         {canManageUsers && (
           <button

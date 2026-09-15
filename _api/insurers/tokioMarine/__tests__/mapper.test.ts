@@ -44,6 +44,59 @@ describe('tokioMarine/mapper — buildCotarBody', () => {
     const body = buildCotarBody(input, CONFIG, 1);
     expect(body.Calculo.Segurado.TipoPessoa).toBe('J');
   });
+
+  it('inclui dados de condutor, RCF, APP, blindagem e kit gás quando informados', () => {
+    const input: CotacaoInput = {
+      ...BASE_INPUT,
+      condutor: { nome: 'Maria Souza', cpf: '22233344455', estadoCivil: 'Casado' },
+      veiculo: { ...BASE_INPUT.veiculo, percentualAjuste: 10, blindado: true, lmiBlindagem: 20000, kitGas: true, lmiKitGas: 3000 },
+      cobertura: { ...BASE_INPUT.cobertura, danosMateriais: 50000, danosCorporais: 100000, danosMorais: 10000, appMorte: 5000, appInvalidez: 5000 },
+    };
+    const body = buildCotarBody(input, CONFIG, 1);
+    expect(body.Calculo.Item.NomeCondutor).toBe('Maria Souza');
+    expect(body.Calculo.Item.CPFCondutor).toBe('22233344455');
+    expect(body.Calculo.Item.EstadoCivilCondutor).toBe('Casado');
+    expect(body.Calculo.Item.PercentualAjuste).toBe(10);
+    expect(body.Calculo.Item.Blindagem).toBe('S');
+    expect(body.Calculo.Item.LmiBlindagem).toBe(20000);
+    expect(body.Calculo.Item.KitGas).toBe('S');
+    expect(body.Calculo.Item.LmiKitGas).toBe(3000);
+    expect(body.Calculo.Item.DanosMateriais).toBe(50000);
+    expect(body.Calculo.Item.DanosCorporais).toBe(100000);
+    expect(body.Calculo.Item.DanosMorais).toBe(10000);
+    expect(body.Calculo.Item.AppMorte).toBe(5000);
+    expect(body.Calculo.Item.AppInvalidez).toBe(5000);
+  });
+
+  it('envia CodigoSeguradoraAnterior só em renovação de congênere (tipoSeguro 6)', () => {
+    const input: CotacaoInput = {
+      ...BASE_INPUT,
+      cobertura: { ...BASE_INPUT.cobertura, tipoSeguro: '6' },
+      renovacao: { codigoSeguradoraAnterior: '99', dataVencimentoApoliceAnterior: '10/10/2026' },
+    };
+    const body = buildCotarBody(input, CONFIG, 1);
+    expect(body.Calculo.Item.CodigoSeguradoraAnterior).toBe('99');
+    expect(body.Calculo.Item.DataVencimentoApoliceAnterior).toBe('10/10/2026');
+    expect(body.Calculo.Item.NumeroApoliceAnterior).toBeUndefined();
+  });
+
+  it('envia NumeroApoliceAnterior só em renovação Tokio (tipoSeguro 7)', () => {
+    const input: CotacaoInput = {
+      ...BASE_INPUT,
+      cobertura: { ...BASE_INPUT.cobertura, tipoSeguro: '7' },
+      renovacao: { numeroApoliceAnterior: '830011111' },
+    };
+    const body = buildCotarBody(input, CONFIG, 1);
+    expect(body.Calculo.Item.NumeroApoliceAnterior).toBe('830011111');
+    expect(body.Calculo.Item.CodigoSeguradoraAnterior).toBeUndefined();
+  });
+
+  it('não envia campos de renovação quando tipoSeguro é 1 (novo)', () => {
+    const body = buildCotarBody(BASE_INPUT, CONFIG, 1);
+    expect(body.Calculo.Item.CodigoSeguradoraAnterior).toBeUndefined();
+    expect(body.Calculo.Item.NumeroApoliceAnterior).toBeUndefined();
+    expect(body.Calculo.Item.DataVencimentoApoliceAnterior).toBeUndefined();
+  });
 });
 
 describe('tokioMarine/mapper — parseCotarResponse', () => {

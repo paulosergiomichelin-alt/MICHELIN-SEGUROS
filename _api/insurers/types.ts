@@ -12,9 +12,21 @@ export interface CotacaoInput {
     anoModelo: number;
     zeroKm: boolean;
     valorVeiculo: number;
-    cep: string;
+    cep: string; // TM só tem um CEP no Item — cobre "CEP Residencial"/"CEP Pernoite" do Agger, que não existem separados aqui
     placa?: string;
     chassi?: string;
+    percentualAjuste?: number; // "Fipe (%)" no Agger — TM: PercentualAjuste
+    blindado?: boolean; // "Blindado" no Agger — TM: Blindagem
+    lmiBlindagem?: number;
+    kitGas?: boolean; // "Kit Gás" no Agger — TM: KitGas
+    lmiKitGas?: number; // "Valor kit Gás" no Agger — TM: LmiKitGas
+  };
+  condutor?: {
+    // "Condutor" no Agger. TM não tem data de nascimento/sexo/tempo de habilitação pra
+    // condutor — só esses três campos existem no cotar.
+    nome?: string;
+    cpf?: string;
+    estadoCivil?: string;
   };
   cobertura: {
     classeBonus?: number;
@@ -25,13 +37,27 @@ export interface CotacaoInput {
     tipoModalidade?: 'A' | 'D';
     codigoFranquia?: string;
     codigoFranquiaIndenizacaoIntegral?: string;
-    principalCondutor?: string;
-    garagemPrincipalCondutor?: string;
-    coberturaPessoasResidentes1825Anos?: string;
+    principalCondutor?: string; // "Condutor Principal" no Agger
+    garagemPrincipalCondutor?: string; // "Garagem na Residência" no Agger
+    coberturaPessoasResidentes1825Anos?: string; // "Jovem Condutor" no Agger (domínio ainda não confirmado, ver spec §5)
+    // RCF — "Coberturas > RCF" no Agger
+    danosMateriais?: number;
+    danosCorporais?: number;
+    danosMorais?: number;
+    // APP — "Coberturas > APP" no Agger
+    appMorte?: number;
+    appInvalidez?: number;
+    appDmho?: number;
   };
   vigencia: {
     inicio: string; // DD/MM/AAAA
     fim: string;    // DD/MM/AAAA
+  };
+  renovacao?: {
+    // "Renovação" no Agger — só se aplica quando cobertura.tipoSeguro é '6' ou '7'.
+    codigoSeguradoraAnterior?: string; // obrigatório p/ tipoSeguro '6' — domínio sem lookup identificado, texto livre
+    numeroApoliceAnterior?: string; // obrigatório p/ tipoSeguro '7'
+    dataVencimentoApoliceAnterior?: string; // DD/MM/AAAA
   };
 }
 
