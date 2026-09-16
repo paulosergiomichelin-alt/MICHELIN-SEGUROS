@@ -69,24 +69,24 @@ function MultiSelect({ label, placeholder, options, selected, onChange }: MultiS
 
   return (
     <div ref={ref} className="flex flex-col gap-1 relative">
-      <label className="text-[8px] font-bold text-white/30 uppercase tracking-widest">{label}</label>
+      <label className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{label}</label>
       <button
         onClick={() => setOpen(o => !o)}
         className={cn(
-          'flex items-center justify-between gap-2 bg-brand-black border text-[10px] rounded-lg px-2.5 py-1.5 outline-none min-w-[140px] text-left transition-colors',
-          open ? 'border-gold-deep/50 text-white' : 'border-white/15 text-white/70 hover:border-white/30',
-          selected.length > 0 && 'border-gold-deep/30 text-white/90',
+          'flex items-center justify-between gap-2 bg-white border text-[10px] rounded-lg px-2.5 py-1.5 outline-none min-w-[140px] text-left transition-colors',
+          open ? 'border-[#1B4D8F]/50 text-slate-800' : 'border-slate-200 text-slate-600 hover:border-slate-300',
+          selected.length > 0 && 'border-gold-deep/40 text-slate-800',
         )}
       >
         <span className="truncate max-w-[130px]">{displayLabel}</span>
-        <ChevronDown className={cn('w-3 h-3 shrink-0 text-white/30 transition-transform duration-200', open && 'rotate-180')} />
+        <ChevronDown className={cn('w-3 h-3 shrink-0 text-slate-400 transition-transform duration-200', open && 'rotate-180')} />
       </button>
 
       {open && (
-        <div className="absolute top-[calc(100%+4px)] left-0 z-50 bg-[#141414] border border-white/10 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] min-w-[200px] overflow-hidden">
+        <div className="absolute top-[calc(100%+4px)] left-0 z-50 bg-white border border-slate-200 rounded-xl shadow-xl min-w-[200px] overflow-hidden">
           {selected.length > 0 && (
-            <div className="px-3 py-2 border-b border-white/5 flex items-center justify-between">
-              <span className="text-[9px] text-white/40">{selected.length} selecionado{selected.length > 1 ? 's' : ''}</span>
+            <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+              <span className="text-[9px] text-slate-400">{selected.length} selecionado{selected.length > 1 ? 's' : ''}</span>
               <button
                 onClick={() => onChange([])}
                 className="text-[9px] font-black text-gold-deep/70 hover:text-gold-deep uppercase tracking-widest transition-colors"
@@ -102,15 +102,15 @@ function MultiSelect({ label, placeholder, options, selected, onChange }: MultiS
                 <button
                   key={opt.value}
                   onClick={() => toggle(opt.value)}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-white/5 transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 transition-colors"
                 >
                   <div className={cn(
                     'w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors',
-                    isSel ? 'bg-gold-deep border-gold-deep' : 'border-white/25 bg-transparent',
+                    isSel ? 'bg-gold-deep border-gold-deep' : 'border-slate-300 bg-transparent',
                   )}>
-                    {isSel && <Check className="w-2.5 h-2.5 text-[#0a0a0a]" strokeWidth={3} />}
+                    {isSel && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
                   </div>
-                  <span className={cn('text-[10px] font-medium truncate', isSel ? 'text-white' : 'text-white/55')}>
+                  <span className={cn('text-[10px] font-medium truncate', isSel ? 'text-slate-800' : 'text-slate-500')}>
                     {opt.label}
                   </span>
                 </button>
@@ -373,37 +373,37 @@ export const RelatoriosPage: React.FC = () => {
   const colDefs = activeTab === 'vendas' ? COLS_VENDAS : COLS_COMISSOES;
 
   const SortIcon = ({ colKey }: { colKey: string }) => {
-    if (sortKey !== colKey) return <ArrowUpDown className="w-3 h-3 text-white/20 group-hover:text-white/40 transition-colors" />;
+    if (sortKey !== colKey) return <ArrowUpDown className="w-3 h-3 text-slate-300 group-hover:text-slate-500 transition-colors" />;
     return sortDir === 'asc'
-      ? <ArrowUp className="w-3 h-3 text-gold-deep" />
-      : <ArrowDown className="w-3 h-3 text-gold-deep" />;
+      ? <ArrowUp className="w-3 h-3 text-[#1B4D8F]" />
+      : <ArrowDown className="w-3 h-3 text-[#1B4D8F]" />;
   };
 
-  const dateCls = "bg-brand-black border border-white/15 text-white/80 text-[10px] rounded-lg px-2.5 py-1.5 outline-none focus:border-gold-deep/40 hover:border-white/30 transition-colors [color-scheme:dark]";
+  const dateCls = "bg-white border border-slate-200 text-slate-700 text-[10px] rounded-lg px-2.5 py-1.5 outline-none focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 hover:border-slate-300 transition-colors";
 
   return (
-    <div className="flex flex-col h-full bg-brand-dark">
+    <div className="flex flex-col h-full bg-slate-50">
       {/* Header */}
-      <div className="shrink-0 border-b border-white/5 px-4 md:px-6 py-4 bg-brand-black/50">
+      <div className="shrink-0 border-b border-slate-200 px-4 md:px-6 py-4 bg-white">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gold-deep/15 border border-gold-deep/20 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl bg-gold-deep/10 border border-gold-deep/25 flex items-center justify-center">
             <BarChart3 className="w-4 h-4 text-gold-deep" />
           </div>
           <div className="flex-1">
-            <h1 className="text-sm font-black text-white uppercase tracking-widest">Relatórios</h1>
-            <p className="text-[10px] text-white/40 font-medium">Análise de vendas e comissões da carteira</p>
+            <h1 className="text-sm font-black text-slate-900 uppercase tracking-widest">Relatórios</h1>
+            <p className="text-[10px] text-slate-500 font-medium">Análise de vendas e comissões da carteira</p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={exportExcel}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-emerald-500/20 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E4F5EA] border border-[#1F8A4C]/20 text-[#1F8A4C] rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-[#1F8A4C]/20 transition-colors"
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
               Excel
             </button>
             <button
               onClick={exportPDF}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-red-500/20 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FDE4E4] border border-[#C0392B]/20 text-[#C0392B] rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-[#C0392B]/20 transition-colors"
             >
               <Printer className="w-3.5 h-3.5" />
               PDF
@@ -413,7 +413,7 @@ export const RelatoriosPage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="shrink-0 border-b border-white/5 px-4 md:px-6 flex gap-1 bg-brand-black/30">
+      <div className="shrink-0 border-b border-slate-200 px-4 md:px-6 flex gap-1 bg-white">
         {(['vendas', 'comissoes'] as const).map(tab => (
           <button
             key={tab}
@@ -421,8 +421,8 @@ export const RelatoriosPage: React.FC = () => {
             className={cn(
               'px-5 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 -mb-px',
               activeTab === tab
-                ? 'text-gold-deep border-gold-deep'
-                : 'text-white/40 border-transparent hover:text-white/70',
+                ? 'text-[#1B4D8F] border-[#1B4D8F]'
+                : 'text-slate-400 border-transparent hover:text-slate-600',
             )}
           >
             {tab === 'vendas' ? 'Relatório de Vendas' : 'Relatório de Comissões'}
@@ -431,9 +431,9 @@ export const RelatoriosPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="shrink-0 border-b border-white/5 px-4 md:px-6 py-3 bg-brand-black/20">
+      <div className="shrink-0 border-b border-slate-200 px-4 md:px-6 py-3 bg-slate-50">
         <div className="flex flex-wrap gap-3 items-end">
-          <div className="flex items-center gap-1.5 self-end pb-2 text-[9px] font-black text-white/30 uppercase tracking-widest">
+          <div className="flex items-center gap-1.5 self-end pb-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">
             <Filter className="w-3 h-3" />
             Filtros
           </div>
@@ -463,7 +463,7 @@ export const RelatoriosPage: React.FC = () => {
           />
 
           <div className="flex flex-col gap-1">
-            <label className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Período de</label>
+            <label className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Período de</label>
             <input
               type="date"
               value={filtroDataInicio}
@@ -473,7 +473,7 @@ export const RelatoriosPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Até</label>
+            <label className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Até</label>
             <input
               type="date"
               value={filtroDataFim}
@@ -497,8 +497,8 @@ export const RelatoriosPage: React.FC = () => {
       {/* Table */}
       <div className="flex-1 overflow-auto custom-scrollbar">
         <table className="w-full min-w-max">
-          <thead className="sticky top-0 z-10 bg-brand-black/95 backdrop-blur-sm">
-            <tr className="border-b border-white/5">
+          <thead className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm">
+            <tr className="border-b border-slate-200">
               {colDefs.map(col => (
                 <th key={col.key} className="px-4 py-3 whitespace-nowrap">
                   <button
@@ -506,7 +506,7 @@ export const RelatoriosPage: React.FC = () => {
                     className={cn(
                       'group flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest transition-colors',
                       col.align === 'right' && 'ml-auto',
-                      sortKey === col.key ? 'text-gold-light' : 'text-white/50 hover:text-white/80',
+                      sortKey === col.key ? 'text-[#1B4D8F]' : 'text-slate-400 hover:text-slate-600',
                     )}
                   >
                     {col.align === 'right' && <SortIcon colKey={col.key} />}
@@ -518,61 +518,61 @@ export const RelatoriosPage: React.FC = () => {
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-white/3">
+          <tbody className="divide-y divide-slate-100">
             {filteredRows.length === 0 ? (
               <tr>
-                <td colSpan={colDefs.length} className="py-20 text-center text-white/20 text-sm">
+                <td colSpan={colDefs.length} className="py-20 text-center text-slate-300 text-sm">
                   Nenhum registro encontrado
                 </td>
               </tr>
             ) : (
               filteredRows.map(r => (
-                <tr key={r.id} className="hover:bg-white/3 transition-colors">
-                  <td className="px-4 py-2.5 text-[10px] text-white/60 whitespace-nowrap font-mono">
+                <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-2.5 text-[10px] text-slate-500 whitespace-nowrap font-mono">
                     {fmtDate(r.inicioVigencia)}
                   </td>
                   <td className="px-4 py-2.5">
-                    <p className="text-[11px] font-bold text-white whitespace-nowrap">{r.clienteNome}</p>
+                    <p className="text-[11px] font-bold text-slate-800 whitespace-nowrap">{r.clienteNome}</p>
                   </td>
-                  <td className="px-4 py-2.5 text-[10px] text-white/70 whitespace-nowrap">{r.produto}</td>
+                  <td className="px-4 py-2.5 text-[10px] text-slate-600 whitespace-nowrap">{r.produto}</td>
                   <td className="px-4 py-2.5">
                     <SeguradoraBadge seguradoraId={r.seguradoraId} size="xs" />
                   </td>
-                  <td className="px-4 py-2.5 text-[10px] text-white/70 text-right font-mono whitespace-nowrap">
+                  <td className="px-4 py-2.5 text-[10px] text-slate-600 text-right font-mono whitespace-nowrap">
                     {fmtCurrency(r.premioLiquido)}
                   </td>
                   {activeTab === 'vendas' ? (
-                    <td className="px-4 py-2.5 text-[10px] text-gold-light text-right font-mono font-bold whitespace-nowrap">
+                    <td className="px-4 py-2.5 text-[10px] text-gold-deep text-right font-mono font-bold whitespace-nowrap">
                       {fmtCurrency(r.valorTotal)}
                     </td>
                   ) : (
                     <>
-                      <td className="px-4 py-2.5 text-[10px] text-white/50 text-right font-mono whitespace-nowrap">
+                      <td className="px-4 py-2.5 text-[10px] text-slate-500 text-right font-mono whitespace-nowrap">
                         {fmtPct(r.comissaoPct)}
                       </td>
-                      <td className="px-4 py-2.5 text-[10px] text-emerald-400 text-right font-mono font-bold whitespace-nowrap">
+                      <td className="px-4 py-2.5 text-[10px] text-[#1F8A4C] text-right font-mono font-bold whitespace-nowrap">
                         {fmtCurrency(r.comissao)}
                       </td>
                     </>
                   )}
-                  <td className="px-4 py-2.5 text-[10px] text-white/40 whitespace-nowrap">{r.vendedorNome}</td>
+                  <td className="px-4 py-2.5 text-[10px] text-slate-400 whitespace-nowrap">{r.vendedorNome}</td>
                 </tr>
               ))
             )}
           </tbody>
 
           {filteredRows.length > 0 && (
-            <tfoot className="sticky bottom-0 bg-brand-black/95 backdrop-blur-sm border-t border-white/10">
+            <tfoot className="sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-slate-200">
               <tr>
-                <td colSpan={4} className="px-4 py-3 text-[9px] font-black text-white/50 uppercase tracking-widest">
+                <td colSpan={4} className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">
                   Total — {filteredRows.length} {filteredRows.length === 1 ? 'apólice' : 'apólices'}
                 </td>
-                <td className="px-4 py-3 text-[11px] text-white/80 text-right font-mono font-black whitespace-nowrap">
+                <td className="px-4 py-3 text-[11px] text-slate-700 text-right font-mono font-black whitespace-nowrap">
                   {fmtCurrency(totals.premioLiquido)}
                 </td>
                 {activeTab === 'vendas' ? (
                   <>
-                    <td className="px-4 py-3 text-[11px] text-gold-light text-right font-mono font-black whitespace-nowrap">
+                    <td className="px-4 py-3 text-[11px] text-gold-deep text-right font-mono font-black whitespace-nowrap">
                       {fmtCurrency(totals.valorTotal)}
                     </td>
                     <td />
@@ -580,7 +580,7 @@ export const RelatoriosPage: React.FC = () => {
                 ) : (
                   <>
                     <td />
-                    <td className="px-4 py-3 text-[11px] text-emerald-400 text-right font-mono font-black whitespace-nowrap">
+                    <td className="px-4 py-3 text-[11px] text-[#1F8A4C] text-right font-mono font-black whitespace-nowrap">
                       {fmtCurrency(totals.comissao)}
                     </td>
                     <td />

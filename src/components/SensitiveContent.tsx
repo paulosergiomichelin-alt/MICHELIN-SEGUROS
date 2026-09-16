@@ -12,18 +12,18 @@ export const SensitiveContent = ({
 }) => {
   const [show, setShow] = useState(false);
   
-  if (!value) return <span className="text-white/20">---</span>;
+  if (!value) return <span className="text-slate-300">---</span>;
 
   if (canView) {
     return (
       <div className="flex items-center gap-2 group">
         <span className="truncate">{show ? value : maskFn(value)}</span>
-        <button 
-          onClick={(e) => { e.stopPropagation(); setShow(!show); }} 
-          className="p-1 hover:bg-white/10 rounded-lg transition-colors shrink-0"
+        <button
+          onClick={(e) => { e.stopPropagation(); setShow(!show); }}
+          className="p-1 hover:bg-slate-100 rounded-lg transition-colors shrink-0"
           title={show ? "Ocultar dado" : "Ver dado completo"}
         >
-          {show ? <EyeOff className="w-3.5 h-3.5 text-white/30" /> : <Eye className="w-3.5 h-3.5 text-white/30" />}
+          {show ? <EyeOff className="w-3.5 h-3.5 text-slate-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
         </button>
       </div>
     );

@@ -154,45 +154,45 @@ export const PDFViewer = React.memo<PDFViewerProps>(({ url, storagePath, title =
   const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
 
   return (
-    <div className="w-full h-full bg-[#121212] flex flex-col overflow-hidden">
+    <div className="w-full h-full bg-slate-100 flex flex-col overflow-hidden">
       {/* Internal Toolbar (Only for PDF.js) */}
       {strategy === 'pdfjs' && !loading && !error && (
-        <div className="bg-black/40 backdrop-blur shadow-sm border-b border-white/5 px-4 py-2 flex items-center justify-center gap-6 z-10 shrink-0">
+        <div className="bg-white backdrop-blur shadow-sm border-b border-slate-200 px-4 py-2 flex items-center justify-center gap-6 z-10 shrink-0">
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))}
               disabled={pageNumber <= 1}
-              className="p-1 text-white/50 hover:bg-white/10 rounded disabled:opacity-30"
+              className="p-1 text-slate-500 hover:bg-[#1B4D8F]/5 hover:text-[#1B4D8F] rounded disabled:opacity-30"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <span className="text-xs font-bold text-white/70">
+            <span className="text-xs font-bold text-slate-600">
               Página {pageNumber} de {numPages || '?'}
             </span>
-            <button 
+            <button
               onClick={() => setPageNumber(prev => Math.min(prev + 1, numPages || prev))}
               disabled={pageNumber >= (numPages || 1)}
-              className="p-1 text-white/50 hover:bg-white/10 rounded disabled:opacity-30"
+              className="p-1 text-slate-500 hover:bg-[#1B4D8F]/5 hover:text-[#1B4D8F] rounded disabled:opacity-30"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
 
-          <div className="w-px h-4 bg-white/10" />
+          <div className="w-px h-4 bg-slate-200" />
 
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={() => setScale(prev => Math.max(prev - 0.25, 0.5))}
-              className="p-1 text-white/50 hover:bg-white/10 rounded"
+              className="p-1 text-slate-500 hover:bg-[#1B4D8F]/5 hover:text-[#1B4D8F] rounded"
             >
               <ZoomOut className="w-5 h-5" />
             </button>
-            <span className="text-xs font-bold text-white/70 w-12 text-center">
+            <span className="text-xs font-bold text-slate-600 w-12 text-center">
               {Math.round(scale * 100)}%
             </span>
-            <button 
+            <button
               onClick={() => setScale(prev => Math.min(prev + 0.25, 3))}
-              className="p-1 text-white/50 hover:bg-white/10 rounded"
+              className="p-1 text-slate-500 hover:bg-[#1B4D8F]/5 hover:text-[#1B4D8F] rounded"
             >
               <ZoomIn className="w-5 h-5" />
             </button>
@@ -201,19 +201,19 @@ export const PDFViewer = React.memo<PDFViewerProps>(({ url, storagePath, title =
       )}
 
       {/* Content Area */}
-      <div className="flex-1 overflow-auto bg-[#1A1A1A] p-4 flex items-start justify-center">
+      <div className="flex-1 overflow-auto bg-slate-100 p-4 flex items-start justify-center">
         {isImage ? (
-          <img 
-            src={url} 
-            alt={title} 
-            className="max-w-full h-auto rounded-lg shadow-2xl" 
+          <img
+            src={url}
+            alt={title}
+            className="max-w-full h-auto rounded-lg shadow-2xl"
             referrerPolicy="no-referrer"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             {loading && strategy === 'pdfjs' && (
-              <div className="flex flex-col items-center justify-center text-white/40 gap-4 pt-20">
-                <Loader2 className="w-12 h-12 animate-spin text-[#D4A854]" />
+              <div className="flex flex-col items-center justify-center text-slate-400 gap-4 pt-20">
+                <Loader2 className="w-12 h-12 animate-spin text-gold-deep" />
                 <p className="text-sm font-medium animate-pulse">Carregando Documento...</p>
               </div>
             )}
@@ -238,18 +238,18 @@ export const PDFViewer = React.memo<PDFViewerProps>(({ url, storagePath, title =
         )}
 
         {error && !isImage && (
-          <div className="max-w-md w-full bg-[#1E1E1E] border border-white/10 p-8 rounded-3xl shadow-2xl text-center space-y-4">
-            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto">
-              <AlertCircle className="w-8 h-8 text-red-500" />
+          <div className="max-w-md w-full bg-white border border-slate-200 p-8 rounded-3xl shadow-2xl text-center space-y-4">
+            <div className="w-16 h-16 bg-[#FDE4E4] rounded-full flex items-center justify-center mx-auto">
+              <AlertCircle className="w-8 h-8 text-[#C0392B]" />
             </div>
-            <h3 className="text-lg font-bold text-white">Erro na Visualização</h3>
-            <p className="text-sm text-white/60">
+            <h3 className="text-lg font-bold text-slate-800">Erro na Visualização</h3>
+            <p className="text-sm text-slate-600">
               {error}
             </p>
             <div className="flex flex-col gap-2 pt-4">
-              <button 
+              <button
                 onClick={handleOpenNewTab}
-                className="w-full py-3 bg-[#D4A854] text-black rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+                className="w-full py-3 bg-[#1B4D8F] text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#153E73] transition-colors"
               >
                 <ExternalLink className="w-4 h-4" />
                 Abrir Externamente

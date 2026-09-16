@@ -102,8 +102,8 @@ export const Modal: React.FC<ModalProps> = ({
             dragMomentum={false}
             dragListener={false} // Only drag by handle
             className={cn(
-              "relative z-[9999] w-full flex flex-col bg-brand-dark shadow-2xl overflow-hidden",
-              viewport.isMobile ? "h-full" : cn("rounded-3xl border border-white/10", maxWidth),
+              "relative z-[9999] w-full flex flex-col bg-white shadow-2xl overflow-hidden",
+              viewport.isMobile ? "h-full" : cn("rounded-3xl border border-slate-200", maxWidth),
               className
             )}
             style={{
@@ -114,14 +114,14 @@ export const Modal: React.FC<ModalProps> = ({
             <div 
               onPointerDown={(e) => dragControls.start(e)}
               className={cn(
-                "flex items-center justify-between px-5 py-3.5 shrink-0 border-b border-white/5 cursor-grab active:cursor-grabbing bg-gradient-to-b from-[#0B1120] to-[#050816]",
+                "flex items-center justify-between px-5 py-3.5 shrink-0 border-b border-slate-100 cursor-grab active:cursor-grabbing bg-white",
                 viewport.isMobile ? "pt-10" : ""
               )}
             >
               <div className="flex items-center gap-3">
-                {showDragHandle && !viewport.isMobile && <GripHorizontal className="w-4 h-4 text-white/20" />}
+                {showDragHandle && !viewport.isMobile && <GripHorizontal className="w-4 h-4 text-slate-300" />}
                 {typeof title === 'string' ? (
-                  <h2 className="text-[11px] font-black uppercase text-white tracking-widest">{title}</h2>
+                  <h2 className="text-[11px] font-black uppercase text-slate-800 tracking-widest">{title}</h2>
                 ) : (
                   title
                 )}
@@ -129,7 +129,7 @@ export const Modal: React.FC<ModalProps> = ({
               {!hideCloseButton && (
                 <button
                   onClick={onClose}
-                  className="p-1.5 hover:bg-white/5 rounded-lg text-white/30 hover:text-white transition-colors"
+                  className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>

@@ -173,14 +173,14 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onSignup, visualConfig })
   };
 
   return (
-    <div className="min-h-screen bg-brand-dark flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         {/* Brand Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gold-deep/10 border border-gold-deep rounded-3xl mb-4">
             <Lock className="w-10 h-10 text-gold-deep" />
           </div>
-          <p className="text-gold-light/60 text-sm mt-1 uppercase tracking-widest font-bold">Gestão Inteligente</p>
+          <p className="text-slate-500 text-sm mt-1 uppercase tracking-widest font-bold">Gestão Inteligente</p>
         </div>
 
         {/* Auth Card */}
@@ -204,7 +204,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onSignup, visualConfig })
                 placeholder="E-mail"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold-deep/20 text-slate-900 text-sm"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 text-slate-900 text-sm"
               />
             </div>
 
@@ -216,7 +216,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onSignup, visualConfig })
                 placeholder="Senha"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold-deep/20 text-slate-900 text-sm"
+                className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 text-slate-900 text-sm"
               />
               <button 
                 type="button"
@@ -231,7 +231,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onSignup, visualConfig })
               <button 
                 type="button"
                 onClick={handleForgotPassword}
-                className="text-xs font-bold text-gold-deep hover:text-brand-dark transition-colors"
+                className="text-xs font-bold text-gold-deep hover:text-slate-800 transition-colors"
               >
                 Esqueceu a senha?
               </button>
@@ -258,9 +258,9 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onSignup, visualConfig })
               )}
             </AnimatePresence>
 
-            <button 
+            <button
               disabled={isLoading}
-              className="w-full py-4 bg-brand-dark text-gold-deep rounded-xl font-bold tracking-widest uppercase text-sm shadow-xl shadow-brand-dark/20 flex items-center justify-center gap-2 hover:bg-brand-black transition-all border border-gold-deep/30"
+              className="w-full py-4 bg-[#1B4D8F] text-white rounded-xl font-bold tracking-widest uppercase text-sm shadow-sm shadow-[#1B4D8F]/20 flex items-center justify-center gap-2 hover:bg-[#153E73] transition-all disabled:opacity-60"
             >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -294,12 +294,12 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onSignup, visualConfig })
         </motion.div>
 
         {onSignup && (
-          <p className="text-center mt-6 text-sm text-white/40">
+          <p className="text-center mt-6 text-sm text-slate-500">
             Não tem conta?{' '}
             <button
               type="button"
               onClick={onSignup}
-              className="text-[#D4A854] font-bold hover:text-[#D4A854]/80 transition-colors underline underline-offset-2"
+              className="text-gold-deep font-bold hover:text-gold-deep/80 transition-colors underline underline-offset-2"
             >
               Cadastre sua empresa →
             </button>

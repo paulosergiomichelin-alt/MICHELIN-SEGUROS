@@ -17,7 +17,7 @@ interface AppShellProps {
 }
 
 const LoadingFallback = () => (
-  <div className="flex-1 flex items-center justify-center bg-brand-dark/50">
+  <div className="flex-1 flex items-center justify-center bg-slate-50">
     <div className="w-6 h-6 border-2 border-gold-deep/30 border-t-gold-deep rounded-full animate-spin"></div>
   </div>
 );
@@ -51,7 +51,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   return (
     <ShellProviders user={user} userProfile={userProfile}>
-      <div className="flex flex-col md:flex-row h-screen h-[100dvh] overflow-hidden bg-brand-dark text-white font-sans selection:bg-gold-deep/30">
+      <div className="flex flex-col md:flex-row h-screen h-[100dvh] overflow-hidden bg-slate-50 text-slate-800 font-sans selection:bg-gold-deep/30">
         <MobileHeader
           user={user}
           userProfile={userProfile}

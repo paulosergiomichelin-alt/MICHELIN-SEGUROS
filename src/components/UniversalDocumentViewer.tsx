@@ -123,11 +123,11 @@ function renderValidationFields(type: string | undefined, data: any) {
       .filter(([k, v]) => !k.startsWith('_') && v !== '' && v != null && typeof v !== 'object')
       .map(([key, value]: any) => (
         <div key={key} className="space-y-1.5">
-          <label className="text-[10px] uppercase tracking-wider text-[#D4A854] font-black ml-1">{key}</label>
+          <label className="text-[10px] uppercase tracking-wider text-gold-deep font-black ml-1">{key}</label>
           <input
             type="text"
             defaultValue={String(value || '')}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-[12px] font-medium focus:border-[#D4A854]/50 outline-none transition-all"
+            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-[12px] font-medium focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all"
           />
         </div>
       ));
@@ -142,11 +142,11 @@ function renderValidationFields(type: string | undefined, data: any) {
       // eslint-disable-next-line no-console
       console.log(`[VIEWER_FIELD] ${def.key}`, { value, checked, allCandidates: [def.key, ...(def.aliases || [])].reduce((acc: any, k) => { acc[k] = data?.[k]; return acc; }, {}) });
       return (
-        <div key={def.key} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
-          <label className="text-[11px] uppercase tracking-wider text-[#D4A854] font-black">{def.label}</label>
+        <div key={def.key} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <label className="text-[11px] uppercase tracking-wider text-gold-deep font-black">{def.label}</label>
           <span className={cn(
             'px-3 py-1 rounded-md text-[10px] font-black uppercase',
-            checked ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/5 text-white/40'
+            checked ? 'bg-[#E4F5EA] text-[#1F8A4C]' : 'bg-slate-100 text-slate-400'
           )}>
             {checked ? 'SIM' : 'NÃO'}
           </span>
@@ -155,14 +155,14 @@ function renderValidationFields(type: string | undefined, data: any) {
     }
     return (
       <div key={def.key} className="space-y-1.5">
-        <label className="text-[10px] uppercase tracking-wider text-[#D4A854] font-black ml-1">{def.label}</label>
+        <label className="text-[10px] uppercase tracking-wider text-gold-deep font-black ml-1">{def.label}</label>
         <div className="relative group">
           <input
             type="text"
             defaultValue={String(value || '')}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-[12px] font-medium focus:border-[#D4A854]/50 focus:ring-1 focus:ring-[#D4A854]/50 outline-none transition-all"
+            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-[12px] font-medium focus:border-[#1B4D8F]/60 focus:ring-1 focus:ring-[#1B4D8F]/40 outline-none transition-all"
           />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#D4A854] opacity-0 group-focus-within:opacity-100 transition-opacity shadow-[0_0_8px_#D4A854]" />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-gold-deep opacity-0 group-focus-within:opacity-100 transition-opacity" />
         </div>
       </div>
     );
@@ -263,47 +263,47 @@ export const UniversalDocumentViewer: React.FC<UniversalDocumentViewerProps> = (
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[10000] flex items-center justify-center p-4 md:p-8 bg-black/95 backdrop-blur-md"
+        className="fixed inset-0 z-[10000] flex items-center justify-center p-4 md:p-8 bg-slate-900/70 backdrop-blur-md"
         onClick={(e) => {
           // Clicking the dark overlay (not the inner card) closes the viewer.
           if (e.target === e.currentTarget) onClose();
         }}
       >
-        <div className="relative w-full h-full max-w-7xl flex flex-col bg-[#1A1A1A] rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
-          
+        <div className="relative w-full h-full max-w-7xl flex flex-col bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
+
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-white/5 bg-black/20">
+          <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-white">
             <div className="flex items-center gap-3">
               <div className={cn(
                 "p-2 rounded-lg",
-                type === 'cnh' ? "bg-emerald-500/10 text-emerald-500" :
-                type === 'crv' ? "bg-amber-500/10 text-amber-500" :
-                type === 'policy' ? "bg-blue-500/10 text-blue-500" :
-                type === 'COTACAO' ? "bg-purple-500/10 text-purple-500" :
-                "bg-[#D4A854]/10 text-[#D4A854]"
+                type === 'cnh' ? "bg-[#E4F5EA] text-[#1F8A4C]" :
+                type === 'crv' ? "bg-[#FFF3DC] text-[#8a6206]" :
+                type === 'policy' ? "bg-[#1B4D8F]/10 text-[#1B4D8F]" :
+                type === 'COTACAO' ? "bg-purple-100 text-purple-600" :
+                "bg-gold-deep/10 text-gold-deep"
               )}>
                 <FileText className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-white font-medium">{title || 'Visualizador de Documento'}</h3>
-                <p className="text-xs text-white/40 uppercase tracking-wider">{type || 'PDF'}</p>
+                <h3 className="text-slate-800 font-medium">{title || 'Visualizador de Documento'}</h3>
+                <p className="text-xs text-slate-500 uppercase tracking-wider">{type || 'PDF'}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
               {resolvedUrl && (
-                <a 
-                  href={resolvedUrl} 
-                  download 
-                  className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                <a
+                  href={resolvedUrl}
+                  download
+                  className="p-2 text-slate-400 hover:text-[#1B4D8F] hover:bg-[#1B4D8F]/5 rounded-lg transition-colors"
                   title="Download"
                 >
                   <Download className="w-5 h-5" />
                 </a>
               )}
-              <button 
+              <button
                 onClick={onClose}
-                className="p-2 text-white/60 hover:text-white hover:bg-red-500/20 hover:text-red-500 rounded-lg transition-all"
+                className="p-2 text-slate-400 hover:bg-[#FDE4E4] hover:text-[#C0392B] rounded-lg transition-all"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -315,26 +315,26 @@ export const UniversalDocumentViewer: React.FC<UniversalDocumentViewerProps> = (
             
             {/* Document Viewer (70% or full) */}
             <div className={cn(
-              "flex-1 relative bg-[#121212] overflow-auto",
-              onConfirm && "md:border-r border-white/5"
+              "flex-1 relative bg-slate-100 overflow-auto",
+              onConfirm && "md:border-r border-slate-200"
             )}>
               {loading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-white/40">
-                  <Loader2 className="w-8 h-8 animate-spin text-[#D4A854]" />
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-slate-400">
+                  <Loader2 className="w-8 h-8 animate-spin text-gold-deep" />
                   <p className="text-sm animate-pulse">Carregando visualizador seguro...</p>
                 </div>
               )}
 
               {error && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
-                  <div className="p-4 bg-red-500/10 rounded-full mb-4">
-                    <AlertCircle className="w-12 h-12 text-red-500" />
+                  <div className="p-4 bg-[#FDE4E4] rounded-full mb-4">
+                    <AlertCircle className="w-12 h-12 text-[#C0392B]" />
                   </div>
-                  <h4 className="text-white font-medium mb-2">Erro ao carregar documento</h4>
-                  <p className="text-white/60 text-sm max-w-md mb-6">{error}</p>
-                  <button 
+                  <h4 className="text-slate-800 font-medium mb-2">Erro ao carregar documento</h4>
+                  <p className="text-slate-500 text-sm max-w-md mb-6">{error}</p>
+                  <button
                     onClick={onClose}
-                    className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all"
+                    className="px-6 py-2 bg-white border border-slate-200 hover:border-[#1B4D8F]/40 hover:text-[#1B4D8F] text-slate-600 rounded-xl transition-all"
                   >
                     Fechar
                   </button>
@@ -352,14 +352,14 @@ export const UniversalDocumentViewer: React.FC<UniversalDocumentViewerProps> = (
 
             {/* Validation Panel (30%) - Visible only if data & onConfirm provided */}
             {onConfirm && data && (
-              <div className="w-full md:w-96 bg-black/40 flex flex-col overflow-hidden">
+              <div className="w-full md:w-96 bg-slate-50 border-l border-slate-200 flex flex-col overflow-hidden">
                 <div className="p-6 overflow-y-auto flex-1 space-y-6 scrollbar-hide">
                   <header>
-                    <h4 className="text-white font-semibold flex items-center gap-2">
-                       <Maximize2 className="w-4 h-4 text-[#D4A854]" />
+                    <h4 className="text-slate-800 font-semibold flex items-center gap-2">
+                       <Maximize2 className="w-4 h-4 text-gold-deep" />
                        Validar Extração Técnica
                     </h4>
-                    <p className="text-xs text-white/40 mt-1">
+                    <p className="text-xs text-slate-500 mt-1">
                       Confirme se os dados extraídos pelo pipeline determinístico estão corretos.
                     </p>
                   </header>
@@ -376,7 +376,7 @@ export const UniversalDocumentViewer: React.FC<UniversalDocumentViewerProps> = (
                         const ratio = filled / schema.length;
                         if (ratio < 0.4) {
                           return (
-                            <div className="p-3 mb-3 rounded-xl bg-amber-950/40 border border-amber-500/30 text-amber-200 text-xs">
+                            <div className="p-3 mb-3 rounded-xl bg-[#FFF3DC] border border-[#B8860B]/30 text-[#8a6206] text-xs">
                               ⚠️ Extração parcial — apenas {filled}/{schema.length} campos preenchidos. Revise manualmente ou clique <strong>Descartar</strong> e reimporte com melhor qualidade.
                             </div>
                           );
@@ -389,56 +389,56 @@ export const UniversalDocumentViewer: React.FC<UniversalDocumentViewerProps> = (
 
                   {/* Technical Debug Info */}
                   {debug && (
-                    <div className="mt-8 pt-6 border-t border-white/5 space-y-4">
+                    <div className="mt-8 pt-6 border-t border-slate-200 space-y-4">
                       <div className="flex items-center gap-2">
-                         <div className="w-1 h-1 rounded-full bg-[#D4A854]" />
-                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Painel de Controle OCR</h3>
+                         <div className="w-1 h-1 rounded-full bg-gold-deep" />
+                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Painel de Controle OCR</h3>
                       </div>
-                      
+
                       {/* Regional Debug Visuals */}
                       {debug.regions && debug.regionImages && (
                         <div className="space-y-4">
-                          <p className="text-[9px] font-black text-[#D4A854] uppercase tracking-[0.2em] border-b border-[#D4A85420] pb-2">Análise Regional Determinística</p>
+                          <p className="text-[9px] font-black text-gold-deep uppercase tracking-[0.2em] border-b border-gold-deep/20 pb-2">Análise Regional Determinística</p>
                           <div className="space-y-3">
                             {Object.entries(debug.regions).map(([key, val]: [string, any]) => {
                               const metrics = (debug as any).metrics?.[key];
                               return (
-                                <div key={key} className="bg-white/[0.04] rounded-2xl border border-white/5 overflow-hidden transition-all hover:border-[#D4A85420] group">
+                                <div key={key} className="bg-white rounded-2xl border border-slate-200 overflow-hidden transition-all hover:border-gold-deep/30 group shadow-sm">
                                   <div className="flex flex-col">
-                                    <div className="flex items-center gap-3 p-3 bg-black/40">
-                                      <div className="w-16 h-10 bg-black rounded-lg overflow-hidden flex-shrink-0 border border-white/10 shadow-inner group-hover:border-[#D4A85440] transition-colors">
+                                    <div className="flex items-center gap-3 p-3 bg-slate-50">
+                                      <div className="w-16 h-10 bg-slate-200 rounded-lg overflow-hidden flex-shrink-0 border border-slate-300 shadow-inner group-hover:border-gold-deep/40 transition-colors">
                                         {debug.regionImages?.[key] ? (
-                                          <img src={debug.regionImages?.[key]} className="w-full h-full object-contain mix-blend-screen" />
+                                          <img src={debug.regionImages?.[key]} className="w-full h-full object-contain" />
                                         ) : (
                                           <div className="w-full h-full flex items-center justify-center">
-                                            <AlertCircle className="w-4 h-4 text-white/20" />
+                                            <AlertCircle className="w-4 h-4 text-slate-300" />
                                           </div>
                                         )}
                                       </div>
                                       <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between">
-                                          <p className="text-[8px] font-black text-[#8E8E93] uppercase tracking-tighter">{key}</p>
+                                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">{key}</p>
                                           {metrics && (
-                                            <span className="text-[7px] font-bold text-emerald-500/80 bg-emerald-500/5 px-1.5 rounded uppercase">Pass {metrics.pass}</span>
+                                            <span className="text-[7px] font-bold text-[#1F8A4C] bg-[#E4F5EA] px-1.5 rounded uppercase">Pass {metrics.pass}</span>
                                           )}
                                         </div>
                                         <p className={cn(
                                           "text-[10px] font-bold truncate mt-0.5",
-                                          val ? "text-[#D4A854]" : "text-red-500 italic"
+                                          val ? "text-gold-deep" : "text-[#C0392B] italic"
                                         )}>
                                           {val ? `"${val}"` : '[Falha na Extração]'}
                                         </p>
                                       </div>
                                     </div>
                                     {metrics && (
-                                      <div className="flex items-center gap-4 px-3 py-1.5 bg-white/[0.02] border-t border-white/[0.03]">
+                                      <div className="flex items-center gap-4 px-3 py-1.5 bg-slate-50/50 border-t border-slate-100">
                                           <div className="flex items-center gap-1">
-                                            <span className="text-[7px] text-white/20 uppercase font-bold">Tempo:</span>
-                                            <span className="text-[8px] text-white/60 font-mono">{metrics.time}ms</span>
+                                            <span className="text-[7px] text-slate-400 uppercase font-bold">Tempo:</span>
+                                            <span className="text-[8px] text-slate-600 font-mono">{metrics.time}ms</span>
                                           </div>
                                           <div className="flex items-center gap-1">
-                                            <span className="text-[7px] text-white/20 uppercase font-bold">Conf:</span>
-                                            <span className="text-[8px] text-white/60 font-mono">{(metrics.confidence * 100 || 100).toFixed(0)}%</span>
+                                            <span className="text-[7px] text-slate-400 uppercase font-bold">Conf:</span>
+                                            <span className="text-[8px] text-slate-600 font-mono">{(metrics.confidence * 100 || 100).toFixed(0)}%</span>
                                           </div>
                                       </div>
                                     )}
@@ -451,26 +451,26 @@ export const UniversalDocumentViewer: React.FC<UniversalDocumentViewerProps> = (
                       )}
 
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                           <p className="text-[8px] font-black text-[#8E8E93] uppercase">Pipeline</p>
-                        <p className="text-[10px] font-bold text-white mt-1 leading-none">{debug.isVisual ? 'PROCESSAMENTO REGIONAL' : 'NATIVO (TEXTO)'}</p>
+                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                           <p className="text-[8px] font-black text-slate-400 uppercase">Pipeline</p>
+                        <p className="text-[10px] font-bold text-slate-800 mt-1 leading-none">{debug.isVisual ? 'PROCESSAMENTO REGIONAL' : 'NATIVO (TEXTO)'}</p>
                       </div>
-                      <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                        <p className="text-[8px] font-black text-[#8E8E93] uppercase">Tempo Proc.</p>
-                        <p className="text-[10px] font-bold text-white mt-1 leading-none">{(Number(debug.time) / 1000).toFixed(2)}s</p>
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <p className="text-[8px] font-black text-slate-400 uppercase">Tempo Proc.</p>
+                        <p className="text-[10px] font-bold text-slate-800 mt-1 leading-none">{(Number(debug.time) / 1000).toFixed(2)}s</p>
                       </div>
-                      <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                        <p className="text-[8px] font-black text-[#8E8E93] uppercase">Volume</p>
-                        <p className="text-[10px] font-bold text-white mt-1 leading-none">{debug.chars} chars</p>
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <p className="text-[8px] font-black text-slate-400 uppercase">Volume</p>
+                        <p className="text-[10px] font-bold text-slate-800 mt-1 leading-none">{debug.chars} chars</p>
                       </div>
-                      <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                        <p className="text-[8px] font-black text-[#8E8E93] uppercase">Status</p>
-                        <p className="text-[10px] font-bold text-[#D4A854] mt-1 leading-none">{(debug.chars ?? 0) > 10 ? 'ESTÁVEL' : 'DIVERGENTE'}</p>
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <p className="text-[8px] font-black text-slate-400 uppercase">Status</p>
+                        <p className="text-[10px] font-bold text-gold-deep mt-1 leading-none">{(debug.chars ?? 0) > 10 ? 'ESTÁVEL' : 'DIVERGENTE'}</p>
                       </div>
                         {debug.resolution && (
-                          <div className="p-3 bg-white/5 rounded-xl border border-white/5 col-span-2 flex items-center justify-between">
-                            <p className="text-[8px] font-black text-[#8E8E93] uppercase">Resolução / Escala</p>
-                            <p className="text-[10px] font-bold text-white leading-none">{debug.resolution} @ {debug.scale}x</p>
+                          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 col-span-2 flex items-center justify-between">
+                            <p className="text-[8px] font-black text-slate-400 uppercase">Resolução / Escala</p>
+                            <p className="text-[10px] font-bold text-slate-800 leading-none">{debug.resolution} @ {debug.scale}x</p>
                           </div>
                         )}
                       </div>
@@ -478,16 +478,16 @@ export const UniversalDocumentViewer: React.FC<UniversalDocumentViewerProps> = (
                   )}
                 </div>
 
-                <div className="p-6 border-t border-white/5 bg-black/40 flex flex-col gap-3">
-                  <button 
+                <div className="p-6 border-t border-slate-200 bg-white flex flex-col gap-3">
+                  <button
                     onClick={() => onConfirm(data)}
-                    className="w-full bg-[#D4A854] hover:bg-[#C2984B] text-black font-bold py-3.5 rounded-xl transition-all shadow-lg active:scale-[0.98]"
+                    className="w-full bg-[#1B4D8F] hover:bg-[#153E73] text-white font-bold py-3.5 rounded-xl transition-all shadow-sm shadow-[#1B4D8F]/20 active:scale-[0.98]"
                   >
                     Confirmar e Importar
                   </button>
-                  <button 
+                  <button
                     onClick={onClose}
-                    className="w-full bg-white/5 hover:bg-white/10 text-white font-medium py-3 rounded-xl transition-all"
+                    className="w-full bg-white border border-slate-200 hover:border-[#1B4D8F]/40 hover:text-[#1B4D8F] text-slate-600 font-medium py-3 rounded-xl transition-all"
                   >
                     Descartar
                   </button>

@@ -314,26 +314,26 @@ export function UserProfileModal({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#050505] text-white overflow-hidden">
+    <div className="flex flex-col h-full bg-slate-50 text-slate-800 overflow-hidden">
       {/* Header Area */}
-      <div className="flex items-center justify-between p-6 bg-[#0B0B0D] border-b border-white/5 relative shrink-0">
+      <div className="flex items-center justify-between p-6 bg-white border-b border-slate-200 relative shrink-0">
         <div className="flex items-center gap-6">
           <div className="flex flex-col gap-1 text-left">
-             <div className="flex items-center gap-2 text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest">
+             <div className="flex items-center gap-2 text-[9px] font-black text-slate-500 uppercase tracking-widest">
                <span>EQUIPE</span>
                <ChevronLeft className="w-2.5 h-2.5 rotate-180" />
-               <span className="text-white">USUÁRIOS</span>
+               <span className="text-slate-700">USUÁRIOS</span>
                <ChevronLeft className="w-2.5 h-2.5 rotate-180" />
-               <span className="text-[#D4A94D] truncate max-w-[200px]">{mode === 'create' ? 'NOVO USUÁRIO' : targetProfile.name?.toUpperCase()}</span>
+               <span className="text-gold-deep truncate max-w-[200px]">{mode === 'create' ? 'NOVO USUÁRIO' : targetProfile.name?.toUpperCase()}</span>
              </div>
              
              <div className="flex items-center gap-4 mt-2">
                 <div className="relative group">
-                  <div className="w-16 h-16 rounded-full border-2 border-[#D4A94D]/30 p-0.5 overflow-hidden bg-[#1A1A1F] relative">
+                  <div className="w-16 h-16 rounded-full border-2 border-gold-deep/30 p-0.5 overflow-hidden bg-slate-100 relative">
                     {targetProfile.photoURL ? (
                       <img src={targetProfile.photoURL} alt="User" className="w-full h-full object-cover rounded-full" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[#D4A94D]/20">
+                      <div className="w-full h-full flex items-center justify-center text-gold-deep/20">
                         <User className="w-8 h-8" />
                       </div>
                     )}
@@ -348,14 +348,14 @@ export function UserProfileModal({
                 <div className="space-y-1 text-left">
                   <div className="flex items-center gap-3">
                     <h2 className="text-2xl font-black tracking-tight">{targetProfile.name || (mode === 'create' ? 'Novo Usuário' : 'Carregando...')}</h2>
-                    <div className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse mt-1" />
-                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-tighter">Online agora</span>
+                    <div className="flex h-2 w-2 rounded-full bg-[#1F8A4C] animate-pulse mt-1" />
+                    <span className="text-[10px] font-bold text-[#1F8A4C] uppercase tracking-tighter">Online agora</span>
                   </div>
                   <div className="flex items-center gap-2">
-                     <span className="px-2 py-0.5 bg-[#D4A94D]/10 text-[#D4A94D] border border-[#D4A94D]/20 rounded-md text-[8px] font-black uppercase tracking-[0.2em]">
+                     <span className="px-2 py-0.5 bg-gold-deep/10 text-gold-deep border border-gold-deep/25 rounded-md text-[8px] font-black uppercase tracking-[0.2em]">
                        {accessProfiles.find(p => p.id === targetProfile.profileId)?.name || targetProfile.role || 'VENDEDOR'}
                      </span>
-                     <span className="flex items-center gap-1.5 px-2 py-0.5 bg-white/5 border border-white/10 rounded-md text-[8px] font-black uppercase tracking-[0.2em] text-[#9CA3AF]">
+                     <span className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 border border-slate-200 rounded-md text-[8px] font-black uppercase tracking-[0.2em] text-slate-500">
                        <Globe className="w-2.5 h-2.5" /> Acesso total
                      </span>
                   </div>
@@ -369,9 +369,9 @@ export function UserProfileModal({
             <>
               <button 
                 type="button"
-                className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-100 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
               >
-                <Lock className="w-3.5 h-3.5 text-[#9CA3AF]" />
+                <Lock className="w-3.5 h-3.5 text-slate-500" />
                 Alterar Senha
               </button>
               <button 
@@ -379,7 +379,7 @@ export function UserProfileModal({
                 onClick={handleToggleStatus}
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 border rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                  targetProfile.status === 'active' ? "bg-white/5 border-white/5 text-white hover:bg-red-500/10 hover:border-red-500/20" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
+                  targetProfile.status === 'active' ? "bg-slate-100 border-slate-200 text-slate-700 hover:bg-[#FDE4E4] hover:border-[#C0392B]/25 hover:text-[#C0392B]" : "bg-[#E4F5EA] border-[#1F8A4C]/25 text-[#1F8A4C]"
                 )}
               >
                 {targetProfile.status === 'active' ? <UserMinus className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
@@ -389,7 +389,7 @@ export function UserProfileModal({
                 <button 
                   type="button"
                   onClick={handleDeleteUser}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#FDE4E4] hover:bg-[#C0392B] text-[#C0392B] hover:text-white border border-[#C0392B]/25 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Excluir Usuário
@@ -397,7 +397,7 @@ export function UserProfileModal({
               )}
             </>
           )}
-          <button type="button" onClick={onClose} className="p-2 ml-4 bg-white/5 hover:bg-white/10 rounded-xl text-[#9CA3AF] border border-white/5 transition-all">
+          <button type="button" onClick={onClose} className="p-2 ml-4 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-500 border border-slate-100 transition-all">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -405,7 +405,7 @@ export function UserProfileModal({
 
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
         {/* Navigation Tabs - VERTICAL on Desktop, HORIZONTAL on Mobile */}
-        <div className="w-full md:w-[280px] bg-[#0B0B0D] border-b md:border-b-0 md:border-r border-white/5 p-4 md:p-6 flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-x-visible shrink-0 no-scrollbar">
+        <div className="w-full md:w-[280px] bg-white border-b md:border-b-0 md:border-r border-slate-200 p-4 md:p-6 flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-x-visible shrink-0 no-scrollbar">
           {[
             { id: 'dados', label: 'DADOS', labelFull: 'DADOS DO USUÁRIO', icon: User },
             { id: 'perfil', label: 'PERFIL', labelFull: 'PERFIL E PERMISSÕES', icon: ShieldCheck },
@@ -419,8 +419,8 @@ export function UserProfileModal({
               className={cn(
                 "flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] transition-all border whitespace-nowrap md:whitespace-normal shrink-0",
                 activeTab === tab.id 
-                  ? "bg-[#D4A94D] text-[#050505] border-[#D4A94D] shadow-[0_0_20px_rgba(212,169,77,0.2)]" 
-                  : "bg-transparent text-[#9CA3AF] border-transparent hover:bg-white/5 hover:text-white"
+                  ? "bg-[#1B4D8F] text-white border-[#1B4D8F] shadow-sm shadow-[#1B4D8F]/20"
+                  : "bg-transparent text-slate-500 border-transparent hover:bg-slate-100 hover:text-slate-800"
               )}
             >
               <tab.icon className="w-4 h-4 shrink-0" />
@@ -429,19 +429,19 @@ export function UserProfileModal({
             </button>
           ))}
           
-          <div className="hidden md:block mt-auto p-4 rounded-xl bg-[#D4A94D]/5 border border-[#D4A94D]/10">
+          <div className="hidden md:block mt-auto p-4 rounded-xl bg-gold-deep/5 border border-gold-deep/20">
              <div className="flex items-center gap-2 mb-2">
-               <ShieldAlert className="w-3.5 h-3.5 text-[#D4A94D]" />
-               <span className="text-[9px] font-black text-[#D4A94D] uppercase tracking-widest">Segurança</span>
+               <ShieldAlert className="w-3.5 h-3.5 text-gold-deep" />
+               <span className="text-[9px] font-black text-gold-deep uppercase tracking-widest">Segurança</span>
              </div>
-             <p className="text-[8px] text-[#9CA3AF] leading-relaxed uppercase font-bold tracking-tight">
+             <p className="text-[8px] text-slate-500 leading-relaxed uppercase font-bold tracking-tight">
                Este perfil possui acesso total às leads da organização e ferramentas de gestão.
              </p>
           </div>
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-10 bg-[#050505]">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-10 bg-slate-50">
           <form onSubmit={handleSave} className="max-w-5xl mx-auto space-y-6 md:space-y-10">
             
             <AnimatePresence mode="wait">
@@ -452,7 +452,7 @@ export function UserProfileModal({
                   exit={{ opacity: 0, y: -20 }}
                   className={cn(
                     "p-4 rounded-2xl border flex items-center justify-between shadow-2xl mb-6",
-                    message.type === 'success' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-red-500/10 border-red-500/20 text-red-500"
+                    message.type === 'success' ? "bg-[#E4F5EA] border-[#1F8A4C]/25 text-[#1F8A4C]" : "bg-[#FDE4E4] border-[#C0392B]/25 text-[#C0392B]"
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -471,94 +471,94 @@ export function UserProfileModal({
                 <div className="lg:col-span-2 space-y-8">
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <User className="w-4 h-4 text-[#D4A94D]" />
+                      <User className="w-4 h-4 text-gold-deep" />
                       <h3 className="text-sm font-black uppercase tracking-widest">Informações pessoais</h3>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2 space-y-1.5">
-                        <label className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest ml-1">Nome completo</label>
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Nome completo</label>
                         <input 
                           type="text"
                           required
                           placeholder="Nome Completo"
                           value={targetProfile.name || ''}
                           onChange={e => setTargetProfile({ ...targetProfile, name: e.target.value })}
-                          className="w-full px-5 py-4 bg-[#0B0B0D] border border-white/5 rounded-2xl text-xs font-bold focus:border-[#D4A94D]/40 outline-none transition-all text-white"
+                          className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all text-slate-800"
                         />
                       </div>
                       
                       <div className="space-y-1.5">
-                        <label className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest ml-1">E-mail</label>
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">E-mail</label>
                         <input 
                           type="email"
                           required
                           placeholder="email@michelin.com"
                           value={targetProfile.email || ''}
                           onChange={e => setTargetProfile({ ...targetProfile, email: e.target.value })}
-                          className="w-full px-5 py-4 bg-[#0B0B0D] border border-white/5 rounded-2xl text-xs font-bold focus:border-[#D4A94D]/40 outline-none transition-all text-white"
+                          className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all text-slate-800"
                         />
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest ml-1">Telefone</label>
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Telefone</label>
                         <input 
                           type="text"
                           required
                           placeholder="(47) 99999-9999"
                           value={targetProfile.phone || ''}
                           onChange={e => setTargetProfile({ ...targetProfile, phone: formatPhone(e.target.value) })}
-                          className="w-full px-5 py-4 bg-[#0B0B0D] border border-white/5 rounded-2xl text-xs font-bold focus:border-[#D4A94D]/40 outline-none transition-all text-white"
+                          className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all text-slate-800"
                         />
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest ml-1">CPF</label>
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">CPF</label>
                         <input 
                           type="text"
                           placeholder="000.000.000-00"
                           value={targetProfile.cpf || ''}
                           onChange={e => setTargetProfile({ ...targetProfile, cpf: formatCPF(e.target.value) })}
-                          className="w-full px-5 py-4 bg-[#0B0B0D] border border-white/5 rounded-2xl text-xs font-bold focus:border-[#D4A94D]/40 outline-none transition-all text-white"
+                          className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all text-slate-800"
                         />
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest ml-1">Data de nascimento</label>
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Data de nascimento</label>
                         <input 
                           type="date"
                           value={targetProfile.birthday || ''}
                           onChange={e => setTargetProfile({ ...targetProfile, birthday: e.target.value })}
-                          className="w-full px-5 py-4 bg-[#0B0B0D] border border-white/5 rounded-2xl text-xs font-bold focus:border-[#D4A94D]/40 outline-none transition-all text-white"
+                          className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all text-slate-800"
                         />
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest ml-1">Gênero</label>
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Gênero</label>
                         <select 
                           value={targetProfile.gender || ''}
                           onChange={e => setTargetProfile({ ...targetProfile, gender: e.target.value })}
-                          className="w-full px-5 py-4 bg-[#0B0B0D] border border-white/5 rounded-2xl text-xs font-bold focus:border-[#D4A94D]/40 outline-none transition-all appearance-none text-white"
+                          className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all appearance-none text-slate-800"
                         >
-                          <option value="" className="bg-[#0B0B0D]">Selecione</option>
-                          <option value="MASCULINO" className="bg-[#0B0B0D]">Masculino</option>
-                          <option value="FEMININO" className="bg-[#0B0B0D]">Feminino</option>
-                          <option value="OUTRO" className="bg-[#0B0B0D]">Outro</option>
+                          <option value="">Selecione</option>
+                          <option value="MASCULINO">Masculino</option>
+                          <option value="FEMININO">Feminino</option>
+                          <option value="OUTRO">Outro</option>
                         </select>
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest ml-1">Estado civil</label>
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Estado civil</label>
                         <select 
                           value={targetProfile.civilStatus || ''}
                           onChange={e => setTargetProfile({ ...targetProfile, civilStatus: e.target.value })}
-                          className="w-full px-5 py-4 bg-[#0B0B0D] border border-white/5 rounded-2xl text-xs font-bold focus:border-[#D4A94D]/40 outline-none transition-all appearance-none text-white"
+                          className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all appearance-none text-slate-800"
                         >
-                          <option value="" className="bg-[#0B0B0D]">Selecione</option>
-                          <option value="SOLTEIRO" className="bg-[#0B0B0D]">Solteiro(a)</option>
-                          <option value="CASADO" className="bg-[#0B0B0D]">Casado(a)</option>
-                          <option value="DIVORCIADO" className="bg-[#0B0B0D]">Divorciado(a)</option>
-                          <option value="VIUVO" className="bg-[#0B0B0D]">Viúvo(a)</option>
+                          <option value="">Selecione</option>
+                          <option value="SOLTEIRO">Solteiro(a)</option>
+                          <option value="CASADO">Casado(a)</option>
+                          <option value="DIVORCIADO">Divorciado(a)</option>
+                          <option value="VIUVO">Viúvo(a)</option>
                         </select>
                       </div>
                     </div>
@@ -566,24 +566,24 @@ export function UserProfileModal({
 
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 mb-2">
-                       <Camera className="w-4 h-4 text-[#D4A94D]" />
+                       <Camera className="w-4 h-4 text-gold-deep" />
                        <h3 className="text-sm font-black uppercase tracking-widest">Foto do perfil</h3>
                     </div>
                     <div className="flex items-center gap-6">
-                       <div className="w-24 h-24 rounded-3xl border-2 border-[#D4A94D]/20 p-0.5 overflow-hidden bg-[#1A1A1F]">
+                       <div className="w-24 h-24 rounded-3xl border-2 border-gold-deep/25 p-0.5 overflow-hidden bg-slate-100">
                          {targetProfile.photoURL ? (
                            <img src={targetProfile.photoURL} alt="Preview" className="w-full h-full object-cover rounded-[1.4rem]" />
                          ) : (
-                           <div className="w-full h-full flex items-center justify-center text-[#D4A94D]/10 text-xs font-black uppercase text-center p-2 tracking-tight">Sem Foto</div>
+                           <div className="w-full h-full flex items-center justify-center text-gold-deep/10 text-xs font-black uppercase text-center p-2 tracking-tight">Sem Foto</div>
                          )}
                        </div>
                        <div className="space-y-2">
-                         <p className="text-[9px] font-bold text-[#9CA3AF] uppercase tracking-widest">PNG, JPG ou WEBP. Máx 2MB.</p>
+                         <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">PNG, JPG ou WEBP. Máx 2MB.</p>
                          <div className="flex gap-2">
                            <button 
                              type="button" 
                              onClick={() => fileInputRef.current?.click()}
-                             className="px-4 py-2 bg-[#D4A94D] text-[#050505] rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-[#CFA764] transition-all shadow-lg shadow-[#D4A94D]/10 font-black"
+                             className="px-4 py-2 bg-[#1B4D8F] text-white rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-[#153E73] transition-all shadow-sm shadow-[#1B4D8F]/20 font-black"
                            >
                              <Camera className="w-3.5 h-3.5" /> ALTERAR FOTO
                            </button>
@@ -591,7 +591,7 @@ export function UserProfileModal({
                              <button 
                                type="button" 
                                onClick={() => setTargetProfile({ ...targetProfile, photoURL: '' })}
-                               className="p-2 bg-white/5 hover:bg-red-500/10 border border-white/5 hover:border-red-500/20 rounded-xl text-red-500 transition-all font-bold"
+                               className="p-2 bg-slate-100 hover:bg-[#FDE4E4] border border-slate-100 hover:border-[#C0392B]/25 rounded-xl text-[#C0392B] transition-all font-bold"
                              >
                                <Trash2 className="w-4 h-4" />
                              </button>
@@ -603,19 +603,19 @@ export function UserProfileModal({
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest ml-1">Sobre o usuário</label>
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Sobre o usuário</label>
                     <textarea 
                       placeholder="Breve descrição sobre o usuário..."
                       value={targetProfile.about || ''}
                       onChange={e => setTargetProfile({ ...targetProfile, about: e.target.value })}
-                      className="w-full h-32 px-5 py-4 bg-[#0B0B0D] border border-white/5 rounded-2xl text-xs font-bold focus:border-[#D4A94D]/40 outline-none transition-all resize-none text-white"
+                      className="w-full h-32 px-5 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all resize-none text-slate-800"
                     />
-                    <div className="text-[8px] font-black text-[#9CA3AF] text-right uppercase tracking-[0.2em]">{targetProfile.about?.length || 0}/200</div>
+                    <div className="text-[8px] font-black text-slate-500 text-right uppercase tracking-[0.2em]">{targetProfile.about?.length || 0}/200</div>
                   </div>
 
                   {mode === 'create' && (
                     <div className="space-y-1.5">
-                      <label className="text-[9px] font-black text-[#D4A94D] uppercase tracking-widest ml-1">Senha de acesso inicial</label>
+                      <label className="text-[9px] font-black text-gold-deep uppercase tracking-widest ml-1">Senha de acesso inicial</label>
                       <div className="relative">
                         <input 
                           type={showPass ? "text" : "password"}
@@ -623,9 +623,9 @@ export function UserProfileModal({
                           placeholder="Mínimo 6 caracteres"
                           value={targetProfile.password || ''}
                           onChange={e => setTargetProfile({ ...targetProfile, password: e.target.value })}
-                          className="w-full px-5 py-4 bg-[#0B0B0D] border border-[#D4A94D]/20 rounded-2xl text-xs font-bold focus:border-[#D4A94D]/50 outline-none transition-all text-white"
+                          className="w-full px-5 py-4 bg-white border border-gold-deep/30 rounded-2xl text-xs font-bold focus:border-gold-deep/60 outline-none transition-all text-slate-800"
                         />
-                        <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-5 top-1/2 -translate-y-1/2 text-[#9CA3AF]">
+                        <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                           {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
@@ -634,9 +634,9 @@ export function UserProfileModal({
                 </div>
 
                 <div className="space-y-8">
-                  <div className="bg-[#0B0B0D] rounded-3xl border border-white/5 p-6 space-y-6">
+                  <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-6">
                     <div className="flex items-center gap-2">
-                       <ShieldCheck className="w-4 h-4 text-[#D4A94D]" />
+                       <ShieldCheck className="w-4 h-4 text-gold-deep" />
                        <h3 className="text-sm font-black uppercase tracking-widest">Permissões ativas</h3>
                     </div>
                     
@@ -648,90 +648,90 @@ export function UserProfileModal({
                       ].map((item, i) => (
                         <div key={i} className={cn(
                           "p-4 rounded-2xl border transition-all flex items-center justify-between",
-                          item.active ? "bg-[#D4A94D]/5 border-[#D4A94D]/20" : "bg-white/0 border-white/5 opacity-40 shrink-0"
+                          item.active ? "bg-gold-deep/5 border-gold-deep/25" : "bg-transparent border-slate-100 opacity-40 shrink-0"
                         )}>
                           <div className="flex items-center gap-3">
-                            <div className={cn("w-1.5 h-1.5 rounded-full", item.active ? "bg-[#D4A94D]" : "bg-white/20")} />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-white/80">{item.label}</span>
+                            <div className={cn("w-1.5 h-1.5 rounded-full", item.active ? "bg-gold-deep" : "bg-slate-300")} />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-800">{item.label}</span>
                           </div>
-                          {item.active && <CheckCircle2 className="w-3.5 h-3.5 text-[#D4A94D]" />}
+                          {item.active && <CheckCircle2 className="w-3.5 h-3.5 text-gold-deep" />}
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="bg-[#0B0B0D] rounded-3xl border border-white/5 p-6 space-y-6">
+                  <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-6">
                     <div className="flex items-center gap-2">
-                       <Briefcase className="w-4 h-4 text-[#D4A94D]" />
+                       <Briefcase className="w-4 h-4 text-gold-deep" />
                        <h3 className="text-sm font-black uppercase tracking-widest">Informações profissionais</h3>
                     </div>
 
                     <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <label className="text-[8px] font-black text-[#9CA3AF] uppercase tracking-widest ml-1">Cargo</label>
+                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Cargo</label>
                         <input 
                           type="text"
                           placeholder="Cargo"
                           value={targetProfile.cargo || ''}
                           onChange={e => setTargetProfile({ ...targetProfile, cargo: e.target.value })}
-                          className="w-full px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-[10px] font-bold focus:border-[#D4A94D]/40 outline-none transition-all text-white"
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all text-slate-800"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[8px] font-black text-[#9CA3AF] uppercase tracking-widest ml-1">Departamento</label>
+                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Departamento</label>
                         <input 
                           type="text"
                           placeholder="Departamento"
                           value={targetProfile.department || ''}
                           onChange={e => setTargetProfile({ ...targetProfile, department: e.target.value })}
-                          className="w-full px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-[10px] font-bold focus:border-[#D4A94D]/40 outline-none transition-all text-white"
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all text-slate-800"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[8px] font-black text-[#9CA3AF] uppercase tracking-widest ml-1">Data de contratação</label>
+                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Data de contratação</label>
                         <input 
                           type="date"
                           value={targetProfile.hiringDate || ''}
                           onChange={e => setTargetProfile({ ...targetProfile, hiringDate: e.target.value })}
-                          className="w-full px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-[10px] font-bold focus:border-[#D4A94D]/40 outline-none transition-all text-white"
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all text-slate-800"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[8px] font-black text-[#9CA3AF] uppercase tracking-widest ml-1">Responsável</label>
+                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Responsável</label>
                         <select 
                           value={targetProfile.managerId || ''}
                           onChange={e => setTargetProfile({ ...targetProfile, managerId: e.target.value })}
-                          className="w-full px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-[10px] font-bold focus:border-[#D4A94D]/40 outline-none transition-all appearance-none text-white"
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all appearance-none text-slate-800"
                         >
-                          <option value="" className="bg-[#0B0B0D]">Nenhum</option>
+                          <option value="">Nenhum</option>
                           {allUsers.filter(u => u.uid !== targetProfile.uid).map(u => (
-                            <option key={u.uid} value={u.uid} className="bg-[#0B0B0D]">{u.name}</option>
+                            <option key={u.uid} value={u.uid}>{u.name}</option>
                           ))}
                         </select>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-[#0B0B0D] rounded-3xl border border-white/5 p-6 space-y-6">
+                  <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-6">
                     <div className="flex items-center gap-2">
-                       <Fingerprint className="w-4 h-4 text-[#D4A94D]" />
+                       <Fingerprint className="w-4 h-4 text-gold-deep" />
                        <h3 className="text-sm font-black uppercase tracking-widest">Status da conta</h3>
                     </div>
 
                     <div className="space-y-4">
                        <div className="space-y-1">
-                          <span className="text-[8px] font-black text-[#9CA3AF] uppercase tracking-widest ml-1">Status</span>
+                          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Status</span>
                           <div className={cn(
                             "flex items-center gap-2 px-3 py-1.5 rounded-lg border w-fit",
-                            targetProfile.status === 'active' ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500" : "bg-red-500/5 border-red-500/20 text-red-500"
+                            targetProfile.status === 'active' ? "bg-[#E4F5EA] border-[#1F8A4C]/25 text-[#1F8A4C]" : "bg-[#FDE4E4] border-[#C0392B]/25 text-[#C0392B]"
                           )}>
-                             <div className={cn("w-1.5 h-1.5 rounded-full", targetProfile.status === 'active' ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
+                             <div className={cn("w-1.5 h-1.5 rounded-full", targetProfile.status === 'active' ? "bg-[#1F8A4C] animate-pulse" : "bg-[#C0392B]")} />
                              <span className="text-[9px] font-black uppercase tracking-widest">{targetProfile.status === 'active' ? 'Ativo' : 'Inativo'}</span>
                           </div>
                        </div>
                        <div className="space-y-1">
-                          <span className="text-[8px] font-black text-[#9CA3AF] uppercase tracking-widest ml-1">Nível de acesso</span>
-                          <p className="text-[10px] font-bold text-white uppercase tracking-tight">Acesso total ao sistema</p>
+                          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Nível de acesso</span>
+                          <p className="text-[10px] font-bold text-slate-800 uppercase tracking-tight">Acesso total ao sistema</p>
                        </div>
                     </div>
                   </div>
@@ -741,20 +741,20 @@ export function UserProfileModal({
 
             {activeTab === 'perfil' && (
                <div className="space-y-10">
-                 <div className="bg-[#0B0B0D] rounded-3xl border border-white/5 p-8 space-y-8">
+                 <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 space-y-8">
                    <div className="flex items-center gap-4">
-                     <div className="w-12 h-12 rounded-2xl bg-[#D4A94D]/10 flex items-center justify-center">
-                        <ShieldCheck className="w-6 h-6 text-[#D4A94D]" />
+                     <div className="w-12 h-12 rounded-2xl bg-gold-deep/10 flex items-center justify-center">
+                        <ShieldCheck className="w-6 h-6 text-gold-deep" />
                      </div>
                      <div className="text-left">
                        <h3 className="text-lg font-black uppercase tracking-tight">Perfil de Acesso Corporativo</h3>
-                       <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mt-1">Determine o cargo e as permissões sistêmicas</p>
+                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Determine o cargo e as permissões sistêmicas</p>
                      </div>
                    </div>
 
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="space-y-3">
-                         <label className="text-[10px] font-black text-[#D4A94D] uppercase tracking-widest ml-1 text-left block">Cargo / Perfil</label>
+                         <label className="text-[10px] font-black text-gold-deep uppercase tracking-widest ml-1 text-left block">Cargo / Perfil</label>
                          <div className="grid grid-cols-1 gap-2">
                            {accessProfiles.map(p => (
                              <button
@@ -764,38 +764,38 @@ export function UserProfileModal({
                                className={cn(
                                  "flex items-center justify-between p-4 rounded-2xl border transition-all text-left",
                                  targetProfile.profileId === p.id 
-                                   ? "bg-[#D4A94D]/10 border-[#D4A94D]/40 ring-2 ring-[#D4A94D]/20" 
-                                   : "bg-white/5 border-white/5 hover:border-white/20"
+                                   ? "bg-gold-deep/10 border-gold-deep/40 ring-2 ring-gold-deep/20"
+                                   : "bg-slate-100 border-slate-100 hover:border-slate-300"
                                )}
                              >
                                 <div className="flex flex-col gap-0.5">
-                                  <span className="text-[11px] font-black uppercase text-white tracking-widest">{p.name}</span>
-                                  <span className="text-[9px] text-[#9CA3AF] font-bold uppercase">{p.description || 'Permissões padrão'}</span>
+                                  <span className="text-[11px] font-black uppercase text-slate-800 tracking-widest">{p.name}</span>
+                                  <span className="text-[9px] text-slate-500 font-bold uppercase">{p.description || 'Permissões padrão'}</span>
                                 </div>
-                                {targetProfile.profileId === p.id && <CheckCircle2 className="w-5 h-5 text-[#D4A94D]" />}
+                                {targetProfile.profileId === p.id && <CheckCircle2 className="w-5 h-5 text-gold-deep" />}
                              </button>
                            ))}
                          </div>
                       </div>
 
-                      <div className="bg-black/40 rounded-3xl p-8 border border-white/5 space-y-6">
+                      <div className="bg-slate-50 rounded-3xl p-8 border border-slate-200 space-y-6">
                          <div className="flex items-center gap-2">
-                           <Settings2 className="w-4 h-4 text-[#D4A94D]" />
-                           <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Resumo de Atribuições</h4>
+                           <Settings2 className="w-4 h-4 text-gold-deep" />
+                           <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Resumo de Atribuições</h4>
                          </div>
                          
                          <div className="space-y-4 text-left">
                             {targetProfile.profileId ? (
                               <div className="space-y-3">
                                 {Object.entries(accessProfiles.find(p => p.id === targetProfile.profileId)?.permissions || {}).map(([key, val]) => (
-                                  <div key={key} className="flex items-center justify-between py-2 border-b border-white/5">
-                                    <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tight">{key.replace('can', '').replace(/([A-Z])/g, ' $1').trim()}</span>
-                                    {val ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <X className="w-4 h-4 text-red-500 opacity-30" />}
+                                  <div key={key} className="flex items-center justify-between py-2 border-b border-slate-100">
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">{key.replace('can', '').replace(/([A-Z])/g, ' $1').trim()}</span>
+                                    {val ? <CheckCircle2 className="w-4 h-4 text-[#1F8A4C]" /> : <X className="w-4 h-4 text-[#C0392B] opacity-30" />}
                                   </div>
                                 ))}
                               </div>
                             ) : (
-                              <div className="flex flex-col items-center justify-center py-20 text-center text-[#9CA3AF]">
+                              <div className="flex flex-col items-center justify-center py-20 text-center text-slate-500">
                                 <Info className="w-8 h-8 mb-4 opacity-20" />
                                 <p className="text-[10px] font-black uppercase tracking-widest max-w-[200px]">Selecione um perfil para visualizar as atribuições</p>
                               </div>
@@ -812,19 +812,19 @@ export function UserProfileModal({
                 {/* Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-[#D4A94D]/10 flex items-center justify-center">
-                      <Activity className="w-5 h-5 text-[#D4A94D]" />
+                    <div className="w-10 h-10 rounded-2xl bg-gold-deep/10 flex items-center justify-center">
+                      <Activity className="w-5 h-5 text-gold-deep" />
                     </div>
                     <div>
                       <h3 className="text-sm font-black uppercase tracking-widest">Atividade e Acessos</h3>
-                      <p className="text-[9px] font-bold text-[#9CA3AF] uppercase tracking-widest mt-0.5">Trilha de auditoria completa</p>
+                      <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Trilha de auditoria completa</p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => { setActivityLogs([]); setActivityLastVisible(null); setActivityHasMore(true); fetchActivityLogs(); }}
                     disabled={activityLoading}
-                    className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all disabled:opacity-40"
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-100 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all disabled:opacity-40"
                   >
                     <RefreshCw className={cn('w-3.5 h-3.5', activityLoading && 'animate-spin')} />
                     Atualizar
@@ -835,22 +835,22 @@ export function UserProfileModal({
                 <div className="space-y-2">
                   {activityLoading && activityLogs.length === 0 ? (
                     Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className="h-16 bg-white/3 animate-pulse rounded-2xl border border-white/5" />
+                      <div key={i} className="h-16 bg-slate-50 animate-pulse rounded-2xl border border-slate-100" />
                     ))
                   ) : activityLogs.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
-                      <Activity className="w-10 h-10 text-white/10 mb-4" />
-                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">Nenhuma atividade registrada</p>
+                      <Activity className="w-10 h-10 text-slate-200 mb-4" />
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nenhuma atividade registrada</p>
                     </div>
                   ) : (
                     activityLogs.map((log) => {
                       const isExpanded = expandedLog === log.id;
                       const actionColor =
-                        log.action === 'DELETE' ? 'text-red-400 bg-red-500/10 border-red-500/20' :
-                        log.action === 'CREATE' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
-                        log.action === 'UPDATE' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' :
-                        log.action.includes('LOGIN') ? 'text-[#D4A94D] bg-[#D4A94D]/10 border-[#D4A94D]/20' :
-                        'text-white/50 bg-white/5 border-white/10';
+                        log.action === 'DELETE' ? 'text-[#C0392B] bg-[#FDE4E4] border-[#C0392B]/25' :
+                        log.action === 'CREATE' ? 'text-[#1F8A4C] bg-[#E4F5EA] border-[#1F8A4C]/25' :
+                        log.action === 'UPDATE' ? 'text-[#1B4D8F] bg-[#1B4D8F]/10 border-[#1B4D8F]/20' :
+                        log.action.includes('LOGIN') ? 'text-gold-deep bg-gold-deep/10 border-gold-deep/25' :
+                        'text-slate-500 bg-slate-100 border-slate-200';
                       const ActionIcon =
                         log.action === 'DELETE' ? Trash2 :
                         log.action === 'CREATE' ? PlusCircle :
@@ -863,12 +863,12 @@ export function UserProfileModal({
                         Laptop2;
 
                       return (
-                        <div key={log.id} className="bg-white/3 border border-white/5 rounded-2xl overflow-hidden transition-all">
+                        <div key={log.id} className="bg-slate-50 border border-slate-100 rounded-2xl overflow-hidden transition-all">
                           {/* Row */}
                           <button
                             type="button"
                             onClick={() => setExpandedLog(isExpanded ? null : log.id)}
-                            className="w-full flex items-center gap-3 p-4 text-left hover:bg-white/3 transition-colors"
+                            className="w-full flex items-center gap-3 p-4 text-left hover:bg-slate-50 transition-colors"
                           >
                             {/* Action badge */}
                             <div className={cn('flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border shrink-0', actionColor)}>
@@ -879,33 +879,33 @@ export function UserProfileModal({
                             {/* QUEM fez O QUÊ EM QUAL RECURSO */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-[11px] font-black text-white truncate">{log.userName || 'Sistema'}</span>
-                                <span className="text-[9px] text-white/30 font-bold">→</span>
-                                <span className="text-[10px] font-bold text-white/60 uppercase tracking-tight">{log.entity}</span>
+                                <span className="text-[11px] font-black text-slate-800 truncate">{log.userName || 'Sistema'}</span>
+                                <span className="text-[9px] text-slate-400 font-bold">→</span>
+                                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">{log.entity}</span>
                                 {log.entityId && (
-                                  <span className="text-[9px] font-mono text-white/20 truncate max-w-[80px]">#{log.entityId.slice(-6)}</span>
+                                  <span className="text-[9px] font-mono text-slate-300 truncate max-w-[80px]">#{log.entityId.slice(-6)}</span>
                                 )}
                               </div>
                               {/* QUANDO + DE ONDE */}
                               <div className="flex items-center gap-3 mt-1 flex-wrap">
-                                <span className="flex items-center gap-1 text-[9px] text-white/30 font-bold">
+                                <span className="flex items-center gap-1 text-[9px] text-slate-400 font-bold">
                                   <Clock className="w-2.5 h-2.5" />
                                   {log.timestamp ? format(new Date(log.timestamp), "dd/MM/yy HH:mm", { locale: ptBR }) : '-'}
                                 </span>
                                 {log.location && (
-                                  <span className="flex items-center gap-1 text-[9px] text-white/30 font-bold">
+                                  <span className="flex items-center gap-1 text-[9px] text-slate-400 font-bold">
                                     <MapPin className="w-2.5 h-2.5" />
                                     {log.location}
                                   </span>
                                 )}
                                 {(log.browser || log.os) && (
-                                  <span className="flex items-center gap-1 text-[9px] text-white/30 font-bold">
+                                  <span className="flex items-center gap-1 text-[9px] text-slate-400 font-bold">
                                     <DeviceIcon className="w-2.5 h-2.5" />
                                     {[log.browser, log.os].filter(Boolean).join(' / ')}
                                   </span>
                                 )}
                                 {log.ip && log.ip !== '0.0.0.0' && (
-                                  <span className="text-[9px] font-mono text-white/20">{log.ip}</span>
+                                  <span className="text-[9px] font-mono text-slate-300">{log.ip}</span>
                                 )}
                               </div>
                             </div>
@@ -915,60 +915,60 @@ export function UserProfileModal({
                               <span className={cn(
                                 'px-2 py-0.5 rounded-lg border text-[8px] font-black uppercase tracking-wider',
                                 log.result === 'denied' || log.result === 'error' || log.status === 'failed' || log.status === 'error'
-                                  ? 'bg-red-500/10 border-red-500/20 text-red-400'
-                                  : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                  ? 'bg-[#FDE4E4] border-[#C0392B]/25 text-[#C0392B]'
+                                  : 'bg-[#E4F5EA] border-[#1F8A4C]/25 text-[#1F8A4C]'
                               )}>
                                 {log.result || log.status || 'ok'}
                               </span>
                               {isExpanded
-                                ? <ChevronDown className="w-3.5 h-3.5 text-white/30" />
-                                : <ChevronRight className="w-3.5 h-3.5 text-white/30" />
+                                ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                                : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                               }
                             </div>
                           </button>
 
                           {/* Expanded detail */}
                           {isExpanded && (
-                            <div className="border-t border-white/5 p-4 space-y-4">
+                            <div className="border-t border-slate-100 p-4 space-y-4">
                               {/* Grid de metadados */}
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <div className="bg-white/3 rounded-xl p-3 space-y-1">
-                                  <p className="text-[8px] font-black text-[#D4A94D] uppercase tracking-widest">DE ONDE</p>
-                                  <p className="text-[10px] font-bold text-white">{log.ip || '—'}</p>
-                                  <p className="text-[9px] text-white/40">{log.location || '—'}</p>
+                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-1">
+                                  <p className="text-[8px] font-black text-gold-deep uppercase tracking-widest">DE ONDE</p>
+                                  <p className="text-[10px] font-bold text-slate-800">{log.ip || '—'}</p>
+                                  <p className="text-[9px] text-slate-500">{log.location || '—'}</p>
                                 </div>
-                                <div className="bg-white/3 rounded-xl p-3 space-y-1">
-                                  <p className="text-[8px] font-black text-[#D4A94D] uppercase tracking-widest">DISPOSITIVO</p>
-                                  <p className="text-[10px] font-bold text-white capitalize">{log.deviceType || '—'}</p>
-                                  <p className="text-[9px] text-white/40">{[log.browser, log.os].filter(Boolean).join(' · ') || '—'}</p>
+                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-1">
+                                  <p className="text-[8px] font-black text-gold-deep uppercase tracking-widest">DISPOSITIVO</p>
+                                  <p className="text-[10px] font-bold text-slate-800 capitalize">{log.deviceType || '—'}</p>
+                                  <p className="text-[9px] text-slate-500">{[log.browser, log.os].filter(Boolean).join(' · ') || '—'}</p>
                                 </div>
-                                <div className="bg-white/3 rounded-xl p-3 space-y-1">
-                                  <p className="text-[8px] font-black text-[#D4A94D] uppercase tracking-widest">CONTEXTO</p>
-                                  <p className="text-[10px] font-bold text-white font-mono truncate">{log.context || '—'}</p>
-                                  <p className="text-[9px] text-white/40 capitalize">{log.origin}</p>
+                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-1">
+                                  <p className="text-[8px] font-black text-gold-deep uppercase tracking-widest">CONTEXTO</p>
+                                  <p className="text-[10px] font-bold text-slate-800 font-mono truncate">{log.context || '—'}</p>
+                                  <p className="text-[9px] text-slate-500 capitalize">{log.origin}</p>
                                 </div>
-                                <div className="bg-white/3 rounded-xl p-3 space-y-1">
-                                  <p className="text-[8px] font-black text-[#D4A94D] uppercase tracking-widest">RESULTADO</p>
+                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-1">
+                                  <p className="text-[8px] font-black text-gold-deep uppercase tracking-widest">RESULTADO</p>
                                   <p className={cn(
                                     'text-[10px] font-bold uppercase',
-                                    log.result === 'denied' || log.result === 'error' ? 'text-red-400' : 'text-emerald-400'
+                                    log.result === 'denied' || log.result === 'error' ? 'text-[#C0392B]' : 'text-[#1F8A4C]'
                                   )}>{log.result || log.status || 'success'}</p>
-                                  {log.details && <p className="text-[9px] text-white/40 line-clamp-2">{log.details}</p>}
+                                  {log.details && <p className="text-[9px] text-slate-500 line-clamp-2">{log.details}</p>}
                                 </div>
                               </div>
 
                               {/* O QUE MUDOU */}
                               {(log.before || log.after) && (
                                 <div className="space-y-2">
-                                  <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">O QUE MUDOU</p>
+                                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">O QUE MUDOU</p>
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     {log.before && (
                                       <div className="space-y-1.5">
-                                        <p className="text-[9px] font-black text-red-400 flex items-center gap-1.5">
+                                        <p className="text-[9px] font-black text-[#C0392B] flex items-center gap-1.5">
                                           <TrendingDown className="w-3 h-3" /> ANTES
                                         </p>
-                                        <div className="bg-black/60 rounded-xl p-3 border border-white/5">
-                                          <pre className="text-[10px] font-mono text-red-300/70 overflow-x-auto max-h-40 leading-relaxed whitespace-pre-wrap break-all">
+                                        <div className="bg-slate-900 rounded-xl p-3 border border-slate-700">
+                                          <pre className="text-[10px] font-mono text-red-300/80 overflow-x-auto max-h-40 leading-relaxed whitespace-pre-wrap break-all">
                                             {JSON.stringify(log.before, null, 2)}
                                           </pre>
                                         </div>
@@ -976,11 +976,11 @@ export function UserProfileModal({
                                     )}
                                     {log.after && (
                                       <div className="space-y-1.5">
-                                        <p className="text-[9px] font-black text-emerald-400 flex items-center gap-1.5">
+                                        <p className="text-[9px] font-black text-[#1F8A4C] flex items-center gap-1.5">
                                           <TrendingUp className="w-3 h-3" /> DEPOIS
                                         </p>
-                                        <div className="bg-black/60 rounded-xl p-3 border border-white/5">
-                                          <pre className="text-[10px] font-mono text-emerald-300/70 overflow-x-auto max-h-40 leading-relaxed whitespace-pre-wrap break-all">
+                                        <div className="bg-slate-900 rounded-xl p-3 border border-slate-700">
+                                          <pre className="text-[10px] font-mono text-emerald-300/80 overflow-x-auto max-h-40 leading-relaxed whitespace-pre-wrap break-all">
                                             {JSON.stringify(log.after, null, 2)}
                                           </pre>
                                         </div>
@@ -992,7 +992,7 @@ export function UserProfileModal({
 
                               {/* User Agent raw */}
                               {log.userAgent && (
-                                <p className="text-[8px] font-mono text-white/15 break-all">{log.userAgent}</p>
+                                <p className="text-[8px] font-mono text-slate-400 break-all">{log.userAgent}</p>
                               )}
                             </div>
                           )}
@@ -1007,7 +1007,7 @@ export function UserProfileModal({
                       type="button"
                       onClick={() => fetchActivityLogs(true)}
                       disabled={activityLoading}
-                      className="w-full py-3 bg-white/3 hover:bg-white/5 border border-white/5 rounded-2xl text-[9px] font-black text-white/40 uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-40"
+                      className="w-full py-3 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-2xl text-[9px] font-black text-slate-500 uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-40"
                     >
                       {activityLoading
                         ? <><RefreshCw className="w-3 h-3 animate-spin" /> Carregando...</>
@@ -1019,18 +1019,18 @@ export function UserProfileModal({
               </div>
             )}
 
-            <div className="flex flex-col sm:flex-row items-center gap-4 pt-6 md:pt-10 border-t border-white/5">
+            <div className="flex flex-col sm:flex-row items-center gap-4 pt-6 md:pt-10 border-t border-slate-100">
                <button
                  type="button"
                  onClick={onClose}
-                 className="w-full sm:flex-1 py-4 bg-white/5 hover:bg-white/10 text-[#9CA3AF] border border-white/5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3"
+                 className="w-full sm:flex-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-500 border border-slate-100 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3"
                >
                  <X className="w-4 h-4" /> CANCELAR
                </button>
                <button 
                  type="submit"
                  disabled={isLoading}
-                 className="w-full sm:flex-[2] py-5 bg-[#D4A94D] text-[#050505] rounded-2xl font-black text-[12px] uppercase tracking-[0.25em] hover:bg-[#CFA764] transition-all flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(212,169,77,0.3)] disabled:opacity-50"
+                 className="w-full sm:flex-[2] py-5 bg-[#1B4D8F] text-white rounded-2xl font-black text-[12px] uppercase tracking-[0.25em] hover:bg-[#153E73] transition-all flex items-center justify-center gap-3 shadow-sm shadow-[#1B4D8F]/20 disabled:opacity-50"
                >
                  {isLoading ? (
                    <Loader2 className="w-5 h-5 animate-spin" />

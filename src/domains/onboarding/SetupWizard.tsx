@@ -32,32 +32,32 @@ const SEGMENT_OPTIONS = [
     id: 'corretora_seguros' as BusinessSegment,
     label: 'Corretora de Seguros',
     icon: Car,
-    color: 'from-blue-500/20 to-blue-600/10 border-blue-500/30',
-    iconColor: 'text-blue-400',
+    color: 'from-blue-50 to-white border-blue-200',
+    iconColor: 'text-blue-600',
     description: 'Venda consultiva de seguros auto, vida e residencial via WhatsApp.',
   },
   {
     id: 'imobiliaria' as BusinessSegment,
     label: 'Imobiliária',
     icon: Home,
-    color: 'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30',
-    iconColor: 'text-emerald-400',
+    color: 'from-emerald-50 to-white border-emerald-200',
+    iconColor: 'text-emerald-600',
     description: 'Captação e qualificação de leads para compra, venda e aluguel de imóveis.',
   },
   {
     id: 'clinica_odontologica' as BusinessSegment,
     label: 'Clínica Odontológica',
     icon: Smile,
-    color: 'from-violet-500/20 to-violet-600/10 border-violet-500/30',
-    iconColor: 'text-violet-400',
+    color: 'from-violet-50 to-white border-violet-200',
+    iconColor: 'text-violet-600',
     description: 'Agendamento de consultas e qualificação de pacientes para tratamentos.',
   },
   {
     id: 'concessionaria' as BusinessSegment,
     label: 'Concessionária',
     icon: Building2,
-    color: 'from-amber-500/20 to-amber-600/10 border-amber-500/30',
-    iconColor: 'text-amber-400',
+    color: 'from-amber-50 to-white border-amber-200',
+    iconColor: 'text-amber-600',
     description: 'Qualificação de leads para compra de veículos e agendamento de test drive.',
   },
 ];
@@ -117,7 +117,7 @@ function StepDots({ current, total }: { current: number; total: number }) {
               ? 'w-6 h-2 bg-gold-deep'
               : i === current
               ? 'w-6 h-2 bg-gold-deep/70'
-              : 'w-2 h-2 bg-white/20'
+              : 'w-2 h-2 bg-slate-200'
           }`}
         />
       ))}
@@ -247,7 +247,7 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-brand-dark flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       {done && <Confetti />}
 
       <div className="w-full max-w-2xl">
@@ -264,8 +264,8 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
         {step === 0 && (
           <div className="space-y-4">
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-white mb-2">Qual é o seu segmento?</h1>
-              <p className="text-white/50 text-sm">Escolha o modelo de agente mais adequado para o seu negócio.</p>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">Qual é o seu segmento?</h1>
+              <p className="text-slate-500 text-sm">Escolha o modelo de agente mais adequado para o seu negócio.</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {SEGMENT_OPTIONS.map(opt => {
@@ -274,12 +274,12 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
                   <button
                     key={opt.id}
                     onClick={() => handleSelectSegment(opt.id)}
-                    className={`bg-gradient-to-br ${opt.color} border rounded-xl p-5 text-left hover:scale-[1.02] transition-all duration-200 group`}
+                    className={`bg-gradient-to-br ${opt.color} border rounded-xl p-5 text-left hover:scale-[1.02] transition-all duration-200 group shadow-sm`}
                   >
                     <Icon className={`w-8 h-8 ${opt.iconColor} mb-3`} />
-                    <h3 className="text-white font-semibold mb-1">{opt.label}</h3>
-                    <p className="text-white/50 text-xs leading-relaxed">{opt.description}</p>
-                    <ChevronRight className="w-4 h-4 text-white/30 mt-3 group-hover:text-white/60 transition-colors" />
+                    <h3 className="text-slate-800 font-semibold mb-1">{opt.label}</h3>
+                    <p className="text-slate-500 text-xs leading-relaxed">{opt.description}</p>
+                    <ChevronRight className="w-4 h-4 text-slate-300 mt-3 group-hover:text-slate-500 transition-colors" />
                   </button>
                 );
               })}
@@ -291,15 +291,15 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
         {step === 1 && (
           <div className="space-y-5">
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-white mb-2">Identidade do Agente</h1>
-              <p className="text-white/50 text-sm">Como seu agente vai se apresentar para os clientes?</p>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">Identidade do Agente</h1>
+              <p className="text-slate-500 text-sm">Como seu agente vai se apresentar para os clientes?</p>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
+            <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-sm">
               <div>
-                <label className="block text-white/70 text-xs uppercase tracking-wider mb-2">Nome do agente</label>
+                <label className="block text-slate-500 text-xs uppercase tracking-wider mb-2">Nome do agente</label>
                 <input
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold-deep/50"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15"
                   value={data.persona.name ?? ''}
                   onChange={e => setData(prev => ({ ...prev, persona: { ...prev.persona, name: e.target.value } }))}
                   placeholder="Ex: Ana, Sofia, Rafael..."
@@ -307,9 +307,9 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
               </div>
 
               <div>
-                <label className="block text-white/70 text-xs uppercase tracking-wider mb-2">Cargo / Função</label>
+                <label className="block text-slate-500 text-xs uppercase tracking-wider mb-2">Cargo / Função</label>
                 <input
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold-deep/50"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15"
                   value={data.persona.role ?? ''}
                   onChange={e => setData(prev => ({ ...prev, persona: { ...prev.persona, role: e.target.value } }))}
                   placeholder="Ex: Consultora de Seguros, Agente Imobiliário..."
@@ -318,41 +318,41 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white/80 text-sm font-medium">Tratamento formal</p>
-                  <p className="text-white/40 text-xs">Usar "Senhor/Senhora" em vez do nome</p>
+                  <p className="text-slate-700 text-sm font-medium">Tratamento formal</p>
+                  <p className="text-slate-500 text-xs">Usar "Senhor/Senhora" em vez do nome</p>
                 </div>
                 <button
                   onClick={() => setData(prev => ({ ...prev, persona: { ...prev.persona, usesFormalTreatment: !prev.persona.usesFormalTreatment } }))}
                   className="text-gold-deep"
                 >
-                  {data.persona.usesFormalTreatment ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8 text-white/30" />}
+                  {data.persona.usesFormalTreatment ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8 text-slate-300" />}
                 </button>
               </div>
             </div>
 
             {/* Live preview bubble */}
-            <div className="bg-white/3 border border-white/5 rounded-xl p-4">
-              <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+              <p className="text-slate-500 text-xs uppercase tracking-wider mb-3 flex items-center gap-1.5">
                 <MessageSquare className="w-3 h-3" /> Prévia
               </p>
               <div className="flex gap-2">
                 <div className="w-7 h-7 rounded-full bg-gold-deep/20 flex items-center justify-center text-gold-deep text-xs font-bold flex-shrink-0">
                   {(data.persona.name ?? 'A')[0]}
                 </div>
-                <div className="bg-white/10 rounded-xl rounded-tl-none px-3 py-2 text-white/80 text-sm max-w-xs">
+                <div className="bg-slate-100 rounded-xl rounded-tl-none px-3 py-2 text-slate-700 text-sm max-w-xs">
                   Olá{data.persona.usesFormalTreatment ? ', Senhor(a)' : ''}! Sou {data.persona.name ?? 'Ana'}, {data.persona.role ?? 'Consultora'} da {organizationName}. Como posso te ajudar?
                 </div>
               </div>
             </div>
 
             <div className="flex gap-3">
-              <button onClick={back} className="flex items-center gap-2 px-4 py-2 text-white/50 hover:text-white text-sm transition-colors">
+              <button onClick={back} className="flex items-center gap-2 px-4 py-2 text-slate-500 hover:text-slate-800 text-sm transition-colors">
                 <ChevronLeft className="w-4 h-4" /> Voltar
               </button>
               <button
                 onClick={() => next()}
                 disabled={!data.persona.name || !data.persona.role}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gold-deep text-black font-semibold rounded-xl hover:bg-gold-deep/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[#1B4D8F] text-white font-semibold rounded-xl hover:bg-[#153E73] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 Continuar <ChevronRight className="w-4 h-4" />
               </button>
@@ -364,15 +364,15 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
         {step === 2 && currentTemplate && (
           <div className="space-y-5">
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-white mb-2">Contexto do Negócio</h1>
-              <p className="text-white/50 text-sm">Essas informações serão usadas pelo agente para atender melhor seus clientes.</p>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">Contexto do Negócio</h1>
+              <p className="text-slate-500 text-sm">Essas informações serão usadas pelo agente para atender melhor seus clientes.</p>
             </div>
 
             <div className="space-y-5">
               {currentTemplate.wizardQuestions.map(q => (
-                <div key={q.id} className="bg-white/5 border border-white/10 rounded-xl p-4">
-                  <label className="block text-white/80 text-sm font-medium mb-1">{q.label}</label>
-                  {q.helpText && <p className="text-white/40 text-xs mb-3">{q.helpText}</p>}
+                <div key={q.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                  <label className="block text-slate-700 text-sm font-medium mb-1">{q.label}</label>
+                  {q.helpText && <p className="text-slate-500 text-xs mb-3">{q.helpText}</p>}
 
                   {q.type === 'multiselect' && (
                     <div className="flex flex-wrap gap-2">
@@ -392,8 +392,8 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
                             }}
                             className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                               selected
-                                ? 'bg-gold-deep/20 border-gold-deep/50 text-gold-deep'
-                                : 'bg-white/5 border-white/10 text-white/50 hover:text-white hover:border-white/30'
+                                ? 'bg-gold-deep/15 border-gold-deep/50 text-gold-deep'
+                                : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-800 hover:border-slate-300'
                             }`}
                           >
                             {selected && <span className="mr-1">✓</span>}{opt}
@@ -405,7 +405,7 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
 
                   {(q.type === 'text' || q.type === 'select') && (
                     <input
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold-deep/50"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15"
                       value={((data.businessContext as any)[q.contextKey] ?? '') as string}
                       onChange={e => setData(prev => ({
                         ...prev,
@@ -418,7 +418,7 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
                   {q.type === 'textarea' && (
                     <textarea
                       rows={3}
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-gold-deep/50 resize-none"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 resize-none"
                       value={((data.businessContext as any)[q.contextKey] ?? '') as string}
                       onChange={e => setData(prev => ({
                         ...prev,
@@ -432,12 +432,12 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
             </div>
 
             <div className="flex gap-3">
-              <button onClick={back} className="flex items-center gap-2 px-4 py-2 text-white/50 hover:text-white text-sm transition-colors">
+              <button onClick={back} className="flex items-center gap-2 px-4 py-2 text-slate-500 hover:text-slate-800 text-sm transition-colors">
                 <ChevronLeft className="w-4 h-4" /> Voltar
               </button>
               <button
                 onClick={() => next()}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gold-deep text-black font-semibold rounded-xl hover:bg-gold-deep/90 transition-all"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[#1B4D8F] text-white font-semibold rounded-xl hover:bg-[#153E73] transition-all"
               >
                 Continuar <ChevronRight className="w-4 h-4" />
               </button>
@@ -449,11 +449,11 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
         {step === 3 && (
           <div className="space-y-5">
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-white mb-2">Tom de Comunicação</h1>
-              <p className="text-white/50 text-sm">Como o agente deve se comunicar com seus clientes?</p>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">Tom de Comunicação</h1>
+              <p className="text-slate-500 text-sm">Como o agente deve se comunicar com seus clientes?</p>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
               <div className="grid grid-cols-2 gap-2">
                 {TONE_OPTIONS.map(t => (
                   <button
@@ -461,8 +461,8 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
                     onClick={() => setData(prev => ({ ...prev, tone: t.value, persona: { ...prev.persona, tone: t.value } }))}
                     className={`px-4 py-3 rounded-xl text-sm font-medium border transition-all ${
                       data.tone === t.value
-                        ? 'bg-gold-deep/20 border-gold-deep/50 text-gold-deep'
-                        : 'bg-white/5 border-white/10 text-white/60 hover:text-white hover:border-white/30'
+                        ? 'bg-gold-deep/15 border-gold-deep/50 text-gold-deep'
+                        : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-800 hover:border-slate-300'
                     }`}
                   >
                     {data.tone === t.value && <Check className="w-3 h-3 inline mr-1" />}
@@ -473,15 +473,15 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
             </div>
 
             {/* Live preview */}
-            <div className="bg-white/3 border border-white/5 rounded-xl p-4">
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-white/40 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <p className="text-slate-500 text-xs uppercase tracking-wider flex items-center gap-1.5">
                   <Sparkles className="w-3 h-3" /> Prévia ao vivo
                 </p>
                 {openrouterApiKey && (
                   <button
                     onClick={() => setData(prev => ({ ...prev, tone: prev.tone }))}
-                    className="text-white/30 hover:text-white/60 transition-colors"
+                    className="text-slate-300 hover:text-slate-500 transition-colors"
                   >
                     <RefreshCw className="w-3 h-3" />
                   </button>
@@ -490,7 +490,7 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
 
               <div className="space-y-2">
                 <div className="flex justify-end">
-                  <div className="bg-gold-deep/10 border border-gold-deep/20 rounded-xl rounded-tr-none px-3 py-2 text-white/70 text-sm max-w-xs">
+                  <div className="bg-gold-deep/10 border border-gold-deep/20 rounded-xl rounded-tr-none px-3 py-2 text-slate-700 text-sm max-w-xs">
                     Olá, quero saber mais sobre os serviços de vocês.
                   </div>
                 </div>
@@ -498,13 +498,13 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
                   <div className="w-7 h-7 rounded-full bg-gold-deep/20 flex items-center justify-center text-gold-deep text-xs font-bold flex-shrink-0">
                     {(data.persona.name ?? 'A')[0]}
                   </div>
-                  <div className="bg-white/10 rounded-xl rounded-tl-none px-3 py-2 text-white/80 text-sm max-w-xs min-h-[40px] flex items-center">
+                  <div className="bg-slate-100 rounded-xl rounded-tl-none px-3 py-2 text-slate-700 text-sm max-w-xs min-h-[40px] flex items-center">
                     {loadingPreview ? (
                       <Loader2 className="w-4 h-4 animate-spin text-gold-deep/50" />
                     ) : previewText ? (
                       previewText
                     ) : (
-                      <span className="text-white/30 text-xs italic">
+                      <span className="text-slate-400 text-xs italic">
                         {openrouterApiKey ? 'Gerando prévia…' : 'Configure uma API key para ver prévia ao vivo.'}
                       </span>
                     )}
@@ -514,12 +514,12 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
             </div>
 
             <div className="flex gap-3">
-              <button onClick={back} className="flex items-center gap-2 px-4 py-2 text-white/50 hover:text-white text-sm transition-colors">
+              <button onClick={back} className="flex items-center gap-2 px-4 py-2 text-slate-500 hover:text-slate-800 text-sm transition-colors">
                 <ChevronLeft className="w-4 h-4" /> Voltar
               </button>
               <button
                 onClick={() => next({ persona: { ...data.persona, tone: data.tone } })}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gold-deep text-black font-semibold rounded-xl hover:bg-gold-deep/90 transition-all"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[#1B4D8F] text-white font-semibold rounded-xl hover:bg-[#153E73] transition-all"
               >
                 Continuar <ChevronRight className="w-4 h-4" />
               </button>
@@ -535,14 +535,14 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
                 <div className="w-20 h-20 rounded-full bg-gold-deep/20 flex items-center justify-center mx-auto mb-4">
                   <Check className="w-10 h-10 text-gold-deep" />
                 </div>
-                <h1 className="text-2xl font-bold text-white mb-2">Agente ativado!</h1>
-                <p className="text-white/50 text-sm">Redirecionando para o painel…</p>
+                <h1 className="text-2xl font-bold text-slate-900 mb-2">Agente ativado!</h1>
+                <p className="text-slate-500 text-sm">Redirecionando para o painel…</p>
               </div>
             ) : (
               <>
                 <div className="text-center mb-6">
-                  <h1 className="text-2xl font-bold text-white mb-2">Revisão Final</h1>
-                  <p className="text-white/50 text-sm">Confirme as configurações antes de ativar o agente.</p>
+                  <h1 className="text-2xl font-bold text-slate-900 mb-2">Revisão Final</h1>
+                  <p className="text-slate-500 text-sm">Confirme as configurações antes de ativar o agente.</p>
                 </div>
 
                 <div className="space-y-3">
@@ -567,13 +567,13 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
                 </div>
 
                 <div className="flex gap-3 pt-2">
-                  <button onClick={back} className="flex items-center gap-2 px-4 py-2 text-white/50 hover:text-white text-sm transition-colors">
+                  <button onClick={back} className="flex items-center gap-2 px-4 py-2 text-slate-500 hover:text-slate-800 text-sm transition-colors">
                     <ChevronLeft className="w-4 h-4" /> Voltar
                   </button>
                   <button
                     onClick={handleActivate}
                     disabled={saving}
-                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gold-deep text-black font-bold rounded-xl hover:bg-gold-deep/90 disabled:opacity-60 disabled:cursor-not-allowed transition-all text-base"
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[#1B4D8F] text-white font-bold rounded-xl hover:bg-[#153E73] disabled:opacity-60 disabled:cursor-not-allowed transition-all text-base"
                   >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                     {saving ? 'Ativando…' : 'Ativar Agente'}
@@ -598,11 +598,11 @@ export function SetupWizard({ organizationId, organizationName, openrouterApiKey
 
 function ReviewRow({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
   return (
-    <div className="flex items-start gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+    <div className="flex items-start gap-3 bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm">
       <Icon className="w-4 h-4 text-gold-deep mt-0.5 flex-shrink-0" />
       <div className="min-w-0">
-        <p className="text-white/40 text-xs uppercase tracking-wider">{label}</p>
-        <p className="text-white text-sm font-medium truncate">{value}</p>
+        <p className="text-slate-500 text-xs uppercase tracking-wider">{label}</p>
+        <p className="text-slate-800 text-sm font-medium truncate">{value}</p>
       </div>
     </div>
   );

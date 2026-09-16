@@ -86,14 +86,14 @@ export const AggerInstallBanner: React.FC<AggerInstallBannerProps> = ({ isSideba
 
       {showModal && (
         <div
-          className="fixed inset-0 bg-brand-black/80 backdrop-blur-sm z-[2000] flex items-center justify-center p-4"
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[2000] flex items-center justify-center p-4"
           onClick={() => setShowModal(false)}
         >
           <div
-            className="bg-brand-dark border border-gold-deep/30 rounded-2xl max-w-lg w-full shadow-2xl"
+            className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-white/5 flex items-start justify-between gap-4">
+            <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <Zap className="w-4 h-4 text-gold-deep" />
@@ -101,13 +101,13 @@ export const AggerInstallBanner: React.FC<AggerInstallBannerProps> = ({ isSideba
                     Cotar no Agger
                   </h2>
                 </div>
-                <p className="text-[11px] text-white/60 font-medium leading-relaxed">
+                <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
                   Ferramenta de automação que faz login, navega até o formulário de cotação e preenche com os dados do lead.
                 </p>
               </div>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-1.5 text-white/30 hover:text-white transition-colors -mt-1 -mr-1"
+                className="p-1.5 text-slate-400 hover:text-slate-700 transition-colors -mt-1 -mr-1"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -118,8 +118,8 @@ export const AggerInstallBanner: React.FC<AggerInstallBannerProps> = ({ isSideba
                 n={1}
                 title="Abrir o gerenciador de extensões"
                 body={
-                  <p className="text-[10px] text-white/60 leading-relaxed">
-                    No Chrome, acesse <span className="font-mono text-gold-light">chrome://extensions</span> ou clique no ícone 🧩 → <span className="font-bold text-gold-light">Gerenciar extensões</span>.
+                  <p className="text-[10px] text-slate-600 leading-relaxed">
+                    No Chrome, acesse <span className="font-mono text-gold-deep">chrome://extensions</span> ou clique no ícone 🧩 → <span className="font-bold text-gold-deep">Gerenciar extensões</span>.
                   </p>
                 }
               />
@@ -128,8 +128,8 @@ export const AggerInstallBanner: React.FC<AggerInstallBannerProps> = ({ isSideba
                 n={2}
                 title="Ativar modo desenvolvedor e carregar"
                 body={
-                  <p className="text-[10px] text-white/60 leading-relaxed">
-                    Ative o toggle <span className="font-bold text-gold-light">Modo do desenvolvedor</span> e clique em <span className="font-bold text-gold-light">Carregar sem compactação</span>. Selecione a pasta <span className="font-mono text-gold-light">Extenção GoogleChrome</span> do repositório.
+                  <p className="text-[10px] text-slate-600 leading-relaxed">
+                    Ative o toggle <span className="font-bold text-gold-deep">Modo do desenvolvedor</span> e clique em <span className="font-bold text-gold-deep">Carregar sem compactação</span>. Selecione a pasta <span className="font-mono text-gold-deep">Extenção GoogleChrome</span> do repositório.
                   </p>
                 }
               />
@@ -140,25 +140,25 @@ export const AggerInstallBanner: React.FC<AggerInstallBannerProps> = ({ isSideba
                 body={
                   <button
                     onClick={() => window.location.reload()}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-md text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-md text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[#1B4D8F]/40 hover:text-[#1B4D8F] transition-all"
                   >
                     Recarregar agora
                   </button>
                 }
               />
 
-              <div className="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-lg flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <p className="text-[10px] text-emerald-300/80 font-medium leading-relaxed">
+              <div className="p-3 bg-[#E4F5EA] border border-[#1F8A4C]/20 rounded-lg flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-[#1F8A4C] shrink-0 mt-0.5" />
+                <p className="text-[10px] text-[#1F8A4C] font-medium leading-relaxed">
                   Depois de instalado, este aviso some e o botão <span className="font-black">"Cotar no Agger"</span> aparece em cada lead.
                   As credenciais ficam só na sua máquina, nunca no servidor.
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-white/5 space-y-2">
+              <div className="pt-3 border-t border-slate-100 space-y-2">
                 <button
                   onClick={runDiagnostic}
-                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-md text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all"
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-md text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[#1B4D8F]/40 hover:text-[#1B4D8F] transition-all"
                 >
                   <RefreshCw className="w-3 h-3" /> Já instalei — verificar agora
                 </button>
@@ -166,8 +166,8 @@ export const AggerInstallBanner: React.FC<AggerInstallBannerProps> = ({ isSideba
                   <div className={cn(
                     "p-2.5 rounded-md flex items-start gap-2 text-[10px] leading-relaxed font-medium",
                     diagnostic.ok
-                      ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"
-                      : "bg-amber-500/10 border border-amber-500/30 text-amber-200"
+                      ? "bg-[#E4F5EA] border border-[#1F8A4C]/30 text-[#1F8A4C]"
+                      : "bg-[#FFF3DC] border border-[#B8860B]/30 text-[#8a6206]"
                   )}>
                     {diagnostic.ok
                       ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-px" />
@@ -177,28 +177,28 @@ export const AggerInstallBanner: React.FC<AggerInstallBannerProps> = ({ isSideba
                 )}
                 {diagnostic && !diagnostic.ok && (
                   <>
-                    <div className="p-3 bg-amber-500/5 border border-amber-500/30 rounded-md text-[10px] text-white/80 font-medium leading-relaxed space-y-2">
-                      <p className="text-amber-200 font-black uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                    <div className="p-3 bg-[#FFF3DC] border border-[#B8860B]/30 rounded-md text-[10px] text-slate-600 font-medium leading-relaxed space-y-2">
+                      <p className="text-[#8a6206] font-black uppercase tracking-wider text-[10px] flex items-center gap-1.5">
                         <ShieldCheck className="w-3.5 h-3.5" /> O que verificar
                       </p>
-                      <ol className="list-decimal list-inside space-y-1 pl-1 text-[9.5px] text-white/70">
-                        <li>Acesse <span className="font-mono text-gold-light">chrome://extensions</span> e confirme que a extensão <span className="font-bold text-gold-light">Michelin Seguros - Automação</span> está ativada.</li>
+                      <ol className="list-decimal list-inside space-y-1 pl-1 text-[9.5px] text-slate-500">
+                        <li>Acesse <span className="font-mono text-gold-deep">chrome://extensions</span> e confirme que a extensão <span className="font-bold text-gold-deep">Michelin Seguros - Automação</span> está ativada.</li>
                         <li>Se atualizou os arquivos, clique no ícone de recarga 🔄 da extensão nessa tela.</li>
                         <li>Recarregue esta página e tente verificar novamente.</li>
                       </ol>
                     </div>
 
-                    <div className="pt-2 border-t border-white/5">
+                    <div className="pt-2 border-t border-slate-100">
                       <button
                         onClick={() => {
                           setManualOverride(true);
                           setShowModal(false);
                         }}
-                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/30 rounded-md text-[10px] font-black uppercase tracking-widest text-amber-200 hover:bg-amber-500/20 transition-all"
+                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#FFF3DC] border border-[#B8860B]/30 rounded-md text-[10px] font-black uppercase tracking-widest text-[#8a6206] hover:bg-[#B8860B]/20 transition-all"
                       >
                         Marcar como instalado mesmo assim
                       </button>
-                      <p className="text-[9px] text-white/40 leading-relaxed mt-1.5">
+                      <p className="text-[9px] text-slate-400 leading-relaxed mt-1.5">
                         Esconde este aviso e libera o botão "Cotar no Agger" em cada lead. Sem a extensão ativa, o Agger abre em nova aba mas <span className="font-bold">não</span> preenche automaticamente.
                       </p>
                     </div>
@@ -207,10 +207,10 @@ export const AggerInstallBanner: React.FC<AggerInstallBannerProps> = ({ isSideba
               </div>
             </div>
 
-            <div className="p-4 border-t border-white/5 flex justify-end">
+            <div className="p-4 border-t border-slate-100 flex justify-end">
               <button
                 onClick={() => { dismiss(); setShowModal(false); }}
-                className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors"
+                className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-700 transition-colors"
               >
                 Não mostrar mais
               </button>
@@ -224,11 +224,11 @@ export const AggerInstallBanner: React.FC<AggerInstallBannerProps> = ({ isSideba
 
 const Step: React.FC<{ n: number; title: string; body: React.ReactNode }> = ({ n, title, body }) => (
   <div className="flex gap-3">
-    <div className="w-6 h-6 rounded-full bg-gold-deep/20 border border-gold-deep/40 flex items-center justify-center text-gold-deep text-[10px] font-black shrink-0">
+    <div className="w-6 h-6 rounded-full bg-gold-deep/10 border border-gold-deep/25 flex items-center justify-center text-gold-deep text-[10px] font-black shrink-0">
       {n}
     </div>
     <div className="flex-1 min-w-0">
-      <p className="text-[11px] font-black text-white uppercase tracking-wider mb-2">{title}</p>
+      <p className="text-[11px] font-black text-slate-800 uppercase tracking-wider mb-2">{title}</p>
       <div>{body}</div>
     </div>
   </div>
