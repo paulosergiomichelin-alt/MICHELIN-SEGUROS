@@ -101,14 +101,14 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ sessionName, onClose, 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="bg-brand-black border border-white/10 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2.5">
-            <Smartphone className="w-4 h-4 text-emerald-400" />
-            <span className="text-[11px] font-black text-white uppercase tracking-widest">Conectar WhatsApp</span>
+            <Smartphone className="w-4 h-4 text-gold-deep" />
+            <span className="text-[11px] font-black text-slate-900 uppercase tracking-widest">Conectar WhatsApp</span>
           </div>
-          <button onClick={onClose} className="p-1.5 text-white/30 hover:text-white transition-colors">
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -116,13 +116,13 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ sessionName, onClose, 
         <div className="p-6 flex flex-col items-center gap-5">
           {status === 'open' ? (
             <div className="flex flex-col items-center gap-3 py-6">
-              <CheckCircle2 className="w-16 h-16 text-emerald-400" />
-              <p className="text-[13px] font-bold text-emerald-400">WhatsApp conectado!</p>
+              <CheckCircle2 className="w-16 h-16 text-[#1F8A4C]" />
+              <p className="text-[13px] font-bold text-[#1F8A4C]">WhatsApp conectado!</p>
             </div>
           ) : status === 'connecting' ? (
             <div className="flex flex-col items-center gap-3 py-6">
               <Loader2 className="w-12 h-12 text-gold-deep animate-spin" />
-              <p className="text-[11px] text-white/60">Autenticando...</p>
+              <p className="text-[11px] text-slate-600">Autenticando...</p>
             </div>
           ) : (
             <>
@@ -134,8 +134,8 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ sessionName, onClose, 
                   <img src={qrBase64} alt="QR Code WhatsApp" className="w-full h-full object-contain" />
                 ) : serviceError ? (
                   <div className="flex flex-col items-center gap-2 px-4 text-center">
-                    <AlertTriangle className="w-6 h-6 text-amber-400" />
-                    <p className="text-[10px] text-amber-600 font-semibold">Serviço indisponível</p>
+                    <AlertTriangle className="w-6 h-6 text-[#B8860B]" />
+                    <p className="text-[10px] text-[#B8860B] font-semibold">Serviço indisponível</p>
                     <p className="text-[9px] text-gray-500">Evolution API não está gerando QR.<br/>Reinicie o serviço e tente novamente.</p>
                   </div>
                 ) : (
@@ -148,17 +148,17 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ sessionName, onClose, 
                 {/* Countdown overlay when near expiry */}
                 {qrBase64 && !fetchingQr && countdown <= 10 && (
                   <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                    <span className="text-2xl font-black text-red-500">{countdown}s</span>
+                    <span className="text-2xl font-black text-[#C0392B]">{countdown}s</span>
                   </div>
                 )}
               </div>
 
               {/* Instructions */}
               <div className="space-y-2 text-center">
-                <p className="text-[11px] text-white/70">
+                <p className="text-[11px] text-slate-600">
                   Abra o WhatsApp no celular e escaneie o QR Code
                 </p>
-                <div className="text-[9px] text-white/30 space-y-0.5">
+                <div className="text-[9px] text-slate-400 space-y-0.5">
                   <p>WhatsApp → Menu (⋮) → Dispositivos conectados → Conectar dispositivo</p>
                 </div>
               </div>
@@ -166,20 +166,20 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ sessionName, onClose, 
               {/* Timer — only when QR is visible */}
               {qrBase64 && (
                 <div className="flex items-center gap-2">
-                  <div className="h-1 w-32 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-1 w-32 bg-slate-200 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-emerald-400 rounded-full transition-all duration-1000"
+                      className="h-full bg-[#1F8A4C] rounded-full transition-all duration-1000"
                       style={{ width: `${(countdown / 60) * 100}%` }}
                     />
                   </div>
-                  <span className="text-[9px] text-white/30 tabular-nums">{countdown}s</span>
+                  <span className="text-[9px] text-slate-400 tabular-nums">{countdown}s</span>
                 </div>
               )}
 
               <button
                 onClick={fetchQR}
                 disabled={fetchingQr}
-                className="flex items-center gap-1.5 text-[9px] text-white/30 hover:text-white/60 transition-colors disabled:opacity-40"
+                className="flex items-center gap-1.5 text-[9px] text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40"
               >
                 <RefreshCw className={`w-3 h-3 ${fetchingQr ? 'animate-spin' : ''}`} /> Atualizar QR
               </button>

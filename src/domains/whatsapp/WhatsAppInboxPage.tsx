@@ -102,42 +102,42 @@ const ConvItem: React.FC<{
   <button
     onClick={onClick}
     className={cn(
-      'w-full flex gap-2.5 p-2.5 hover:bg-[#202c33] transition-colors relative border-b border-[#202c33]/40 text-left',
-      active && 'bg-[#2a3942]'
+      'w-full flex gap-2.5 p-2.5 hover:bg-slate-50 transition-colors relative border-b border-slate-100 text-left',
+      active && 'bg-slate-100'
     )}
   >
     <Avatar name={conv.contactName || conv.phone} picture={conv.contactPicture} isGroup={conv.isGroup} session={session} phone={conv.phone} />
     <div className="flex-1 min-w-0">
       <div className="flex justify-between items-start">
-        <p className="text-[12px] font-bold text-[#e9edef] truncate pr-2 leading-none">
+        <p className="text-[12px] font-bold text-slate-900 truncate pr-2 leading-none">
           {conv.contactName || conv.phone}
         </p>
-        <span className="text-[8.5px] text-[#8696a0] shrink-0 font-medium whitespace-nowrap">
+        <span className="text-[8.5px] text-slate-400 shrink-0 font-medium whitespace-nowrap">
           {fmtTime(conv.lastMessageAt)}
         </span>
       </div>
       <div className="flex items-center justify-between mt-1">
         <p className={cn(
           'text-[11px] truncate pr-3 leading-tight',
-          (conv.unreadCount ?? 0) > 0 ? 'text-[#e9edef] font-bold' : 'text-[#8696a0]'
+          (conv.unreadCount ?? 0) > 0 ? 'text-slate-900 font-bold' : 'text-slate-500'
         )}>
           {conv.presence === 'composing' ? (
-            <span className="text-emerald-400 italic">digitando...</span>
+            <span className="text-emerald-500 italic">digitando...</span>
           ) : conv.presence === 'recording' ? (
-            <span className="text-emerald-400 italic">gravando áudio...</span>
+            <span className="text-emerald-500 italic">gravando áudio...</span>
           ) : (
             conv.lastMessage || 'Nova conversa'
           )}
         </p>
         <div className="flex items-center gap-1 shrink-0">
           {conv.clienteId && (
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Cliente" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#1F8A4C]" title="Cliente" />
           )}
           {conv.leadId && !conv.clienteId && (
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Lead" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#B8860B]" title="Lead" />
           )}
           {(conv.unreadCount ?? 0) > 0 && (
-            <span className="bg-emerald-500 text-[#111b21] w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8.5px] font-black">
+            <span className="bg-[#1F8A4C] text-white w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8.5px] font-black">
               {(conv.unreadCount ?? 0) > 9 ? '9+' : conv.unreadCount}
             </span>
           )}
@@ -163,12 +163,12 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage; session: string; isGroup?: boo
       <div className={cn(
         'max-w-[85%] md:max-w-[70%] lg:max-w-[60%] rounded-xl shadow-sm relative group overflow-hidden',
         isOut
-          ? 'bg-[#005c4b] text-[#e9edef] rounded-tr-none'
-          : 'bg-[#202c33] text-[#e9edef] rounded-tl-none',
+          ? 'bg-[#005c4b] text-white rounded-tr-none hover:bg-[#006e5a]'
+          : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none hover:bg-slate-50',
       )}>
         {/* Nome do remetente em grupos */}
         {isGroup && !isOut && msg.contactName && (
-          <p className="text-[10px] font-semibold text-emerald-400 px-3 pt-2 pb-0 leading-none truncate">
+          <p className="text-[10px] font-semibold text-gold-deep px-3 pt-2 pb-0 leading-none truncate">
             {msg.contactName}
           </p>
         )}
@@ -184,7 +184,7 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage; session: string; isGroup?: boo
               />
             </a>
           ) : (
-            <div className="flex items-center gap-2 px-3 pt-2 pb-0 text-white/50">
+            <div className={cn('flex items-center gap-2 px-3 pt-2 pb-0', isOut ? 'text-white/50' : 'text-slate-500')}>
               <Image className="w-4 h-4" />
               <span className="text-[11px]">Imagem</span>
             </div>
@@ -195,13 +195,13 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage; session: string; isGroup?: boo
         {msg.messageType === 'audio' && (
           <div className="px-3 pt-2 pb-2">
             {msg.id ? (
-              <audio controls className="w-full max-w-[280px]" style={{ accentColor: '#25d366' }}>
+              <audio controls className="w-full max-w-[280px]" style={{ accentColor: isOut ? '#25d366' : '#1B4D8F' }}>
                 <source src={mediaProxyUrl(session, msg.id)} type={msg.mimeType ?? 'audio/ogg; codecs=opus'} />
                 <source src={mediaProxyUrl(session, msg.id)} type="audio/ogg" />
                 <source src={mediaProxyUrl(session, msg.id)} />
               </audio>
             ) : (
-              <div className="flex items-center gap-2 text-white/50">
+              <div className={cn('flex items-center gap-2', isOut ? 'text-white/50' : 'text-slate-500')}>
                 <MicIcon className="w-4 h-4" />
                 <span className="text-[11px]">Áudio</span>
               </div>
@@ -212,13 +212,13 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage; session: string; isGroup?: boo
         {/* Vídeo */}
         {msg.messageType === 'video' && (
           <div className="flex items-center gap-2.5 px-3 pt-2 pb-0">
-            <Video className="w-5 h-5 text-white/60 shrink-0" />
-            <span className="text-[11px] text-white/70 truncate flex-1">
+            <Video className={cn('w-5 h-5 shrink-0', isOut ? 'text-white/60' : 'text-slate-500')} />
+            <span className={cn('text-[11px] truncate flex-1', isOut ? 'text-white/70' : 'text-slate-600')}>
               {msg.fileName || 'Vídeo'}
             </span>
             {msg.id && (
               <a href={mediaProxyUrl(session, msg.id)} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                <ExternalLink className="w-3.5 h-3.5 text-white/40 hover:text-white/80" />
+                <ExternalLink className={cn('w-3.5 h-3.5', isOut ? 'text-white/40 hover:text-white/80' : 'text-slate-400 hover:text-slate-700')} />
               </a>
             )}
           </div>
@@ -227,15 +227,18 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage; session: string; isGroup?: boo
         {/* Documento */}
         {msg.messageType === 'document' && (
           <div className="flex items-center gap-2.5 px-3 pt-2 pb-0">
-            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
-              <FileText className="w-4 h-4 text-white/70" />
+            <div className={cn(
+              'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-gold-deep',
+              isOut ? 'bg-white/10' : 'bg-slate-100'
+            )}>
+              <FileText className="w-4 h-4" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-medium truncate text-[#e9edef]">
+              <p className="text-[11px] font-medium truncate">
                 {msg.fileName || msg.body || 'Documento'}
               </p>
               {msg.mimeType && (
-                <p className="text-[9px] text-white/40 uppercase">
+                <p className={cn('text-[9px] uppercase', isOut ? 'text-white/40' : 'text-slate-500')}>
                   {msg.mimeType.split('/').pop()}
                 </p>
               )}
@@ -246,9 +249,9 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage; session: string; isGroup?: boo
                 target="_blank"
                 rel="noopener noreferrer"
                 download={msg.fileName}
-                className="shrink-0 p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                className={cn('shrink-0 p-1.5 rounded-lg transition-colors', isOut ? 'hover:bg-white/10' : 'hover:bg-slate-100')}
               >
-                <Download className="w-4 h-4 text-white/60" />
+                <Download className={cn('w-4 h-4', isOut ? 'text-white/60' : 'text-slate-500')} />
               </a>
             )}
           </div>
@@ -259,7 +262,7 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage; session: string; isGroup?: boo
           msg.id ? (
             <img src={mediaProxyUrl(session, msg.id)} alt="Sticker" className="w-28 h-28 object-contain p-2 block" />
           ) : (
-            <div className="flex items-center gap-2 px-3 pt-2 pb-0 text-white/50">
+            <div className={cn('flex items-center gap-2 px-3 pt-2 pb-0', isOut ? 'text-white/50' : 'text-slate-500')}>
               <span className="text-[11px]">Sticker</span>
             </div>
           )
@@ -277,7 +280,7 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage; session: string; isGroup?: boo
 
         {/* Fallback para tipos de mídia não renderizados */}
         {!msg.body && msg.messageType !== 'text' && !['image','video','audio','document','sticker'].includes(msg.messageType) && (
-          <div className="flex items-center gap-2 px-3 pt-2 pb-5 text-white/40">
+          <div className={cn('flex items-center gap-2 px-3 pt-2 pb-5', isOut ? 'text-white/40' : 'text-slate-500')}>
             <MicIcon className="w-3.5 h-3.5 shrink-0" />
             <span className="text-[11px] italic">{msg.messageType}</span>
           </div>
@@ -285,7 +288,7 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage; session: string; isGroup?: boo
 
         {/* Rodapé: hora + status */}
         <div className="absolute bottom-0.5 right-1.5 flex items-center gap-1 select-none">
-          <span className="text-[8px] text-white/30 font-medium">{fmtTime(msg.timestamp)}</span>
+          <span className={cn('text-[8px] font-medium', isOut ? 'text-white/70' : 'text-slate-400')}>{fmtTime(msg.timestamp)}</span>
           {isOut && (
             msg.status === 'read' ? <CheckCheck className="w-3 h-3 text-[#53bdeb]" /> :
             msg.status === 'delivered' ? <CheckCheck className="w-3 h-3 text-white/40" /> :
@@ -302,7 +305,7 @@ const MsgBubble: React.FC<{ msg: WhatsAppMessage; session: string; isGroup?: boo
 
 const DateSep: React.FC<{ date: string }> = ({ date }) => (
   <div className="flex items-center justify-center my-3">
-    <span className="bg-[#202c33]/80 text-[#8696a0] text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">
+    <span className="bg-white border border-slate-200 text-slate-500 text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
       {date}
     </span>
   </div>
@@ -326,21 +329,21 @@ const ContactItem: React.FC<{
   <button
     onClick={onClick}
     className={cn(
-      'w-full flex gap-2.5 p-2.5 hover:bg-[#202c33] transition-colors relative border-b border-[#202c33]/40 text-left',
-      active && 'bg-[#2a3942]',
+      'w-full flex gap-2.5 p-2.5 hover:bg-slate-50 transition-colors relative border-b border-slate-100 text-left',
+      active && 'bg-slate-100',
     )}
   >
     <Avatar name={contact.name} picture={contact.picture} session={session} phone={contact.phone} />
     <div className="flex-1 min-w-0">
       <div className="flex justify-between items-center">
-        <p className="text-[12px] font-bold text-[#e9edef] truncate pr-2 leading-none">
+        <p className="text-[12px] font-bold text-slate-900 truncate pr-2 leading-none">
           {contact.name}
         </p>
         {contact.hasChat && (
-          <span className="text-[8px] text-emerald-400 font-black shrink-0 uppercase tracking-tight">chat</span>
+          <span className="text-[8px] text-[#1F8A4C] font-black shrink-0 uppercase tracking-tight">chat</span>
         )}
       </div>
-      <p className="text-[10px] text-[#8696a0] mt-1 font-mono leading-none">
+      <p className="text-[10px] text-slate-400 mt-1 font-mono leading-none">
         +{contact.phone}
       </p>
     </div>
@@ -772,29 +775,29 @@ export const WhatsAppInboxPage: React.FC = () => {
     : undefined;
 
   return (
-    <div className="flex h-full w-full bg-[#0b141a] text-[#e9edef] overflow-hidden">
+    <div className="flex h-full w-full bg-slate-50 text-slate-800 overflow-hidden">
 
       {/* ── Column 1: Conversation list ──────────────────────────────────── */}
       <div className={cn(
-        'flex flex-col border-r border-[#202c33] shrink-0',
+        'flex flex-col border-r border-slate-200 shrink-0',
         'w-full md:w-[260px] lg:w-[300px]',
         isMobile && showChat ? 'hidden' : 'flex',
       )}>
         {/* Header */}
-        <div className="p-2.5 bg-[#202c33] flex flex-col gap-2.5 shrink-0">
+        <div className="p-2.5 bg-white border-b border-slate-200 flex flex-col gap-2.5 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-white tracking-tight">Conversas</h2>
+              <h2 className="text-base font-bold text-slate-900 tracking-tight">Conversas</h2>
               <span className={cn(
                 'w-1.5 h-1.5 rounded-full',
-                socketConnected ? 'bg-emerald-400' : 'bg-red-400'
+                socketConnected ? 'bg-[#1F8A4C]' : 'bg-[#C0392B]'
               )} title={socketConnected ? 'Conectado' : 'Desconectado'} />
             </div>
             <button
               onClick={handleSync}
               disabled={syncing || !selectedSessionName}
               title="Sincronizar"
-              className="p-1 text-[#aebac1] hover:bg-[#374248] rounded-full transition-colors disabled:opacity-30"
+              className="p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-full transition-colors disabled:opacity-30"
             >
               <RefreshCw className={cn('w-3.5 h-3.5', syncing && 'animate-spin')} />
             </button>
@@ -809,8 +812,8 @@ export const WhatsAppInboxPage: React.FC = () => {
                 className={cn(
                   'flex items-center gap-1 px-2 py-1 rounded-full text-[8.5px] font-black uppercase tracking-tight shrink-0 transition-all border',
                   selectedSessionName === META_SESSION_NAME
-                    ? 'bg-[#CFA764] text-[#0a0a0a] border-[#CFA764]'
-                    : 'bg-[#111b21] text-[#8696a0] border-transparent hover:bg-[#2a3942]'
+                    ? 'bg-[#1B4D8F] text-white border-[#1B4D8F]'
+                    : 'bg-slate-100 text-slate-500 border-transparent hover:bg-slate-200'
                 )}
               >
                 <MessageSquare className="w-2.5 h-2.5" />
@@ -824,8 +827,8 @@ export const WhatsAppInboxPage: React.FC = () => {
                   className={cn(
                     'flex items-center gap-1 px-2 py-1 rounded-full text-[8.5px] font-black uppercase tracking-tight shrink-0 transition-all border',
                     selectedSessionName === s.sessionName
-                      ? 'bg-gold-deep text-brand-dark border-gold-deep'
-                      : 'bg-[#111b21] text-[#8696a0] border-transparent hover:bg-[#2a3942]'
+                      ? 'bg-[#1B4D8F] text-white border-[#1B4D8F]'
+                      : 'bg-slate-100 text-slate-500 border-transparent hover:bg-slate-200'
                   )}
                 >
                   <Smartphone className="w-2.5 h-2.5" />
@@ -842,9 +845,9 @@ export const WhatsAppInboxPage: React.FC = () => {
               placeholder="Buscar..."
               value={searchText}
               onChange={e => setSearchText(e.target.value)}
-              className="w-full bg-[#111b21] border-none rounded-lg px-8 py-1.5 text-[11px] text-[#d1d7db] focus:ring-1 focus:ring-gold-deep/50 outline-none placeholder:text-[#8696a0]"
+              className="w-full bg-white border border-slate-200 rounded-lg px-8 py-1.5 text-[11px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200 placeholder:text-slate-400"
             />
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#8696a0]" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
           </div>
 
           {/* Filters */}
@@ -862,8 +865,8 @@ export const WhatsAppInboxPage: React.FC = () => {
                 className={cn(
                   'px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-tight transition-all shrink-0 border',
                   filter === item.id
-                    ? 'bg-gold-deep text-brand-dark border-gold-deep shadow-sm'
-                    : 'bg-[#111b21] text-[#8696a0] border-transparent hover:bg-[#202c33]'
+                    ? 'bg-[#1B4D8F] text-white border-[#1B4D8F] shadow-sm'
+                    : 'bg-slate-100 text-slate-500 border-transparent hover:bg-slate-200'
                 )}
               >
                 {item.label}
@@ -871,16 +874,16 @@ export const WhatsAppInboxPage: React.FC = () => {
             ))}
           </div>
 
-          {syncResult && <p className="text-[9px] text-emerald-400 px-0.5">{syncResult}</p>}
+          {syncResult && <p className="text-[9px] text-[#1F8A4C] px-0.5">{syncResult}</p>}
         </div>
 
         {/* List */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#111b21]">
+        <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
           {filter === 'contacts' ? (
             /* ── Aba Contatos ── */
             <>
               {/* Campo para iniciar conversa por número */}
-              <div className="p-2 border-b border-[#202c33]/60 bg-[#111b21]">
+              <div className="p-2 border-b border-slate-100 bg-white">
                 <div className="flex gap-1.5">
                   <input
                     type="tel"
@@ -888,12 +891,12 @@ export const WhatsAppInboxPage: React.FC = () => {
                     value={newPhoneInput}
                     onChange={e => setNewPhoneInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleStartByPhone()}
-                    className="flex-1 bg-[#202c33] border border-white/5 rounded-lg px-2.5 py-1.5 text-[11px] text-[#d1d7db] outline-none focus:ring-1 focus:ring-gold-deep/50 placeholder:text-[#8696a0] font-mono"
+                    className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-700 outline-none focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 placeholder:text-slate-400 font-mono"
                   />
                   <button
                     onClick={handleStartByPhone}
                     disabled={newPhoneInput.replace(/\D/g, '').length < 8}
-                    className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[10px] font-black uppercase tracking-tight disabled:opacity-30 hover:bg-emerald-500 transition-colors shrink-0"
+                    className="px-3 py-1.5 rounded-lg bg-[#1B4D8F] text-white text-[10px] font-black uppercase tracking-tight disabled:opacity-30 hover:bg-[#153E73] transition-colors shrink-0"
                   >
                     Iniciar
                   </button>
@@ -902,8 +905,8 @@ export const WhatsAppInboxPage: React.FC = () => {
 
               {contactsLoading ? (
                 <div className="flex flex-col items-center gap-2 py-10">
-                  <Loader2 className="w-5 h-5 text-white/20 animate-spin" />
-                  <p className="text-[10px] text-[#8696a0]">Carregando contatos...</p>
+                  <Loader2 className="w-5 h-5 text-slate-300 animate-spin" />
+                  <p className="text-[10px] text-slate-500">Carregando contatos...</p>
                 </div>
               ) : (() => {
                 const q = searchText.toLowerCase();
@@ -912,8 +915,8 @@ export const WhatsAppInboxPage: React.FC = () => {
                 );
                 return filtered.length === 0 ? (
                   <div className="flex flex-col items-center gap-3 py-10 px-4 text-center">
-                    <MessageSquare className="w-8 h-8 text-white/10" />
-                    <p className="text-[10px] text-[#8696a0]">
+                    <MessageSquare className="w-8 h-8 text-slate-200" />
+                    <p className="text-[10px] text-slate-500">
                       {contacts.length === 0 ? 'Nenhum contato encontrado' : 'Nenhum resultado para a busca'}
                     </p>
                   </div>
@@ -934,12 +937,12 @@ export const WhatsAppInboxPage: React.FC = () => {
             /* ── Aba Conversas (Todas / Não lidas / Leads / Clientes) ── */
             convLoading ? (
               <div className="flex items-center justify-center py-10">
-                <Loader2 className="w-5 h-5 text-white/20 animate-spin" />
+                <Loader2 className="w-5 h-5 text-slate-300 animate-spin" />
               </div>
             ) : filteredConvs.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-10 px-4 text-center">
-                <MessageSquare className="w-8 h-8 text-white/10" />
-                <p className="text-[10px] text-[#8696a0]">
+                <MessageSquare className="w-8 h-8 text-slate-200" />
+                <p className="text-[10px] text-slate-500">
                   {conversations.length === 0
                     ? syncing ? 'Sincronizando...' : 'Nenhuma conversa ainda'
                     : 'Nenhuma conversa encontrada'}
@@ -962,7 +965,7 @@ export const WhatsAppInboxPage: React.FC = () => {
 
       {/* ── Column 2: Chat area ──────────────────────────────────────────── */}
       <div className={cn(
-        'flex-1 flex flex-col relative bg-[#0b141a] h-full min-w-0',
+        'flex-1 flex flex-col relative bg-slate-50 h-full min-w-0',
         isMobile && !showChat ? 'hidden' : 'flex',
       )}>
         <AnimatePresence mode="wait">
@@ -975,9 +978,9 @@ export const WhatsAppInboxPage: React.FC = () => {
               className="flex flex-col h-full w-full overflow-hidden"
             >
               {/* Chat header */}
-              <header className="h-[52px] bg-[#202c33] flex items-center px-3 md:px-4 shrink-0 border-b border-white/5 relative z-10">
+              <header className="h-[52px] bg-white flex items-center px-3 md:px-4 shrink-0 border-b border-slate-200 relative z-10">
                 {isMobile && (
-                  <button onClick={() => setShowChat(false)} className="p-1 -ml-1 text-[#aebac1] mr-1.5">
+                  <button onClick={() => setShowChat(false)} className="p-1 -ml-1 text-slate-500 mr-1.5">
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                 )}
@@ -991,15 +994,15 @@ export const WhatsAppInboxPage: React.FC = () => {
                     phone={selectedConv.phone}
                   />
                   <div className="flex flex-col min-w-0">
-                    <h3 className="text-[13px] font-bold text-[#e9edef] truncate leading-tight">
+                    <h3 className="text-[13px] font-bold text-slate-900 truncate leading-tight">
                       {selectedConv.contactName || selectedConv.phone}
                     </h3>
                     {convPresence === 'composing' ? (
-                      <p className="text-[9px] text-emerald-400 leading-none mt-0.5 animate-pulse">digitando...</p>
+                      <p className="text-[9px] text-emerald-500 leading-none mt-0.5 animate-pulse">digitando...</p>
                     ) : convPresence === 'recording' ? (
-                      <p className="text-[9px] text-emerald-400 leading-none mt-0.5 animate-pulse">gravando áudio...</p>
+                      <p className="text-[9px] text-emerald-500 leading-none mt-0.5 animate-pulse">gravando áudio...</p>
                     ) : (
-                      <p className="text-[9px] text-[#8696a0] font-mono leading-none mt-0.5">
+                      <p className="text-[9px] text-slate-500 font-mono leading-none mt-0.5">
                         {selectedConv.phone}
                       </p>
                     )}
@@ -1009,7 +1012,7 @@ export const WhatsAppInboxPage: React.FC = () => {
                   onClick={handleRefreshMessages}
                   disabled={msgLoading}
                   title="Atualizar mensagens (limpa cache e recarrega)"
-                  className="p-1.5 rounded-lg text-[#aebac1] hover:bg-[#374248] transition-colors disabled:opacity-30"
+                  className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-600 transition-colors disabled:opacity-30"
                 >
                   <RefreshCw className={cn('w-3.5 h-3.5', msgLoading && 'animate-spin')} />
                 </button>
@@ -1017,7 +1020,7 @@ export const WhatsAppInboxPage: React.FC = () => {
                   onClick={() => setShowPanel(p => !p)}
                   className={cn(
                     'p-1.5 rounded-lg transition-colors flex items-center gap-1.5',
-                    showPanel ? 'bg-gold-deep/10 text-gold-deep' : 'text-[#aebac1] hover:bg-[#374248]'
+                    showPanel ? 'bg-gold-deep/10 text-gold-deep' : 'text-slate-500 hover:bg-slate-100'
                   )}
                   title="Painel de contato"
                 >
@@ -1027,28 +1030,19 @@ export const WhatsAppInboxPage: React.FC = () => {
               </header>
 
               {/* Messages */}
-              <div
-                className="flex-1 overflow-y-auto custom-scrollbar p-3 md:p-5 flex flex-col gap-0.5"
-                style={{
-                  backgroundImage: `url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')`,
-                  backgroundRepeat: 'repeat',
-                  backgroundColor: '#0b141a',
-                  backgroundBlendMode: 'overlay',
-                  opacity: 0.95,
-                }}
-              >
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-3 md:p-5 flex flex-col gap-0.5 bg-slate-50">
                 {msgLoading ? (
                   <div className="flex flex-col items-center justify-center py-10 gap-2">
-                    <Loader2 className="w-5 h-5 text-white/20 animate-spin" />
-                    <p className="text-[10px] text-[#8696a0]">Carregando mensagens...</p>
+                    <Loader2 className="w-5 h-5 text-slate-300 animate-spin" />
+                    <p className="text-[10px] text-slate-500">Carregando mensagens...</p>
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="flex flex-col items-center gap-3 py-10 text-center">
-                    <MessageSquare className="w-8 h-8 text-white/10" />
-                    <p className="text-[10px] text-[#8696a0]">
+                    <MessageSquare className="w-8 h-8 text-slate-200" />
+                    <p className="text-[10px] text-slate-500">
                       Nenhuma mensagem nesta sessão
                     </p>
-                    <p className="text-[9px] text-[#8696a0]/60 max-w-[200px]">
+                    <p className="text-[9px] text-slate-400 max-w-[200px]">
                       Novas mensagens aparecerão em tempo real
                     </p>
                   </div>
@@ -1064,14 +1058,14 @@ export const WhatsAppInboxPage: React.FC = () => {
               </div>
 
               {/* Input */}
-              <footer className="bg-[#202c33] flex flex-col shrink-0 border-t border-white/5 relative z-20 p-1.5 md:p-2">
+              <footer className="bg-white flex flex-col shrink-0 border-t border-slate-200 relative z-20 p-1.5 md:p-2">
                 {/* Emoji picker */}
                 {showEmojiPicker && (
                   <div ref={emojiPickerRef} className="absolute bottom-full left-12 mb-1 z-50 shadow-2xl rounded-xl overflow-hidden">
-                    <React.Suspense fallback={<div className="w-[300px] h-[350px] bg-[#1f2c33] flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-white/30" /></div>}>
+                    <React.Suspense fallback={<div className="w-[300px] h-[350px] bg-slate-100 flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-slate-400" /></div>}>
                       <EmojiPicker
                         onEmojiClick={handleEmojiClick}
-                        theme={'dark' as any}
+                        theme={'light' as any}
                         skinTonesDisabled
                         height={350}
                         width={300}
@@ -1095,20 +1089,20 @@ export const WhatsAppInboxPage: React.FC = () => {
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingFile || !selectedSessionName}
                     title="Enviar arquivo"
-                    className="p-2 text-[#aebac1] hover:bg-[#374248] rounded-full transition-all disabled:opacity-40"
+                    className="p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-600 rounded-full transition-all disabled:opacity-40"
                   >
                     {uploadingFile
-                      ? <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
+                      ? <Loader2 className="w-5 h-5 animate-spin text-gold-deep" />
                       : <Plus className="w-5 h-5" />
                     }
                   </button>
 
-                  <div className="flex-1 flex items-center bg-[#2a3942] rounded-[15px] px-2.5 min-h-[36px] border border-white/5 shadow-inner">
+                  <div className="flex-1 flex items-center bg-slate-100 rounded-[15px] px-2.5 min-h-[36px] border border-slate-200 shadow-inner">
                     <button
                       onClick={() => setShowEmojiPicker(p => !p)}
                       className={cn(
                         'p-1 transition-colors',
-                        showEmojiPicker ? 'text-gold-deep' : 'text-[#8696a0] hover:text-[#d1d7db]'
+                        showEmojiPicker ? 'text-gold-deep' : 'text-slate-400 hover:text-slate-600'
                       )}
                       title="Emojis"
                     >
@@ -1121,10 +1115,10 @@ export const WhatsAppInboxPage: React.FC = () => {
                       value={inputText}
                       onChange={e => setInputText(e.target.value)}
                       onKeyDown={handleKeyDown}
-                      className="flex-1 bg-transparent border-none outline-none text-[13px] px-2.5 text-[#d1d7db] placeholder:text-[#8696a0] py-1"
+                      className="flex-1 bg-transparent border-none outline-none text-[13px] px-2.5 text-slate-700 placeholder:text-slate-400 py-1"
                     />
                     {inputText.trim() === '' && (
-                      <button className="p-1 text-[#8696a0] hover:text-[#d1d7db] transition-colors">
+                      <button className="p-1 text-slate-400 hover:text-slate-600 transition-colors">
                         <Mic className="w-4 h-4" />
                       </button>
                     )}
@@ -1135,7 +1129,7 @@ export const WhatsAppInboxPage: React.FC = () => {
                     disabled={!inputText.trim() || sending || !selectedSessionName}
                     className={cn(
                       'w-9 h-9 rounded-full flex items-center justify-center shadow-lg transition-all shrink-0 active:scale-95',
-                      inputText.trim() ? 'bg-emerald-500 text-[#111b21]' : 'bg-white/5 text-white/20'
+                      inputText.trim() ? 'bg-[#1B4D8F] text-white' : 'bg-slate-200 text-slate-400'
                     )}
                   >
                     {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -1148,16 +1142,16 @@ export const WhatsAppInboxPage: React.FC = () => {
               key="empty"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-[#111b21]"
+              className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-slate-50"
             >
-              <div className="w-32 h-32 bg-[#202c33] rounded-full flex items-center justify-center mb-8 border border-white/5">
-                <MessageSquare className="w-12 h-12 text-gold-deep/20" />
+              <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center mb-8 border border-slate-200 shadow-sm">
+                <MessageSquare className="w-12 h-12 text-gold-deep/30" />
               </div>
-              <h2 className="text-3xl font-bold text-[#e9edef] tracking-tight mb-4">Michelin Seguros CRM</h2>
-              <p className="text-[#8696a0] max-w-sm mx-auto leading-relaxed text-sm">
+              <h2 className="text-3xl font-bold text-slate-900 tracking-tight mb-4">Michelin Seguros CRM</h2>
+              <p className="text-slate-500 max-w-sm mx-auto leading-relaxed text-sm">
                 Gerencie suas conversas do WhatsApp pessoal integradas ao CRM. Selecione uma conversa para começar.
               </p>
-              <div className="mt-12 flex items-center gap-2 text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">
+              <div className="mt-12 flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
                 <Lock className="w-3 h-3" />
                 Criptografia de ponta a ponta
               </div>
@@ -1169,7 +1163,7 @@ export const WhatsAppInboxPage: React.FC = () => {
       {/* ── Column 3: Contact panel ──────────────────────────────────────── */}
       {showPanel && selectedConv && !isMobile && (
         <div className={cn(
-          'transition-all duration-300 border-l border-[#202c33] shrink-0',
+          'transition-all duration-300 border-l border-slate-200 shrink-0',
           showPanel && selectedConv ? 'w-[300px]' : 'w-0 overflow-hidden'
         )}>
           <ContactSidePanel

@@ -47,14 +47,14 @@ function fmtCPF(cpf?: string) {
 }
 
 const APOLICE_STATUS_COLOR: Record<string, string> = {
-  ativo: 'text-emerald-400', em_renovacao: 'text-amber-300',
-  expirado: 'text-red-400', cancelado: 'text-white/20',
+  ativo: 'text-[#1F8A4C]', em_renovacao: 'text-[#B8860B]',
+  expirado: 'text-[#C0392B]', cancelado: 'text-slate-400',
 };
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
-const I = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[11px] text-white placeholder:text-white/20 focus:outline-none focus:border-white/30 transition-colors';
-const L = 'block text-[9px] font-black text-white/30 uppercase tracking-widest mb-1';
+const I = 'w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-[11px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 transition-colors';
+const L = 'block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1';
 
 const Field: React.FC<{ label: string; children: React.ReactNode; col?: boolean }> = ({ label, children, col }) => (
   <div className={col ? 'col-span-2' : ''}>
@@ -69,13 +69,13 @@ const Toggle: React.FC<{
   onChange: (v: boolean) => void;
 }> = ({ label, checked, onChange }) => (
   <div className="flex items-center justify-between py-1">
-    <span className="text-[10px] text-white/50 font-bold">{label}</span>
+    <span className="text-[10px] text-slate-500 font-bold">{label}</span>
     <button
       type="button"
       onClick={() => onChange(!checked)}
       className={cn(
         'relative w-10 h-5 rounded-full transition-colors shrink-0',
-        checked ? 'bg-gold-deep' : 'bg-white/10'
+        checked ? 'bg-[#1B4D8F]' : 'bg-slate-200'
       )}
     >
       <span className={cn(
@@ -94,17 +94,17 @@ const Section: React.FC<{
 }> = ({ title, icon: Icon, children, defaultOpen = true }) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border border-white/5 rounded-xl overflow-hidden">
+    <div className="border border-slate-200 rounded-xl overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-3 py-2.5 bg-white/3 hover:bg-white/5 transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2.5 bg-slate-50 hover:bg-slate-100 transition-colors"
       >
         <div className="flex items-center gap-2">
           <Icon className="w-3.5 h-3.5 text-gold-deep" />
           <span className="text-[9px] font-black text-gold-deep uppercase tracking-widest">{title}</span>
         </div>
-        {open ? <ChevronUp className="w-3 h-3 text-white/30" /> : <ChevronDown className="w-3 h-3 text-white/30" />}
+        {open ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />}
       </button>
       {open && <div className="px-3 pb-3 pt-2 space-y-3">{children}</div>}
     </div>
@@ -170,10 +170,10 @@ const LeadSearchPanel: React.FC<{
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Link2 className="w-3.5 h-3.5 text-blue-400" />
-          <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Vincular Lead Existente</span>
+          <Link2 className="w-3.5 h-3.5 text-[#1B4D8F]" />
+          <span className="text-[9px] font-black text-[#1B4D8F] uppercase tracking-widest">Vincular Lead Existente</span>
         </div>
-        <button onClick={onCancel} className="text-white/20 hover:text-white/60 transition-colors">
+        <button onClick={onCancel} className="text-slate-300 hover:text-slate-600 transition-colors">
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -190,25 +190,25 @@ const LeadSearchPanel: React.FC<{
         <button
           onClick={handleSearch}
           disabled={searching || !query.trim()}
-          className="px-3 py-2 bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 hover:bg-blue-500/30 transition-colors disabled:opacity-40"
+          className="px-3 py-2 bg-[#1B4D8F]/10 border border-[#1B4D8F]/25 rounded-lg text-[#1B4D8F] hover:bg-[#1B4D8F]/15 transition-colors disabled:opacity-40"
         >
           {searching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
         </button>
       </div>
 
       {searched && results.length === 0 && (
-        <p className="text-[10px] text-white/30 text-center py-2">Nenhum lead encontrado</p>
+        <p className="text-[10px] text-slate-400 text-center py-2">Nenhum lead encontrado</p>
       )}
 
       {results.map(l => (
-        <div key={l.id} className="flex items-center justify-between gap-2 p-2.5 bg-white/5 border border-white/5 rounded-lg">
+        <div key={l.id} className="flex items-center justify-between gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold text-white truncate">{l.name}</p>
-            <p className="text-[9px] text-white/40 font-mono">{l.phone || l.cpf || '—'}</p>
+            <p className="text-[11px] font-bold text-slate-900 truncate">{l.name}</p>
+            <p className="text-[9px] text-slate-500 font-mono">{l.phone || l.cpf || '—'}</p>
           </div>
           <button
             onClick={() => onLinked(l.id)}
-            className="shrink-0 px-2.5 py-1.5 bg-blue-500 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-400 transition-all"
+            className="shrink-0 px-2.5 py-1.5 bg-[#1B4D8F] text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-[#153E73] transition-all"
           >
             Vincular
           </button>
@@ -320,10 +320,10 @@ const FullLeadForm: React.FC<{
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <UserPlus className="w-3.5 h-3.5 text-amber-400" />
-          <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Novo Lead</span>
+          <UserPlus className="w-3.5 h-3.5 text-[#B8860B]" />
+          <span className="text-[9px] font-black text-[#B8860B] uppercase tracking-widest">Novo Lead</span>
         </div>
-        <button onClick={onCancel} className="text-white/20 hover:text-white/60 transition-colors">
+        <button onClick={onCancel} className="text-slate-300 hover:text-slate-600 transition-colors">
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -439,12 +439,12 @@ const FullLeadForm: React.FC<{
         )}
       </Section>
 
-      {error && <p className="text-[10px] text-red-400 px-1">{error}</p>}
+      {error && <p className="text-[10px] text-[#C0392B] px-1">{error}</p>}
 
       <button
         onClick={handleSave}
         disabled={saving}
-        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-gold-deep text-brand-dark rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-gold-light transition-all disabled:opacity-50 sticky bottom-0"
+        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-[#1B4D8F] text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#153E73] transition-all disabled:opacity-50 sticky bottom-0"
       >
         <Save className="w-3.5 h-3.5" />
         {saving ? 'Salvando...' : 'Salvar Lead'}
@@ -526,7 +526,7 @@ export const ContactSidePanel: React.FC<ContactSidePanelProps> = ({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full bg-[#111b21]">
+      <div className="flex items-center justify-center h-full bg-white">
         <div className="w-5 h-5 border-2 border-gold-deep/30 border-t-gold-deep rounded-full animate-spin" />
       </div>
     );
@@ -547,15 +547,15 @@ export const ContactSidePanel: React.FC<ContactSidePanelProps> = ({
   const hasContact = lead || cliente;
 
   return (
-    <div className="flex flex-col h-full bg-[#111b21]">
+    <div className="flex flex-col h-full bg-white">
       {/* Contact header */}
-      <div className="h-[50px] flex items-center gap-3 px-4 bg-[#202c33] border-b border-white/5 shrink-0">
+      <div className="h-[50px] flex items-center gap-3 px-4 bg-white border-b border-slate-200 shrink-0">
         <div className="w-7 h-7 rounded-full bg-gold-deep/10 flex items-center justify-center shrink-0">
           <User className="w-4 h-4 text-gold-deep" />
         </div>
         <div className="min-w-0">
-          <p className="text-[12px] font-bold text-[#e9edef] truncate leading-tight">{contactName || phone}</p>
-          <p className="text-[9px] text-[#8696a0] font-mono leading-none mt-0.5">{stripDDI(phone)}</p>
+          <p className="text-[12px] font-bold text-slate-900 truncate leading-tight">{contactName || phone}</p>
+          <p className="text-[9px] text-slate-500 font-mono leading-none mt-0.5">{stripDDI(phone)}</p>
         </div>
       </div>
 
@@ -581,19 +581,19 @@ export const ContactSidePanel: React.FC<ContactSidePanelProps> = ({
 
         {/* No contact */}
         {!hasContact && !showForm && !showSearch && (
-          <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 text-center space-y-3">
-            <AlertTriangle className="w-8 h-8 text-white/10 mx-auto" />
-            <p className="text-[10px] text-[#8696a0]">Contato não identificado no CRM</p>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center space-y-3">
+            <AlertTriangle className="w-8 h-8 text-slate-300 mx-auto" />
+            <p className="text-[10px] text-slate-500">Contato não identificado no CRM</p>
             <button
               onClick={() => setShowSearch(true)}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-500/20 border border-blue-500/30 text-blue-300 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-500/30 transition-all"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#1B4D8F]/10 border border-[#1B4D8F]/25 text-[#1B4D8F] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#1B4D8F]/15 transition-all"
             >
               <Link2 className="w-3.5 h-3.5" />
               Vincular Lead Existente
             </button>
             <button
               onClick={() => setShowForm(true)}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gold-deep text-brand-dark rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-gold-light transition-all"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#1B4D8F] text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#153E73] transition-all"
             >
               <UserPlus className="w-3.5 h-3.5" />
               Criar Lead
@@ -605,32 +605,32 @@ export const ContactSidePanel: React.FC<ContactSidePanelProps> = ({
 
         {/* Cliente info */}
         {cliente && (
-          <div className="bg-brand-black/50 border border-emerald-500/10 rounded-xl p-4 space-y-3">
+          <div className="bg-white border border-[#1F8A4C]/20 rounded-xl p-4 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Briefcase className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Cliente</span>
+                <Briefcase className="w-3.5 h-3.5 text-[#1F8A4C]" />
+                <span className="text-[9px] font-black text-[#1F8A4C] uppercase tracking-widest">Cliente</span>
               </div>
-              <button onClick={() => navigate(`/clientes/${cliente.id}`)} className="text-white/20 hover:text-gold-deep transition-colors">
+              <button onClick={() => navigate(`/clientes/${cliente.id}`)} className="text-slate-300 hover:text-gold-deep transition-colors">
                 <ExternalLink className="w-3 h-3" />
               </button>
             </div>
             <div>
-              <p className="text-[12px] font-bold text-white">{cliente.nome}</p>
-              <p className="text-[10px] text-white/40 font-mono mt-0.5">{fmtCPF(cliente.cpf)}</p>
+              <p className="text-[12px] font-bold text-slate-900">{cliente.nome}</p>
+              <p className="text-[10px] text-slate-500 font-mono mt-0.5">{fmtCPF(cliente.cpf)}</p>
             </div>
             {[
               ['E-mail', cliente.email],
               ['Cidade', [cliente.cidade, cliente.estado].filter(Boolean).join(' / ')],
             ].map(([k, v]) => v ? (
               <div key={k} className="flex justify-between gap-2">
-                <span className="text-[9px] text-white/30 uppercase font-black tracking-widest">{k}</span>
-                <span className="text-[10px] text-white/70 font-medium text-right">{v}</span>
+                <span className="text-[9px] text-slate-400 uppercase font-black tracking-widest">{k}</span>
+                <span className="text-[10px] text-slate-600 font-medium text-right">{v}</span>
               </div>
             ) : null)}
             <button
               onClick={() => navigate(`/clientes/${cliente.id}`)}
-              className="w-full flex items-center justify-between px-3 py-2 bg-white/5 border border-white/5 rounded-lg text-[9px] font-black uppercase tracking-widest text-white/50 hover:text-white hover:bg-white/10 transition-all"
+              className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-all"
             >
               <span>Ver Cadastro Completo</span><ChevronRight className="w-3 h-3" />
             </button>
@@ -642,17 +642,17 @@ export const ContactSidePanel: React.FC<ContactSidePanelProps> = ({
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <FileText className="w-3.5 h-3.5 text-gold-deep" />
-              <span className="text-[9px] font-black text-gold-light uppercase tracking-widest">Apólices ({apolices.length})</span>
+              <span className="text-[9px] font-black text-gold-deep uppercase tracking-widest">Apólices ({apolices.length})</span>
             </div>
             {apolices.map(a => {
               const daysToRenew = a.dataRenovacao ? differenceInDays(parseISO(a.dataRenovacao), new Date()) : null;
               return (
-                <div key={a.id} className="bg-brand-black/50 border border-white/5 rounded-xl p-3 space-y-2">
+                <div key={a.id} className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[11px] font-bold text-white">{a.produto}</p>
+                    <p className="text-[11px] font-bold text-slate-900">{a.produto}</p>
                     <SeguradoraBadge seguradoraId={a.seguradoraId} size="xs" />
                   </div>
-                  {a.numeroApolice && <p className="text-[9px] text-white/30 font-mono">#{a.numeroApolice}</p>}
+                  {a.numeroApolice && <p className="text-[9px] text-slate-400 font-mono">#{a.numeroApolice}</p>}
                   <div className="grid grid-cols-2 gap-1.5">
                     {[
                       ['Vigência', fmtDate(a.fimVigencia)],
@@ -661,14 +661,14 @@ export const ContactSidePanel: React.FC<ContactSidePanelProps> = ({
                       ['Status', a.status?.replace('_', ' ')],
                     ].map(([k, v]) => (
                       <div key={k}>
-                        <p className="text-[8px] text-white/20 uppercase font-black">{k}</p>
-                        <p className={cn('text-[9px] font-bold', k === 'Status' ? APOLICE_STATUS_COLOR[a.status] : 'text-white/60')}>{v}</p>
+                        <p className="text-[8px] text-slate-300 uppercase font-black">{k}</p>
+                        <p className={cn('text-[9px] font-bold', k === 'Status' ? APOLICE_STATUS_COLOR[a.status] : 'text-slate-600')}>{v}</p>
                       </div>
                     ))}
                   </div>
                   {daysToRenew !== null && daysToRenew <= 30 && daysToRenew >= 0 && (
                     <div className={cn('flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[9px] font-black',
-                      daysToRenew <= 7 ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-300'
+                      daysToRenew <= 7 ? 'bg-[#FDE4E4] text-[#C0392B]' : 'bg-[#FFF3DC] text-[#B8860B]'
                     )}>
                       <AlertTriangle className="w-3 h-3" />
                       Renovação em {daysToRenew === 0 ? 'HOJE' : `${daysToRenew} dias`}
@@ -683,11 +683,11 @@ export const ContactSidePanel: React.FC<ContactSidePanelProps> = ({
         {/* Quick actions */}
         {hasContact && (
           <div className="space-y-2">
-            <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Ações Rápidas</p>
+            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Ações Rápidas</p>
             {cliente && (
               <button
                 onClick={() => navigate(`/clientes/${cliente.id}?tab=apolices`)}
-                className="w-full flex items-center justify-between px-3 py-2.5 bg-white/5 border border-white/5 rounded-lg text-[9px] font-black uppercase tracking-widest text-white/50 hover:text-white hover:bg-white/10 transition-all"
+                className="w-full flex items-center justify-between px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-all"
               >
                 <span>Nova Apólice</span><ChevronRight className="w-3 h-3" />
               </button>
@@ -695,7 +695,7 @@ export const ContactSidePanel: React.FC<ContactSidePanelProps> = ({
             {lead && !cliente && (
               <button
                 onClick={() => navigate(`/leads/${lead.id}`)}
-                className="w-full flex items-center justify-between px-3 py-2.5 bg-white/5 border border-white/5 rounded-lg text-[9px] font-black uppercase tracking-widest text-white/50 hover:text-white hover:bg-white/10 transition-all"
+                className="w-full flex items-center justify-between px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-all"
               >
                 <span>Converter em Cliente</span><ChevronRight className="w-3 h-3" />
               </button>
