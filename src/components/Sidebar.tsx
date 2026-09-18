@@ -92,7 +92,7 @@ export const Sidebar = React.memo(({
       className={cn(
         "bg-brand-black border-r border-brand-dark flex flex-col transition-all duration-300 z-[1000] fixed md:relative h-full inset-y-0 left-0 overflow-x-hidden sidebar-main",
         isSidebarOpen
-          ? "w-[240px] translate-x-0 shadow-[20px_0_60px_rgba(0,0,0,0.5)] md:shadow-[2px_0_8px_rgba(15,42,74,0.08)]"
+          ? "w-[240px] translate-x-0 shadow-[20px_0_60px_rgba(0,0,0,0.5)] md:shadow-none"
           : "w-[240px] -translate-x-full md:w-16 md:translate-x-0"
       )}
     >
