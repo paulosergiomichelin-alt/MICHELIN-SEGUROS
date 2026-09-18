@@ -47,7 +47,7 @@ export const LeadDetailsSidebar = React.memo(({
       {/* Mobile Overlay Backdrop */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-brand-black/60 backdrop-blur-sm z-[50] lg:hidden"
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[50] lg:hidden"
           onClick={onClose}
         />
       )}

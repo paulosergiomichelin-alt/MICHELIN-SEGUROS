@@ -275,7 +275,7 @@ export const LeadsView = React.memo(({
                     )}
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center font-bold text-[9px] text-white shrink-0 bg-gradient-to-br from-slate-700 to-slate-800">
+                        <div className="w-7 h-7 rounded-full bg-gold-deep/10 border border-gold-deep/20 flex items-center justify-center font-bold text-[9px] text-gold-deep shrink-0">
                           {lead.name.substring(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0">
@@ -332,10 +332,10 @@ export const LeadsView = React.memo(({
                         const displayName = lead.responsibleAgentName || user?.name || user?.email || 'Sem agente';
                         return (
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-slate-800 overflow-hidden border border-slate-200 flex items-center justify-center shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-gold-deep/10 overflow-hidden border border-gold-deep/20 flex items-center justify-center shrink-0">
                               {user?.photoURL
                                 ? <img src={user.photoURL} alt={displayName} className="w-full h-full object-cover" />
-                                : <span className="text-[10px] font-bold text-white/70">{displayName.charAt(0).toUpperCase()}</span>
+                                : <span className="text-[10px] font-bold text-gold-deep">{displayName.charAt(0).toUpperCase()}</span>
                               }
                             </div>
                             <span className="text-[9px] font-bold text-slate-500 truncate max-w-[90px]">{displayName}</span>

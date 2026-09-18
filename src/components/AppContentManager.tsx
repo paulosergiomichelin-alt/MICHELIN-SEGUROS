@@ -41,7 +41,7 @@ interface AppContentManagerProps {
 }
 
 const LoadingFallback = () => (
-  <div className="flex-1 flex items-center justify-center bg-brand-dark/50">
+  <div className="flex-1 flex items-center justify-center bg-slate-50">
     <div className="w-6 h-6 border-2 border-gold-deep/30 border-t-gold-deep rounded-full animate-spin"></div>
   </div>
 );

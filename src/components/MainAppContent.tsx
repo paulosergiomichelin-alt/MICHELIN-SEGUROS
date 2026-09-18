@@ -29,7 +29,7 @@ export const MainAppContent = ({
 
   if (permsLoading || !isAuthReady) {
     return (
-      <div className="h-screen bg-brand-dark flex items-center justify-center">
+      <div className="h-screen bg-slate-50 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-gold-deep/30 border-t-gold-deep rounded-full animate-spin"></div>
       </div>
     );

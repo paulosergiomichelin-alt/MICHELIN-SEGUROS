@@ -162,33 +162,6 @@
     background-color: var(--bg-primary) !important;
   }
 
-  /* superfície secundária (cards/painéis) */
-  .light .bg-\[\#111214\],
-  .light .bg-\[\#0E0F11\],
-  .light .bg-\[\#121212\] {
-    background-color: var(--bg-secondary) !important;
-  }
-
-  /* superfície elevada (hover, inputs) */
-  .light .bg-\[\#16181B\],
-  .light .bg-\[\#18191b\],
-  .light .bg-\[\#1A1A1A\],
-  .light .bg-\[\#1A1A1F\],
-  .light .bg-\[\#1A1C1E\],
-  .light .bg-\[\#1E1E1E\] {
-    background-color: var(--bg-elevated) !important;
-  }
-
-  /* WhatsApp shell — mantém identidade visual mesmo em light */
-  .light .bg-\[\#202c33\],
-  .light .bg-\[\#111b21\],
-  .light .bg-\[\#0b141a\],
-  .light .bg-\[\#2a3942\],
-  .light .bg-\[\#233138\],
-  .light .bg-\[\#374248\] {
-    background-color: var(--bg-secondary) !important;
-  }
-
   /* --- Borders ------------------------------------------------- */
   .light .border-white\/5,
   .light .border-slate-800,
@@ -205,10 +178,6 @@
   .light .border-white\/50 {
     border-color: var(--border-strong) !important;
   }
-
-  /* --- Ring / focus outlines ----------------------------------- */
-  .light .ring-white\/5  { --tw-ring-color: var(--border-subtle) !important; }
-  .light .ring-white\/10 { --tw-ring-color: var(--border-medium) !important; }
 
   /* --- Text em superfícies coloridas (botões gold, badge, etc.) - */
   /* text-brand-dark e text-black em botões dourados devem ser escuros em ambos os temas */
@@ -247,11 +216,6 @@
   .light .text-blue-400,
   .light .text-blue-500 {
     color: #1B4D8F !important;
-  }
-
-  .light .text-yellow-400,
-  .light .text-yellow-500 {
-    color: #ca8a04 !important;
   }
 
   .light .text-purple-400,
