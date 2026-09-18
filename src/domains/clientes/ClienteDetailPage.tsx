@@ -227,7 +227,7 @@ export const ClienteDetailPage: React.FC = () => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-sm font-black text-slate-900">
-              {cliente.tipoPessoa === 'juridica' ? (clientePJ?.razaoSocial ?? cliente.nome) : cliente.nome}
+              {cliente.tipoPessoa === 'juridica' ? (clientePJ?.nomeFantasia || clientePJ?.razaoSocial || cliente.nome) : cliente.nome}
             </h1>
             <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-wider', statusCfg.cls)}>
               <StatusIcon className="w-2.5 h-2.5" />{statusCfg.label}
@@ -310,7 +310,7 @@ export const ClienteDetailPage: React.FC = () => {
                 ['Situação Cadastral', clientePJ?.situacaoCadastral],
                 ['Porte', clientePJ?.porte],
                 ['CNAE', clientePJ?.cnae],
-                ['Contato responsável', cliente.nome],
+                ['Contato responsável', clientePJ?.nomeContato ?? cliente.nome],
               ] : [
                 ['Nome', cliente.nome],
                 ['CPF', fmtCPF(cliente.cpf)],

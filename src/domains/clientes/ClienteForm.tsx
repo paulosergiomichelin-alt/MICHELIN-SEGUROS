@@ -87,7 +87,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
   const [sexo, setSexo] = useState<'M' | 'F' | ''>('');
   const [tipoPessoa, setTipoPessoa] = useState<TipoPessoa>('fisica');
   const [pj, setPj] = useState({
-    cnpj: '', razaoSocial: '', nomeFantasia: '', inscricaoEstadual: '', situacaoCadastral: '', porte: '', cnae: '',
+    cnpj: '', razaoSocial: '', nomeFantasia: '', nomeContato: '', inscricaoEstadual: '', situacaoCadastral: '', porte: '', cnae: '',
   });
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [cnpjError, setCnpjError] = useState('');
@@ -109,6 +109,9 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
               cnpj: formatCNPJ(row.cnpj ?? ''),
               razaoSocial: row.razaoSocial ?? '',
               nomeFantasia: row.nomeFantasia ?? '',
+              // Registros antigos (antes desse campo existir) guardavam o nome do contato
+              // em cliente.nome — usa como fallback só nesse caso.
+              nomeContato: row.nomeContato ?? cliente.nome ?? '',
               inscricaoEstadual: row.inscricaoEstadual ?? '',
               situacaoCadastral: row.situacaoCadastral ?? '',
               porte: row.porte ?? '',
@@ -117,7 +120,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
           }
         }).catch(() => {});
       } else {
-        setPj({ cnpj: '', razaoSocial: '', nomeFantasia: '', inscricaoEstadual: '', situacaoCadastral: '', porte: '', cnae: '' });
+        setPj({ cnpj: '', razaoSocial: '', nomeFantasia: '', nomeContato: '', inscricaoEstadual: '', situacaoCadastral: '', porte: '', cnae: '' });
       }
       setForm({
         nome: cliente.nome ?? '',
@@ -146,7 +149,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
       setContatosAdicionais(cliente.contatosAdicionais ?? []);
     } else {
       setTipoPessoa('fisica');
-      setPj({ cnpj: '', razaoSocial: '', nomeFantasia: '', inscricaoEstadual: '', situacaoCadastral: '', porte: '', cnae: '' });
+      setPj({ cnpj: '', razaoSocial: '', nomeFantasia: '', nomeContato: '', inscricaoEstadual: '', situacaoCadastral: '', porte: '', cnae: '' });
       setForm({
         nome: '', cpf: '', rg: '', rgDataExpedicao: '', rgOrgaoEmissor: '', dataNascimento: '', estadoCivil: '', profissao: '',
         telefone: '', whatsapp: '', email: '',
@@ -312,15 +315,15 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nome.trim() || !form.telefone.trim()) return;
-    if (tipoPessoa === 'fisica' && !form.cpf.trim()) return;
-    if (tipoPessoa === 'juridica' && !pj.razaoSocial.trim()) return;
+    if (!form.telefone.trim()) return;
+    if (tipoPessoa === 'fisica' && (!form.nome.trim() || !form.cpf.trim())) return;
+    if (tipoPessoa === 'juridica' && (!pj.razaoSocial.trim() || !pj.nomeContato.trim())) return;
     setSaving(true);
     const clienteId = cliente?.id ?? generateId();
     try {
       await onSave({
         id: clienteId,
-        nome: form.nome.trim(),
+        nome: tipoPessoa === 'juridica' ? (pj.nomeFantasia.trim() || pj.razaoSocial.trim()) : form.nome.trim(),
         cpf: tipoPessoa === 'fisica' ? form.cpf.replace(/\D/g, '') : undefined,
         tipoPessoa,
         rg: tipoPessoa === 'fisica' ? (form.rg || undefined) : undefined,
@@ -360,6 +363,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
           cnpj: pj.cnpj.replace(/\D/g, ''),
           razaoSocial: pj.razaoSocial.trim(),
           nomeFantasia: pj.nomeFantasia || undefined,
+          nomeContato: pj.nomeContato.trim() || undefined,
           inscricaoEstadual: pj.inscricaoEstadual || undefined,
           situacaoCadastral: pj.situacaoCadastral || undefined,
           porte: pj.porte || undefined,
@@ -517,7 +521,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
             {tipoPessoa === 'juridica' && (
               <div className="md:col-span-2">
                 <Field label="Nome do responsável" required>
-                  <input className={inputCls} value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Nome do responsável" required />
+                  <input className={inputCls} value={pj.nomeContato} onChange={e => setPj(p => ({ ...p, nomeContato: e.target.value }))} placeholder="Nome do responsável" required />
                 </Field>
               </div>
             )}
@@ -766,7 +770,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
             variant="primary"
             icon={Save}
             loading={saving}
-            disabled={!form.nome || !form.telefone || (tipoPessoa === 'fisica' ? !form.cpf : !pj.razaoSocial)}
+            disabled={!form.telefone || (tipoPessoa === 'fisica' ? (!form.nome || !form.cpf) : (!pj.razaoSocial || !pj.nomeContato))}
           >
             {isEditing ? 'Salvar alterações' : 'Criar cliente'}
           </Button>

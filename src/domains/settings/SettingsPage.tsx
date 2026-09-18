@@ -22,6 +22,7 @@ import { AggerToolSettings } from '../../components/AggerToolSettings';
 import { AgentSettings } from './AgentSettings';
 import { SessionsPage } from '../whatsapp/SessionsPage';
 import { InsurerSettings } from './InsurerSettings';
+import { InsurerLogosSettings } from './InsurerLogosSettings';
 
 interface SettingsProps {
   canManageUsers?: boolean;
@@ -1103,7 +1104,8 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
         )}
 
         {activeSubTab === 'seguradoras' && canManageUsers && (
-          <motion.div key="seguradoras" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+          <motion.div key="seguradoras" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
+            <InsurerLogosSettings />
             <InsurerSettings />
           </motion.div>
         )}

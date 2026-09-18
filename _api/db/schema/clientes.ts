@@ -7,6 +7,8 @@ import { leads } from './leads';
 export const seguradoras = pgTable('seguradoras', {
   id: text('id').primaryKey(),
   nome: text('nome').notNull(),
+  logoUrl: text('logo_url'),
+  logoPath: text('logo_path'), // caminho no storage — usado para excluir o arquivo antigo ao trocar o logo
 });
 
 export const clientes = pgTable('clientes', {
@@ -112,6 +114,7 @@ export const clientePessoaJuridica = pgTable('cliente_pessoa_juridica', {
   cnpj: text('cnpj').notNull(),
   razaoSocial: text('razao_social').notNull(),
   nomeFantasia: text('nome_fantasia'),
+  nomeContato: text('nome_contato'), // nome da pessoa de contato/responsável pela empresa
   inscricaoEstadual: text('inscricao_estadual'),
   situacaoCadastral: text('situacao_cadastral'),
   porte: text('porte'),
