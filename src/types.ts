@@ -409,6 +409,15 @@ export interface ClienteDocumento {
   uploadedAt: string;
 }
 
+export interface ClienteContato {
+  id: string;
+  nome: string;
+  telefone?: string;
+  whatsapp?: string;
+  email?: string;
+  observacao?: string; // ex: "Financeiro", "Proprietário", "Responsável pela contratação", "Filho do dono"
+}
+
 export interface Cliente {
   id: string;
   nome: string;
@@ -433,6 +442,7 @@ export interface Cliente {
   estado?: string;
   responsavelId?: string;
   observacoes?: string;
+  contatosAdicionais?: ClienteContato[];
   leadOrigemId?: string;
   status: ClienteStatus;
   seguradoraAtualId?: string;

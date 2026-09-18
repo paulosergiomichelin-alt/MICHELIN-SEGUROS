@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Loader2, User, Phone, MapPin, Briefcase, X, ArrowLeft, Upload, FileText, CheckCircle2, Paperclip, Trash2, Lock } from 'lucide-react';
-import { Cliente, ClienteDocumento, ClienteDocumentoTipo, UserProfile } from '../../types';
+import { Save, Loader2, User, Phone, MapPin, Briefcase, X, ArrowLeft, Upload, FileText, CheckCircle2, Paperclip, Trash2, Lock, UserPlus } from 'lucide-react';
+import { Cliente, ClienteContato, ClienteDocumento, ClienteDocumentoTipo, UserProfile } from '../../types';
 import { StorageService } from '../../services/StorageService';
 import { cn, formatCPF, generateId, formatCpfCnpjProgressive, detectTipoPessoa, formatCNPJ, validateCNPJ } from '../../lib/utils';
 import { Modal } from '../../components/Modal';
@@ -91,6 +91,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
   });
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [cnpjError, setCnpjError] = useState('');
+  const [contatosAdicionais, setContatosAdicionais] = useState<ClienteContato[]>([]);
   const [form, setForm] = useState({
     nome: '', cpf: '', rg: '', rgDataExpedicao: '', rgOrgaoEmissor: '', dataNascimento: '', estadoCivil: '', profissao: '',
     telefone: '', whatsapp: '', email: '',
@@ -142,6 +143,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
       });
       setSexo(cliente.sexo ?? '');
       setDocumentos(cliente.documentos ?? []);
+      setContatosAdicionais(cliente.contatosAdicionais ?? []);
     } else {
       setTipoPessoa('fisica');
       setPj({ cnpj: '', razaoSocial: '', nomeFantasia: '', inscricaoEstadual: '', situacaoCadastral: '', porte: '', cnae: '' });
@@ -154,6 +156,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
       });
       setSexo('');
       setDocumentos([]);
+      setContatosAdicionais([]);
     }
   }, [cliente, isOpen, isAdmin, currentUser]);
 
@@ -174,6 +177,16 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
   }, [form.estado]);
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  const addContato = () => {
+    setContatosAdicionais(prev => [...prev, { id: generateId(), nome: '', telefone: '', whatsapp: '', email: '', observacao: '' }]);
+  };
+  const updateContato = (id: string, field: keyof ClienteContato, value: string) => {
+    setContatosAdicionais(prev => prev.map(c => (c.id === id ? { ...c, [field]: value } : c)));
+  };
+  const removeContato = (id: string) => {
+    setContatosAdicionais(prev => prev.filter(c => c.id !== id));
+  };
 
   const fetchCep = async (cep: string) => {
     const digits = cep.replace(/\D/g, '');
@@ -329,6 +342,11 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
         estado: form.estado || undefined,
         responsavelId: form.responsavelId || undefined,
         observacoes: form.observacoes || undefined,
+        contatosAdicionais: contatosAdicionais.filter(c => c.nome.trim()).map(c => ({
+          ...c,
+          telefone: c.telefone ? c.telefone.replace(/\D/g, '') : undefined,
+          whatsapp: c.whatsapp ? c.whatsapp.replace(/\D/g, '') : undefined,
+        })),
         status: (cliente?.status as any) ?? 'ativo',
         leadOrigemId: cliente?.leadOrigemId,
         seguradoraAtualId: cliente?.seguradoraAtualId,
@@ -515,6 +533,56 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
               </Field>
             </div>
           </div>
+
+          {/* Contatos adicionais — financeiro, proprietário, responsável pela contratação etc. */}
+          {contatosAdicionais.length > 0 && (
+            <div className="space-y-3 mt-4 pt-4 border-t border-slate-100">
+              {contatosAdicionais.map((c, idx) => (
+                <div key={c.id} className="relative bg-slate-50 border border-slate-200 rounded-xl p-3">
+                  <button
+                    type="button"
+                    onClick={() => removeContato(c.id)}
+                    className="absolute top-2 right-2 p-1 text-slate-400 hover:text-[#C0392B] transition-colors"
+                    title="Remover contato"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Contato adicional {idx + 1}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-6">
+                    <div className="md:col-span-2">
+                      <Field label="Nome" required>
+                        <input className={inputCls} value={c.nome} onChange={e => updateContato(c.id, 'nome', e.target.value)} placeholder="Nome do contato" />
+                      </Field>
+                    </div>
+                    <Field label="Telefone">
+                      <input className={inputCls} value={c.telefone ?? ''} onChange={e => updateContato(c.id, 'telefone', formatPhone(e.target.value))} placeholder="(00) 00000-0000" maxLength={15} />
+                    </Field>
+                    <Field label="WhatsApp">
+                      <input className={inputCls} value={c.whatsapp ?? ''} onChange={e => updateContato(c.id, 'whatsapp', formatPhone(e.target.value))} placeholder="(00) 00000-0000" maxLength={15} />
+                    </Field>
+                    <div className="md:col-span-2">
+                      <Field label="E-mail">
+                        <input type="email" className={inputCls} value={c.email ?? ''} onChange={e => updateContato(c.id, 'email', e.target.value)} placeholder="email@exemplo.com" />
+                      </Field>
+                    </div>
+                    <div className="md:col-span-2">
+                      <Field label="Observação">
+                        <input className={inputCls} value={c.observacao ?? ''} onChange={e => updateContato(c.id, 'observacao', e.target.value)} placeholder="Ex: Financeiro, Proprietário, Responsável pela contratação, Filho do dono..." />
+                      </Field>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={addContato}
+            className="w-full flex items-center justify-center gap-2 mt-3 py-2.5 rounded-xl border border-dashed border-slate-300 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:border-[#1B4D8F]/40 hover:text-[#1B4D8F] transition-colors"
+          >
+            <UserPlus className="w-3.5 h-3.5" /> Adicionar contato
+          </button>
         </Card>
 
         {/* Endereço */}

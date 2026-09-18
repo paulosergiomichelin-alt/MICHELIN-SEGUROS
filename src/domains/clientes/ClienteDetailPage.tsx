@@ -343,6 +343,31 @@ export const ClienteDetailPage: React.FC = () => {
               ) : null)}
             </Card>
 
+            {/* Contatos adicionais — financeiro, proprietário, responsável pela contratação etc. */}
+            {cliente.contatosAdicionais && cliente.contatosAdicionais.length > 0 && (
+              <Card title="Contatos Adicionais" icon={Users} className="md:col-span-2 space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {cliente.contatosAdicionais.map(c => (
+                    <div key={c.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-[11px] font-bold text-slate-800">{c.nome}</span>
+                        {c.observacao && (
+                          <span className="shrink-0 px-2 py-0.5 bg-gold-deep/10 text-gold-deep text-[8.5px] font-black uppercase tracking-wider rounded-full">
+                            {c.observacao}
+                          </span>
+                        )}
+                      </div>
+                      <div className="space-y-0.5">
+                        {c.telefone && <p className="text-[10px] text-slate-500">{fmtPhone(c.telefone)}</p>}
+                        {c.whatsapp && <p className="text-[10px] text-slate-500">WhatsApp: {fmtPhone(c.whatsapp)}</p>}
+                        {c.email && <p className="text-[10px] text-slate-500">{c.email}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
             {/* Seguro atual */}
             {apoliceAtiva && (
               <Card title="Apólice Ativa" icon={FileText} className="md:col-span-2 border-gold-deep/20">

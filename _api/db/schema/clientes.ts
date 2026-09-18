@@ -34,6 +34,10 @@ export const clientes = pgTable('clientes', {
   estado: text('estado'),
   responsavelId: text('responsavel_id'),
   observacoes: text('observacoes'),
+  // Array de { id, nome, telefone?, whatsapp?, email?, observacao? } — contatos extras do
+  // cliente (financeiro, proprietário, responsável pela contratação etc.), além do contato
+  // principal (nome/telefone/whatsapp/email já nas colunas acima).
+  contatosAdicionais: jsonb('contatos_adicionais').default([]),
   leadOrigemId: text('lead_origem_id').references(() => leads.id),
   status: text('status').notNull(),
   seguradoraAtualId: text('seguradora_atual_id').references(() => seguradoras.id),
