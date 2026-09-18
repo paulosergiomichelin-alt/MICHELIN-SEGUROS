@@ -68,7 +68,7 @@ export const nfseDocuments = pgTable('nfse_documents', {
   numeroRps: text('numero_rps'),
   protocolo: text('protocolo'),
   codigoVerificacao: text('codigo_verificacao'),
-  clienteId: text('cliente_id').references(() => clientes.id),
+  clienteId: text('cliente_id').references(() => clientes.id, { onDelete: 'set null' }),
   clienteNome: text('cliente_nome').notNull(),
   clienteCpfCnpj: text('cliente_cpf_cnpj').notNull(),
   clienteEmail: text('cliente_email'),

@@ -82,6 +82,7 @@ export const ClienteDetailPage: React.FC = () => {
   const [loadingCliente, setLoadingCliente] = useState(true);
   const [tab, setTab] = useState<Tab>('resumo');
   const [showEditCliente, setShowEditCliente] = useState(false);
+  const [deletingCliente, setDeletingCliente] = useState(false);
   const [showApoliceForm, setShowApoliceForm] = useState(false);
   const [editingApolice, setEditingApolice] = useState<Apolice | null>(null);
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -169,6 +170,19 @@ export const ClienteDetailPage: React.FC = () => {
     await ClienteService.deleteApolice(id, apoliceId);
   };
 
+  const handleDeleteCliente = async () => {
+    if (!id) return;
+    if (!window.confirm(`Excluir o cliente "${cliente?.nome}"? Esta ação também remove apólices, histórico e vínculos familiares dele, e não pode ser desfeita.`)) return;
+    setDeletingCliente(true);
+    try {
+      await DataService.delete('cliente', id);
+      navigate('/clientes');
+    } catch (err: any) {
+      window.alert(`Não foi possível excluir o cliente: ${err.message}`);
+      setDeletingCliente(false);
+    }
+  };
+
   if (loadingCliente) {
     return (
       <div className="flex items-center justify-center h-full bg-slate-50">
@@ -237,6 +251,13 @@ export const ClienteDetailPage: React.FC = () => {
             className="flex items-center gap-1 px-3 py-1.5 bg-gold-deep/10 border border-gold-deep/20 rounded-lg text-[9px] font-black uppercase tracking-widest text-gold-deep hover:bg-gold-deep/20 transition-colors"
           >
             <Edit2 className="w-3 h-3" /> Editar
+          </button>
+          <button
+            onClick={handleDeleteCliente}
+            disabled={deletingCliente}
+            className="flex items-center gap-1 px-3 py-1.5 bg-[#FDE4E4] border border-[#C0392B]/20 rounded-lg text-[9px] font-black uppercase tracking-widest text-[#C0392B] hover:bg-[#C0392B]/15 transition-colors disabled:opacity-50"
+          >
+            <Trash2 className="w-3 h-3" /> {deletingCliente ? 'Excluindo...' : 'Excluir'}
           </button>
         </div>
       </div>

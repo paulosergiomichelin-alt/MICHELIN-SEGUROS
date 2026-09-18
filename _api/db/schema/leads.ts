@@ -12,7 +12,7 @@ export const leads = pgTable('leads', {
   ownerId: text('owner_id'),
   responsibleAgentId: text('responsible_agent_id'),
   responsibleAgentType: text('responsible_agent_type'),
-  clienteId: text('cliente_id').references(() => clientes.id),
+  clienteId: text('cliente_id').references(() => clientes.id, { onDelete: 'set null' }),
   origin: text('origin').notNull(),
   isTest: boolean('is_test').notNull().default(false),
   iaActive: boolean('ia_active'),

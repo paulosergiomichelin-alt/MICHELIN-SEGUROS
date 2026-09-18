@@ -30,7 +30,7 @@ export const whatsappConversations = pgTable('whatsapp_conversations', {
   contactPicture: text('contact_picture'),
   isGroup: boolean('is_group').notNull().default(false),
   leadId: text('lead_id').references(() => leads.id),
-  clienteId: text('cliente_id').references(() => clientes.id),
+  clienteId: text('cliente_id').references(() => clientes.id, { onDelete: 'set null' }),
   lastMessage: text('last_message'),
   lastMessageAt: timestamp('last_message_at', { withTimezone: true, mode: 'string' }),
   lastMessageDirection: text('last_message_direction'),

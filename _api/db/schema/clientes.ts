@@ -48,7 +48,7 @@ export const clientes = pgTable('clientes', {
 
 export const clienteApolices = pgTable('cliente_apolices', {
   id: text('id').primaryKey(),
-  clienteId: text('cliente_id').notNull().references(() => clientes.id),
+  clienteId: text('cliente_id').notNull().references(() => clientes.id, { onDelete: 'cascade' }),
   produto: text('produto').notNull(),
   seguradoraId: text('seguradora_id').references(() => seguradoras.id),
   numeroApolice: text('numero_apolice').notNull(),
@@ -75,7 +75,7 @@ export const clienteApolices = pgTable('cliente_apolices', {
 
 export const clienteHistorico = pgTable('cliente_historico', {
   id: text('id').primaryKey(),
-  clienteId: text('cliente_id').notNull().references(() => clientes.id),
+  clienteId: text('cliente_id').notNull().references(() => clientes.id, { onDelete: 'cascade' }),
   tipo: text('tipo').notNull(),
   descricao: text('descricao').notNull(),
   usuarioId: text('usuario_id'),
@@ -90,8 +90,8 @@ export const clienteHistorico = pgTable('cliente_historico', {
 // para 1 linha (ver SPEC §4.7).
 export const clienteRelacionamentos = pgTable('cliente_relacionamentos', {
   id: text('id').primaryKey(),
-  clienteId: text('cliente_id').notNull().references(() => clientes.id),
-  relatedClienteId: text('related_cliente_id').notNull().references(() => clientes.id),
+  clienteId: text('cliente_id').notNull().references(() => clientes.id, { onDelete: 'cascade' }),
+  relatedClienteId: text('related_cliente_id').notNull().references(() => clientes.id, { onDelete: 'cascade' }),
   relatedClienteNome: text('related_cliente_nome').notNull(),
   relatedClienteTelefone: text('related_cliente_telefone'),
   relatedClienteWhatsapp: text('related_cliente_whatsapp'),
@@ -103,7 +103,7 @@ export const clienteRelacionamentos = pgTable('cliente_relacionamentos', {
 });
 
 export const clientePessoaJuridica = pgTable('cliente_pessoa_juridica', {
-  clienteId: text('cliente_id').primaryKey().references(() => clientes.id),
+  clienteId: text('cliente_id').primaryKey().references(() => clientes.id, { onDelete: 'cascade' }),
   organizationId: text('organization_id').references(() => organizations.id),
   cnpj: text('cnpj').notNull(),
   razaoSocial: text('razao_social').notNull(),
