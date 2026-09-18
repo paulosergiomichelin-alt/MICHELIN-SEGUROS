@@ -76,6 +76,8 @@ export const ClientesPage: React.FC = () => {
         usuarioNome: userProfile?.name,
         organizationId: orgId,
       });
+      // Cliente novo: vai direto para a ficha dele em vez de voltar para a lista.
+      navigate('/clientes/' + clienteId);
     }
   };
 
