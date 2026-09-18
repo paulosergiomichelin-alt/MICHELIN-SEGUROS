@@ -518,7 +518,7 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
   return (
     <>
       {inline ? (
-        <div className="max-w-2xl">
+        <div className="max-w-5xl">
           <div className="flex items-center gap-3 mb-4">
             <button
               type="button"

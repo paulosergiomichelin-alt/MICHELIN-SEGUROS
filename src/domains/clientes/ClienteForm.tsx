@@ -776,7 +776,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
 
   if (inline) {
     return (
-      <div className="max-w-3xl">
+      <div className="max-w-5xl">
         <div className="flex items-center gap-3 mb-4">
           <button
             type="button"

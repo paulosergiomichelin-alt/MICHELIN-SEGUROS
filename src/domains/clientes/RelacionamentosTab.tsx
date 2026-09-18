@@ -311,7 +311,7 @@ export const RelacionamentosTab: React.FC<RelacionamentosTabProps> = ({
   const existingRelIds = relacionamentos.map(r => r.relatedClienteId);
 
   return (
-    <div className="max-w-3xl">
+    <div>
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <Users className="w-3.5 h-3.5 text-gold-deep" />
@@ -337,7 +337,7 @@ export const RelacionamentosTab: React.FC<RelacionamentosTabProps> = ({
           }
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {relacionamentos.map(rel => {
             const waNumber = (rel.relatedClienteWhatsapp || rel.relatedClienteTelefone || '').replace(/\D/g, '');
             return (

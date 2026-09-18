@@ -299,7 +299,7 @@ export const ClienteDetailPage: React.FC = () => {
 
         {/* RESUMO */}
         {tab === 'resumo' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Dados pessoais */}
             <Card title="Dados Pessoais" icon={User} className="space-y-3">
               {(cliente.tipoPessoa === 'juridica' ? [
@@ -404,7 +404,7 @@ export const ClienteDetailPage: React.FC = () => {
 
         {/* CADASTRO */}
         {tab === 'cadastro' && (
-          <div className="max-w-4xl space-y-4">
+          <div className="space-y-4">
             {!cliente.leadOrigemId ? (
               <div className="bg-white border border-slate-200 rounded-2xl p-10 flex flex-col items-center gap-3 text-center shadow-sm">
                 <ClipboardList className="w-10 h-10 text-slate-200" />
@@ -427,7 +427,7 @@ export const ClienteDetailPage: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {/* Identificação */}
                   <Card title="Identificação" icon={User} className="space-y-2.5">
                     {[
@@ -566,7 +566,7 @@ export const ClienteDetailPage: React.FC = () => {
 
         {/* APÓLICES */}
         {tab === 'apolices' && (
-          <div className="max-w-5xl space-y-4">
+          <div className="space-y-4">
             {showApoliceForm ? (
               <ApoliceForm
                 isOpen={true}
@@ -644,34 +644,38 @@ export const ClienteDetailPage: React.FC = () => {
 
         {/* RENOVAÇÕES */}
         {tab === 'renovacoes' && (
-          <div className="max-w-3xl space-y-3">
+          <div className="space-y-3">
             <h2 className="text-[11px] font-black text-slate-600 uppercase tracking-widest mb-4">Próximas Renovações</h2>
             {upcomingRenov.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-12 text-center">
                 <Calendar className="w-10 h-10 text-slate-200" />
                 <p className="text-slate-500 text-sm">Nenhuma renovação pendente</p>
               </div>
-            ) : upcomingRenov.map(a => {
-              const days = differenceInDays(parseISO(a.dataRenovacao), new Date());
-              const urgencyColor = days <= 7 ? 'border-[#C0392B]/30 bg-[#FDE4E4]/50' : days <= 30 ? 'border-[#B8860B]/30 bg-[#FFF3DC]/50' : 'border-slate-200 bg-white';
-              return (
-                <div key={a.id} className={cn('border rounded-xl p-4 shadow-sm', urgencyColor)}>
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[12px] font-bold text-slate-800">{a.produto}</p>
-                      <SeguradoraBadge seguradoraId={a.seguradoraId} size="xs" className="mt-1" />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {upcomingRenov.map(a => {
+                  const days = differenceInDays(parseISO(a.dataRenovacao), new Date());
+                  const urgencyColor = days <= 7 ? 'border-[#C0392B]/30 bg-[#FDE4E4]/50' : days <= 30 ? 'border-[#B8860B]/30 bg-[#FFF3DC]/50' : 'border-slate-200 bg-white';
+                  return (
+                    <div key={a.id} className={cn('border rounded-xl p-4 shadow-sm', urgencyColor)}>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[12px] font-bold text-slate-800">{a.produto}</p>
+                          <SeguradoraBadge seguradoraId={a.seguradoraId} size="xs" className="mt-1" />
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-slate-500">Renovação</p>
+                          <p className={cn('text-[13px] font-black', days <= 7 ? 'text-[#C0392B]' : days <= 30 ? 'text-[#B8860B]' : 'text-slate-800')}>
+                            {fmtDate(a.dataRenovacao)}
+                          </p>
+                          <p className="text-[10px] text-slate-400">{days === 0 ? 'Hoje' : `em ${days} dias`}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[10px] text-slate-500">Renovação</p>
-                      <p className={cn('text-[13px] font-black', days <= 7 ? 'text-[#C0392B]' : days <= 30 ? 'text-[#B8860B]' : 'text-slate-800')}>
-                        {fmtDate(a.dataRenovacao)}
-                      </p>
-                      <p className="text-[10px] text-slate-400">{days === 0 ? 'Hoje' : `em ${days} dias`}</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -686,7 +690,7 @@ export const ClienteDetailPage: React.FC = () => {
 
         {/* HISTÓRICO */}
         {tab === 'historico' && (
-          <div className="max-w-2xl space-y-0 relative">
+          <div className="max-w-3xl space-y-0 relative">
             <div className="absolute left-[18px] top-0 bottom-0 w-px bg-slate-200" />
             {historico.length === 0 ? (
               <p className="text-slate-500 text-sm pl-12">Nenhum registro de histórico</p>
