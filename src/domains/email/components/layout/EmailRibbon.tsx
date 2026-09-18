@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Mail, Trash2, Archive, Reply, ReplyAll, Forward,
-  FolderInput, Search, RefreshCw, MailOpen,
+  FolderInput, Search, RefreshCw, MailOpen, Plus,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
 import { useEmail } from '../../../../contexts/EmailContext';
+import { useViewport } from '../../../../hooks/useAppContexts';
 
 // ─── Building blocks ────────────────────────────────────────────────────────
 
@@ -116,6 +117,7 @@ export const EmailRibbon: React.FC = () => {
   const [searchValue, setSearchValue] = useState('');
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasSelection = Boolean(selectedMessage);
+  const { isMobile } = useViewport();
 
   const handleAction = (action: string) => {
     if (!selectedMessage) return;
@@ -128,6 +130,41 @@ export const EmailRibbon: React.FC = () => {
     if (!v.trim()) { clearSearch(); return; }
     searchDebounceRef.current = setTimeout(() => search(v), 400);
   };
+
+  // Celular: a fita completa (estilo Outlook desktop) não cabe na largura da tela e
+  // quebra em várias linhas, ocupando boa parte da tela. Ações de resposta/exclusão/
+  // arquivamento já existem no EmailViewer (por mensagem) e no menu de cada item da
+  // lista — aqui sobra só o essencial: novo e-mail, busca e sincronizar, numa linha só.
+  if (isMobile) {
+    return (
+      <div className="shrink-0 w-full border-b border-slate-200 bg-white px-2.5 py-2 flex items-center gap-2">
+        <button
+          onClick={() => openComposer('new')}
+          title="Novo e-mail"
+          className="flex items-center justify-center gap-1.5 px-3 h-9 rounded-lg text-[#1B4D8F] bg-[#1B4D8F]/8 border border-[#1B4D8F]/25 shrink-0"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+        <div className="flex-1 min-w-0 flex items-center gap-1.5 bg-slate-100 border border-slate-200 rounded-lg px-2.5 h-9">
+          <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <input
+            value={searchValue}
+            onChange={e => handleSearchChange(e.target.value)}
+            placeholder="Pesquisar"
+            className="bg-transparent text-[12px] text-slate-700 placeholder:text-slate-400 outline-none w-full min-w-0"
+          />
+        </div>
+        <button
+          onClick={() => triggerSync()}
+          disabled={syncing}
+          title={syncing ? 'Sincronizando...' : 'Sincronizar'}
+          className="flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:bg-slate-100 shrink-0 disabled:opacity-50"
+        >
+          <RefreshCw className={cn('w-4 h-4', syncing && 'animate-spin')} />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="shrink-0 w-full border-b border-slate-200 bg-white">

@@ -64,9 +64,11 @@ export const EmailShell: React.FC<{ onOpenSettings: () => void }> = ({ onOpenSet
 
   // Celular: uma coluna por vez (pastas -> lista -> mensagem), com barra de voltar —
   // mesmo padrão de navegação já usado em WhatsAppInboxPage.tsx pra conversas.
+  // A ribbon some no visualizador: lá o cabeçalho já tem botão de voltar e as ações
+  // de resposta/exclusão próprias, então repeti-la só tomaria espaço da tela.
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
-      <EmailRibbon />
+      {mobilePane !== 'viewer' && <EmailRibbon />}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {mobilePane === 'sidebar' && (
           <div className="flex-1 min-h-0 overflow-hidden">
