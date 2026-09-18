@@ -411,7 +411,7 @@ CLASSIFICAÇÃO:
   };
 
   return (
-    <div className="flex flex-col min-h-full font-sans">
+    <div className="flex flex-col h-full font-sans">
       {/* Horizontal Tab Bar */}
       <nav className="flex-shrink-0 sticky top-0 z-10 bg-white border-b border-slate-200 px-2 flex items-center overflow-x-auto">
         <button

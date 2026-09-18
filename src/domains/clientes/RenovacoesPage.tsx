@@ -260,7 +260,7 @@ export const RenovacoesPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-full bg-slate-50">
+    <div className="h-full overflow-y-auto bg-slate-50">
       <div className="p-4 md:p-6 space-y-5">
         {/* PageHeader */}
         <div className="flex items-center gap-3">

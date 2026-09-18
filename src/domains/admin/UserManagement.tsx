@@ -380,7 +380,7 @@ export const UserManagement: React.FC<{ permissions?: Permissions }> = ({ permis
   };
 
   return (
-    <div className="min-h-full bg-slate-50">
+    <div className="h-full overflow-y-auto bg-slate-50">
     <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-8">
       {/* SaaS Dashboard Top Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-4 duration-700">

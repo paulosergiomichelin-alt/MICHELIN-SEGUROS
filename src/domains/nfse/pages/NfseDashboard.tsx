@@ -42,7 +42,7 @@ export function NfseDashboard() {
   ] : [];
 
   return (
-    <div className="min-h-full bg-slate-50">
+    <div className="h-full overflow-y-auto bg-slate-50">
       <div className="p-4 md:p-6 space-y-5">
 
         <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>

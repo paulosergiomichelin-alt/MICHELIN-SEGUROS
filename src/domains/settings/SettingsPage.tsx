@@ -623,7 +623,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
   ];
 
   return (
-    <div className="flex flex-col min-h-full font-sans bg-slate-50">
+    <div className="flex flex-col h-full font-sans bg-slate-50">
       <SystemDocumentationModal
         isOpen={isDocsModalOpen}
         onClose={() => setIsDocsModalOpen(false)}

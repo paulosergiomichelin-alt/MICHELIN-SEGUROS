@@ -133,7 +133,7 @@ export const EmailSettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-full bg-slate-50">
+    <div className="h-full overflow-y-auto bg-slate-50">
       <form onSubmit={handleSave} className="max-w-2xl mx-auto p-4 md:p-6 space-y-5">
         {/* Page header */}
         <PageHeader

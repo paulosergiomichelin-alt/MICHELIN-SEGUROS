@@ -221,7 +221,7 @@ export const MulticalculoPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-full bg-slate-50">
+    <div className="h-full overflow-y-auto bg-slate-50">
       <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-5">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>

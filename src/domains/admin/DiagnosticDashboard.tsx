@@ -71,7 +71,7 @@ export const DiagnosticDashboard: React.FC = () => {
   );
 
   return (
-    <div className="min-h-full bg-slate-50">
+    <div className="h-full overflow-y-auto bg-slate-50">
       <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-end flex-wrap gap-4">
         <PageHeader
