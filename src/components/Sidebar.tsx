@@ -125,12 +125,12 @@ export const Sidebar = React.memo(({
 
       <nav className="flex-1 mt-4 px-2 space-y-0.5 overflow-y-auto overflow-x-hidden custom-scrollbar">
         {[
+          { id: 'dashboard',   label: 'Dashboard',     icon: RefreshCw,     permission: permissions.canReadAllLeads },
           { id: 'pipeline',    label: 'Pipeline',      icon: LayoutGrid,    permission: permissions.canReadAllLeads },
           { id: 'relatorios',  label: 'Relatório',     icon: BarChart3,     permission: permissions.canReadAllLeads },
           { id: 'multicalculo', label: 'Multicálculo', icon: ShieldCheck,   permission: permissions.canReadAllLeads },
           { id: 'leads',       label: 'LEADS',         icon: Users,         permission: permissions.canReadAllLeads },
           { id: 'clientes',    label: 'Clientes',      icon: Briefcase,     permission: permissions.canReadAllLeads },
-          { id: 'dashboard',        label: 'Dashboard',     icon: RefreshCw,     permission: permissions.canReadAllLeads },
           { id: 'ativos',           label: 'Msgs Ativas',   icon: Send,          permission: permissions.canReadAllLeads },
           { id: 'chat',             label: 'WhatsApp IA',   icon: MessageSquare, permission: permissions.canReadAllLeads },
           { id: 'whatsapp',         label: 'WA Pessoal',    icon: Smartphone,    permission: permissions.canReadAllLeads, badge: waBadge },

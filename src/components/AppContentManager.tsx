@@ -65,8 +65,8 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
       <div className="flex-1 overflow-auto">
         <Routes>
 
-          {/* Default: redirect / to /pipeline */}
-          <Route path="/" element={<Navigate to="/pipeline" replace />} />
+          {/* Default: redirect / to /dashboard */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
           <Route
             path="/pipeline"
@@ -126,7 +126,7 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
             element={
               permissions.canReadAllLeads
                 ? <MensagensAtivas leads={leads} visualConfig={visualConfig} />
-                : <Navigate to="/pipeline" replace />
+                : <Navigate to="/dashboard" replace />
             }
           />
           <Route
@@ -139,7 +139,7 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
             element={
               permissions.canAccessSettings
                 ? <UserLogsView />
-                : <Navigate to="/pipeline" replace />
+                : <Navigate to="/dashboard" replace />
             }
           />
 
@@ -148,7 +148,7 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
             element={
               permissions.canManageUsers
                 ? <TeamPage />
-                : <Navigate to="/pipeline" replace />
+                : <Navigate to="/dashboard" replace />
             }
           />
 
@@ -157,7 +157,7 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
             element={
               permissions.canManageUsers
                 ? <UserProfilePage />
-                : <Navigate to="/pipeline" replace />
+                : <Navigate to="/dashboard" replace />
             }
           />
 
@@ -174,7 +174,7 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
                     }}
                   />
                 )
-                : <Navigate to="/pipeline" replace />
+                : <Navigate to="/dashboard" replace />
             }
           />
 
@@ -191,7 +191,7 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
                     userProfile={userProfile}
                   />
                 )
-                : <Navigate to="/pipeline" replace />
+                : <Navigate to="/dashboard" replace />
             }
           />
 
@@ -205,7 +205,7 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
             element={
               userProfile?.superadmin === true
                 ? <EmpresasManagement />
-                : <Navigate to="/pipeline" replace />
+                : <Navigate to="/dashboard" replace />
             }
           />
 
@@ -214,7 +214,7 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
             element={
               permissions.canReadAllLeads
                 ? <NfseListPage />
-                : <Navigate to="/pipeline" replace />
+                : <Navigate to="/dashboard" replace />
             }
           />
           <Route
@@ -222,12 +222,12 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
             element={
               permissions.canReadAllLeads
                 ? <NfseDashboard />
-                : <Navigate to="/pipeline" replace />
+                : <Navigate to="/dashboard" replace />
             }
           />
 
-          {/* Fallback: any unknown path → pipeline */}
-          <Route path="*" element={<Navigate to="/pipeline" replace />} />
+          {/* Fallback: any unknown path → dashboard */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
 
         </Routes>
       </div>
