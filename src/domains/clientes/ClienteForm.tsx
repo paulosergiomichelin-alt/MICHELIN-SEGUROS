@@ -399,13 +399,23 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
           </Card>
         )}
 
-        {/* Dados pessoais */}
-        <Card title="Dados Pessoais" icon={User}>
+        {/* Dados pessoais / Dados da empresa — mesmo card, conteúdo muda com o tipo de
+            pessoa. O input de CPF/CNPJ fica sempre nesta mesma posição (nunca troca de
+            card) porque é ele que detecta a transição física↔jurídica enquanto o usuário
+            digita; movê-lo para dentro de um card condicional faria o React desmontar e
+            remontar o input no meio da digitação, perdendo o foco. */}
+        <Card title={tipoPessoa === 'juridica' ? 'Dados da Empresa' : 'Dados Pessoais'} icon={tipoPessoa === 'juridica' ? Briefcase : User}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="md:col-span-2">
-              <Field label={tipoPessoa === 'juridica' ? 'Nome do responsável' : 'Nome completo'} required>
-                <input className={inputCls} value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Nome completo" required />
-              </Field>
+              {tipoPessoa === 'juridica' ? (
+                <Field label="Razão Social" required>
+                  <input className={inputCls} value={pj.razaoSocial} onChange={e => setPj(p => ({ ...p, razaoSocial: e.target.value }))} placeholder="Razão Social" required />
+                </Field>
+              ) : (
+                <Field label="Nome completo" required>
+                  <input className={inputCls} value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Nome completo" required />
+                </Field>
+              )}
             </div>
             <Field label="CPF/CNPJ" required>
               <div className="relative">
@@ -432,7 +442,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
               </div>
               {cnpjError && <p className="text-[9px] text-[#C0392B] mt-1">{cnpjError}</p>}
             </Field>
-            {tipoPessoa === 'fisica' && (<>
+            {tipoPessoa === 'fisica' ? (<>
               <Field label="RG">
                 <input className={inputCls} value={form.rg} onChange={e => set('rg', e.target.value)} placeholder="RG" />
               </Field>
@@ -461,18 +471,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
                   <option value="F">Feminino</option>
                 </select>
               </Field>
-            </>)}
-          </div>
-        </Card>
-
-        {tipoPessoa === 'juridica' && (
-          <Card title="Dados da Empresa" icon={Briefcase}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="md:col-span-2">
-                <Field label="Razão Social" required>
-                  <input className={inputCls} value={pj.razaoSocial} onChange={e => setPj(p => ({ ...p, razaoSocial: e.target.value }))} placeholder="Razão Social" required />
-                </Field>
-              </div>
+            </>) : (<>
               <Field label="Nome Fantasia">
                 <input className={inputCls} value={pj.nomeFantasia} onChange={e => setPj(p => ({ ...p, nomeFantasia: e.target.value }))} placeholder="Nome Fantasia" />
               </Field>
@@ -490,13 +489,20 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
                   <input className={inputCls} value={pj.cnae} onChange={e => setPj(p => ({ ...p, cnae: e.target.value }))} placeholder="Atividade principal" />
                 </Field>
               </div>
-            </div>
-          </Card>
-        )}
+            </>)}
+          </div>
+        </Card>
 
         {/* Contato */}
         <Card title="Contato" icon={Phone}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {tipoPessoa === 'juridica' && (
+              <div className="md:col-span-2">
+                <Field label="Nome do responsável" required>
+                  <input className={inputCls} value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Nome do responsável" required />
+                </Field>
+              </div>
+            )}
             <Field label="Telefone" required>
               <input className={inputCls} value={form.telefone} onChange={e => set('telefone', formatPhone(e.target.value))} placeholder="(00) 00000-0000" maxLength={15} required />
             </Field>
