@@ -51,6 +51,22 @@ function resolveTable(entity: string, res: any) {
   return table;
 }
 
+// `settings`/`config` armazenam tudo dentro de uma única coluna `data` (jsonb) — não têm
+// colunas reais para campos de negócio como logoDark/companyName (ver _api/db/schema/settings.ts).
+// As rotas genéricas abaixo fazem `.set(req.body)`/`.values(req.body)` direto contra as colunas
+// da tabela; para essas duas entidades isso silenciosamente descarta todo campo que não seja
+// id/createdAt/updatedAt (os únicos nomes que colidem com colunas reais), sem erro — o PATCH
+// "funciona" (retorna 200, até atualiza updatedAt) mas o conteúdo real nunca é persistido.
+// Confirmado em produção: branding (logoDark/logoLight) parava de refletir uploads novos assim
+// que a entidade migrou de documento Firestore plano para linha Postgres com coluna jsonb.
+const GENERIC_JSON_ENTITIES = new Set(['settings', 'config']);
+
+function flattenJsonRow(row: any): any {
+  if (!row) return row;
+  const { data, ...rest } = row;
+  return { ...(data ?? {}), ...rest };
+}
+
 function orgScopeWhere(entity: string, table: any, req: any) {
   // Superadmins bypassam isolamento de tenant — mesma regra de DataPolicyService.applyVisibilityConstraints
   // no cliente (ADR-6). Sem este bypass, telas de administração de plataforma (ex.: listar todas as
@@ -180,7 +196,7 @@ dataRouter.get('/:entity/:id', async (req: any, res) => {
   const [row] = await getDb().select().from(table).where(where);
   // Se o registro existe mas é de outra organização, retorna 404 (não 403) para não
   // revelar existência do dado a quem não tem acesso.
-  res.json(row ?? null);
+  res.json(GENERIC_JSON_ENTITIES.has(req.params.entity) ? flattenJsonRow(row ?? null) : (row ?? null));
 });
 
 dataRouter.post('/:entity/query', async (req: any, res) => {
@@ -208,9 +224,11 @@ dataRouter.post('/:entity', async (req: any, res) => {
     }
     req.body.organizationId = req.organizationId;
   }
-  const [row] = await getDb().insert(table).values(req.body).returning();
+  const isGenericJson = GENERIC_JSON_ENTITIES.has(req.params.entity);
+  const values = isGenericJson ? { [pkPropertyName(req.params.entity)]: req.body.id, data: req.body } : req.body;
+  const [row] = await getDb().insert(table).values(values).returning();
   await emitDataChanged(req.params.entity, row[pkPropertyName(req.params.entity)], row.organizationId ?? null);
-  res.status(201).json(row);
+  res.status(201).json(isGenericJson ? flattenJsonRow(row) : row);
 });
 
 dataRouter.patch('/:entity/:id', async (req: any, res) => {
@@ -218,9 +236,15 @@ dataRouter.patch('/:entity/:id', async (req: any, res) => {
   const scope = orgScopeWhere(req.params.entity, table, req);
   const idEq = eq(pkColumn(req.params.entity, table), req.params.id);
   const where = scope ? and(idEq, scope) : idEq;
-  const [row] = await getDb().update(table).set(req.body).where(where).returning();
+  const isGenericJson = GENERIC_JSON_ENTITIES.has(req.params.entity);
+  let setValues = req.body;
+  if (isGenericJson) {
+    const [current] = await getDb().select().from(table).where(where);
+    setValues = { data: { ...(current?.data ?? {}), ...req.body } };
+  }
+  const [row] = await getDb().update(table).set(setValues).where(where).returning();
   await emitDataChanged(req.params.entity, req.params.id, row?.organizationId ?? null);
-  res.json(row ?? null);
+  res.json(isGenericJson ? flattenJsonRow(row ?? null) : (row ?? null));
 });
 
 dataRouter.put('/:entity/:id', async (req: any, res) => {
@@ -232,13 +256,16 @@ dataRouter.put('/:entity/:id', async (req: any, res) => {
     req.body.organizationId = req.organizationId;
   }
   const pkProp = pkPropertyName(req.params.entity);
+  const isGenericJson = GENERIC_JSON_ENTITIES.has(req.params.entity);
+  const values = isGenericJson ? { [pkProp]: req.params.id, data: req.body } : { ...req.body, [pkProp]: req.params.id };
+  const setOnConflict = isGenericJson ? { data: req.body } : req.body;
   const [row] = await getDb()
     .insert(table)
-    .values({ ...req.body, [pkProp]: req.params.id })
-    .onConflictDoUpdate({ target: pkColumn(req.params.entity, table), set: req.body })
+    .values(values)
+    .onConflictDoUpdate({ target: pkColumn(req.params.entity, table), set: setOnConflict })
     .returning();
   await emitDataChanged(req.params.entity, req.params.id, row?.organizationId ?? null);
-  res.json(row);
+  res.json(isGenericJson ? flattenJsonRow(row) : row);
 });
 
 dataRouter.delete('/:entity/:id', async (req: any, res) => {
