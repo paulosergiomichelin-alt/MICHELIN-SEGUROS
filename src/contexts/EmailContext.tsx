@@ -102,6 +102,7 @@ type EmailAction =
   | { type: 'CLOSE_COMPOSER' }
   | { type: 'SET_UNREAD_BY_FOLDER'; payload: Record<string, number> }
   | { type: 'INCREMENT_UNREAD'; payload: string }
+  | { type: 'DECREMENT_UNREAD'; payload: string }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_NEEDS_REFRESH'; payload: boolean };
 
@@ -144,18 +145,36 @@ function emailReducer(state: EmailState, action: EmailAction): EmailState {
           ...state,
           selectedMessage: { ...msg, isRead: true },
           messages: state.messages.map(m => m.id === msg.id ? { ...m, isRead: true } : m),
+          unreadByFolder: {
+            ...state.unreadByFolder,
+            [msg.folder]: Math.max(0, (state.unreadByFolder[msg.folder] ?? 0) - 1),
+          },
+          stats: { ...state.stats, unread: Math.max(0, state.stats.unread - 1) },
         };
       }
       return { ...state, selectedMessage: action.payload };
     }
-    case 'UPDATE_MESSAGE':
+    case 'UPDATE_MESSAGE': {
+      const prev = state.messages.find(m => m.id === action.payload.id) ?? state.selectedMessage;
+      let { unreadByFolder, stats } = state;
+      if (prev && action.payload.isRead !== undefined && action.payload.isRead !== prev.isRead) {
+        const delta = action.payload.isRead ? -1 : 1;
+        unreadByFolder = {
+          ...unreadByFolder,
+          [prev.folder]: Math.max(0, (unreadByFolder[prev.folder] ?? 0) + delta),
+        };
+        stats = { ...stats, unread: Math.max(0, stats.unread + delta) };
+      }
       return {
         ...state,
+        unreadByFolder,
+        stats,
         messages: state.messages.map(m => m.id === action.payload.id ? { ...m, ...action.payload } : m),
         selectedMessage: state.selectedMessage?.id === action.payload.id
           ? { ...state.selectedMessage, ...action.payload }
           : state.selectedMessage,
       };
+    }
     case 'PREPEND_MESSAGE': {
       const alreadyExists = state.messages.some(m => m.id === action.payload.id);
       if (alreadyExists) return { ...state, messages: state.messages.map(m => m.id === action.payload.id ? action.payload : m) };
@@ -198,6 +217,18 @@ function emailReducer(state: EmailState, action: EmailAction): EmailState {
           ...state.unreadByFolder,
           [folder]: (state.unreadByFolder[folder] ?? 0) + 1,
         },
+        stats: { ...state.stats, unread: state.stats.unread + 1 },
+      };
+    }
+    case 'DECREMENT_UNREAD': {
+      const folder = action.payload;
+      return {
+        ...state,
+        unreadByFolder: {
+          ...state.unreadByFolder,
+          [folder]: Math.max(0, (state.unreadByFolder[folder] ?? 0) - 1),
+        },
+        stats: { ...state.stats, unread: Math.max(0, state.stats.unread - 1) },
       };
     }
     case 'SET_ERROR':
