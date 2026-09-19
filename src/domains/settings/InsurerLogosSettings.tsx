@@ -69,9 +69,12 @@ export const InsurerLogosSettings: React.FC = () => {
           const isUploading = uploadingId === s.id;
           return (
             <div key={s.id} className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
-              <div className="w-11 h-11 rounded-lg overflow-hidden shrink-0 bg-white flex items-center justify-center border border-slate-200">
+              <div className={cn(
+                'rounded-lg shrink-0 bg-white flex items-center justify-center border border-slate-200',
+                logo ? 'h-11 w-20 overflow-hidden px-1.5' : 'h-11 w-11 overflow-hidden',
+              )}>
                 {logo ? (
-                  <img src={logo} alt={s.nome} className="w-full h-full object-contain p-1" />
+                  <img src={logo} alt={s.nome} className="h-full w-auto max-w-full object-contain" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center font-black text-white" style={{ backgroundColor: s.cor }}>
                     {s.nome.charAt(0).toUpperCase()}

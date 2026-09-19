@@ -33,17 +33,23 @@ export const SeguradoraBadge: React.FC<SeguradoraBadgeProps> = ({
   // Se o logo mudar (ex: admin acabou de subir um novo), esquece um eventual erro anterior.
   useEffect(() => { setImgError(false); }, [logo]);
 
-  const avatarSize = size === 'xs' ? 'w-5 h-5 text-[9px]' : size === 'sm' ? 'w-6 h-6 text-[10px]' : 'w-8 h-8 text-xs';
+  const hasLogo = !!logo && !imgError;
+
+  // Logos reais das seguradoras já trazem o nome escrito (ver InsurerLogosSettings) — uma
+  // altura fixa com largura livre (em vez de uma caixa quadrada) evita espremer um logotipo
+  // largo numa miniatura ilegível, e o rótulo de texto ao lado fica redundante nesse caso.
+  const logoBoxSize = size === 'xs' ? 'h-6 max-w-[84px]' : size === 'sm' ? 'h-8 max-w-[110px]' : 'h-10 max-w-[140px]';
+  const avatarSize = size === 'xs' ? 'w-6 h-6 text-[9px]' : size === 'sm' ? 'w-8 h-8 text-[11px]' : 'w-10 h-10 text-sm';
   const textSize  = size === 'xs' ? 'text-[9px]' : size === 'sm' ? 'text-[10px]' : 'text-xs';
 
   return (
     <div className={cn('flex items-center gap-1.5', className)}>
-      {logo && !imgError ? (
-        <div className={cn('rounded-md overflow-hidden shrink-0 bg-white flex items-center justify-center', avatarSize)}>
+      {hasLogo ? (
+        <div className={cn('rounded-md overflow-hidden shrink-0 bg-white flex items-center justify-center px-1', logoBoxSize)}>
           <img
             src={logo}
             alt={nome}
-            className="w-full h-full object-contain p-[2px]"
+            className="h-full w-auto max-w-full object-contain"
             onError={() => setImgError(true)}
           />
         </div>
@@ -55,7 +61,7 @@ export const SeguradoraBadge: React.FC<SeguradoraBadgeProps> = ({
           {inicial}
         </div>
       )}
-      {showName && (
+      {showName && !hasLogo && (
         <span className={cn('font-semibold text-[var(--text-primary)] opacity-80 truncate', textSize)}>{nome}</span>
       )}
     </div>
