@@ -6,6 +6,7 @@ import { useChatPreferences } from '../hooks/useAppContexts';
 import { useViewport } from '../hooks/useAppContexts';
 import { ShellProviders } from './ShellProviders';
 import { MobileHeader } from './MobileHeader';
+import { EmailToastNotifications } from './EmailToastNotifications';
 import { VisualIdentityConfig, Permissions, UserProfile } from '../types';
 
 interface AppShellProps {
@@ -86,6 +87,8 @@ export const AppShell: React.FC<AppShellProps> = ({
         </main>
 
       </div>
+
+      <EmailToastNotifications />
     </ShellProviders>
   );
 };

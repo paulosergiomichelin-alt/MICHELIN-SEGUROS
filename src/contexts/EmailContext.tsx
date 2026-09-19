@@ -42,6 +42,12 @@ interface EmailState {
   unreadByFolder: Record<string, number>;
   error: string | null;
   needsRefresh?: boolean;
+  toasts: EmailToast[];
+}
+
+export interface EmailToast {
+  id: string;
+  message: CachedEmail;
 }
 
 const DEFAULT_STATS: EmailStats = {
@@ -76,6 +82,7 @@ const initialState: EmailState = {
   composerReplyTo: null,
   unreadByFolder: {},
   error: null,
+  toasts: [],
 };
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -103,6 +110,8 @@ type EmailAction =
   | { type: 'SET_UNREAD_BY_FOLDER'; payload: Record<string, number> }
   | { type: 'INCREMENT_UNREAD'; payload: string }
   | { type: 'DECREMENT_UNREAD'; payload: string }
+  | { type: 'SHOW_EMAIL_TOAST'; payload: EmailToast }
+  | { type: 'DISMISS_EMAIL_TOAST'; payload: string }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_NEEDS_REFRESH'; payload: boolean };
 
@@ -235,6 +244,11 @@ function emailReducer(state: EmailState, action: EmailAction): EmailState {
       return { ...state, error: action.payload };
     case 'SET_NEEDS_REFRESH':
       return { ...state, needsRefresh: action.payload };
+    case 'SHOW_EMAIL_TOAST':
+      // No máximo 3 toasts empilhados — os mais antigos somem para não poluir a tela.
+      return { ...state, toasts: [...state.toasts, action.payload].slice(-3) };
+    case 'DISMISS_EMAIL_TOAST':
+      return { ...state, toasts: state.toasts.filter(t => t.id !== action.payload) };
     default:
       return state;
   }
@@ -267,6 +281,7 @@ interface EmailContextType {
   emptyFolder: (folderId: string) => Promise<boolean>;
   markFolderRead: (folderId: string) => Promise<boolean>;
   moveMessage: (messageId: string, targetFolderId: string) => Promise<void>;
+  dismissToast: (id: string) => void;
 }
 
 // Valor padrão garante que useEmail() nunca lança mesmo se o provider ainda
@@ -299,6 +314,7 @@ const DEFAULT_EMAIL_CTX: EmailContextType = {
   emptyFolder: async () => false,
   markFolderRead: async () => false,
   moveMessage: noop,
+  dismissToast: () => {},
 };
 
 const EmailContext = createContext<EmailContextType>(DEFAULT_EMAIL_CTX);
@@ -334,6 +350,12 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           dispatch({ type: 'PREPEND_MESSAGE', payload: data.message });
         }
         dispatch({ type: 'INCREMENT_UNREAD', payload: folder });
+        if (folder === 'inbox') {
+          dispatch({
+            type: 'SHOW_EMAIL_TOAST',
+            payload: { id: `toast_${data.message.id}_${Date.now()}`, message: data.message },
+          });
+        }
       } else if (data.type === 'update' && data.message) {
         dispatch({ type: 'UPDATE_MESSAGE', payload: data.message });
       } else if (data.type === 'delete' && data.message?.id) {
@@ -701,6 +723,10 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [loadAccounts]);
 
+  const dismissToast = useCallback((id: string) => {
+    dispatch({ type: 'DISMISS_EMAIL_TOAST', payload: id });
+  }, []);
+
   // Reagir ao needsRefresh (disparado por doAction em caso de erro)
   useEffect(() => {
     if (state.needsRefresh) {
@@ -744,6 +770,7 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         emptyFolder,
         markFolderRead,
         moveMessage,
+        dismissToast,
       }}
     >
       {children}
