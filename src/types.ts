@@ -508,6 +508,19 @@ export interface ApoliceAnexo {
   uploadedAt: string;
 }
 
+export interface ApoliceVeiculo {
+  marca?: string;
+  modelo?: string;
+  anoFabricacao?: string;
+  anoModelo?: string;
+  placa?: string;
+  chassi?: string;
+  cor?: string;
+  renavam?: string;
+}
+
+export const PRODUTOS_COM_VEICULO: ProdutoSeguro[] = ['Automóvel', 'Moto', 'Caminhão', 'Frota'];
+
 export interface Apolice {
   id: string;
   clienteId: string;
@@ -529,6 +542,7 @@ export interface Apolice {
   documentoFileName?: string;
   documentoUploadedAt?: string;
   anexos?: ApoliceAnexo[];
+  veiculo?: ApoliceVeiculo;
   organizationId?: string;
   createdAt: string;
   updatedAt: string;

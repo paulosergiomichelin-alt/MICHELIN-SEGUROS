@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Loader2, FileText, Upload, CheckCircle2, X, ExternalLink, Paperclip, Trash2, ArrowLeft, Pencil } from 'lucide-react';
-import { Apolice, ApoliceAnexo, ApoliceAnexoTipo, ApoliceStatus, ProdutoSeguro, PRODUTOS_SEGURO } from '../../types';
+import { Save, Loader2, FileText, Upload, CheckCircle2, X, ExternalLink, Paperclip, Trash2, ArrowLeft, Pencil, Car } from 'lucide-react';
+import { Apolice, ApoliceAnexo, ApoliceAnexoTipo, ApoliceStatus, ApoliceVeiculo, ProdutoSeguro, PRODUTOS_SEGURO, PRODUTOS_COM_VEICULO } from '../../types';
 import { SEGURADORAS } from '../../lib/seguradoras';
 import { Modal } from '../../components/Modal';
 import { UniversalDocumentViewer } from '../../components/UniversalDocumentViewer';
@@ -110,6 +110,9 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
     observacoes: '',
     status: 'ativo' as ApoliceStatus,
   });
+  const [veiculo, setVeiculo] = useState<ApoliceVeiculo>({});
+  const isVeiculo = form.produto ? PRODUTOS_COM_VEICULO.includes(form.produto as ProdutoSeguro) : false;
+  const setVeic = (k: keyof ApoliceVeiculo, v: string) => setVeiculo(vv => ({ ...vv, [k]: v }));
 
   // Main document import state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -146,6 +149,7 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
       });
       setDocMeta(apolice.documentoUrl ? { url: apolice.documentoUrl, path: apolice.documentoPath ?? '', name: apolice.documentoFileName ?? 'Apólice' } : null);
       setAnexos(apolice.anexos ?? []);
+      setVeiculo(apolice.veiculo ?? {});
     } else {
       setForm({
         produto: '', seguradoraId: '', numeroApolice: '',
@@ -155,6 +159,7 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
       });
       setDocMeta(null);
       setAnexos([]);
+      setVeiculo({});
     }
     setDocFile(null);
     setDocObjectUrl('');
@@ -220,6 +225,11 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
       updates.dataRenovacao = fim;
     }
     if (data.brokerName && !form.corretoraOrigem) updates.corretoraOrigem = data.brokerName;
+
+    const veicUpdates: Partial<ApoliceVeiculo> = {};
+    if (data.plate) veicUpdates.placa = data.plate;
+    if (data.chassis || data.chassi) veicUpdates.chassi = data.chassis ?? data.chassi;
+    if (Object.keys(veicUpdates).length > 0) setVeiculo(v => ({ ...v, ...veicUpdates }));
 
     // Map premium values from OCR
     const premioLiquidoStr = parseBRMoneyStr(data.premioLiquido ?? data.premio_liquido ?? '');
@@ -301,6 +311,7 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
         documentoFileName: docMeta?.name,
         documentoUploadedAt: docMeta ? new Date().toISOString() : undefined,
         anexos: anexos.length > 0 ? anexos : undefined,
+        veiculo: isVeiculo && Object.values(veiculo).some(v => v && v.trim()) ? veiculo : undefined,
       });
       onClose();
     } catch (err: any) {
@@ -399,6 +410,38 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
               </Field>
             </div>
           </Card>
+
+          {/* ── Dados do Veículo ────────────────────────────────────────── */}
+          {isVeiculo && (
+          <Card title="Dados do Veículo" icon={Car}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Field label="Marca">
+                <input className={inputCls} value={veiculo.marca ?? ''} onChange={e => setVeic('marca', e.target.value)} placeholder="Ex: Volkswagen" disabled={readOnly} />
+              </Field>
+              <Field label="Modelo">
+                <input className={inputCls} value={veiculo.modelo ?? ''} onChange={e => setVeic('modelo', e.target.value)} placeholder="Ex: Gol 1.0" disabled={readOnly} />
+              </Field>
+              <Field label="Ano de fabricação">
+                <input className={inputCls} value={veiculo.anoFabricacao ?? ''} onChange={e => setVeic('anoFabricacao', e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="2020" disabled={readOnly} />
+              </Field>
+              <Field label="Ano modelo">
+                <input className={inputCls} value={veiculo.anoModelo ?? ''} onChange={e => setVeic('anoModelo', e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="2021" disabled={readOnly} />
+              </Field>
+              <Field label="Placa">
+                <input className={inputCls} value={veiculo.placa ?? ''} onChange={e => setVeic('placa', e.target.value.toUpperCase())} placeholder="ABC1D23" disabled={readOnly} />
+              </Field>
+              <Field label="Chassi">
+                <input className={inputCls} value={veiculo.chassi ?? ''} onChange={e => setVeic('chassi', e.target.value.toUpperCase())} placeholder="9BWZZZ..." disabled={readOnly} />
+              </Field>
+              <Field label="Cor">
+                <input className={inputCls} value={veiculo.cor ?? ''} onChange={e => setVeic('cor', e.target.value)} placeholder="Ex: Prata" disabled={readOnly} />
+              </Field>
+              <Field label="Renavam">
+                <input className={inputCls} value={veiculo.renavam ?? ''} onChange={e => setVeic('renavam', e.target.value.replace(/\D/g, ''))} placeholder="00000000000" disabled={readOnly} />
+              </Field>
+            </div>
+          </Card>
+          )}
 
           {/* ── Valores ─────────────────────────────────────────────────── */}
           <Card title="Valores" icon={FileText}>

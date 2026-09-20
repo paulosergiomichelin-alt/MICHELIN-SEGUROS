@@ -454,6 +454,11 @@ export const ClienteDetailPage: React.FC = () => {
                   <div>
                     <p className="text-[9px] text-slate-400 uppercase font-black mb-1">Produto</p>
                     <p className="text-[11px] text-slate-800 font-bold">{apoliceAtiva.produto}</p>
+                    {apoliceAtiva.veiculo?.placa && (
+                      <p className="text-[9px] text-slate-400 font-mono mt-0.5">
+                        {apoliceAtiva.veiculo.placa}{apoliceAtiva.veiculo.modelo ? ` · ${apoliceAtiva.veiculo.modelo}` : ''}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <p className="text-[9px] text-slate-400 uppercase font-black mb-1">Seguradora</p>
@@ -687,6 +692,11 @@ export const ClienteDetailPage: React.FC = () => {
                               <p className="text-[9px] text-slate-400 uppercase font-black mb-1">Produto</p>
                               <p className="text-[11px] text-slate-800 font-bold">{a.produto}</p>
                               {a.numeroApolice && <p className="text-[9px] text-slate-400 font-mono mt-0.5">#{a.numeroApolice}</p>}
+                              {a.veiculo?.placa && (
+                                <p className="text-[9px] text-slate-400 font-mono mt-0.5">
+                                  {a.veiculo.placa}{a.veiculo.modelo ? ` · ${a.veiculo.modelo}` : ''}
+                                </p>
+                              )}
                             </div>
                             <div>
                               <p className="text-[9px] text-slate-400 uppercase font-black mb-1">Seguradora</p>
