@@ -301,6 +301,15 @@ export const EmailService = {
   syncAccount: (accountId: string): Promise<{ success: boolean; synced: number }> =>
     fetch(`/api/email/sync?accountId=${encodeURIComponent(accountId)}`, { method: 'POST' }).then(r => r.json()),
 
+  // Roda as regras de organização em todos os e-mails já na inbox (não só nos
+  // novos do próximo sync) — ver _api/email/rules-run.ts.
+  runRulesNow: (accountId: string): Promise<{ success: boolean; checked: number; moved: number; errors: string[] }> =>
+    fetch('/api/email/rules/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId }),
+    }).then(r => r.json()),
+
   // ── Busca ───────────────────────────────────────────────────────────────────
   search: (accountId: string, q: string, folder?: string): Promise<SearchResponse> =>
     fetch(

@@ -315,6 +315,7 @@ async function startServer() {
   const { default: emailActionHandler }           = await import('./_api/email/action.js');
   const { default: emailDraftHandler }            = await import('./_api/email/draft.js');
   const { default: emailSyncHandler }             = await import('./_api/email/sync.js');
+  const { default: emailRulesRunHandler }         = await import('./_api/email/rules-run.js');
   const { default: emailSearchHandler }           = await import('./_api/email/search.js');
   const { default: emailSettingsHandler }         = await import('./_api/email/settings.js');
   const { default: emailStatsHandler }            = await import('./_api/email/stats.js');
@@ -341,6 +342,7 @@ async function startServer() {
   app.all('/api/email/draft',               emailDraftHandler);
   app.all('/api/email/draft/:id',           emailDraftHandler);
   app.all('/api/email/sync',                emailSyncHandler);
+  app.all('/api/email/rules/run',           emailRulesRunHandler);
   app.all('/api/email/search',              emailSearchHandler);
   app.all('/api/email/settings',            emailSettingsHandler);
   app.all('/api/email/stats',               emailStatsHandler);

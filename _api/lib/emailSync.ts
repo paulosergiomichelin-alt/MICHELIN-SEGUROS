@@ -1,7 +1,7 @@
 import { fsGet, fsQueryFull, fsUpdate } from './pgData.js';
 import { decrypt } from './emailEncryption.js';
 import {
-  setEmail, removeEmail, setSyncState, getSyncState, cacheStats, CachedEmail,
+  setEmail, removeEmail, setSyncState, getSyncState, cacheStats, CachedEmail, getAllEmailsByFolder,
 } from './emailCache.js';
 import { emitGlobal } from './socketRegistry.js';
 import {
@@ -305,6 +305,33 @@ export async function syncAccount(
   }
 
   return result;
+}
+
+// ── Public: forçar execução das regras em toda a inbox já sincronizada ────────
+//
+// Diferente do sync periódico (que só aplica regra em mensagem NOVA daquele
+// ciclo), isso resincroniza a inbox de verdade e depois confere TODAS as
+// mensagens da inbox — inclusive as que já estavam lá antes de qualquer regra
+// existir — contra as regras ativas, movendo as que baterem.
+export async function runRulesNow(accountId: string): Promise<{ checked: number; moved: number; errors: string[] }> {
+  await syncAccount(accountId, 'inbox');
+
+  const rawAccount = await fsGet('email_accounts', accountId);
+  if (!rawAccount) throw new Error(`Conta ${accountId} não encontrada`);
+  rawAccount.id = accountId;
+  const account = decryptAccount(rawAccount);
+
+  const rules = await loadActiveRules(accountId);
+  if (rules.length === 0) return { checked: 0, moved: 0, errors: ['Nenhuma regra ativa cadastrada para esta conta.'] };
+
+  const messages = getAllEmailsByFolder(accountId, 'inbox');
+  const errors: string[] = [];
+  let moved = 0;
+  for (const message of messages) {
+    const result = await applyRulesToMessage(account, message, rules, errors);
+    if (result.folder !== 'inbox') moved++;
+  }
+  return { checked: messages.length, moved, errors };
 }
 
 // ── Public: sync all active accounts ─────────────────────────────────────────

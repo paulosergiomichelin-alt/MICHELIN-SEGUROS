@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FolderPlus, Plus, Trash2, Loader2, Wand2, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import { FolderPlus, Plus, Trash2, Loader2, Wand2, ShieldCheck, CheckCircle2, AlertCircle, PlayCircle } from 'lucide-react';
 import { cn, generateId } from '../../../../lib/utils';
 import { useEmail } from '../../../../contexts/EmailContext';
 import { useEmailFolders } from '../../hooks/useEmailFolders';
@@ -57,6 +57,9 @@ export const EmailRulesSection: React.FC = () => {
 
   const [bulkRunning, setBulkRunning] = useState(false);
   const [bulkMessage, setBulkMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const [runningNow, setRunningNow] = useState(false);
+  const [runNowMessage, setRunNowMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const [newFolderName, setNewFolderName] = useState('');
   const [creatingFolder, setCreatingFolder] = useState(false);
@@ -124,6 +127,26 @@ export const EmailRulesSection: React.FC = () => {
       setBulkMessage({ type: 'error', text: e.message ?? 'Falha ao criar pastas/regras.' });
     } finally {
       setBulkRunning(false);
+    }
+  };
+
+  const handleRunNow = async () => {
+    if (!selectedAccountId) return;
+    setRunningNow(true);
+    setRunNowMessage(null);
+    try {
+      const result = await EmailService.runRulesNow(selectedAccountId);
+      if (!result.success) throw new Error((result as any).error ?? 'Falha ao executar regras.');
+      const erroText = result.errors.length > 0 ? ` ${result.errors.length} erro(s) — veja o console.` : '';
+      if (result.errors.length > 0) console.warn('[email rules] erros ao executar agora:', result.errors);
+      setRunNowMessage({
+        type: 'success',
+        text: `${result.checked} e-mail(s) da inbox conferido(s), ${result.moved} movido(s).${erroText}`,
+      });
+    } catch (e: any) {
+      setRunNowMessage({ type: 'error', text: e.message ?? 'Falha ao executar regras.' });
+    } finally {
+      setRunningNow(false);
     }
   };
 
@@ -238,16 +261,42 @@ export const EmailRulesSection: React.FC = () => {
 
       {/* Lista de regras */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <p className="text-slate-700 text-sm font-medium">Regras ({rules.length})</p>
-          <button
-            type="button"
-            onClick={() => setShowForm(s => !s)}
-            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[#1B4D8F] hover:text-[#153E73] transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" /> Nova regra
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleRunNow}
+              disabled={runningNow || rules.length === 0}
+              title={rules.length === 0 ? 'Crie uma regra primeiro' : 'Confere todos os e-mails já na Caixa de Entrada contra as regras ativas, e move os que baterem'}
+              className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[#1F8A4C] hover:text-[#166838] transition-colors disabled:opacity-40 disabled:pointer-events-none"
+            >
+              {runningNow ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlayCircle className="w-3.5 h-3.5" />}
+              {runningNow ? 'Executando...' : 'Executar regras agora'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm(s => !s)}
+              className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[#1B4D8F] hover:text-[#153E73] transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" /> Nova regra
+            </button>
+          </div>
         </div>
+
+        {runNowMessage && (
+          <div className={cn(
+            'flex items-start gap-2 text-[12px] p-2.5 rounded-lg',
+            runNowMessage.type === 'success' ? 'bg-[#E4F5EA] text-[#1F8A4C]' : 'bg-[#FDE4E4] text-[#C0392B]',
+          )}>
+            {runNowMessage.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-px" /> : <AlertCircle className="w-4 h-4 shrink-0 mt-px" />}
+            {runNowMessage.text}
+          </div>
+        )}
+        <p className="text-slate-400 text-[11px]">
+          "Executar regras agora" sincroniza a Caixa de Entrada e move todos os e-mails que baterem
+          com uma regra ativa — não espera o próximo ciclo automático (a cada 5 minutos).
+        </p>
 
         {showForm && (
           <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-3">
