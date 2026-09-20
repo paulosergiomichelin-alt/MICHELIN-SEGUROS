@@ -115,9 +115,24 @@ export const MulticalculoPage: React.FC = () => {
   const [buscandoVeiculo, setBuscandoVeiculo] = useState(false);
   const [zeroKm, setZeroKm] = useState(false);
   const [valorVeiculo, setValorVeiculo] = useState('');
-  const [percentualAjuste, setPercentualAjuste] = useState('');
+  const [percentualAjuste, setPercentualAjuste] = useState('100');
   const [placa, setPlaca] = useState('');
   const [chassi, setChassi] = useState('');
+  const [combustivel, setCombustivel] = useState('');
+
+  // Ao selecionar um veículo, tenta pré-marcar o combustível a partir do que veio da
+  // base da Tokio Marine — o usuário ainda pode corrigir manualmente depois.
+  useEffect(() => {
+    const raw = (veiculoSelecionado?.tipoCombustivel ?? '').toUpperCase();
+    if (!raw) { setCombustivel(''); return; }
+    if (raw.includes('FLEX')) setCombustivel('Flex');
+    else if (raw.includes('DIESEL')) setCombustivel('Diesel');
+    else if (raw.includes('ELETR')) setCombustivel('Elétrico');
+    else if (raw.includes('HIBRID')) setCombustivel('Híbrido');
+    else if (raw.includes('ALC') || raw.includes('ETANOL')) setCombustivel('Álcool');
+    else if (raw.includes('GASOL')) setCombustivel('Gasolina');
+    else setCombustivel('');
+  }, [veiculoSelecionado]);
 
   // Informações complementares — CEP de pernoite sempre acompanha o residencial, mas
   // pode ser editado manualmente quando o carro dorme em outro endereço.
@@ -376,8 +391,24 @@ export const MulticalculoPage: React.FC = () => {
                 </select>
               </Field>
               <Field label="Valor Referenciado (R$)" required><input className={inputCls} value={valorVeiculo} onChange={(e) => setValorVeiculo(e.target.value)} placeholder="0,00" /></Field>
-              <Field label="Combustível"><input className={inputCls} value={veiculoSelecionado?.tipoCombustivel ?? ''} readOnly placeholder="Selecione o modelo" /></Field>
-              <Field label="Fipe (%)"><input className={inputCls} value={percentualAjuste} onChange={(e) => setPercentualAjuste(e.target.value)} placeholder="100" /></Field>
+              <Field label="Combustível">
+                <select className={inputCls} value={combustivel} onChange={(e) => setCombustivel(e.target.value)}>
+                  <option value="">Selecione</option>
+                  <option value="Álcool">Álcool</option>
+                  <option value="Diesel">Diesel</option>
+                  <option value="Elétrico">Elétrico</option>
+                  <option value="Flex">Flex</option>
+                  <option value="Gasolina">Gasolina</option>
+                  <option value="Híbrido">Híbrido</option>
+                </select>
+              </Field>
+              <Field label="Fipe (%)">
+                <select className={inputCls} value={percentualAjuste} onChange={(e) => setPercentualAjuste(e.target.value)}>
+                  {['75', '80', '85', '90', '95', '100', '105', '110'].map((v) => (
+                    <option key={v} value={v}>{v}%</option>
+                  ))}
+                </select>
+              </Field>
 
               <div className="md:col-span-2">
                 <SubCard title="Informações complementares" icon={Info} collapsible>
