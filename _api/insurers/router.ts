@@ -40,11 +40,23 @@ insurersRouter.put('/credenciais/:providerId', requireAdmin, async (req: any, re
 });
 
 insurersRouter.post('/credenciais/:providerId/validar', requireAdmin, async (req: any, res) => {
+  if (req.params.providerId !== 'tokio') {
+    return res.status(400).json({ ok: false, error: `Validação real ainda não implementada para "${req.params.providerId}"` });
+  }
   const creds = await getInsurerCredentials(req.organizationId, req.params.providerId);
   if (!creds) return res.status(400).json({ ok: false, error: 'Nenhuma credencial salva para validar' });
-  // Validação real (chamar /codigoProduto da Tokio Marine) entra na Task 7, quando o
-  // restClient existir. Por enquanto confirma só que há credencial salva.
-  res.json({ ok: true, pendingRealValidation: true });
+  try {
+    // Chama de fato a Tokio Marine (codigoProduto é a consulta mais barata/rápida que
+    // exige credencial válida) — se o corretor/senha estiver errado ou inativo, a API
+    // responde 200 com produtos:null + erros.mensagens, que buscarCodigoProduto agora
+    // detecta e transforma numa exceção com a mensagem real (ver restClient.ts).
+    const config = await getTokioMarineConfig(req.organizationId);
+    const { produtos } = await buscarCodigoProduto(config);
+    if (!produtos?.length) return res.json({ ok: false, error: 'Tokio Marine não retornou nenhum produto para essa credencial.' });
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.json({ ok: false, error: err?.message ?? 'Falha ao validar credenciais na Tokio Marine' });
+  }
 });
 
 insurersRouter.post('/cotar', async (req: any, res) => {
