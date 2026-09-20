@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Car, User as UserIcon, ShieldCheck, Search, Loader2, FileText, AlertCircle,
   HeartPulse, RefreshCw, UserCheck, Info, Wrench, History, ChevronUp, ChevronDown,
@@ -36,9 +36,11 @@ const Card: React.FC<{ title: string; icon: React.ElementType; children: React.R
   );
 };
 
-const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+const Field: React.FC<{ label: string; children: React.ReactNode; required?: boolean }> = ({ label, children, required }) => (
   <div className="space-y-1">
-    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">{label}</label>
+    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">
+      {label}{required && <span className="text-[#C0392B] ml-0.5">*</span>}
+    </label>
     {children}
   </div>
 );
@@ -91,7 +93,19 @@ export const MulticalculoPage: React.FC = () => {
   const [sexoCondutor, setSexoCondutor] = useState(''); // (*)
   const [estadoCivilCondutor, setEstadoCivilCondutor] = useState('');
   const [tempoHabilitacao, setTempoHabilitacao] = useState(''); // (*)
-  const [principalCondutor, setPrincipalCondutor] = useState('');
+  const [principalCondutor, setPrincipalCondutor] = useState('Próprio');
+
+  // Condutor "Próprio" é o próprio segurado — copia os dados automaticamente e mantém
+  // os campos travados enquanto essa opção estiver selecionada, pra não divergir do segurado.
+  const condutorIsProprio = principalCondutor === 'Próprio';
+  useEffect(() => {
+    if (!condutorIsProprio) return;
+    setNomeCondutor(nome);
+    setCpfCondutor(cpfCnpj);
+    setDataNascimentoCondutor(dataNascimento);
+    setSexoCondutor(sexo);
+    setEstadoCivilCondutor(estadoCivilSegurado);
+  }, [condutorIsProprio, nome, cpfCnpj, dataNascimento, sexo, estadoCivilSegurado]);
 
   // Questionário
   const [garagemResidencia, setGaragemResidencia] = useState('');
@@ -237,8 +251,8 @@ export const MulticalculoPage: React.FC = () => {
           {/* Coluna principal */}
           <div className="lg:col-span-2 space-y-5">
             <Card title="Segurado" icon={UserIcon}>
-              <Field label="CPF/CNPJ"><input className={inputCls} value={cpfCnpj} onChange={(e) => setCpfCnpj(formatCpfCnpjProgressive(e.target.value))} placeholder="000.000.000-00" /></Field>
-              <Field label="Nome Completo"><input className={inputCls} value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome do segurado" /></Field>
+              <Field label="CPF/CNPJ" required><input className={inputCls} value={cpfCnpj} onChange={(e) => setCpfCnpj(formatCpfCnpjProgressive(e.target.value))} placeholder="000.000.000-00" /></Field>
+              <Field label="Nome Completo" required><input className={inputCls} value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome do segurado" /></Field>
               <Field label="Data de Nascimento"><input type="date" className={inputCls} value={dataNascimento} onChange={(e) => setDataNascimento(e.target.value)} /></Field>
               <Field label="Sexo">
                 <select className={inputCls} value={sexo} onChange={(e) => setSexo(e.target.value)}>
@@ -251,7 +265,7 @@ export const MulticalculoPage: React.FC = () => {
                   <option value="Divorciado">Divorciado(a)</option><option value="Viuvo">Viúvo(a)</option>
                 </select>
               </Field>
-              <Field label="CEP Residencial"><input className={inputCls} value={cepResidencial} onChange={(e) => setCepResidencial(e.target.value)} placeholder="00000-000" /></Field>
+              <Field label="CEP Residencial" required><input className={inputCls} value={cepResidencial} onChange={(e) => setCepResidencial(e.target.value)} placeholder="00000-000" /></Field>
               <Field label="Telefone"><input className={inputCls} value={telefone} onChange={(e) => setTelefone(formatPhone(e.target.value))} placeholder="(00) 00000-0000" /></Field>
               <Field label="E-mail"><input className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" /></Field>
             </Card>
@@ -262,7 +276,7 @@ export const MulticalculoPage: React.FC = () => {
               <Field label="Ano Fabricação">
                 <input className={inputCls} value={anoFabricacao} onChange={(e) => setAnoFabricacao(e.target.value)} placeholder="2023" />
               </Field>
-              <Field label="Ano Modelo">
+              <Field label="Ano Modelo" required>
                 <div className="flex rounded-lg border border-slate-200 overflow-hidden focus-within:border-gold-deep/60 focus-within:ring-2 focus-within:ring-gold-deep/15 transition-all">
                   <input
                     className="w-full px-3 py-2 bg-white text-slate-800 text-[12px] font-medium outline-none placeholder:text-slate-300"
@@ -278,7 +292,7 @@ export const MulticalculoPage: React.FC = () => {
               <Field label="Zero KM">
                 <select className={inputCls} value={zeroKm ? 'S' : 'N'} onChange={(e) => setZeroKm(e.target.value === 'S')}>{boolOptions}</select>
               </Field>
-              <Field label="Modelo">
+              <Field label="Modelo" required>
                 <select className={inputCls} value={veiculoSelecionado?.idVeiculo ?? ''} onChange={(e) => setVeiculoSelecionado(buscaVeiculo.find((v) => v.idVeiculo === Number(e.target.value)) ?? null)}>
                   <option value="">Busque pelo ano modelo…</option>
                   {buscaVeiculo.map((v) => (
@@ -286,7 +300,7 @@ export const MulticalculoPage: React.FC = () => {
                   ))}
                 </select>
               </Field>
-              <Field label="Valor Referenciado (R$)"><input className={inputCls} value={valorVeiculo} onChange={(e) => setValorVeiculo(e.target.value)} placeholder="0,00" /></Field>
+              <Field label="Valor Referenciado (R$)" required><input className={inputCls} value={valorVeiculo} onChange={(e) => setValorVeiculo(e.target.value)} placeholder="0,00" /></Field>
               <Field label="Combustível"><input className={inputCls} value={veiculoSelecionado?.tipoCombustivel ?? ''} readOnly placeholder="Selecione o modelo" /></Field>
               <Field label="Fipe (%)"><input className={inputCls} value={percentualAjuste} onChange={(e) => setPercentualAjuste(e.target.value)} placeholder="100" /></Field>
             </Card>
@@ -316,22 +330,33 @@ export const MulticalculoPage: React.FC = () => {
             </Card>
 
             <Card title="Condutor" icon={UserCheck}>
-              <Field label="Condutor Principal">
-                <select className={inputCls} value={principalCondutor} onChange={(e) => setPrincipalCondutor(e.target.value)}>
-                  <option value="">Selecione</option><option value="Próprio">Próprio</option><option value="Cônjuge">Cônjuge</option>
-                  <option value="Filho(a)">Filho(a)</option><option value="Terceiro">Terceiro</option>
-                </select>
+              <div className="md:col-span-2 space-y-1">
+                <Field label="Condutor Principal">
+                  <select className={inputCls} value={principalCondutor} onChange={(e) => setPrincipalCondutor(e.target.value)}>
+                    <option value="">Selecione</option><option value="Próprio">Próprio</option><option value="Cônjuge">Cônjuge</option>
+                    <option value="Filho(a)">Filho(a)</option><option value="Terceiro">Terceiro</option>
+                  </select>
+                </Field>
+                {condutorIsProprio && (
+                  <p className="text-[9px] text-slate-400 ml-1">Dados copiados automaticamente do segurado.</p>
+                )}
+              </div>
+              <Field label="CPF">
+                <input className={inputCls} value={cpfCondutor} onChange={(e) => setCpfCondutor(formatCpfCnpjProgressive(e.target.value))} placeholder="000.000.000-00" disabled={condutorIsProprio} />
               </Field>
-              <Field label="CPF"><input className={inputCls} value={cpfCondutor} onChange={(e) => setCpfCondutor(formatCpfCnpjProgressive(e.target.value))} placeholder="000.000.000-00" /></Field>
-              <Field label="Nome Completo"><input className={inputCls} value={nomeCondutor} onChange={(e) => setNomeCondutor(e.target.value)} placeholder="Nome do condutor" /></Field>
-              <Field label="Data de Nascimento"><input type="date" className={inputCls} value={dataNascimentoCondutor} onChange={(e) => setDataNascimentoCondutor(e.target.value)} /></Field>
+              <Field label="Nome Completo">
+                <input className={inputCls} value={nomeCondutor} onChange={(e) => setNomeCondutor(e.target.value)} placeholder="Nome do condutor" disabled={condutorIsProprio} />
+              </Field>
+              <Field label="Data de Nascimento">
+                <input type="date" className={inputCls} value={dataNascimentoCondutor} onChange={(e) => setDataNascimentoCondutor(e.target.value)} disabled={condutorIsProprio} />
+              </Field>
               <Field label="Sexo">
-                <select className={inputCls} value={sexoCondutor} onChange={(e) => setSexoCondutor(e.target.value)}>
+                <select className={inputCls} value={sexoCondutor} onChange={(e) => setSexoCondutor(e.target.value)} disabled={condutorIsProprio}>
                   <option value="">Selecione</option><option value="M">Masculino</option><option value="F">Feminino</option>
                 </select>
               </Field>
               <Field label="Estado Civil">
-                <select className={inputCls} value={estadoCivilCondutor} onChange={(e) => setEstadoCivilCondutor(e.target.value)}>
+                <select className={inputCls} value={estadoCivilCondutor} onChange={(e) => setEstadoCivilCondutor(e.target.value)} disabled={condutorIsProprio}>
                   <option value="">Selecione</option><option value="Solteiro">Solteiro(a)</option><option value="Casado">Casado(a)</option>
                   <option value="Divorciado">Divorciado(a)</option><option value="Viuvo">Viúvo(a)</option>
                 </select>
@@ -399,8 +424,8 @@ export const MulticalculoPage: React.FC = () => {
             </Card>
 
             <Card title="Vigência" icon={History}>
-              <Field label="Início"><input type="date" className={inputCls} value={inicioVigencia} onChange={(e) => setInicioVigencia(e.target.value)} /></Field>
-              <Field label="Fim"><input type="date" className={inputCls} value={fimVigencia} onChange={(e) => setFimVigencia(e.target.value)} /></Field>
+              <Field label="Início" required><input type="date" className={inputCls} value={inicioVigencia} onChange={(e) => setInicioVigencia(e.target.value)} /></Field>
+              <Field label="Fim" required><input type="date" className={inputCls} value={fimVigencia} onChange={(e) => setFimVigencia(e.target.value)} /></Field>
             </Card>
           </div>
 
