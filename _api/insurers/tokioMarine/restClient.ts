@@ -19,7 +19,15 @@ async function postConsulta<T>(config: TokioMarineConfig, method: string, extra:
   });
   const text = await res.text();
   if (!res.ok) throw new Error(`Tokio Marine REST "${method}" retornou ${res.status}: ${text}`);
-  return JSON.parse(text) as T;
+  const parsed = JSON.parse(text) as any;
+  // A Tokio Marine responde 200 OK mesmo em erro de negócio (credencial/corretor
+  // inválido, etc.) — o campo de dados esperado vem null e o motivo real fica em
+  // `erros.mensagens`. Sem essa checagem, quem chama tenta ler o campo null (ex:
+  // produtos.find(...)) e quebra com um TypeError genérico que esconde a causa.
+  if (parsed?.erros?.mensagens?.length) {
+    throw new Error(`Tokio Marine REST "${method}": ${parsed.erros.mensagens.join('; ')}`);
+  }
+  return parsed as T;
 }
 
 export interface VeiculoTokioMarine {
