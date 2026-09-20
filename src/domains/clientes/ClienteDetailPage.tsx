@@ -58,6 +58,56 @@ function fmtPhone(phone: string) {
   return phone;
 }
 
+function calcularIdade(dataNascimento?: string): number | null {
+  if (!dataNascimento) return null;
+  try {
+    const nasc = parseISO(dataNascimento);
+    const hoje = new Date();
+    let idade = hoje.getFullYear() - nasc.getFullYear();
+    const aniversarioEsteAno = new Date(hoje.getFullYear(), nasc.getMonth(), nasc.getDate());
+    if (hoje < aniversarioEsteAno) idade--;
+    return idade;
+  } catch { return null; }
+}
+
+// "X meses e Y dias" até o próximo aniversário — calendário de verdade (meses/dias),
+// não uma divisão simples de dias totais por 30.
+function tempoParaAniversario(dataNascimento?: string): string | null {
+  if (!dataNascimento) return null;
+  try {
+    const nasc = parseISO(dataNascimento);
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    let proximo = new Date(hoje.getFullYear(), nasc.getMonth(), nasc.getDate());
+    if (proximo.getTime() < hoje.getTime()) proximo = new Date(hoje.getFullYear() + 1, nasc.getMonth(), nasc.getDate());
+    if (proximo.getTime() === hoje.getTime()) return 'Hoje! 🎉';
+
+    let meses = (proximo.getFullYear() - hoje.getFullYear()) * 12 + (proximo.getMonth() - hoje.getMonth());
+    let dias = proximo.getDate() - hoje.getDate();
+    if (dias < 0) {
+      meses -= 1;
+      dias += new Date(proximo.getFullYear(), proximo.getMonth(), 0).getDate();
+    }
+    const partes: string[] = [];
+    if (meses > 0) partes.push(`${meses} ${meses === 1 ? 'mês' : 'meses'}`);
+    if (dias > 0) partes.push(`${dias} ${dias === 1 ? 'dia' : 'dias'}`);
+    return partes.length > 0 ? partes.join(' e ') : 'Hoje! 🎉';
+  } catch { return null; }
+}
+
+function diasParaVencer(dataISO?: string): number | null {
+  if (!dataISO) return null;
+  try { return differenceInDays(parseISO(dataISO), new Date()); } catch { return null; }
+}
+
+function fmtDiasVencimento(dataISO?: string): string {
+  const dias = diasParaVencer(dataISO);
+  if (dias === null) return '';
+  if (dias < 0) return `Vencida há ${Math.abs(dias)} dia${Math.abs(dias) === 1 ? '' : 's'}`;
+  if (dias === 0) return 'Vence hoje';
+  return `Faltam ${dias} dia${dias === 1 ? '' : 's'}`;
+}
+
 const HIST_ICON: Record<string, React.ElementType> = {
   criado:         Plus,
   convertido:     ExternalLink,
@@ -85,6 +135,7 @@ export const ClienteDetailPage: React.FC = () => {
   const [deletingCliente, setDeletingCliente] = useState(false);
   const [showApoliceForm, setShowApoliceForm] = useState(false);
   const [editingApolice, setEditingApolice] = useState<Apolice | null>(null);
+  const [viewingApoliceOnly, setViewingApoliceOnly] = useState(false);
   const [users, setUsers] = useState<UserProfile[]>([]);
 
   const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'gestor';
@@ -316,6 +367,8 @@ export const ClienteDetailPage: React.FC = () => {
                 ['CPF', fmtCPF(cliente.cpf)],
                 ['RG', cliente.rg],
                 ['Nascimento', fmtDate(cliente.dataNascimento)],
+                ['Idade', calcularIdade(cliente.dataNascimento) != null ? `${calcularIdade(cliente.dataNascimento)} anos` : undefined],
+                ['Aniversário em', tempoParaAniversario(cliente.dataNascimento)],
                 ['Estado civil', cliente.estadoCivil],
                 ['Profissão', cliente.profissao],
               ]).map(([k,v]) => v ? (
@@ -383,6 +436,7 @@ export const ClienteDetailPage: React.FC = () => {
                   <div>
                     <p className="text-[9px] text-slate-400 uppercase font-black mb-1">Renovação</p>
                     <p className="text-[11px] text-[#B8860B] font-bold">{fmtDate(apoliceAtiva.dataRenovacao)}</p>
+                    <p className="text-[9px] text-slate-400 mt-0.5">{fmtDiasVencimento(apoliceAtiva.dataRenovacao)}</p>
                   </div>
                   <div>
                     <p className="text-[9px] text-slate-400 uppercase font-black mb-1">Prêmio</p>
@@ -571,15 +625,16 @@ export const ClienteDetailPage: React.FC = () => {
               <ApoliceForm
                 isOpen={true}
                 inline={true}
-                onClose={() => { setShowApoliceForm(false); setEditingApolice(null); }}
+                onClose={() => { setShowApoliceForm(false); setEditingApolice(null); setViewingApoliceOnly(false); }}
                 onSave={handleSaveApolice}
                 apolice={editingApolice}
+                initialReadOnly={viewingApoliceOnly}
               />
             ) : (
               <>
                 <div className="flex justify-between items-center">
                   <h2 className="text-[11px] font-black text-slate-600 uppercase tracking-widest">Histórico de Apólices</h2>
-                  <Button variant="primary" icon={Plus} onClick={() => { setEditingApolice(null); setShowApoliceForm(true); }}>
+                  <Button variant="primary" icon={Plus} onClick={() => { setEditingApolice(null); setViewingApoliceOnly(false); setShowApoliceForm(true); }}>
                     Nova Apólice
                   </Button>
                 </div>
@@ -588,14 +643,18 @@ export const ClienteDetailPage: React.FC = () => {
                   <div className="flex flex-col items-center gap-3 py-12 text-center">
                     <FileText className="w-10 h-10 text-slate-200" />
                     <p className="text-slate-500 text-sm">Nenhuma apólice cadastrada</p>
-                    <button onClick={() => setShowApoliceForm(true)} className="text-[#1B4D8F] text-[10px] font-black uppercase hover:text-[#153E73] transition-colors">
+                    <button onClick={() => { setViewingApoliceOnly(false); setShowApoliceForm(true); }} className="text-[#1B4D8F] text-[10px] font-black uppercase hover:text-[#153E73] transition-colors">
                       + Adicionar primeira apólice
                     </button>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {apolices.map(a => (
-                      <div key={a.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-gold-deep/30 transition-colors">
+                      <div
+                        key={a.id}
+                        onClick={() => { setEditingApolice(a); setViewingApoliceOnly(true); setShowApoliceForm(true); }}
+                        className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-gold-deep/30 transition-colors cursor-pointer"
+                      >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
                             <div>
@@ -610,7 +669,7 @@ export const ClienteDetailPage: React.FC = () => {
                             <div>
                               <p className="text-[9px] text-slate-400 uppercase font-black mb-1">Vigência</p>
                               <p className="text-[10px] text-slate-600">{fmtDate(a.inicioVigencia)} → {fmtDate(a.fimVigencia)}</p>
-                              <p className="text-[9px] text-[#B8860B] mt-0.5">Renov: {fmtDate(a.dataRenovacao)}</p>
+                              <p className="text-[9px] text-[#B8860B] mt-0.5">Renov: {fmtDate(a.dataRenovacao)} · {fmtDiasVencimento(a.dataRenovacao)}</p>
                             </div>
                             <div>
                               <p className="text-[9px] text-slate-400 uppercase font-black mb-1">Valor total</p>
@@ -620,14 +679,16 @@ export const ClienteDetailPage: React.FC = () => {
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
                             <button
-                              onClick={() => { setEditingApolice(a); setShowApoliceForm(true); }}
+                              onClick={e => { e.stopPropagation(); setEditingApolice(a); setViewingApoliceOnly(false); setShowApoliceForm(true); }}
                               className="p-1.5 text-slate-300 hover:text-gold-deep transition-colors"
+                              title="Editar apólice"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => handleDeleteApolice(a.id)}
+                              onClick={e => { e.stopPropagation(); handleDeleteApolice(a.id); }}
                               className="p-1.5 text-slate-300 hover:text-[#C0392B] transition-colors"
+                              title="Excluir apólice"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Loader2, FileText, Upload, CheckCircle2, X, ExternalLink, Paperclip, Trash2, ArrowLeft } from 'lucide-react';
+import { Save, Loader2, FileText, Upload, CheckCircle2, X, ExternalLink, Paperclip, Trash2, ArrowLeft, Pencil } from 'lucide-react';
 import { Apolice, ApoliceAnexo, ApoliceAnexoTipo, ApoliceStatus, ProdutoSeguro, PRODUTOS_SEGURO } from '../../types';
 import { SEGURADORAS } from '../../lib/seguradoras';
 import { Modal } from '../../components/Modal';
@@ -16,9 +16,13 @@ interface ApoliceFormProps {
   onSave: (data: Omit<Apolice, 'id' | 'clienteId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   apolice?: Apolice | null;
   inline?: boolean;
+  // Abre em modo visualização (todos os campos travados) em vez de edição direta —
+  // usado quando o usuário clica na apólice na lista pra só consultar os dados;
+  // o botão "Editar" dentro do próprio formulário destrava pra edição.
+  initialReadOnly?: boolean;
 }
 
-const inputCls = "w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 text-[11px] font-medium focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 transition-all placeholder:text-slate-300";
+const inputCls = "w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 text-[11px] font-medium focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 transition-all placeholder:text-slate-300 disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed disabled:border-slate-200";
 
 const Field = ({ label, children, required }: { label: string; children: React.ReactNode; required?: boolean }) => (
   <div className="space-y-1">
@@ -87,8 +91,9 @@ const ANEXO_TIPO_LABEL: Record<ApoliceAnexoTipo, string> = {
   outros: 'Outros',
 };
 
-export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSave, apolice, inline = false }) => {
+export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSave, apolice, inline = false, initialReadOnly = false }) => {
   const isEditing = !!apolice;
+  const [readOnly, setReadOnly] = useState(initialReadOnly);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [form, setForm] = useState({
@@ -157,6 +162,8 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
     setDocError('');
     setAnexoError('');
     setSaveError('');
+    setReadOnly(initialReadOnly);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apolice, isOpen]);
 
   useEffect(() => {
@@ -310,6 +317,7 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
     <form onSubmit={handleSubmit} className="p-6 space-y-5 bg-slate-50">
 
           {/* ── Importar PDF ────────────────────────────────────────────── */}
+          {(!readOnly || docMeta) && (
           <Card title="Importar Apólice (PDF)" icon={Upload}>
             {docMeta ? (
               <div className="flex items-center gap-2 p-3 bg-[#E4F5EA] border border-[#1F8A4C]/20 rounded-xl">
@@ -318,9 +326,11 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
                 <a href={docMeta.url} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="w-3.5 h-3.5 text-[#1F8A4C] hover:opacity-80 transition-colors" />
                 </a>
-                <button type="button" onClick={() => { setDocMeta(null); setDocFile(null); setOcrData(null); }} className="text-slate-400 hover:text-[#C0392B] transition-colors">
-                  <X className="w-3.5 h-3.5" />
-                </button>
+                {!readOnly && (
+                  <button type="button" onClick={() => { setDocMeta(null); setDocFile(null); setOcrData(null); }} className="text-slate-400 hover:text-[#C0392B] transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             ) : (
               <div
@@ -350,27 +360,28 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
             )}
             {docError && <p className="text-[10px] text-[#C0392B] font-medium mt-2">{docError}</p>}
           </Card>
+          )}
 
           {/* ── Dados da Apólice ────────────────────────────────────────── */}
           <Card title="Dados da Apólice" icon={FileText}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Field label="Produto" required>
-                <select className={inputCls} value={form.produto} onChange={e => set('produto', e.target.value)} required>
+                <select className={inputCls} value={form.produto} onChange={e => set('produto', e.target.value)} required disabled={readOnly}>
                   <option value="">Selecionar...</option>
                   {PRODUTOS_SEGURO.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </Field>
               <Field label="Seguradora" required>
-                <select className={inputCls} value={form.seguradoraId} onChange={e => set('seguradoraId', e.target.value)} required>
+                <select className={inputCls} value={form.seguradoraId} onChange={e => set('seguradoraId', e.target.value)} required disabled={readOnly}>
                   <option value="">Selecionar...</option>
                   {SEGURADORAS.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
                 </select>
               </Field>
               <Field label="Número da apólice">
-                <input className={inputCls} value={form.numeroApolice} onChange={e => set('numeroApolice', e.target.value)} placeholder="000.000.000-0" />
+                <input className={inputCls} value={form.numeroApolice} onChange={e => set('numeroApolice', e.target.value)} placeholder="000.000.000-0" disabled={readOnly} />
               </Field>
               <Field label="Status">
-                <select className={inputCls} value={form.status} onChange={e => set('status', e.target.value as ApoliceStatus)}>
+                <select className={inputCls} value={form.status} onChange={e => set('status', e.target.value as ApoliceStatus)} disabled={readOnly}>
                   <option value="ativo">Ativo</option>
                   <option value="em_renovacao">Em renovação</option>
                   <option value="expirado">Expirado</option>
@@ -378,13 +389,13 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
                 </select>
               </Field>
               <Field label="Início de vigência">
-                <input type="date" className={inputCls} value={form.inicioVigencia} onChange={e => set('inicioVigencia', e.target.value)} />
+                <input type="date" className={inputCls} value={form.inicioVigencia} onChange={e => set('inicioVigencia', e.target.value)} disabled={readOnly} />
               </Field>
               <Field label="Fim de vigência" required>
-                <input type="date" className={inputCls} value={form.fimVigencia} onChange={e => handleFimVigencia(e.target.value)} required />
+                <input type="date" className={inputCls} value={form.fimVigencia} onChange={e => handleFimVigencia(e.target.value)} required disabled={readOnly} />
               </Field>
               <Field label="Corretora origem">
-                <input className={inputCls} value={form.corretoraOrigem} onChange={e => set('corretoraOrigem', e.target.value)} placeholder="Nome da corretora" />
+                <input className={inputCls} value={form.corretoraOrigem} onChange={e => set('corretoraOrigem', e.target.value)} placeholder="Nome da corretora" disabled={readOnly} />
               </Field>
             </div>
           </Card>
@@ -396,14 +407,14 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]">R$</span>
                   <input className={cn(inputCls, 'pl-8')} value={form.premioLiquido}
-                    onChange={e => set('premioLiquido', fmtCurrency(e.target.value))} placeholder="0,00" />
+                    onChange={e => set('premioLiquido', fmtCurrency(e.target.value))} placeholder="0,00" disabled={readOnly} />
                 </div>
               </Field>
               <Field label="Valor total">
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]">R$</span>
                   <input className={cn(inputCls, 'pl-8')} value={form.valorTotal}
-                    onChange={e => set('valorTotal', fmtCurrency(e.target.value))} placeholder="0,00" />
+                    onChange={e => set('valorTotal', fmtCurrency(e.target.value))} placeholder="0,00" disabled={readOnly} />
                 </div>
               </Field>
               <Field label="Comissão (%)*">
@@ -417,6 +428,7 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
                     }}
                     placeholder="10,00"
                     required
+                    disabled={readOnly}
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]">%</span>
                 </div>
@@ -435,6 +447,7 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
           </Card>
 
           {/* ── Documentos adicionais ────────────────────────────────────── */}
+          {(!readOnly || anexos.length > 0) && (
           <Card title="Documentos Adicionais" icon={Paperclip}>
             <div className="space-y-2">
               {/* Existing attachments */}
@@ -449,15 +462,18 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
                       <a href={a.url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-slate-400 hover:text-gold-deep transition-colors">
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
-                      <button type="button" onClick={() => removeAnexo(i)} className="shrink-0 text-slate-300 hover:text-[#C0392B] transition-colors">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {!readOnly && (
+                        <button type="button" onClick={() => removeAnexo(i)} className="shrink-0 text-slate-300 hover:text-[#C0392B] transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
 
               {/* Add attachment row */}
+              {!readOnly && (
               <div className="flex items-center gap-2">
                 <select
                   className={cn(inputCls, 'flex-1')}
@@ -486,17 +502,21 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
                   {uploadingAnexo ? 'Enviando...' : 'Anexar'}
                 </button>
               </div>
+              )}
               {anexoError && <p className="text-[10px] text-[#C0392B]">{anexoError}</p>}
             </div>
           </Card>
+          )}
 
           {/* ── Observações ──────────────────────────────────────────────── */}
+          {(!readOnly || form.observacoes) && (
           <Card>
             <Field label="Observações">
               <textarea className={cn(inputCls, 'resize-none h-16')} value={form.observacoes}
-                onChange={e => set('observacoes', e.target.value)} placeholder="Observações sobre esta apólice..." />
+                onChange={e => set('observacoes', e.target.value)} placeholder="Observações sobre esta apólice..." disabled={readOnly} />
             </Field>
           </Card>
+          )}
 
           {saveError && (
             <div className="px-4 py-2.5 bg-[#FDE4E4] border border-[#C0392B]/20 rounded-xl">
@@ -505,12 +525,25 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
           )}
 
           <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-200">
-            <Button type="button" variant="ghost" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="primary" icon={Save} loading={saving} disabled={!canSubmit}>
-              {isEditing ? 'Salvar' : 'Criar apólice'}
-            </Button>
+            {readOnly ? (
+              <>
+                <Button type="button" variant="ghost" onClick={onClose}>
+                  Fechar
+                </Button>
+                <Button type="button" variant="primary" icon={Pencil} onClick={() => setReadOnly(false)}>
+                  Editar
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button type="button" variant="ghost" onClick={onClose}>
+                  Cancelar
+                </Button>
+                <Button type="submit" variant="primary" icon={Save} loading={saving} disabled={!canSubmit}>
+                  {isEditing ? 'Salvar' : 'Criar apólice'}
+                </Button>
+              </>
+            )}
           </div>
         </form>
   );
@@ -529,13 +562,13 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
             </button>
             <span className="text-slate-200">|</span>
             <h2 className="text-[11px] font-black text-slate-900 uppercase tracking-widest">
-              {isEditing ? 'Editar Apólice' : 'Nova Apólice'}
+              {readOnly ? 'Apólice' : isEditing ? 'Editar Apólice' : 'Nova Apólice'}
             </h2>
           </div>
           {formBody}
         </div>
       ) : (
-        <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Editar Apólice' : 'Nova Apólice'} maxWidth="max-w-2xl">
+        <Modal isOpen={isOpen} onClose={onClose} title={readOnly ? 'Apólice' : isEditing ? 'Editar Apólice' : 'Nova Apólice'} maxWidth="max-w-2xl">
           {formBody}
         </Modal>
       )}
