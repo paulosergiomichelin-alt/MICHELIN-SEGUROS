@@ -1,7 +1,7 @@
 import { fsGet, fsQueryFull, fsUpdate } from './pgData.js';
 import { decrypt } from './emailEncryption.js';
 import {
-  setEmail, setSyncState, getSyncState, cacheStats,
+  setEmail, setSyncState, getSyncState, cacheStats, CachedEmail,
 } from './emailCache.js';
 import { emitGlobal } from './socketRegistry.js';
 import {
@@ -48,9 +48,10 @@ function decryptAccount(account: Record<string, any>): GmailAccount | MicrosoftA
 async function syncGmailAccount(
   account: GmailAccount,
   extraFolder?: string,
-): Promise<{ imported: number; errors: string[] }> {
+): Promise<{ imported: number; errors: string[]; newInboxMessages: CachedEmail[] }> {
   let imported = 0;
   const errors: string[] = [];
+  const newInboxMessages: CachedEmail[] = [];
 
   for (const folder of foldersToSync(extraFolder)) {
     try {
@@ -59,8 +60,9 @@ async function syncGmailAccount(
         try {
           const full = await gmailGetMessage(account, msgRef.id, 'full');
           const cached = parseGmailMessage(full, account.id);
-          setEmail(cached);
+          const isNew = setEmail(cached);
           imported++;
+          if (isNew && cached.folder === 'inbox') newInboxMessages.push(cached);
         } catch (err: any) {
           errors.push(`gmail msg ${msgRef.id}: ${err.message}`);
         }
@@ -70,7 +72,7 @@ async function syncGmailAccount(
     }
   }
 
-  return { imported, errors };
+  return { imported, errors, newInboxMessages };
 }
 
 // ── Sync single Microsoft account ────────────────────────────────────────────
@@ -78,9 +80,10 @@ async function syncGmailAccount(
 async function syncMicrosoftAccount(
   account: MicrosoftAccount,
   extraFolder?: string,
-): Promise<{ imported: number; errors: string[] }> {
+): Promise<{ imported: number; errors: string[]; newInboxMessages: CachedEmail[] }> {
   let imported = 0;
   const errors: string[] = [];
+  const newInboxMessages: CachedEmail[] = [];
 
   for (const folder of foldersToSync(extraFolder)) {
     try {
@@ -88,8 +91,9 @@ async function syncMicrosoftAccount(
       for (const msg of messages) {
         try {
           const cached = parseMicrosoftMessage(msg, account.id, folder);
-          setEmail(cached);
+          const isNew = setEmail(cached);
           imported++;
+          if (isNew && cached.folder === 'inbox') newInboxMessages.push(cached);
         } catch (err: any) {
           errors.push(`ms msg ${msg.id}: ${err.message}`);
         }
@@ -99,7 +103,7 @@ async function syncMicrosoftAccount(
     }
   }
 
-  return { imported, errors };
+  return { imported, errors, newInboxMessages };
 }
 
 // ── Sync single IMAP account ────────────────────────────────────────────────
@@ -107,9 +111,10 @@ async function syncMicrosoftAccount(
 async function syncImapAccount(
   account: ImapAccount,
   extraFolder?: string,
-): Promise<{ imported: number; errors: string[] }> {
+): Promise<{ imported: number; errors: string[]; newInboxMessages: CachedEmail[] }> {
   let imported = 0;
   const errors: string[] = [];
+  const newInboxMessages: CachedEmail[] = [];
 
   // Uma conexão IMAP por PASTA (3 ou 4 por ciclo), não uma por mensagem: o padrão
   // anterior (listMessages + getMessage por uid) abria ~150 conexões completas a
@@ -125,8 +130,9 @@ async function syncImapAccount(
         }
         try {
           const cached = parseImapMessage(item.parsed, account.id, folder);
-          setEmail(cached);
+          const isNew = setEmail(cached);
           imported++;
+          if (isNew && cached.folder === 'inbox') newInboxMessages.push(cached);
         } catch (err: any) {
           errors.push(`imap msg ${item.uid} em ${folder}: ${err.message}`);
         }
@@ -136,7 +142,7 @@ async function syncImapAccount(
     }
   }
 
-  return { imported, errors };
+  return { imported, errors, newInboxMessages };
 }
 
 // ── Public: sync single account ───────────────────────────────────────────────
@@ -158,10 +164,14 @@ export async function syncAccount(
   if (syncState.syncing) {
     return { imported: 0, errors: [`Account ${accountId} already syncing`] };
   }
+  // Na primeira sincronização da conta (logo após conectar), TODAS as mensagens
+  // da inbox entram como "novas" no cache vazio — sem essa checagem, conectar uma
+  // conta cheia dispararia dezenas de toasts de e-mails antigos de uma vez.
+  const isFirstSync = syncState.lastSync === 0;
 
   setSyncState(accountId, { syncing: true });
 
-  let result = { imported: 0, errors: [] as string[] };
+  let result: { imported: number; errors: string[]; newInboxMessages?: CachedEmail[] } = { imported: 0, errors: [] };
 
   try {
     const account = decryptAccount(rawAccount);
@@ -181,6 +191,23 @@ export async function syncAccount(
 
     // Persist lastSync to Firestore
     await fsUpdate('email_accounts', accountId, { lastSync }).catch(() => {});
+
+    // Um evento 'new' por mensagem nova que caiu na inbox — é o que o frontend
+    // usa pra atualizar a lista em tempo real e mostrar o toast de notificação
+    // (ver EmailContext.tsx). Sem isso, o sync periódico rodava a cada 5 min só
+    // por baixo dos panos e nada aparecia pro usuário sem um clique manual em
+    // "Sincronizar".
+    if (!isFirstSync) {
+      for (const message of result.newInboxMessages ?? []) {
+        emitGlobal('email:update', {
+          type: 'new',
+          userId: rawAccount.userId,
+          accountId,
+          message,
+          folder: 'inbox',
+        });
+      }
+    }
 
     // Emit sync complete event (frontend filters by userId in payload)
     emitGlobal('email:update', {

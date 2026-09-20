@@ -47,7 +47,11 @@ function getOrCreateStore(accountId: string): AccountStore {
   return accountStores.get(accountId)!;
 }
 
-export function setEmail(email: CachedEmail): void {
+// Retorna true quando a mensagem ainda não existia no cache — usado pelo sync
+// periódico (emailSync.ts) pra saber quais mensagens são de fato novas e avisar
+// o frontend (toast + contador), em vez de reprocessar as ~50 mais recentes a
+// cada ciclo como se todas fossem novidade.
+export function setEmail(email: CachedEmail): boolean {
   const store = getOrCreateStore(email.accountId);
 
   // Remove from old folder index if folder changed
@@ -68,6 +72,8 @@ export function setEmail(email: CachedEmail): void {
     folderIds.push(email.id);
     store.folderIndex.set(email.folder, folderIds);
   }
+
+  return !existing;
 }
 
 export function getEmail(accountId: string, id: string): CachedEmail | undefined {
