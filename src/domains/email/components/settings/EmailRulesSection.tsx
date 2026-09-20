@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FolderPlus, Plus, Trash2, Loader2, Wand2, ShieldCheck, CheckCircle2, AlertCircle, PlayCircle } from 'lucide-react';
 import { cn, generateId } from '../../../../lib/utils';
 import { useEmail } from '../../../../contexts/EmailContext';
+import { usePermissions } from '../../../../contexts/PermissionsContext';
 import { useEmailFolders } from '../../hooks/useEmailFolders';
 import { EmailService } from '../../../../services/EmailService';
 import { DataService } from '../../../../services/DataService';
@@ -49,6 +50,7 @@ const inputCls = "w-full px-3 py-2 bg-white border border-slate-200 rounded-lg t
 
 export const EmailRulesSection: React.FC = () => {
   const { state } = useEmail();
+  const { userProfile } = usePermissions();
   const { selectedAccountId, accounts } = state;
   const { folders, refetch: refetchFolders } = useEmailFolders(selectedAccountId);
 
@@ -107,6 +109,7 @@ export const EmailRulesSection: React.FC = () => {
         if (!jaTemRegra) {
           await dataApiClient.create('email_rules', {
             id: generateId(),
+            organizationId: userProfile?.organizationId,
             accountId: selectedAccountId,
             nome: seguradora.nome,
             matchTipo: 'dominio',
@@ -169,6 +172,7 @@ export const EmailRulesSection: React.FC = () => {
       const pasta = folders.find(f => f.id === form.pastaDestinoId);
       await dataApiClient.create('email_rules', {
         id: generateId(),
+        organizationId: userProfile?.organizationId,
         accountId: selectedAccountId,
         nome: form.nome.trim(),
         matchTipo: form.matchTipo,
