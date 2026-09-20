@@ -23,6 +23,7 @@ import { AgentSettings } from './AgentSettings';
 import { SessionsPage } from '../whatsapp/SessionsPage';
 import { InsurerSettings } from './InsurerSettings';
 import { InsurerLogosSettings } from './InsurerLogosSettings';
+import { PacotesCoberturaSettings } from './PacotesCoberturaSettings';
 
 interface SettingsProps {
   canManageUsers?: boolean;
@@ -650,7 +651,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
               activeSubTab === 'seguradoras' ? "text-[#1B4D8F] border-[#1B4D8F]" : "text-slate-400 hover:text-slate-700 border-transparent"
             )}
           >
-            <Shield className="w-3.5 h-3.5 flex-shrink-0" /> Seguradoras
+            <Shield className="w-3.5 h-3.5 flex-shrink-0" /> Multicálculo
           </button>
         )}
 
@@ -1105,6 +1106,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
 
         {activeSubTab === 'seguradoras' && canManageUsers && (
           <motion.div key="seguradoras" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
+            <PacotesCoberturaSettings />
             <InsurerLogosSettings />
             <InsurerSettings />
           </motion.div>

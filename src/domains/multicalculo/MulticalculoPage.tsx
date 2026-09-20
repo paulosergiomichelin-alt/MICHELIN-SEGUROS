@@ -8,6 +8,19 @@ import { formatCpfCnpjProgressive, detectTipoPessoa, formatPhone } from '../../l
 import { getSeguradora, SEGURADORAS } from '../../lib/seguradoras';
 import { InsurerService, CotacaoInput, CotacaoResultado, VeiculoTokioMarine } from '../../services/InsurerService';
 import { PDFViewer } from '../../components/PDFViewer';
+import { dataApiClient } from '../../lib/dataApiClient';
+import { PacotesCobertura, ENTITY_ID_PACOTES } from '../settings/PacotesCoberturaSettings';
+
+function hojeISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function somaUmAno(iso: string) {
+  if (!iso) return '';
+  const [ano, mes, dia] = iso.split('-').map(Number);
+  const d = new Date(ano + 1, mes - 1, dia);
+  return d.toISOString().slice(0, 10);
+}
 
 // Campos marcados com (*) no comentário existem no formulário só pra bater com o
 // layout do Agger — a API da Tokio Marine não tem esse dado no `cotar` (confirmado
@@ -141,9 +154,14 @@ export const MulticalculoPage: React.FC = () => {
   const [carroReserva, setCarroReserva] = useState('Básico 7 dias'); // (*)
   const [carroReservaAr, setCarroReservaAr] = useState('N'); // (*)
 
-  // Vigência / Renovação
-  const [inicioVigencia, setInicioVigencia] = useState('');
-  const [fimVigencia, setFimVigencia] = useState('');
+  // Vigência / Renovação — início pré-preenchido com hoje, fim com a mesma data no ano
+  // seguinte; toda vez que o início muda, o fim é recalculado automaticamente.
+  const [inicioVigencia, setInicioVigenciaState] = useState(hojeISO());
+  const [fimVigencia, setFimVigencia] = useState(somaUmAno(hojeISO()));
+  const setInicioVigencia = (v: string) => {
+    setInicioVigenciaState(v);
+    setFimVigencia(somaUmAno(v));
+  };
   const [tipoSeguro, setTipoSeguro] = useState<'1' | '6' | '7'>('1');
   const [codigoInterno, setCodigoInterno] = useState(''); // (*)
   const [quantidadeSinistros, setQuantidadeSinistros] = useState(''); // (*)
@@ -155,6 +173,31 @@ export const MulticalculoPage: React.FC = () => {
   const [resultados, setResultados] = useState<CotacaoResultado[] | null>(null);
   const [erroGeral, setErroGeral] = useState('');
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+
+  // Pacotes de cobertura pré-cadastrados em Configurações > Multicálculo — ao trocar o
+  // pacote abaixo, aplica de uma vez Tipo de Cobertura, Franquia, Modalidade, RCF/APP e Serviços.
+  const [pacotesConfig, setPacotesConfig] = useState<PacotesCobertura | null>(null);
+  useEffect(() => {
+    dataApiClient.get('settings', ENTITY_ID_PACOTES).then((row: any) => setPacotesConfig(row ?? null)).catch(() => {});
+  }, []);
+
+  const handlePacoteChange = (nome: string) => {
+    setPacoteCoberturas(nome);
+    const preset = pacotesConfig?.[nome];
+    if (!preset) return;
+    setCodigoCobertura(preset.codigoCobertura);
+    setCodigoFranquia(preset.codigoFranquia);
+    setPercentualFranquia(preset.percentualFranquia);
+    setTipoModalidade(preset.tipoModalidade);
+    setDanosMateriais(preset.danosMateriais);
+    setDanosCorporais(preset.danosCorporais);
+    setDanosMorais(preset.danosMorais);
+    setAppMorteInvalidez(preset.appMorteInvalidez);
+    setTipoAssistencia(preset.tipoAssistencia);
+    setVidros(preset.vidros);
+    setCarroReserva(preset.carroReserva);
+    setCarroReservaAr(preset.carroReservaAr);
+  };
 
   const tipoPessoa = detectTipoPessoa(cpfCnpj.replace(/\D/g, ''));
   const isRenovacao = tipoSeguro === '6' || tipoSeguro === '7';
@@ -448,7 +491,7 @@ export const MulticalculoPage: React.FC = () => {
             >
               <div className="md:col-span-2">
                 <Field label="Pacote de Coberturas">
-                  <select className={inputCls} value={pacoteCoberturas} onChange={(e) => setPacoteCoberturas(e.target.value)}>
+                  <select className={inputCls} value={pacoteCoberturas} onChange={(e) => handlePacoteChange(e.target.value)}>
                     <option value="Bronze">Bronze</option><option value="Prata">Prata</option><option value="Ouro">Ouro</option><option value="Diamante">Diamante</option>
                   </select>
                 </Field>
