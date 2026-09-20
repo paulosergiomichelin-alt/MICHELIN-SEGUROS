@@ -9,6 +9,7 @@ import { StorageService } from '../../services/StorageService';
 import { Button, Card } from '../../components/ui';
 import { cn } from '../../lib/utils';
 import { parseISO } from 'date-fns';
+import { authHeader } from '../../lib/dataApiClient';
 
 interface ApoliceFormProps {
   isOpen: boolean;
@@ -221,7 +222,7 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
     setDocError('');
     setReimporting(true);
     try {
-      const resp = await fetch(docMeta.url);
+      const resp = await fetch(`/api/documents/fetch?url=${encodeURIComponent(docMeta.url)}`, { headers: await authHeader() });
       if (!resp.ok) throw new Error('download failed');
       const blob = await resp.blob();
       const file = new File([blob], docMeta.name, { type: blob.type || 'application/pdf' });

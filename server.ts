@@ -363,6 +363,11 @@ async function startServer() {
   app.get('/api/cnpj/:cnpj', requireAuthForCnpj, cnpjLookupHandler);
   log.info('Rota de busca de CNPJ registrada');
 
+  // ── Proxy de download de documentos (Firebase Storage não tem CORS liberado) ──
+  const { default: documentsFetchHandler } = await import('./_api/documents/fetch.js');
+  app.get('/api/documents/fetch', requireAuthForCnpj, documentsFetchHandler);
+  log.info('Rota de proxy de documentos registrada');
+
   // ── Multicálculo / Seguradoras ────────────────────────────────────────────────
   const { insurersRouter } = await import('./_api/insurers/router.js');
   app.use('/api/insurers', insurersRouter);
