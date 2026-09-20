@@ -81,11 +81,31 @@ export const Sidebar = React.memo(({
   // A sidebar é sempre escura (independente do tema do app — ver .sidebar-main
   // em index.css), então sempre usa a logo de fundo escuro, nunca a variante clara.
   const [logoError, setLogoError] = React.useState(false);
-  const logoUrl = visualConfig.logoDark || 'https://cdn-icons-png.flaticon.com/512/3755/3755250.png';
+  const [logoRetry, setLogoRetry] = React.useState(0);
+  const baseLogoUrl = visualConfig.logoDark || 'https://cdn-icons-png.flaticon.com/512/3755/3755250.png';
+  // O Firebase Storage às vezes falha o carregamento da imagem de forma passageira
+  // (blip de rede) — em vez de desistir na primeira falha e ficar preso mostrando
+  // só a inicial, tenta de novo algumas vezes com um parâmetro que força o
+  // navegador a refazer a requisição em vez de reusar o erro em cache.
+  const MAX_LOGO_RETRIES = 3;
+  const logoUrl = logoRetry === 0 ? baseLogoUrl : `${baseLogoUrl}${baseLogoUrl.includes('?') ? '&' : '?'}retry=${logoRetry}`;
 
   React.useEffect(() => {
     setLogoError(false);
-  }, [logoUrl]);
+    setLogoRetry(0);
+  }, [baseLogoUrl]);
+
+  const handleLogoError = () => {
+    setLogoRetry(prev => {
+      if (prev >= MAX_LOGO_RETRIES) {
+        setLogoError(true);
+        return prev;
+      }
+      const attempt = prev + 1;
+      setTimeout(() => setLogoRetry(attempt), 800 * attempt);
+      return prev;
+    });
+  };
 
   return (
     <aside
@@ -113,7 +133,7 @@ export const Sidebar = React.memo(({
                 "object-contain w-full h-full transition-all duration-300 scale-110",
                 !isSidebarOpen && "scale-150 translate-x-[-2px]"
               )}
-              onError={() => setLogoError(true)}
+              onError={handleLogoError}
             />
           ) : (
             <div className="w-16 h-16 bg-gold-deep/20 rounded-2xl flex items-center justify-center text-gold-deep font-black text-xl mb-4">
