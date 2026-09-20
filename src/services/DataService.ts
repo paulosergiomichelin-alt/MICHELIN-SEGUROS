@@ -116,6 +116,8 @@ export class DataService {
     'email_accounts': 'email_accounts',
     'email_account': 'email_accounts',
     'email_settings': 'email_settings',
+    'email_rules': 'email_rules',
+    'email_rule': 'email_rules',
     'cotacoes': 'cotacoes',
     'cotacao': 'cotacoes',
   };
