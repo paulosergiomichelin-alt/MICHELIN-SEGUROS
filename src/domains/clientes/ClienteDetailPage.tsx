@@ -70,8 +70,26 @@ function calcularIdade(dataNascimento?: string): number | null {
   } catch { return null; }
 }
 
-// "X meses e Y dias" até o próximo aniversário — calendário de verdade (meses/dias),
-// não uma divisão simples de dias totais por 30.
+// Diferença em meses/dias de calendário entre duas datas (assume `de` <= `para`) —
+// não é uma divisão simples de dias totais por 30, respeita o tamanho real dos meses.
+function diferencaMesesDias(de: Date, para: Date): { meses: number; dias: number } {
+  let meses = (para.getFullYear() - de.getFullYear()) * 12 + (para.getMonth() - de.getMonth());
+  let dias = para.getDate() - de.getDate();
+  if (dias < 0) {
+    meses -= 1;
+    dias += new Date(para.getFullYear(), para.getMonth(), 0).getDate();
+  }
+  return { meses: Math.max(0, meses), dias: Math.max(0, dias) };
+}
+
+function fmtMesesDias(meses: number, dias: number): string {
+  const partes: string[] = [];
+  if (meses > 0) partes.push(`${meses} ${meses === 1 ? 'mês' : 'meses'}`);
+  if (dias > 0) partes.push(`${dias} ${dias === 1 ? 'dia' : 'dias'}`);
+  return partes.length > 0 ? partes.join(' e ') : 'Hoje';
+}
+
+// "X meses e Y dias" até o próximo aniversário.
 function tempoParaAniversario(dataNascimento?: string): string | null {
   if (!dataNascimento) return null;
   try {
@@ -81,17 +99,8 @@ function tempoParaAniversario(dataNascimento?: string): string | null {
     let proximo = new Date(hoje.getFullYear(), nasc.getMonth(), nasc.getDate());
     if (proximo.getTime() < hoje.getTime()) proximo = new Date(hoje.getFullYear() + 1, nasc.getMonth(), nasc.getDate());
     if (proximo.getTime() === hoje.getTime()) return 'Hoje! 🎉';
-
-    let meses = (proximo.getFullYear() - hoje.getFullYear()) * 12 + (proximo.getMonth() - hoje.getMonth());
-    let dias = proximo.getDate() - hoje.getDate();
-    if (dias < 0) {
-      meses -= 1;
-      dias += new Date(proximo.getFullYear(), proximo.getMonth(), 0).getDate();
-    }
-    const partes: string[] = [];
-    if (meses > 0) partes.push(`${meses} ${meses === 1 ? 'mês' : 'meses'}`);
-    if (dias > 0) partes.push(`${dias} ${dias === 1 ? 'dia' : 'dias'}`);
-    return partes.length > 0 ? partes.join(' e ') : 'Hoje! 🎉';
+    const { meses, dias } = diferencaMesesDias(hoje, proximo);
+    return meses === 0 && dias === 0 ? 'Hoje! 🎉' : fmtMesesDias(meses, dias);
   } catch { return null; }
 }
 
@@ -100,12 +109,24 @@ function diasParaVencer(dataISO?: string): number | null {
   try { return differenceInDays(parseISO(dataISO), new Date()); } catch { return null; }
 }
 
+// "Faltam X meses e Y dias" / "Vencida há X meses e Y dias" — mesmo formato de
+// calendário usado no aniversário, em vez de só a contagem de dias corridos.
 function fmtDiasVencimento(dataISO?: string): string {
+  if (!dataISO) return '';
   const dias = diasParaVencer(dataISO);
   if (dias === null) return '';
-  if (dias < 0) return `Vencida há ${Math.abs(dias)} dia${Math.abs(dias) === 1 ? '' : 's'}`;
   if (dias === 0) return 'Vence hoje';
-  return `Faltam ${dias} dia${dias === 1 ? '' : 's'}`;
+  try {
+    const alvo = parseISO(dataISO);
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    if (dias > 0) {
+      const { meses, dias: d } = diferencaMesesDias(hoje, alvo);
+      return `Faltam ${fmtMesesDias(meses, d)}`;
+    }
+    const { meses, dias: d } = diferencaMesesDias(alvo, hoje);
+    return `Vencida há ${fmtMesesDias(meses, d)}`;
+  } catch { return ''; }
 }
 
 const HIST_ICON: Record<string, React.ElementType> = {
@@ -423,7 +444,12 @@ export const ClienteDetailPage: React.FC = () => {
 
             {/* Seguro atual */}
             {apoliceAtiva && (
-              <Card title="Apólice Ativa" icon={FileText} className="md:col-span-2 border-gold-deep/20">
+              <Card
+                title="Apólice Ativa"
+                icon={FileText}
+                className="md:col-span-2 border-gold-deep/20"
+                onClick={() => { setEditingApolice(apoliceAtiva); setViewingApoliceOnly(true); setShowApoliceForm(true); setTab('apolices'); }}
+              >
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <p className="text-[9px] text-slate-400 uppercase font-black mb-1">Produto</p>

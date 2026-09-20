@@ -7,11 +7,15 @@ export interface CardProps {
   action?: React.ReactNode;
   className?: string;
   children: React.ReactNode;
+  onClick?: () => void;
 }
 
-export const Card: React.FC<CardProps> = ({ title, icon: Icon, action, className, children }) => {
+export const Card: React.FC<CardProps> = ({ title, icon: Icon, action, className, children, onClick }) => {
   return (
-    <div className={cn('bg-white rounded-2xl border border-slate-200 p-5 shadow-sm', className)}>
+    <div
+      onClick={onClick}
+      className={cn('bg-white rounded-2xl border border-slate-200 p-5 shadow-sm', onClick && 'cursor-pointer hover:border-gold-deep/40 transition-colors', className)}
+    >
       {(title || action) && (
         <div className="flex items-center justify-between mb-4">
           {title && (
