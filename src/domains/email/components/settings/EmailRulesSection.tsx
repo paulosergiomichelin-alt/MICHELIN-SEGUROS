@@ -79,6 +79,9 @@ export const EmailRulesSection: React.FC = () => {
   }, [selectedAccountId]);
 
   const customFolders = folders.filter(f => !SYSTEM_FOLDER_IDS.has(f.id));
+  // Gmail não tem conceito de subpasta real da Inbox (labels são sempre raiz nesse
+  // provedor) — Outlook e IMAP suportam de verdade. Só pra avisar, não bloqueia nada.
+  const isGmail = accounts.find(a => a.id === selectedAccountId)?.provider === 'gmail';
 
   const handleBulkCreate = async () => {
     if (!selectedAccountId) return;
@@ -91,8 +94,8 @@ export const EmailRulesSection: React.FC = () => {
       for (const seguradora of SEGURADORAS) {
         let folder = currentFolders.find(f => f.name.toLowerCase() === seguradora.nome.toLowerCase());
         if (!folder) {
-          const result = await EmailService.createFolder(selectedAccountId, seguradora.nome, null);
-          folder = { id: result.folder.id, name: result.folder.name, parentId: null, unreadCount: 0 };
+          const result = await EmailService.createFolder(selectedAccountId, seguradora.nome, 'inbox');
+          folder = { id: result.folder.id, name: result.folder.name, parentId: 'inbox', unreadCount: 0 };
           currentFolders = [...currentFolders, folder];
           pastasCriadas++;
         }
@@ -128,7 +131,7 @@ export const EmailRulesSection: React.FC = () => {
     if (!selectedAccountId || !newFolderName.trim()) return;
     setCreatingFolder(true);
     try {
-      await EmailService.createFolder(selectedAccountId, newFolderName.trim(), null);
+      await EmailService.createFolder(selectedAccountId, newFolderName.trim(), 'inbox');
       setNewFolderName('');
       await refetchFolders();
     } finally {
@@ -180,9 +183,16 @@ export const EmailRulesSection: React.FC = () => {
           <div className="flex-1">
             <p className="text-slate-800 text-sm font-semibold">Criar pastas e regras para as seguradoras</p>
             <p className="text-slate-500 text-xs mt-0.5">
-              Cria uma pasta real na sua caixa de e-mail para cada seguradora e uma regra que move
-              automaticamente os e-mails recebidos do domínio de cada uma para a pasta correspondente.
+              Cria, como subpasta da Caixa de Entrada, uma pasta real para cada seguradora e uma regra
+              que move automaticamente os e-mails recebidos do domínio de cada uma pra lá.
             </p>
+            {isGmail && (
+              <p className="text-amber-600 text-[11px] mt-1.5 flex items-start gap-1">
+                <AlertCircle className="w-3 h-3 shrink-0 mt-px" />
+                No Gmail as pastas (labels) não têm como ficar dentro da Caixa de Entrada — o Gmail
+                cria como label de nível raiz mesmo assim; a regra de mover continua funcionando igual.
+              </p>
+            )}
           </div>
         </div>
         <button
@@ -208,7 +218,7 @@ export const EmailRulesSection: React.FC = () => {
       {/* Criar pasta avulsa */}
       <div className="flex items-end gap-2">
         <div className="flex-1">
-          <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Nova pasta (qualquer nome)</label>
+          <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Nova pasta dentro da Caixa de Entrada</label>
           <input
             className={inputCls}
             value={newFolderName}
