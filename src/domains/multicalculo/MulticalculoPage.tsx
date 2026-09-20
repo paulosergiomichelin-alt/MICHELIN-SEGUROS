@@ -4,7 +4,7 @@ import {
   HeartPulse, RefreshCw, UserCheck, Info, Wrench, History, ChevronUp, ChevronDown,
   ClipboardList, Trash2, Save,
 } from 'lucide-react';
-import { formatCpfCnpjProgressive, detectTipoPessoa, formatPhone } from '../../lib/utils';
+import { formatCpfCnpjProgressive, detectTipoPessoa, formatPhone, cn } from '../../lib/utils';
 import { getSeguradora, SEGURADORAS } from '../../lib/seguradoras';
 import { InsurerService, CotacaoInput, CotacaoResultado, VeiculoTokioMarine } from '../../services/InsurerService';
 import { PDFViewer } from '../../components/PDFViewer';
@@ -20,6 +20,16 @@ function somaUmAno(iso: string) {
   const [ano, mes, dia] = iso.split('-').map(Number);
   const d = new Date(ano + 1, mes - 1, dia);
   return d.toISOString().slice(0, 10);
+}
+
+function fmtCurrency(v: string) {
+  const n = v.replace(/\D/g, '');
+  if (!n) return '';
+  return (parseInt(n, 10) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
+function parseCurrency(v: string): number {
+  return parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
 }
 
 // Campos marcados com (*) no comentário existem no formulário só pra bater com o
@@ -270,11 +280,11 @@ export const MulticalculoPage: React.FC = () => {
           principalCondutor: principalCondutor || undefined,
           garagemPrincipalCondutor: garagemResidencia || undefined,
           coberturaPessoasResidentes1825Anos: jovemCondutor || undefined,
-          danosMateriais: danosMateriais ? Number(danosMateriais) : undefined,
-          danosCorporais: danosCorporais ? Number(danosCorporais) : undefined,
-          danosMorais: danosMorais ? Number(danosMorais) : undefined,
-          appMorte: appMorteInvalidez ? Number(appMorteInvalidez) : undefined,
-          appInvalidez: appMorteInvalidez ? Number(appMorteInvalidez) : undefined,
+          danosMateriais: danosMateriais ? parseCurrency(danosMateriais) : undefined,
+          danosCorporais: danosCorporais ? parseCurrency(danosCorporais) : undefined,
+          danosMorais: danosMorais ? parseCurrency(danosMorais) : undefined,
+          appMorte: appMorteInvalidez ? parseCurrency(appMorteInvalidez) : undefined,
+          appInvalidez: appMorteInvalidez ? parseCurrency(appMorteInvalidez) : undefined,
         },
         vigencia: { inicio: dataParaTM(inicioVigencia), fim: dataParaTM(fimVigencia) },
         renovacao: isRenovacao
@@ -549,10 +559,30 @@ export const MulticalculoPage: React.FC = () => {
             </Card>
 
             <Card title="RCF / APP" icon={HeartPulse}>
-              <Field label="Danos Materiais (R$)"><input className={inputCls} value={danosMateriais} onChange={(e) => setDanosMateriais(e.target.value)} placeholder="0,00" /></Field>
-              <Field label="Danos Corporais (R$)"><input className={inputCls} value={danosCorporais} onChange={(e) => setDanosCorporais(e.target.value)} placeholder="0,00" /></Field>
-              <Field label="Danos Morais (R$)"><input className={inputCls} value={danosMorais} onChange={(e) => setDanosMorais(e.target.value)} placeholder="0,00" /></Field>
-              <Field label="Morte/Invalidez (APP)"><input className={inputCls} value={appMorteInvalidez} onChange={(e) => setAppMorteInvalidez(e.target.value)} placeholder="0,00" /></Field>
+              <Field label="Danos Materiais (R$)">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[12px]">R$</span>
+                  <input className={cn(inputCls, 'pl-8')} value={danosMateriais} onChange={(e) => setDanosMateriais(fmtCurrency(e.target.value))} placeholder="0,00" />
+                </div>
+              </Field>
+              <Field label="Danos Corporais (R$)">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[12px]">R$</span>
+                  <input className={cn(inputCls, 'pl-8')} value={danosCorporais} onChange={(e) => setDanosCorporais(fmtCurrency(e.target.value))} placeholder="0,00" />
+                </div>
+              </Field>
+              <Field label="Danos Morais (R$)">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[12px]">R$</span>
+                  <input className={cn(inputCls, 'pl-8')} value={danosMorais} onChange={(e) => setDanosMorais(fmtCurrency(e.target.value))} placeholder="0,00" />
+                </div>
+              </Field>
+              <Field label="Morte/Invalidez (APP)">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[12px]">R$</span>
+                  <input className={cn(inputCls, 'pl-8')} value={appMorteInvalidez} onChange={(e) => setAppMorteInvalidez(fmtCurrency(e.target.value))} placeholder="0,00" />
+                </div>
+              </Field>
             </Card>
 
             <Card title="Acessórios" icon={ShieldCheck}>

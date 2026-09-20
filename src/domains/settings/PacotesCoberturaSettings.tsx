@@ -39,6 +39,12 @@ const PACOTE_VAZIO: PacoteCobertura = {
 
 export const ENTITY_ID_PACOTES = 'multicalculo_pacotes';
 
+function fmtCurrency(v: string) {
+  const n = v.replace(/\D/g, '');
+  if (!n) return '';
+  return (parseInt(n, 10) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
 const inputCls = "w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 text-[12px] font-medium focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 transition-all placeholder:text-slate-300";
 
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
@@ -146,16 +152,28 @@ export const PacotesCoberturaSettings: React.FC = () => {
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">RCF / APP</p>
         </div>
         <Field label="Danos Materiais (R$)">
-          <input className={inputCls} value={p.danosMateriais} onChange={e => set('danosMateriais', e.target.value)} placeholder="0,00" />
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[12px]">R$</span>
+            <input className={cn(inputCls, 'pl-8')} value={p.danosMateriais} onChange={e => set('danosMateriais', fmtCurrency(e.target.value))} placeholder="0,00" />
+          </div>
         </Field>
         <Field label="Danos Corporais (R$)">
-          <input className={inputCls} value={p.danosCorporais} onChange={e => set('danosCorporais', e.target.value)} placeholder="0,00" />
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[12px]">R$</span>
+            <input className={cn(inputCls, 'pl-8')} value={p.danosCorporais} onChange={e => set('danosCorporais', fmtCurrency(e.target.value))} placeholder="0,00" />
+          </div>
         </Field>
         <Field label="Danos Morais (R$)">
-          <input className={inputCls} value={p.danosMorais} onChange={e => set('danosMorais', e.target.value)} placeholder="0,00" />
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[12px]">R$</span>
+            <input className={cn(inputCls, 'pl-8')} value={p.danosMorais} onChange={e => set('danosMorais', fmtCurrency(e.target.value))} placeholder="0,00" />
+          </div>
         </Field>
         <Field label="Morte/Invalidez (APP)">
-          <input className={inputCls} value={p.appMorteInvalidez} onChange={e => set('appMorteInvalidez', e.target.value)} placeholder="0,00" />
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[12px]">R$</span>
+            <input className={cn(inputCls, 'pl-8')} value={p.appMorteInvalidez} onChange={e => set('appMorteInvalidez', fmtCurrency(e.target.value))} placeholder="0,00" />
+          </div>
         </Field>
 
         <div className="md:col-span-2 pt-2 mt-1 border-t border-slate-100">
