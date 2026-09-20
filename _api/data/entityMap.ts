@@ -39,6 +39,7 @@ export const ENTITY_TABLE: Record<string, any> = {
   metrics_daily: schema.metricsDaily,
   email_accounts: schema.emailAccounts,
   email_settings: schema.emailSettings,
+  email_rules: schema.emailRules,
   calendar_events: schema.calendarEvents,
 };
 

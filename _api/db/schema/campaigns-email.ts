@@ -74,6 +74,26 @@ export const emailAccounts = pgTable('email_accounts', {
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 });
 
+// Regra de organização automática: quando uma mensagem nova chega na inbox e
+// bate no critério (remetente contém X, domínio do remetente, ou assunto contém X),
+// o sync periódico (ver emailSync.ts) move a mensagem pra pasta de destino real
+// no provedor (Gmail label / pasta do Outlook / pasta IMAP) antes de notificar o usuário.
+export const emailRules = pgTable('email_rules', {
+  id: text('id').primaryKey(),
+  organizationId: text('organization_id').references(() => organizations.id),
+  accountId: text('account_id').notNull(),
+  nome: text('nome').notNull(),
+  matchTipo: text('match_tipo').notNull(), // 'dominio' | 'remetente_contem' | 'assunto_contem'
+  matchValor: text('match_valor').notNull(),
+  pastaDestinoId: text('pasta_destino_id').notNull(),
+  pastaDestinoNome: text('pasta_destino_nome').notNull(),
+  ativo: boolean('ativo').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_email_rules_account').on(t.accountId),
+]);
+
 export const emailSettings = pgTable('email_settings', {
   userId: text('user_id').primaryKey(),
   signature: text('signature'),

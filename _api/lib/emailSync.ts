@@ -1,7 +1,7 @@
 import { fsGet, fsQueryFull, fsUpdate } from './pgData.js';
 import { decrypt } from './emailEncryption.js';
 import {
-  setEmail, setSyncState, getSyncState, cacheStats, CachedEmail,
+  setEmail, removeEmail, setSyncState, getSyncState, cacheStats, CachedEmail,
 } from './emailCache.js';
 import { emitGlobal } from './socketRegistry.js';
 import {
@@ -20,9 +20,72 @@ import {
   parseImapMessage,
   ImapAccount,
 } from './imapClient.js';
+import { applyMoveAction } from '../email/action.js';
 
 const SYNC_FOLDERS = ['inbox', 'sent', 'drafts'];
 const MESSAGES_PER_FOLDER = 50;
+
+// ── Regras de organização automática (email_rules) ────────────────────────────
+
+interface EmailRule {
+  id: string;
+  accountId: string;
+  nome: string;
+  matchTipo: 'dominio' | 'remetente_contem' | 'assunto_contem';
+  matchValor: string;
+  pastaDestinoId: string;
+  pastaDestinoNome: string;
+  ativo: boolean;
+}
+
+async function loadActiveRules(accountId: string): Promise<EmailRule[]> {
+  const rows = await fsQueryFull('email_rules', [{ field: 'accountId', value: accountId }]);
+  return (rows as EmailRule[]).filter(r => r.ativo !== false);
+}
+
+function ruleMatches(message: CachedEmail, rule: EmailRule): boolean {
+  const valor = (rule.matchValor ?? '').toLowerCase().trim();
+  if (!valor) return false;
+  const remetente = (message.from?.email ?? '').toLowerCase();
+  if (rule.matchTipo === 'dominio') {
+    const dominio = valor.startsWith('@') ? valor.slice(1) : valor;
+    return remetente.endsWith(`@${dominio}`);
+  }
+  if (rule.matchTipo === 'remetente_contem') return remetente.includes(valor);
+  if (rule.matchTipo === 'assunto_contem') return (message.subject ?? '').toLowerCase().includes(valor);
+  return false;
+}
+
+// Acha a primeira regra ativa que bate e move a mensagem de verdade no provedor
+// (Gmail label / pasta do Outlook / pasta IMAP) — retorna a mensagem já com o
+// campo `folder` atualizado pra refletir onde ela realmente ficou. Falha na
+// movimentação não derruba o sync inteiro: a mensagem só fica na inbox mesmo,
+// e o erro é reportado igual aos outros erros por mensagem.
+async function applyRulesToMessage(
+  account: Record<string, any>,
+  message: CachedEmail,
+  rules: EmailRule[],
+  errors: string[],
+): Promise<CachedEmail> {
+  const rule = rules.find(r => ruleMatches(message, r));
+  if (!rule) return message;
+  try {
+    await applyMoveAction(account, message.id, rule.pastaDestinoId, 'inbox');
+    const moved: CachedEmail = { ...message, folder: rule.pastaDestinoId };
+    if (account.provider === 'imap') {
+      // MOVE no IMAP atribui um UID novo no destino — a entrada com o id antigo
+      // (inbox:UID) não corresponde a nada real depois disso. Remove e deixa o
+      // próximo sync reimportar já com o UID certo na pasta certa.
+      removeEmail(account.id, message.id);
+    } else {
+      setEmail(moved);
+    }
+    return moved;
+  } catch (err: any) {
+    errors.push(`regra "${rule.nome}" falhou ao mover msg ${message.id}: ${err.message}`);
+    return message;
+  }
+}
 
 // O sync periódico só cobre as 3 pastas padrão — navegar numa pasta descoberta via
 // listFolders/listLabels/listFoldersTree (subpasta real, label customizado etc.) nunca
@@ -48,6 +111,7 @@ function decryptAccount(account: Record<string, any>): GmailAccount | MicrosoftA
 async function syncGmailAccount(
   account: GmailAccount,
   extraFolder?: string,
+  rules: EmailRule[] = [],
 ): Promise<{ imported: number; errors: string[]; newInboxMessages: CachedEmail[] }> {
   let imported = 0;
   const errors: string[] = [];
@@ -59,10 +123,13 @@ async function syncGmailAccount(
       for (const msgRef of messages) {
         try {
           const full = await gmailGetMessage(account, msgRef.id, 'full');
-          const cached = parseGmailMessage(full, account.id);
+          let cached = parseGmailMessage(full, account.id);
           const isNew = setEmail(cached);
           imported++;
-          if (isNew && cached.folder === 'inbox') newInboxMessages.push(cached);
+          if (isNew && cached.folder === 'inbox') {
+            if (rules.length > 0) cached = await applyRulesToMessage(account, cached, rules, errors);
+            newInboxMessages.push(cached);
+          }
         } catch (err: any) {
           errors.push(`gmail msg ${msgRef.id}: ${err.message}`);
         }
@@ -80,6 +147,7 @@ async function syncGmailAccount(
 async function syncMicrosoftAccount(
   account: MicrosoftAccount,
   extraFolder?: string,
+  rules: EmailRule[] = [],
 ): Promise<{ imported: number; errors: string[]; newInboxMessages: CachedEmail[] }> {
   let imported = 0;
   const errors: string[] = [];
@@ -90,10 +158,13 @@ async function syncMicrosoftAccount(
       const { messages } = await msListMessages(account, folder, MESSAGES_PER_FOLDER);
       for (const msg of messages) {
         try {
-          const cached = parseMicrosoftMessage(msg, account.id, folder);
+          let cached = parseMicrosoftMessage(msg, account.id, folder);
           const isNew = setEmail(cached);
           imported++;
-          if (isNew && cached.folder === 'inbox') newInboxMessages.push(cached);
+          if (isNew && cached.folder === 'inbox') {
+            if (rules.length > 0) cached = await applyRulesToMessage(account, cached, rules, errors);
+            newInboxMessages.push(cached);
+          }
         } catch (err: any) {
           errors.push(`ms msg ${msg.id}: ${err.message}`);
         }
@@ -111,6 +182,7 @@ async function syncMicrosoftAccount(
 async function syncImapAccount(
   account: ImapAccount,
   extraFolder?: string,
+  rules: EmailRule[] = [],
 ): Promise<{ imported: number; errors: string[]; newInboxMessages: CachedEmail[] }> {
   let imported = 0;
   const errors: string[] = [];
@@ -129,10 +201,13 @@ async function syncImapAccount(
           continue;
         }
         try {
-          const cached = parseImapMessage(item.parsed, account.id, folder);
+          let cached = parseImapMessage(item.parsed, account.id, folder);
           const isNew = setEmail(cached);
           imported++;
-          if (isNew && cached.folder === 'inbox') newInboxMessages.push(cached);
+          if (isNew && cached.folder === 'inbox') {
+            if (rules.length > 0) cached = await applyRulesToMessage(account, cached, rules, errors);
+            newInboxMessages.push(cached);
+          }
         } catch (err: any) {
           errors.push(`imap msg ${item.uid} em ${folder}: ${err.message}`);
         }
@@ -175,13 +250,14 @@ export async function syncAccount(
 
   try {
     const account = decryptAccount(rawAccount);
+    const rules = await loadActiveRules(accountId).catch(() => [] as EmailRule[]);
 
     if (rawAccount.provider === 'gmail') {
-      result = await syncGmailAccount(account as GmailAccount, extraFolder);
+      result = await syncGmailAccount(account as GmailAccount, extraFolder, rules);
     } else if (rawAccount.provider === 'microsoft') {
-      result = await syncMicrosoftAccount(account as MicrosoftAccount, extraFolder);
+      result = await syncMicrosoftAccount(account as MicrosoftAccount, extraFolder, rules);
     } else if (rawAccount.provider === 'imap') {
-      result = await syncImapAccount(account as ImapAccount, extraFolder);
+      result = await syncImapAccount(account as ImapAccount, extraFolder, rules);
     } else {
       result.errors.push(`Unknown provider: ${rawAccount.provider}`);
     }

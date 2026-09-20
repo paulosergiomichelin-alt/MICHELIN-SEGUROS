@@ -55,6 +55,7 @@ export class DataService {
     'whatsapp_messages', 'whatsapp_message',
     'cliente_relacionamentos', 'cliente_relacionamento',
     'cotacoes', 'cotacao',
+    'email_rules', 'email_rule',
   ]);
 
   // Collections whose document IDs are scoped per-org: {orgId}::{docId}

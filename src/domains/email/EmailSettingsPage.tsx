@@ -9,12 +9,14 @@ import {
   CheckCircle,
   AlertCircle,
   Mail,
+  FolderTree,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { useEmail } from '../../contexts/EmailContext';
 import { EmailSettings } from '../../services/EmailService';
 import { Button, Input, PageHeader, Select, Textarea } from '../../components/ui';
+import { EmailRulesSection } from './components/settings/EmailRulesSection';
 
 // ─── Toggle ───────────────────────────────────────────────────────────────────
 
@@ -187,6 +189,15 @@ export const EmailSettingsPage: React.FC = () => {
               ))}
             </Select>
           )}
+        </SectionCard>
+
+        {/* Pastas e regras de organização automática */}
+        <SectionCard
+          title="Pastas e Regras"
+          description="Organize e-mails automaticamente em pastas por seguradora ou remetente"
+          icon={<FolderTree className="w-4 h-4" />}
+        >
+          <EmailRulesSection />
         </SectionCard>
 
         {/* Display name */}

@@ -260,6 +260,27 @@ function applyLocalCacheUpdate(
   }
 }
 
+// Reaproveitado por emailSync.ts pra mover mensagens automaticamente segundo as
+// regras (email_rules) logo após importar uma mensagem nova na inbox — mesma
+// lógica por trás da action 'move' manual, só que chamada direto (sem passar
+// pelo handler HTTP).
+export async function applyMoveAction(
+  account: Record<string, any>,
+  messageId: string,
+  targetFolderId: string,
+  currentFolder: string,
+): Promise<void> {
+  if (account.provider === 'gmail') {
+    await applyGmailAction(account as GmailAccount, messageId, 'move', { targetFolderId, sourceFolderId: currentFolder });
+  } else if (account.provider === 'microsoft') {
+    await applyMicrosoftAction(account as MicrosoftAccount, messageId, 'move', { targetFolderId });
+  } else if (account.provider === 'imap') {
+    await applyImapAction(account as ImapAccount, messageId, 'move', currentFolder, { targetFolderId });
+  } else {
+    throw new Error(`Provider desconhecido: ${account.provider}`);
+  }
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });

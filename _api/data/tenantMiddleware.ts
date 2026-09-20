@@ -25,5 +25,6 @@ export const ORG_SCOPED_ENTITIES = new Set([
   'cliente_pessoa_juridica', 'lead_pessoa_juridica',
   'nfse_documents', 'nfse_logs',
   'email_accounts', 'email_account',
+  'email_rules', 'email_rule',
   'cotacoes', 'cotacao',
 ]);
