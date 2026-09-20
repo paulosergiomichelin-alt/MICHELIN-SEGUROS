@@ -17,6 +17,7 @@ import { useEmail } from '../../contexts/EmailContext';
 import { EmailSettings } from '../../services/EmailService';
 import { Button, Input, PageHeader, Select, Textarea } from '../../components/ui';
 import { EmailRulesSection } from './components/settings/EmailRulesSection';
+import { SignatureEditor } from './components/settings/SignatureEditor';
 
 // ─── Toggle ───────────────────────────────────────────────────────────────────
 
@@ -223,24 +224,11 @@ export const EmailSettingsPage: React.FC = () => {
           icon={<PenLine className="w-4 h-4" />}
         >
           <div>
-            <Textarea
-              label="Assinatura"
+            <label className="block text-slate-700 text-sm font-medium mb-1.5">Assinatura</label>
+            <SignatureEditor
               value={form.signature ?? ''}
-              onChange={e => setForm(prev => ({ ...prev, signature: e.target.value }))}
-              rows={6}
-              placeholder={`Ex:\n--\nPaulo Michelin\nCorretor de Seguros | Michelin Seguros\n(11) 99999-9999`}
-              className="font-mono"
+              onChange={html => setForm(prev => ({ ...prev, signature: html }))}
             />
-            <p className="text-slate-400 text-[11px] mt-1 ml-1">Suporta HTML básico</p>
-            {form.signature && (
-              <div className="mt-2 p-3 rounded-lg bg-slate-50 border border-slate-200">
-                <p className="text-[11px] text-slate-400 uppercase tracking-widest mb-2">Pré-visualização</p>
-                <div
-                  className="text-slate-600 text-sm leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: form.signature }}
-                />
-              </div>
-            )}
           </div>
         </SectionCard>
 
