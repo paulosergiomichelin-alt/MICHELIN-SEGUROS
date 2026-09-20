@@ -117,7 +117,11 @@ export function UserProfileModal({
           try {
             const data = await DataService.get('users', uid);
             if (data && isMounted) {
-              setTargetProfile(data);
+              // A tabela `users` no Postgres usa `id` como chave primária, sem coluna
+              // `uid` própria — sem este fallback, todo save (inclusive trocar a foto)
+              // quebrava com "UID ausente para edição" (ver mesmo padrão em
+              // PermissionsContext.tsx ao montar o userProfile da sessão).
+              setTargetProfile({ ...data, uid: data.uid ?? data.id ?? uid });
             }
           } catch (err) {
             console.error("Error loading user profile:", err);
