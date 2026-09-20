@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Loader2, FileText, Upload, CheckCircle2, X, ExternalLink, Paperclip, Trash2, ArrowLeft, Pencil, Car } from 'lucide-react';
+import { Save, Loader2, FileText, Upload, CheckCircle2, X, ExternalLink, Paperclip, Trash2, ArrowLeft, Pencil, Car, RefreshCw } from 'lucide-react';
 import { Apolice, ApoliceAnexo, ApoliceAnexoTipo, ApoliceStatus, ApoliceVeiculo, ProdutoSeguro, PRODUTOS_SEGURO, PRODUTOS_COM_VEICULO } from '../../types';
 import { SEGURADORAS } from '../../lib/seguradoras';
 import { Modal } from '../../components/Modal';
@@ -123,6 +123,10 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
   const [ocrData, setOcrData] = useState<any>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [docMeta, setDocMeta] = useState<{ url: string; path: string; name: string } | null>(null);
+  const [reimporting, setReimporting] = useState(false);
+  // true enquanto os dados extraídos vêm de uma reimportação do doc já salvo,
+  // pra handleViewerConfirm não subir o mesmo arquivo de novo pro storage
+  const isReimportRef = useRef(false);
 
   // Additional attachments state
   const [anexos, setAnexos] = useState<ApoliceAnexo[]>([]);
@@ -209,6 +213,35 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
     }
   };
 
+  // Refaz o OCR sobre o PDF já importado, sem exigir que o usuário selecione
+  // o arquivo de novo — útil quando o parser ganhou novos campos (ex: dados
+  // do veículo) depois que a apólice já tinha sido cadastrada.
+  const handleReimport = async () => {
+    if (!docMeta) return;
+    setDocError('');
+    setReimporting(true);
+    try {
+      const resp = await fetch(docMeta.url);
+      if (!resp.ok) throw new Error('download failed');
+      const blob = await resp.blob();
+      const file = new File([blob], docMeta.name, { type: blob.type || 'application/pdf' });
+      isReimportRef.current = true;
+      setDocFile(file);
+      const objUrl = URL.createObjectURL(file);
+      setDocObjectUrl(objUrl);
+      setDocProcessing(true);
+      const result = await OCRService.processDocument(file, { hintType: 'policy' });
+      const data = result?.structuredData ?? result?.data ?? result ?? {};
+      setOcrData(data);
+      setViewerOpen(true);
+    } catch {
+      setDocError('Falha ao reimportar documento. Verifique a conexão e tente novamente.');
+    } finally {
+      setDocProcessing(false);
+      setReimporting(false);
+    }
+  };
+
   const handleViewerConfirm = async (data: any) => {
     setViewerOpen(false);
     if (!docFile) return;
@@ -239,6 +272,12 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
     if (premioTotalStr) updates.valorTotal = premioTotalStr;
 
     setForm(f => ({ ...f, ...updates }));
+
+    if (isReimportRef.current) {
+      // Arquivo já está salvo no storage; reimportação só reprocessa os campos.
+      isReimportRef.current = false;
+      return;
+    }
 
     try {
       const ext = docFile.name.split('.').pop() ?? 'pdf';
@@ -338,9 +377,20 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
                   <ExternalLink className="w-3.5 h-3.5 text-[#1F8A4C] hover:opacity-80 transition-colors" />
                 </a>
                 {!readOnly && (
-                  <button type="button" onClick={() => { setDocMeta(null); setDocFile(null); setOcrData(null); }} className="text-slate-400 hover:text-[#C0392B] transition-colors">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleReimport}
+                      disabled={reimporting || docProcessing}
+                      title="Reimportar documento (atualiza os campos extraídos, ex: dados do veículo)"
+                      className="text-[#1F8A4C] hover:text-[#153E73] transition-colors disabled:opacity-40"
+                    >
+                      {reimporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                    </button>
+                    <button type="button" onClick={() => { setDocMeta(null); setDocFile(null); setOcrData(null); }} className="text-slate-400 hover:text-[#C0392B] transition-colors">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </>
                 )}
               </div>
             ) : (
