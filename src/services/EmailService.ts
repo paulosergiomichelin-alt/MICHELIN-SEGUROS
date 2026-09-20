@@ -200,6 +200,16 @@ export const EmailService = {
       body: JSON.stringify({ accountId, name, parentId }),
     }).then(r => r.json()),
 
+  // Relocaliza uma pasta customizada já existente pra debaixo de outra (ex.: pasta de
+  // seguradora criada solta na raiz antes do padrão virar "sempre subpasta da Inbox").
+  // Só suportado no Outlook — ver moveFolderForAccount em _api/email/folders.ts.
+  moveFolder: (accountId: string, folderId: string, destinationId: string): Promise<{ success: boolean }> =>
+    fetch(`/api/email/folders/${encodeURIComponent(folderId)}/move-folder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId, destinationId }),
+    }).then(r => r.json()),
+
   renameFolder: (accountId: string, folderId: string, name: string): Promise<{ success: boolean }> =>
     fetch(`/api/email/folders/${encodeURIComponent(folderId)}`, {
       method: 'PATCH',

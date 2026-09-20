@@ -3,6 +3,7 @@ import {
   listFolders as msListFolders, createFolder as msCreateFolder, renameFolder as msRenameFolder,
   deleteFolder as msDeleteFolder, listAllMessageIds as msListAllMessageIds,
   updateMessage as msUpdateMessage, moveMessage as msMoveMessage, deleteMessage as msDeleteMessage,
+  moveFolder as msMoveFolder,
   MicrosoftAccount,
 } from '../lib/microsoftClient.js';
 import {
@@ -97,6 +98,16 @@ async function deleteFolderForAccount(account: Record<string, any>, folderId: st
   throw new Error(`Provider desconhecido: ${account.provider}`);
 }
 
+// Relocaliza uma pasta customizada já existente pra debaixo de outra (ex.: uma pasta
+// de seguradora criada solta na raiz antes do padrão virar "sempre subpasta da Inbox").
+// Gmail não tem esse conceito (labels não têm hierarquia real sob Inbox) e IMAP ainda
+// não tem essa operação implementada — só Microsoft por enquanto.
+async function moveFolderForAccount(account: Record<string, any>, folderId: string, destinationId: string): Promise<void> {
+  if (SYSTEM_FOLDER_KEYS.has(folderId)) throw new Error('Pastas de sistema não podem ser movidas');
+  if (account.provider === 'microsoft') { await msMoveFolder(account as MicrosoftAccount, folderId, destinationId); return; }
+  throw new Error(`Mover pasta ainda não é suportado para o provedor "${account.provider}"`);
+}
+
 async function emptyFolderForAccount(account: Record<string, any>, folderId: string): Promise<void> {
   const permanent = PERMANENT_EMPTY_FOLDERS.has(folderId);
 
@@ -170,6 +181,15 @@ export default async function handler(req: any, res: any) {
       if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
       const account = await loadAccount(String(accountId));
       await emptyFolderForAccount(account, folderId);
+      return res.status(200).json({ success: true });
+    }
+
+    if (req.method === 'POST' && folderId && subAction === 'move-folder') {
+      const { accountId, destinationId } = req.body ?? {};
+      if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
+      if (!destinationId) return res.status(400).json({ error: 'destinationId é obrigatório' });
+      const account = await loadAccount(String(accountId));
+      await moveFolderForAccount(account, folderId, normalizeFolderId(String(destinationId)));
       return res.status(200).json({ success: true });
     }
 

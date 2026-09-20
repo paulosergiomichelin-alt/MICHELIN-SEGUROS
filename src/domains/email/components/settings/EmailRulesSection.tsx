@@ -86,13 +86,15 @@ export const EmailRulesSection: React.FC = () => {
   const customFolders = folders.filter(f => !SYSTEM_FOLDER_IDS.has(f.id));
   // Gmail não tem conceito de subpasta real da Inbox (labels são sempre raiz nesse
   // provedor) — Outlook e IMAP suportam de verdade. Só pra avisar, não bloqueia nada.
-  const isGmail = accounts.find(a => a.id === selectedAccountId)?.provider === 'gmail';
+  const selectedProvider = accounts.find(a => a.id === selectedAccountId)?.provider;
+  const isGmail = selectedProvider === 'gmail';
 
   const handleBulkCreate = async () => {
     if (!selectedAccountId) return;
     setBulkRunning(true);
     setBulkMessage(null);
     let pastasCriadas = 0;
+    let pastasMovidas = 0;
     let regrasCriadas = 0;
     try {
       let currentFolders = folders;
@@ -103,6 +105,13 @@ export const EmailRulesSection: React.FC = () => {
           folder = { id: result.folder.id, name: result.folder.name, parentId: 'inbox', unreadCount: 0 };
           currentFolders = [...currentFolders, folder];
           pastasCriadas++;
+        } else if (folder.parentId !== 'inbox' && selectedProvider === 'microsoft') {
+          // Pasta já existia (ex.: criada antes de subpastas virarem o padrão) mas
+          // solta na raiz — relocaliza pra dentro da Inbox em vez de deixar como está.
+          await EmailService.moveFolder(selectedAccountId, folder.id, 'inbox');
+          folder = { ...folder, parentId: 'inbox' };
+          currentFolders = currentFolders.map(f => (f.id === folder!.id ? folder! : f));
+          pastasMovidas++;
         }
         const dominio = DOMINIO_SEGURADORA[seguradora.id];
         const jaTemRegra = rules.some(r => r.pastaDestinoId === folder!.id) || !dominio;
@@ -122,9 +131,10 @@ export const EmailRulesSection: React.FC = () => {
         }
       }
       await refetchFolders();
+      const movidasTexto = pastasMovidas > 0 ? ` ${pastasMovidas} pasta(s) que estavam soltas na raiz foram movidas pra dentro da Caixa de Entrada.` : '';
       setBulkMessage({
         type: 'success',
-        text: `${pastasCriadas} pasta(s) nova(s), ${regrasCriadas} regra(s) nova(s). Seguradoras sem domínio confirmado (MSIG) ficaram só com a pasta — crie a regra manualmente abaixo.`,
+        text: `${pastasCriadas} pasta(s) nova(s), ${regrasCriadas} regra(s) nova(s).${movidasTexto} Seguradoras sem domínio confirmado (MSIG) ficaram só com a pasta — crie a regra manualmente abaixo.`,
       });
     } catch (e: any) {
       setBulkMessage({ type: 'error', text: e.message ?? 'Falha ao criar pastas/regras.' });

@@ -336,6 +336,7 @@ async function startServer() {
   app.all('/api/email/folders/:id',         emailFoldersHandler);
   app.all('/api/email/folders/:id/empty',   emailFoldersHandler);
   app.all('/api/email/folders/:id/read-all', emailFoldersHandler);
+  app.all('/api/email/folders/:id/move-folder', emailFoldersHandler);
   app.all('/api/email/send',                emailSendHandler);
   app.all('/api/email/action',              emailActionHandler);
   app.all('/api/email/drafts',              emailDraftHandler);

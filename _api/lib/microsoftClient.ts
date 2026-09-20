@@ -83,10 +83,15 @@ export async function ensureValidToken(account: MicrosoftAccount): Promise<strin
 
 // ── Generic request helper ────────────────────────────────────────────────────
 
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export async function graphRequest(
   account: MicrosoftAccount,
   path: string,
   opts: RequestInit = {},
+  retriesLeft = 3,
 ): Promise<any> {
   const token = await ensureValidToken(account);
   const url = path.startsWith('http') ? path : `${GRAPH_BASE}/${path}`;
@@ -100,6 +105,16 @@ export async function graphRequest(
   });
 
   if (!res.ok) {
+    // 429 (throttling, incl. "ApplicationThrottled"/MailboxConcurrency) e 503 são
+    // transitórios — o Graph API pede pra respeitar Retry-After e tentar de novo,
+    // em vez de estourar como erro definitivo (era o que causava o 500 na listagem
+    // de pastas logo depois de criar várias pastas em sequência).
+    if ((res.status === 429 || res.status === 503) && retriesLeft > 0) {
+      const retryAfterHeader = res.headers.get('retry-after');
+      const waitMs = retryAfterHeader ? Number(retryAfterHeader) * 1000 : 1500 * (4 - retriesLeft);
+      await sleep(Math.min(waitMs, 10000));
+      return graphRequest(account, path, opts, retriesLeft - 1);
+    }
     const text = await res.text();
     throw new Error(`Graph API ${path}: ${res.status} ${text}`);
   }
@@ -224,6 +239,16 @@ export async function createFolder(
     body: JSON.stringify({ displayName: name }),
   });
   return { id: data.id, name: data.displayName };
+}
+
+// Relocaliza uma pasta já existente pra dentro de outra (ex.: uma pasta que tinha
+// sido criada solta na raiz antes de virarmos pra subpasta da Inbox por padrão).
+export async function moveFolder(account: MicrosoftAccount, folderId: string, destinationId: string): Promise<{ id: string }> {
+  const data = await graphRequest(account, `me/mailFolders/${encodeURIComponent(folderId)}/move`, {
+    method: 'POST',
+    body: JSON.stringify({ destinationId }),
+  });
+  return { id: data.id };
 }
 
 export async function renameFolder(account: MicrosoftAccount, folderId: string, name: string): Promise<void> {
