@@ -89,7 +89,7 @@ export const EmailList: React.FC = () => {
   const hasNoAccounts = accounts.length === 0 && !messagesLoading;
 
   return (
-    <div className="flex flex-col h-full min-w-[300px] w-[380px] shrink-0 border-r border-slate-200 bg-white">
+    <div className="flex flex-col h-full w-full border-r border-slate-200 bg-white">
       {/* Header */}
       <div className="shrink-0 px-4 pt-4 pb-2">
         <div className="flex items-center justify-between mb-3">
