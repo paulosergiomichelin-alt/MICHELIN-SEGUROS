@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Mail, Bold, Italic, Underline } from 'lucide-react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Mail } from 'lucide-react';
 import { useEmail } from '../../contexts/EmailContext';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import { EmailShell } from './components/layout/EmailShell';
-import { Button, EmptyState, Modal } from '../../components/ui';
+import { EmptyState } from '../../components/ui';
 
 // ─── NoAccountsOnboarding ─────────────────────────────────────────────────────
 
@@ -52,91 +53,12 @@ const NoAccountsOnboarding: React.FC = () => {
   );
 };
 
-// ─── EmailSignatureSettings ───────────────────────────────────────────────────
-
-const EmailSignatureSettings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const { state, saveSettings } = useEmail();
-  const sigRef = React.useRef<HTMLDivElement>(null);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    if (sigRef.current) {
-      sigRef.current.innerHTML = state.settings?.signature ?? '';
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const execCmd = (cmd: string) => {
-    document.execCommand(cmd, false);
-    sigRef.current?.focus();
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    await saveSettings({ signature: sigRef.current?.innerHTML ?? '' });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => { setSaved(false); onClose(); }, 700);
-  };
-
-  return (
-    <Modal
-      title="Assinatura de E-mail"
-      onClose={onClose}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button
-            variant="primary"
-            onClick={handleSave}
-            disabled={saving || saved}
-            loading={saving}
-            className={saved ? 'bg-[#1F8A4C] hover:bg-[#1F8A4C]' : undefined}
-          >
-            {saved ? 'Salvo!' : 'Salvar Assinatura'}
-          </Button>
-        </>
-      }
-    >
-      <p className="text-slate-400 text-xs mb-3">Adicionada automaticamente ao compor e responder e-mails</p>
-      <div className="flex items-center gap-0.5 px-1 py-2 border-b border-slate-100 mb-3">
-        {[
-          { cmd: 'bold', icon: <Bold className="w-3.5 h-3.5" />, title: 'Negrito' },
-          { cmd: 'italic', icon: <Italic className="w-3.5 h-3.5" />, title: 'Itálico' },
-          { cmd: 'underline', icon: <Underline className="w-3.5 h-3.5" />, title: 'Sublinhado' },
-        ].map(btn => (
-          <button
-            key={btn.cmd}
-            type="button"
-            title={btn.title}
-            onMouseDown={e => { e.preventDefault(); execCmd(btn.cmd); }}
-            className="p-1.5 rounded text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
-          >
-            {btn.icon}
-          </button>
-        ))}
-        <div className="w-px h-4 bg-slate-200 mx-1" />
-        <span className="text-slate-400 text-xs ml-1">Use Enter para quebra de linha</span>
-      </div>
-      <div
-        ref={sigRef}
-        contentEditable
-        suppressContentEditableWarning
-        data-placeholder="Digite sua assinatura aqui..."
-        className="min-h-[180px] max-h-[320px] overflow-y-auto text-slate-700 text-sm leading-relaxed outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-slate-300"
-        style={{ wordBreak: 'break-word' }}
-      />
-    </Modal>
-  );
-};
-
 // ─── EmailPage ────────────────────────────────────────────────────────────────
 
 export const EmailPage: React.FC = () => {
   const { state } = useEmail();
   const { accounts, loading } = state;
-  const [showSettings, setShowSettings] = useState(false);
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -159,8 +81,7 @@ export const EmailPage: React.FC = () => {
 
   return (
     <div className="flex h-full w-full bg-slate-50 overflow-hidden">
-      <EmailShell onOpenSettings={() => setShowSettings(true)} />
-      {showSettings && <EmailSignatureSettings onClose={() => setShowSettings(false)} />}
+      <EmailShell onOpenSettings={() => navigate('/email/configuracoes')} />
     </div>
   );
 };
