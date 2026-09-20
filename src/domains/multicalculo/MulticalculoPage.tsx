@@ -49,6 +49,26 @@ const Card: React.FC<{ title: string; icon: React.ElementType; children: React.R
   );
 };
 
+const SubCard: React.FC<{ title: string; icon: React.ElementType; children: React.ReactNode; collapsible?: boolean }> = ({ title, icon: Icon, children, collapsible }) => {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-slate-700">
+          <Icon className="w-3.5 h-3.5 text-gold-deep" />
+          <h4 className="text-[10px] font-black uppercase tracking-widest">{title}</h4>
+        </div>
+        {collapsible && (
+          <button type="button" onClick={() => setOpen((o) => !o)} className="text-slate-400 hover:text-slate-700 transition-colors">
+            {open ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+        )}
+      </div>
+      {open && <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{children}</div>}
+    </div>
+  );
+};
+
 const Field: React.FC<{ label: string; children: React.ReactNode; required?: boolean }> = ({ label, children, required }) => (
   <div className="space-y-1">
     <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">
@@ -89,8 +109,10 @@ export const MulticalculoPage: React.FC = () => {
   const [placa, setPlaca] = useState('');
   const [chassi, setChassi] = useState('');
 
-  // Informações complementares
+  // Informações complementares — CEP de pernoite sempre acompanha o residencial, mas
+  // pode ser editado manualmente quando o carro dorme em outro endereço.
   const [cepPernoite, setCepPernoite] = useState('');
+  useEffect(() => { setCepPernoite(cepResidencial); }, [cepResidencial]);
   const [rastreador, setRastreador] = useState('N'); // (*)
   const [dispositivoAntiFurto, setDispositivoAntiFurto] = useState('N'); // (*)
   const [blindado, setBlindado] = useState(false);
@@ -346,30 +368,32 @@ export const MulticalculoPage: React.FC = () => {
               <Field label="Valor Referenciado (R$)" required><input className={inputCls} value={valorVeiculo} onChange={(e) => setValorVeiculo(e.target.value)} placeholder="0,00" /></Field>
               <Field label="Combustível"><input className={inputCls} value={veiculoSelecionado?.tipoCombustivel ?? ''} readOnly placeholder="Selecione o modelo" /></Field>
               <Field label="Fipe (%)"><input className={inputCls} value={percentualAjuste} onChange={(e) => setPercentualAjuste(e.target.value)} placeholder="100" /></Field>
-            </Card>
 
-            <Card title="Informações complementares" icon={Info} collapsible>
-              <Field label="CEP Pernoite"><input className={inputCls} value={cepPernoite} onChange={(e) => setCepPernoite(e.target.value)} placeholder="00000-000" /></Field>
-              <Field label="Rastreador">
-                <select className={inputCls} value={rastreador} onChange={(e) => setRastreador(e.target.value)}>
-                  <option value="N">Não Possui</option><option value="S">Possui</option>
-                </select>
-              </Field>
-              <Field label="Dispositivo Anti-furto">
-                <select className={inputCls} value={dispositivoAntiFurto} onChange={(e) => setDispositivoAntiFurto(e.target.value)}>
-                  <option value="N">Não Possui</option><option value="S">Possui</option>
-                </select>
-              </Field>
-              <Field label="Blindado">
-                <select className={inputCls} value={blindado ? 'S' : 'N'} onChange={(e) => setBlindado(e.target.value === 'S')}>{boolOptions}</select>
-              </Field>
-              <Field label="Kit Gás">
-                <select className={inputCls} value={kitGas ? 'S' : 'N'} onChange={(e) => setKitGas(e.target.value === 'S')}>{boolOptions}</select>
-              </Field>
-              <Field label="Valor Kit Gás (R$)"><input className={inputCls} value={lmiKitGas} onChange={(e) => setLmiKitGas(e.target.value)} disabled={!kitGas} placeholder="0,00" /></Field>
-              <Field label="Alienado">
-                <select className={inputCls} value={alienado} onChange={(e) => setAlienado(e.target.value)}>{boolOptions}</select>
-              </Field>
+              <div className="md:col-span-2">
+                <SubCard title="Informações complementares" icon={Info} collapsible>
+                  <Field label="CEP Pernoite"><input className={inputCls} value={cepPernoite} onChange={(e) => setCepPernoite(e.target.value)} placeholder="00000-000" /></Field>
+                  <Field label="Rastreador">
+                    <select className={inputCls} value={rastreador} onChange={(e) => setRastreador(e.target.value)}>
+                      <option value="N">Não Possui</option><option value="S">Possui</option>
+                    </select>
+                  </Field>
+                  <Field label="Dispositivo Anti-furto">
+                    <select className={inputCls} value={dispositivoAntiFurto} onChange={(e) => setDispositivoAntiFurto(e.target.value)}>
+                      <option value="N">Não Possui</option><option value="S">Possui</option>
+                    </select>
+                  </Field>
+                  <Field label="Blindado">
+                    <select className={inputCls} value={blindado ? 'S' : 'N'} onChange={(e) => setBlindado(e.target.value === 'S')}>{boolOptions}</select>
+                  </Field>
+                  <Field label="Kit Gás">
+                    <select className={inputCls} value={kitGas ? 'S' : 'N'} onChange={(e) => setKitGas(e.target.value === 'S')}>{boolOptions}</select>
+                  </Field>
+                  <Field label="Valor Kit Gás (R$)"><input className={inputCls} value={lmiKitGas} onChange={(e) => setLmiKitGas(e.target.value)} disabled={!kitGas} placeholder="0,00" /></Field>
+                  <Field label="Alienado">
+                    <select className={inputCls} value={alienado} onChange={(e) => setAlienado(e.target.value)}>{boolOptions}</select>
+                  </Field>
+                </SubCard>
+              </div>
             </Card>
 
             <Card title="Condutor" icon={UserCheck}>
