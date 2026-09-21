@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Plus, Search, ChevronRight, Users, Filter, X,
+  Plus, Search, ChevronRight, ChevronUp, ChevronDown, Users, Filter, X,
   Phone, Mail, MapPin, RefreshCw, AlertTriangle, CheckCircle2, Clock,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -58,6 +58,20 @@ function formatPhone(phone: string) {
   return phone;
 }
 
+type SortKey = 'nome' | 'telefone' | 'localidade' | 'seguradora' | 'produto' | 'renovacao' | 'status';
+type SortDir = 'asc' | 'desc';
+
+const COLUMNS: { label: string; key?: SortKey }[] = [
+  { label: 'Cliente', key: 'nome' },
+  { label: 'Contato', key: 'telefone' },
+  { label: 'Localidade', key: 'localidade' },
+  { label: 'Seguradora', key: 'seguradora' },
+  { label: 'Produto', key: 'produto' },
+  { label: 'Renovação', key: 'renovacao' },
+  { label: 'Status', key: 'status' },
+  { label: '' },
+];
+
 export const ClientesView: React.FC<ClientesViewProps> = ({
   clientes, loading, hasMore, onLoadMore, onNew, onSelect, onEdit,
 }) => {
@@ -66,17 +80,57 @@ export const ClientesView: React.FC<ClientesViewProps> = ({
   const [filterSeguradora, setFilterSeguradora] = useState('');
   const [filterProduto, setFilterProduto] = useState<ProdutoSeguro | ''>('');
   const [showFilters, setShowFilters] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  const seguradoraNomeById = useMemo(() => {
+    const map: Record<string, string> = {};
+    SEGURADORAS.forEach(s => { map[s.id] = s.nome; });
+    return map;
+  }, []);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  const getSortValue = (c: Cliente, key: SortKey): string => {
+    switch (key) {
+      case 'nome': return c.nome ?? '';
+      case 'telefone': return c.telefone ?? '';
+      case 'localidade': return [c.cidade, c.estado].filter(Boolean).join(' ');
+      case 'seguradora': return c.seguradoraAtualId ? (seguradoraNomeById[c.seguradoraAtualId] ?? c.seguradoraAtualId) : '';
+      case 'produto': return c.produtoAtual ?? '';
+      case 'renovacao': return c.dataRenovacao ?? '';
+      case 'status': return STATUS_CONFIG[c.status]?.label ?? '';
+      default: return '';
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return clientes.filter(c => {
+    const list = clientes.filter(c => {
       if (q && !c.nome.toLowerCase().includes(q) && !(c.cpf ?? '').includes(q.replace(/\D/g,'')) && !(c.telefone || '').includes(q.replace(/\D/g,''))) return false;
       if (filterStatus && c.status !== filterStatus) return false;
       if (filterSeguradora && c.seguradoraAtualId !== filterSeguradora) return false;
       if (filterProduto && c.produtoAtual !== filterProduto) return false;
       return true;
     });
-  }, [clientes, search, filterStatus, filterSeguradora, filterProduto]);
+    if (!sortKey) return list;
+    return [...list].sort((a, b) => {
+      const va = getSortValue(a, sortKey);
+      const vb = getSortValue(b, sortKey);
+      if (!va && !vb) return 0;
+      if (!va) return 1;
+      if (!vb) return -1;
+      const cmp = va.localeCompare(vb, 'pt-BR', { numeric: true, sensitivity: 'base' });
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [clientes, search, filterStatus, filterSeguradora, filterProduto, sortKey, sortDir, seguradoraNomeById]);
 
   const activeFilters = [filterStatus, filterSeguradora, filterProduto].filter(Boolean).length;
 
@@ -187,8 +241,24 @@ export const ClientesView: React.FC<ClientesViewProps> = ({
               <table className="w-full">
                 <thead className="sticky top-0 z-10">
                   <tr className="bg-white/95 backdrop-blur border-b border-slate-200">
-                    {['Cliente', 'Contato', 'Localidade', 'Seguradora', 'Produto', 'Renovação', 'Status', ''].map(h => (
-                      <th key={h} className="px-4 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-widest">{h}</th>
+                    {COLUMNS.map(col => (
+                      <th key={col.label || 'chevron'} className="px-4 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                        {col.key ? (
+                          <button
+                            type="button"
+                            onClick={() => handleSort(col.key!)}
+                            className={cn(
+                              'flex items-center gap-1 transition-colors hover:text-slate-700',
+                              sortKey === col.key && 'text-slate-700',
+                            )}
+                          >
+                            {col.label}
+                            {sortKey === col.key && (
+                              sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                            )}
+                          </button>
+                        ) : col.label}
+                      </th>
                     ))}
                   </tr>
                 </thead>
