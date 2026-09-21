@@ -357,8 +357,37 @@ async function startServer() {
     });
   });
 
+  // Sem isso, qualquer socket conectado (sem login nenhum) conseguia emitir
+  // `join:org` com QUALQUER organizationId e passar a receber, em tempo real,
+  // os eventos `data:changed` (leads/clientes/apólices etc. de OUTRO tenant) —
+  // achado F-02 da auditoria. O token vem no handshake (ver src/lib/realtimeSocket.ts)
+  // e a organização do socket passa a vir só do perfil resolvido daqui, nunca
+  // do que o cliente pedir no evento `join:org`.
+  const { verifyFirebaseToken: verifyFirebaseTokenForSocket } = await import('./_api/lib/verifyFirebaseToken.js');
+  const { getDb: getDbForSocket } = await import('./_api/lib/db.js');
+  const { users: usersTableForSocket } = await import('./_api/db/schema/index.js');
+  const { eq: eqForSocket } = await import('drizzle-orm');
+
+  io.use(async (socket, next) => {
+    try {
+      const token = socket.handshake.auth?.token;
+      if (!token) return next(new Error('unauthorized'));
+      const { uid } = await verifyFirebaseTokenForSocket(String(token));
+      const [profile] = await getDbForSocket().select().from(usersTableForSocket).where(eqForSocket(usersTableForSocket.id, uid));
+      if (!profile) return next(new Error('unauthorized'));
+      socket.data.userId = uid;
+      socket.data.organizationId = profile.organizationId;
+      next();
+    } catch (err: any) {
+      next(new Error('unauthorized'));
+    }
+  });
+
   io.on('connection', socket => {
-    log.info('Socket.IO client conectado', { socketId: socket.id, transport: socket.conn.transport.name, ip: socket.handshake.address });
+    log.info('Socket.IO client conectado', {
+      socketId: socket.id, transport: socket.conn.transport.name,
+      ip: socket.handshake.address, userId: socket.data.userId,
+    });
     socket.on('join_session', (sessionName: string) => {
       socket.join(`session:${sessionName}`);
       log.info('Socket joined session', { socketId: socket.id, sessionName });
@@ -366,8 +395,9 @@ async function startServer() {
     socket.on('leave_session', (sessionName: string) => {
       socket.leave(`session:${sessionName}`);
     });
-    socket.on('join:org', (organizationId: string) => {
-      socket.join(`org:${organizationId}`);
+    socket.on('join:org', () => {
+      const ownOrgId = socket.data.organizationId;
+      if (ownOrgId) socket.join(`org:${ownOrgId}`);
     });
     socket.on('disconnect', reason => {
       log.info('Socket.IO client desconectado', { socketId: socket.id, reason });
