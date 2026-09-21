@@ -33,7 +33,10 @@ import { useAggerUserscriptInstalled, EXTENSION_ID } from '../../lib/agger-users
 
 interface LeadFormProps {
   lead?: Lead | null;
-  onSave: (lead: Lead, options?: { silent?: boolean }) => void;
+  // Retorna o lead persistido (com a version atualizada) pra quem chama
+  // poder re-sincronizar o formData local — ver comentário em
+  // DataService.update sobre o bug de version-conflict silencioso que isso resolve.
+  onSave: (lead: Lead, options?: { silent?: boolean }) => Promise<any> | void;
   onCancel: () => void;
   onDelete?: (id: string) => void;
   onNavigateToLead?: (lead: Lead) => void;
@@ -725,7 +728,14 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
     if (isSavingRef.current) return;
     isSavingRef.current = true;
     try {
-      await onSave(data, options);
+      const persisted = await onSave(data, options);
+      // Sincroniza a version local com a que o backend acabou de persistir —
+      // sem isso, o próximo save (ex: o botão "Salvar" logo depois de um
+      // import de documento) manda uma version desatualizada e é descartado
+      // silenciosamente pelo bloqueio de conflito do DataService.
+      if (persisted && typeof persisted === 'object' && persisted.version !== undefined) {
+        setFormData(f => (f.id === data.id ? { ...f, version: persisted.version } : f));
+      }
       if (data.tipoPessoa === 'juridica') {
         await dataApiClient.save('lead_pessoa_juridica', data.id, {
           cnpj: (data.cpf || '').replace(/\D/g, ''),
@@ -1225,7 +1235,10 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
 
       // Auto-save if lead exists to ensure persistence
       if (lead?.id) {
-        await onSave(updated as Lead, { silent: true });
+        const persisted = await onSave(updated as Lead, { silent: true });
+        if (persisted && typeof persisted === 'object' && persisted.version !== undefined) {
+          setFormData(f => (f.id === updated.id ? { ...f, version: persisted.version } : f));
+        }
       }
     } catch (err) {
       console.error(err);
@@ -1277,7 +1290,10 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
     }
 
     try {
-      await onSave(finalLead);
+      const persisted = await onSave(finalLead);
+      if (persisted && typeof persisted === 'object' && persisted.version !== undefined) {
+        setFormData(f => (f.id === finalLead.id ? { ...f, version: persisted.version } : f));
+      }
       setIsDirty(false);
       setIsSaving(false);
     } catch (err) {

@@ -20,12 +20,14 @@ export const LeadPage: React.FC = () => {
 
   const handleSave = async (savedLead: Lead, options?: { silent?: boolean }) => {
     try {
+      let persisted: any;
       if (savedLead.id && leads.find(l => l.id === savedLead.id)) {
-        await DataService.update('lead', savedLead.id, savedLead);
+        persisted = await DataService.update('lead', savedLead.id, savedLead);
       } else {
-        await DataService.create('lead', savedLead);
+        persisted = await DataService.create('lead', savedLead);
       }
       if (!options?.silent) navigate('/leads');
+      return persisted;
     } catch (error) {
       console.error('Error saving lead:', error);
     }

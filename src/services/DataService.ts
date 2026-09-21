@@ -1002,11 +1002,17 @@ export class DataService {
     throw new Error(`CRITICAL: Failed to persist ${entity}:${id} after 3 attempts.`);
   }
 
-  static async update(entity: string, id: string, updates: any, origin: AuditLog['origin'] = 'USUARIO'): Promise<void> {
+  // Retorna o documento persistido (com a version atualizada quando entity
+  // === 'lead') pra quem chama poder re-sincronizar o estado local — sem
+  // isso, um segundo save vindo do mesmo formData "velho" (ex: o autosave
+  // silencioso de um documento OCR seguido do botão Salvar manual) sempre
+  // manda uma version desatualizada e cai no bloqueio de conflito abaixo,
+  // descartando a escrita sem erro nenhum pro usuário.
+  static async update(entity: string, id: string, updates: any, origin: AuditLog['origin'] = 'USUARIO'): Promise<any> {
     if (!id || typeof id !== 'string' || id.trim() === '') {
       throw new Error(`UPDATE rejected: Invalid ID for entity ${entity}`);
     }
-    if (!updates || Object.keys(updates).length === 0) return;
+    if (!updates || Object.keys(updates).length === 0) return null;
 
     const collName = this.getCollectionName(entity);
     const docId = this.resolveDocId(entity, id);
@@ -1050,14 +1056,16 @@ export class DataService {
 
     if (!hasChanges) {
       metricsService.track('db_writes_saved', 1, { entity });
-      return;
+      return before;
     }
 
     if (entity === 'lead') {
       const currentVersion = before.version || 0;
       if (sanitizedUpdates.version !== undefined && sanitizedUpdates.version < currentVersion) {
         console.warn(`[DataService] Version conflict for lead ${id}`);
-        return;
+        // Devolve o estado atual (já persistido) pra quem chamou re-sincronizar
+        // a version local, em vez de ficar preso repetindo o mesmo conflito.
+        return before;
       }
       after.version = currentVersion + 1;
     }
@@ -1071,7 +1079,7 @@ export class DataService {
       CacheManager.set(cacheKey, updated ?? after);
       CacheManager.invalidatePattern(`list:${entity}`);
       this.updateAggregates(entity, before, after);
-      return;
+      return updated ?? after;
     }
 
     if (this.isQuotaExceeded || !QuotaProtectionService.canWrite()) {
@@ -1112,7 +1120,7 @@ export class DataService {
             }
           }
 
-          return;
+          return after;
         }
         
         throw new Error('Persistence validation failed (data mismatch after write)');
