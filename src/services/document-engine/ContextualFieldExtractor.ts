@@ -65,24 +65,36 @@ export class ContextualFieldExtractor {
   }
 
   /**
+   * Removes diacritics (á, í, ç, ...) 1-char-for-1-char, so the result stays
+   * the same length/index-aligned as the input — needed to slice `candidate`
+   * using an index found in the accent-stripped copy.
+   */
+  private static stripAccents(s: string): string {
+    return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  }
+
+  /**
    * Finds where a field value likely ends within a block of text.
    */
   private static findBoundary(text: string, currentLabel: string, stopTokens: string[] = []): string {
     if (!text) return '';
-    
+
     // 1. Column Break Detection (3+ spaces usually indicates next column)
     const columnSplit = text.split(/ {3,}/);
     let candidate = columnSplit[0].trim();
 
     // 2. Stop Labels/Tokens Detection (Next field start)
-    const upperCandidate = candidate.toUpperCase();
+    // Stop labels/tokens are always plain ASCII uppercase (ex: "COMBUSTIVEL"),
+    // but the source text often has accents ("Combustível") — strip them
+    // before matching so labels don't slip past the boundary check.
     const allStopLabels = [...this.STOP_LABELS, ...stopTokens];
 
     for (const stopLabel of allStopLabels) {
       if (stopLabel === currentLabel.toUpperCase()) continue;
-      
+
+      const upperCandidate = this.stripAccents(candidate).toUpperCase();
       const regex = new RegExp(`\\b${stopLabel}\\b|${stopLabel}[:/]`, 'i');
-      const match = candidate.match(regex);
+      const match = upperCandidate.match(regex);
       if (match && match.index !== undefined) {
          candidate = candidate.substring(0, match.index).trim();
       }
