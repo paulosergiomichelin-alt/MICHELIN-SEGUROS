@@ -49,7 +49,9 @@ const DOCUMENT_SCHEMAS: Record<string, FieldDef[]> = {
     { key: 'birthDate', label: 'Data de Nascimento', type: 'date', aliases: ['data_nascimento', 'nascimento'] },
     { key: 'licenseNumber', label: 'Nº Registro', aliases: ['registration', 'registro'] },
     { key: 'licenseExpiry', label: 'Validade CNH', type: 'date', aliases: ['validity', 'validade'] },
-    { key: 'licenseCategory', label: 'Categoria', aliases: ['category', 'categoria'] }
+    { key: 'licenseCategory', label: 'Categoria', aliases: ['category', 'categoria'] },
+    { key: 'rg', label: 'RG', aliases: ['doc_identidade'] },
+    { key: 'rgOrgaoEmissor', label: 'Órgão Emissor', aliases: ['orgao_emissor'] }
   ],
   crv: [
     { key: 'name', label: 'Nome do Proprietário', aliases: ['nome', 'ownerName', 'nomeProprietario'] },

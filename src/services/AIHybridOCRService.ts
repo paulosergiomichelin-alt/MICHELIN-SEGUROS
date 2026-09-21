@@ -47,7 +47,7 @@ export interface AIExtractionResult {
 const MODEL_ID = 'google/gemini-2.5-pro';
 // Cache version: bump this whenever the prompt, model, or output schema changes so
 // old cached responses (which may miss fields) are invalidated automatically.
-const CACHE_VERSION = 'v14';
+const CACHE_VERSION = 'v15';
 const CACHE_PREFIX = `ai_ocr_cache_${CACHE_VERSION}:`;
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -388,10 +388,12 @@ export class AIHybridOCRService {
             '- filiacao_pai: nome completo do pai',
             '- filiacao_mae: nome completo da mãe',
             '- primeira_habilitacao: data da primeira habilitação (DD/MM/YYYY)',
+            '- doc_identidade: número do documento de identidade (RG) — procure o campo "DOC. IDENTIDADE" ou "Nº DOC. IDENTIDADE", geralmente na mesma linha/bloco de "ÓRGÃO EMISSOR". Só os dígitos, sem pontos/traço.',
+            '- orgao_emissor: sigla do órgão emissor do documento de identidade + UF (procure "ÓRG. EMISSOR" ou "ÓRGÃO EMISSOR"), ex: "SSP SP", "SSP MG", "DETRAN RJ"',
             '',
             'ATENÇÃO: CPF e REGISTRO são campos DIFERENTES. CPF tem formato "000.000.000-00". REGISTRO é só números sem formatação.',
             'Retorne APENAS este JSON, sem comentários:',
-            '{"nome":"","cpf":"","data_nascimento":"","registro":"","validade":"","categoria":"","filiacao_pai":"","filiacao_mae":"","primeira_habilitacao":""}'
+            '{"nome":"","cpf":"","data_nascimento":"","registro":"","validade":"","categoria":"","filiacao_pai":"","filiacao_mae":"","primeira_habilitacao":"","doc_identidade":"","orgao_emissor":""}'
           ].join('\n')
         };
       case 'crv':
@@ -550,6 +552,10 @@ export class AIHybridOCRService {
       out.licenseExpiry = out.validade;
       out.licenseCategory = out.categoria;
       out.licenseIssueDate = out.primeira_habilitacao;
+      // Nomes iguais aos campos do Lead (rg/rgOrgaoEmissor) — LeadForm faz um
+      // spread direto do resultado da OCR sobre o lead, sem mapeamento extra.
+      out.rg = parsed.doc_identidade || '';
+      out.rgOrgaoEmissor = parsed.orgao_emissor || '';
     } else if (type === 'crv' || type === 'crlv') {
       runValidator('placa', () => DocumentValidator.validatePlate(String(parsed.placa)));
       runValidator('chassi', () => DocumentValidator.validateChassis(String(parsed.chassi)));

@@ -14,7 +14,7 @@ import { PDFRenderService } from './PDFRenderService';
 // Bump this when the result-shape or merge logic changes so previously-cached
 // results (which may be missing fields the new pipeline would have added) are
 // invalidated automatically on the next import.
-const ENTERPRISE_CACHE_PREFIX = 'enterprise_ocr_cache_v5';
+const ENTERPRISE_CACHE_PREFIX = 'enterprise_ocr_cache_v6';
 
 export enum ProcessingState {
   IDLE = 'IDLE',
