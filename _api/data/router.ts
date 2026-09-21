@@ -188,24 +188,50 @@ dataRouter.post('/_batch', async (req: any, res) => {
       const table = ENTITY_TABLE[op.entity];
       if (!table) throw new Error(`_batch: entidade desconhecida "${op.entity}"`);
       const pkProp = pkPropertyName(op.entity);
-      const data = { ...(op.data ?? {}) };
+      const rawData = { ...(op.data ?? {}) };
+      const idEq = eq(pkColumn(op.entity, table), op.id);
+
+      // Mesmo tratamento das rotas singulares (POST/PATCH/PUT /:entity) — sem isso,
+      // qualquer campo de uma entidade jsonb (settings/config/leads) que não seja
+      // coluna real da tabela era silenciosamente descartado num batch, nunca caindo
+      // na coluna `data` (achado F-03 da auditoria). Nenhum caller atual do /_batch
+      // toca essas entidades, mas a rota genérica precisa se comportar igual às
+      // outras pra não virar um jeito silencioso de perder dado no futuro.
+      let data: Record<string, any> = rawData;
+      if (GENERIC_JSON_ENTITIES.has(op.entity)) {
+        data = { data: rawData };
+      } else if (HYBRID_JSON_ENTITIES.has(op.entity)) {
+        const { known, extra } = splitHybridColumns(table, rawData);
+        data = { ...known, data: extra };
+      }
 
       if (op.type === 'set') {
         if (!req.userSuperadmin && ORG_SCOPED_ENTITIES.has(op.entity) && table.organizationId) {
           data.organizationId = req.organizationId;
+        }
+        // Merge, não substituição: um upsert que só toca um subconjunto de campos
+        // (comum em writes incrementais) não pode apagar o resto do JSONB `data`
+        // já persistido pra esse registro.
+        if (JSON_BLOB_ENTITIES.has(op.entity)) {
+          const [current] = await tx.select().from(table).where(idEq);
+          data.data = { ...(current?.data ?? {}), ...data.data };
         }
         const [row] = await tx.insert(table).values({ ...data, [pkProp]: op.id })
           .onConflictDoUpdate({ target: pkColumn(op.entity, table), set: data }).returning();
         out.push(row);
       } else if (op.type === 'update') {
         const scope = orgScopeWhere(op.entity, table, req);
-        const idEq = eq(pkColumn(op.entity, table), op.id);
-        const [row] = await tx.update(table).set(data).where(scope ? and(idEq, scope) : idEq).returning();
+        const where = scope ? and(idEq, scope) : idEq;
+        if (JSON_BLOB_ENTITIES.has(op.entity)) {
+          const [current] = await tx.select().from(table).where(where);
+          data.data = { ...(current?.data ?? {}), ...data.data };
+        }
+        const [row] = await tx.update(table).set(data).where(where).returning();
         out.push(row ?? null);
       } else {
         const scope = orgScopeWhere(op.entity, table, req);
-        const idEq = eq(pkColumn(op.entity, table), op.id);
-        await tx.delete(table).where(scope ? and(idEq, scope) : idEq);
+        const where = scope ? and(idEq, scope) : idEq;
+        await tx.delete(table).where(where);
         out.push({ [pkProp]: op.id, deleted: true });
       }
     }

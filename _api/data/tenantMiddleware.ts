@@ -24,4 +24,12 @@ export const ORG_SCOPED_ENTITIES = new Set([
   'email_accounts', 'email_account',
   'email_rules', 'email_rule',
   'cotacoes', 'cotacao',
+  // Ambas têm coluna organization_id mas ficaram de fora desta lista — qualquer
+  // usuário autenticado de QUALQUER organização lia/editava/apagava eventos de
+  // agenda e dados de aprendizado de IA de outra organização pela rota genérica
+  // /api/data/calendar_events e /api/data/learning_memory (achado F-04 da
+  // auditoria; calendar_events tem sua própria rota dedicada em
+  // _api/calendar/events.ts com verificação de posse, mas isso nunca protegeu
+  // o caminho genérico, que continua registrado em ENTITY_TABLE).
+  'calendar_events', 'learning_memory',
 ]);

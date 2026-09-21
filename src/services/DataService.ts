@@ -53,6 +53,7 @@ export class DataService {
     'cliente_relacionamentos', 'cliente_relacionamento',
     'cotacoes', 'cotacao',
     'email_rules', 'email_rule',
+    'calendar_events', 'learning_memory',
   ]);
 
   // Collections whose document IDs are scoped per-org: {orgId}::{docId}
