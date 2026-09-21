@@ -32,4 +32,12 @@ export const ORG_SCOPED_ENTITIES = new Set([
   // _api/calendar/events.ts com verificação de posse, mas isso nunca protegeu
   // o caminho genérico, que continua registrado em ENTITY_TABLE).
   'calendar_events', 'learning_memory',
+  // Chaveadas pela própria organizationId (ver PK_COLUMN em entityMap.ts) — sem
+  // estarem aqui, GET/PATCH/PUT /api/data/tenant_agent_configs/:id (ou
+  // tenant_onboarding_wizard_state) não recebia NENHUM filtro de organização, e
+  // :id é justamente o organizationId escolhido livremente pelo cliente: qualquer
+  // usuário autenticado lia e sobrescrevia a config do agente de IA / estado do
+  // wizard de onboarding de QUALQUER outra empresa só trocando o id na URL
+  // (achado F-08 da auditoria).
+  'tenant_agent_configs', 'tenant_onboarding_wizard_state',
 ]);
