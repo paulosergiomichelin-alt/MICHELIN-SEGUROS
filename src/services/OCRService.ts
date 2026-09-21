@@ -553,6 +553,11 @@ export class OCRService {
         ['insuredCpf',     ['segurado_cpf', 'insuredCpf']],
         ['plate',          ['placa']],
         ['chassis',        ['chassi']],
+        ['renavam',        ['renavam']],
+        ['brandModel',     ['marca_modelo']],
+        ['manufactureYear',['ano_fabricacao']],
+        ['modelYear',      ['ano_modelo']],
+        ['color',          ['cor']],
         ['cep',            ['cep']],
         ['startDate',      ['inicio_vigencia', 'startDate']],
         ['insuranceExpiry',['fim_vigencia', 'insuranceExpiry']]

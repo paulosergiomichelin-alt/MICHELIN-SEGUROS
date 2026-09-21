@@ -72,6 +72,14 @@ function parseBRMoneyStr(v: string): string {
   return num.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 }
 
+function splitBrandModel(v: string): Partial<ApoliceVeiculo> {
+  const clean = v.trim();
+  if (!clean) return {};
+  const parts = clean.split('/').map(s => s.trim()).filter(Boolean);
+  if (parts.length >= 2) return { marca: parts[0], modelo: parts.slice(1).join(' ') };
+  return { modelo: clean };
+}
+
 function matchSeguradora(ocrInsurer: string): string {
   if (!ocrInsurer) return '';
   const norm = (s: string) =>
@@ -261,8 +269,14 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
     if (data.brokerName && !form.corretoraOrigem) updates.corretoraOrigem = data.brokerName;
 
     const veicUpdates: Partial<ApoliceVeiculo> = {};
-    if (data.plate) veicUpdates.placa = data.plate;
+    if (data.plate || data.placa) veicUpdates.placa = data.plate || data.placa;
     if (data.chassis || data.chassi) veicUpdates.chassi = data.chassis ?? data.chassi;
+    if (data.renavam) veicUpdates.renavam = data.renavam;
+    if (data.manufactureYear || data.ano_fabricacao) veicUpdates.anoFabricacao = data.manufactureYear ?? data.ano_fabricacao;
+    if (data.modelYear || data.ano_modelo) veicUpdates.anoModelo = data.modelYear ?? data.ano_modelo;
+    if (data.color || data.cor) veicUpdates.cor = data.color ?? data.cor;
+    const brandModel = data.brandModel || data.marca_modelo;
+    if (brandModel) Object.assign(veicUpdates, splitBrandModel(brandModel));
     if (Object.keys(veicUpdates).length > 0) setVeiculo(v => ({ ...v, ...veicUpdates }));
 
     // Map premium values from OCR

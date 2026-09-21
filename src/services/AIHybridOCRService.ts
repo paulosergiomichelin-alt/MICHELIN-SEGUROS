@@ -325,6 +325,11 @@ export class AIHybridOCRService {
             '- proprietario_veiculo_cpf: CPF do proprietário do veículo',
             '- placa: placa do veículo (7 caracteres, ex: ABC1D23 ou ABC-1234)',
             '- chassi: chassi/VIN (exatamente 17 caracteres alfanuméricos)',
+            '- marca_modelo: marca e modelo do veículo (ex: VW/GOL 1.0, FIAT/ARGO DRIVE)',
+            '- ano_fabricacao: ano de fabricação (4 dígitos)',
+            '- ano_modelo: ano do modelo (4 dígitos)',
+            '- cor: cor do veículo',
+            '- renavam: número RENAVAM do veículo, 9 a 11 dígitos',
             '- cep: CEP de pernoite formato XXXXX-XXX',
             '',
             'VIGÊNCIA (procure "Vigência", "Período de Cobertura"):',
@@ -343,7 +348,7 @@ export class AIHybridOCRService {
             '- estado_civil: SOLTEIRO, CASADO, DIVORCIADO, VIUVO ou UNIAO ESTAVEL',
             '',
             'Retorne APENAS este JSON sem comentários:',
-            '{"numero_apolice":"","seguradora":"","corretora":"","seguradora_cnpj":"","corretora_cnpj":"","corretora_susep":"","segurado_nome":"","segurado_cpf":"","segurado_data_nascimento":"","proprietario_veiculo_nome":"","proprietario_veiculo_cpf":"","placa":"","chassi":"","cep":"","fim_vigencia":"","inicio_vigencia":"","premio_liquido":"","valor_total":"","uso_comercial":"","alienacao_fiduciaria":"","proprietario_e_condutor":"","condutor_jovem":"","estado_civil":""}'
+            '{"numero_apolice":"","seguradora":"","corretora":"","seguradora_cnpj":"","corretora_cnpj":"","corretora_susep":"","segurado_nome":"","segurado_cpf":"","segurado_data_nascimento":"","proprietario_veiculo_nome":"","proprietario_veiculo_cpf":"","placa":"","chassi":"","marca_modelo":"","ano_fabricacao":"","ano_modelo":"","cor":"","renavam":"","cep":"","fim_vigencia":"","inicio_vigencia":"","premio_liquido":"","valor_total":"","uso_comercial":"","alienacao_fiduciaria":"","proprietario_e_condutor":"","condutor_jovem":"","estado_civil":""}'
           ].join('\n')
         };
       default:
@@ -451,6 +456,14 @@ export class AIHybridOCRService {
       out.startDate = out.inicio_vigencia;
       out.premioLiquido = parsed.premio_liquido || '';
       out.premio = parsed.valor_total || '';
+      // Dados do veículo (para preencher o card "Dados do Veículo" da apólice)
+      out.plate = out.placa || '';
+      out.chassis = out.chassi || '';
+      out.brandModel = parsed.marca_modelo || '';
+      out.manufactureYear = parsed.ano_fabricacao || '';
+      out.modelYear = parsed.ano_modelo || '';
+      out.color = parsed.cor || '';
+      out.renavam = parsed.renavam || '';
     }
 
     const semanticScore = scores.length > 0 ? DocumentValidator.aggregate(scores) : 0.5;

@@ -426,6 +426,30 @@ export class DeterministicParser {
       const chassisHit = regexHits.find(r => r.field === 'chassi');
       if (chassisHit) data.chassis = chassisHit.value;
     }
+    if (!data.renavam) {
+      const renavamHit = regexHits.find(r => r.field === 'renavam');
+      if (renavamHit) data.renavam = renavamHit.value;
+    }
+
+    if (!data.brandModel) {
+      data.brandModel = ContextualFieldExtractor.extract(text, ['MARCA/MODELO', 'MARCA / MODELO', 'MARCA MODELO', 'VEICULO', 'MODELO'], {
+        maxChars: 50,
+        stopTokens: ['PLACA', 'CHASSI', 'ANO', 'COR', 'RENAVAM', 'CATEGORIA', 'COMBUSTIVEL']
+      });
+    }
+
+    const anoMatch = text.match(/ANO\s*(?:FAB(?:RICA[CÇ][AÃ]O)?)?\s*\/?\s*MOD(?:ELO)?[:\s]{0,5}(\d{4})\s*\/\s*(\d{4})/i);
+    if (anoMatch) {
+      data.manufactureYear = anoMatch[1];
+      data.modelYear = anoMatch[2];
+    }
+
+    if (!data.color) {
+      data.color = ContextualFieldExtractor.extract(text, ['COR PREDOMINANTE', 'COR'], {
+        maxChars: 20,
+        stopTokens: ['PLACA', 'CHASSI', 'RENAVAM', 'CATEGORIA', 'COMBUSTIVEL', 'ANO']
+      });
+    }
 
     // CEP de pernoite: prefer values within ~80 chars after a "CEP" label, fall
     // back to the first plausible XXXXX-XXX / 8-digit run anywhere. The labeled
