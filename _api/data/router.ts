@@ -127,6 +127,32 @@ function selfUserScopeWhere(entity: string, table: any, req: any) {
   return eq(table.userId, req.userId);
 }
 
+// A única barreira real que existia contra escalação de privilégio (um usuário comum
+// mudando o próprio role/permissions pra admin) era DataPolicyService.checkPermissions —
+// que roda só no navegador. Qualquer PATCH/PUT direto em /api/data/users/:id (via
+// curl/Postman, sem passar pelo DataService do frontend) alterava role/permissions/
+// organizationId/superadmin de qualquer usuário da própria organização sem checagem
+// nenhuma no backend (achado F-14 da auditoria). Espelha exatamente a mesma lista de
+// campos e a mesma regra (bloqueado pra quem não é admin/superadmin) que já existia em
+// DataService.ts:1022-1034 — só que agora também no servidor, que é quem manda de
+// verdade. Escopo: só PATCH/PUT (edição de registro existente) — POST de criação
+// continua livre pra permitir o auto-cadastro definir o role padrão inicial (baixo
+// privilégio), igual o frontend já fazia.
+const SENSITIVE_USER_FIELDS = ['role', 'permissions', 'ownerId', 'createdBy', 'organizationId', 'superadmin'];
+function assertNoPrivilegeEscalation(entity: string, body: Record<string, any>, req: any, res: any): boolean {
+  if (entity !== 'users' && entity !== 'user') return true;
+  // Mesma condição de UserProfileModal.tsx:92 (isAdmin) — um usuário com
+  // permissions.canManageUsers=true mas role !== 'admin' também tem permissão
+  // legítima de editar outros usuários nesta tela.
+  if (req.userSuperadmin || req.userRole === 'admin' || req.userPermissions?.canManageUsers) return true;
+  const attempted = SENSITIVE_USER_FIELDS.filter(f => body[f] !== undefined);
+  if (attempted.length > 0) {
+    res.status(403).json({ error: `Ação negada: campos restritos (${attempted.join(', ')})` });
+    return false;
+  }
+  return true;
+}
+
 function scopeWhere(entity: string, table: any, req: any) {
   const clauses = [orgScopeWhere(entity, table, req), selfUserScopeWhere(entity, table, req)].filter(Boolean);
   if (clauses.length === 0) return undefined;
@@ -320,6 +346,7 @@ dataRouter.post('/:entity', async (req: any, res) => {
 
 dataRouter.patch('/:entity/:id', async (req: any, res) => {
   const table = resolveTable(req.params.entity, res); if (!table) return;
+  if (!assertNoPrivilegeEscalation(req.params.entity, req.body, req, res)) return;
   const scope = scopeWhere(req.params.entity, table, req);
   const idEq = eq(pkColumn(req.params.entity, table), req.params.id);
   const where = scope ? and(idEq, scope) : idEq;
@@ -339,6 +366,7 @@ dataRouter.patch('/:entity/:id', async (req: any, res) => {
 
 dataRouter.put('/:entity/:id', async (req: any, res) => {
   const table = resolveTable(req.params.entity, res); if (!table) return;
+  if (!assertNoPrivilegeEscalation(req.params.entity, req.body, req, res)) return;
   if (!req.userSuperadmin && ORG_SCOPED_ENTITIES.has(req.params.entity) && table.organizationId) {
     if (req.body.organizationId && req.body.organizationId !== req.organizationId) {
       return res.status(403).json({ error: 'organizationId do payload não corresponde ao usuário autenticado' });
