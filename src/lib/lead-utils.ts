@@ -128,10 +128,27 @@ export const standardizeLeadData = (data: any, existingLead?: Partial<Lead>): Pa
     'address_overnight': 'enderecoAuto'
   };
 
+  // marca/modelo chegam como dois campos separados na extração de apólice (ver
+  // DOCUMENT_SCHEMAS['policy'] em UniversalDocumentViewer.tsx), mas o fieldMapping
+  // abaixo só sabia mapear 'modelo' isoladamente para 'brandModel' — sem 'marca'
+  // mapeado, ela passava direto como um campo 'marca' órfão (que Lead nem tem) e
+  // brandModel acabava só com o modelo, perdendo a marca inteira (achado F-10 da
+  // auditoria: reincidência do bug "marca/modelo vêm juntos", desta vez no import
+  // via LeadForm em vez do ApoliceForm). Combina os dois ANTES do mapeamento
+  // genérico, pra 'modelo' sozinho nunca mais sobrescrever o brandModel combinado.
+  let sourceData = data;
+  if (data.marca || data.modelo) {
+    const combined = [data.marca, data.modelo].filter(Boolean).join(' ').trim();
+    sourceData = { ...data };
+    delete sourceData.marca;
+    delete sourceData.modelo;
+    if (combined && !sourceData.brandModel) sourceData.brandModel = combined;
+  }
+
   const cleanData: any = {};
-  Object.keys(data).forEach(key => {
+  Object.keys(sourceData).forEach(key => {
     const mappedKey = fieldMapping[key] || key;
-    cleanData[mappedKey] = data[key];
+    cleanData[mappedKey] = sourceData[key];
   });
 
   // 2. Initial Cleaning
