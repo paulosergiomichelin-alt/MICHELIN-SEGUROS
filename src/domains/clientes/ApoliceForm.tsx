@@ -72,11 +72,19 @@ function parseBRMoneyStr(v: string): string {
   return num.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 }
 
+// Fallback só usado quando a IA não separou marca/modelo (ex: veio só do
+// parser determinístico por texto). "GM/CELTA 1.0" -> corta na barra;
+// "TOYOTA COROLLA XEI" -> assume 1ª palavra = marca (padrão comum no
+// mercado BR: GM, FIAT, VW, FORD, TOYOTA, HONDA, HYUNDAI...).
 function splitBrandModel(v: string): Partial<ApoliceVeiculo> {
   const clean = v.trim();
   if (!clean) return {};
-  const parts = clean.split('/').map(s => s.trim()).filter(Boolean);
-  if (parts.length >= 2) return { marca: parts[0], modelo: parts.slice(1).join(' ') };
+  if (clean.includes('/')) {
+    const parts = clean.split('/').map(s => s.trim()).filter(Boolean);
+    if (parts.length >= 2) return { marca: parts[0], modelo: parts.slice(1).join(' ') };
+  }
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return { marca: words[0], modelo: words.slice(1).join(' ') };
   return { modelo: clean };
 }
 
@@ -278,8 +286,14 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
     if (data.manufactureYear || data.ano_fabricacao) veicUpdates.anoFabricacao = data.manufactureYear || data.ano_fabricacao;
     if (data.modelYear || data.ano_modelo) veicUpdates.anoModelo = data.modelYear || data.ano_modelo;
     if (data.color || data.cor) veicUpdates.cor = data.color || data.cor;
-    const brandModel = data.brandModel || data.marca_modelo;
-    if (brandModel) Object.assign(veicUpdates, splitBrandModel(brandModel));
+    if (data.marca || data.modelo) {
+      // IA já manda marca e modelo separados — usa direto, sem heurística.
+      if (data.marca) veicUpdates.marca = data.marca;
+      if (data.modelo) veicUpdates.modelo = data.modelo;
+    } else {
+      const brandModel = data.brandModel || data.marca_modelo;
+      if (brandModel) Object.assign(veicUpdates, splitBrandModel(brandModel));
+    }
     if (Object.keys(veicUpdates).length > 0) setVeiculo(v => ({ ...v, ...veicUpdates }));
 
     // Map premium values from OCR

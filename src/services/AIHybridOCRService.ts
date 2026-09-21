@@ -448,7 +448,8 @@ export class AIHybridOCRService {
             '- proprietario_veiculo_cpf: CPF do proprietário do veículo',
             '- placa: placa do veículo (7 caracteres, ex: ABC1D23 ou ABC-1234)',
             '- chassi: chassi/VIN (exatamente 17 caracteres alfanuméricos)',
-            '- marca_modelo: marca e modelo do veículo (ex: VW/GOL 1.0, FIAT/ARGO DRIVE)',
+            '- marca: só a marca/fabricante do veículo, SEM o modelo (ex: VOLKSWAGEN, FIAT, CHEVROLET, HARLEY DAVIDSON)',
+            '- modelo: só o modelo do veículo, SEM a marca (ex: GOL 1.0, ARGO DRIVE, ONIX PLUS)',
             '- ano_fabricacao: ano de fabricação (4 dígitos)',
             '- ano_modelo: ano do modelo (4 dígitos)',
             '- cor: cor do veículo',
@@ -471,7 +472,7 @@ export class AIHybridOCRService {
             '- estado_civil: SOLTEIRO, CASADO, DIVORCIADO, VIUVO ou UNIAO ESTAVEL',
             '',
             'Retorne APENAS este JSON sem comentários:',
-            '{"numero_apolice":"","seguradora":"","corretora":"","seguradora_cnpj":"","corretora_cnpj":"","corretora_susep":"","segurado_nome":"","segurado_cpf":"","segurado_data_nascimento":"","proprietario_veiculo_nome":"","proprietario_veiculo_cpf":"","placa":"","chassi":"","marca_modelo":"","ano_fabricacao":"","ano_modelo":"","cor":"","renavam":"","cep":"","fim_vigencia":"","inicio_vigencia":"","premio_liquido":"","valor_total":"","uso_comercial":"","alienacao_fiduciaria":"","proprietario_e_condutor":"","condutor_jovem":"","estado_civil":""}'
+            '{"numero_apolice":"","seguradora":"","corretora":"","seguradora_cnpj":"","corretora_cnpj":"","corretora_susep":"","segurado_nome":"","segurado_cpf":"","segurado_data_nascimento":"","proprietario_veiculo_nome":"","proprietario_veiculo_cpf":"","placa":"","chassi":"","marca":"","modelo":"","ano_fabricacao":"","ano_modelo":"","cor":"","renavam":"","cep":"","fim_vigencia":"","inicio_vigencia":"","premio_liquido":"","valor_total":"","uso_comercial":"","alienacao_fiduciaria":"","proprietario_e_condutor":"","condutor_jovem":"","estado_civil":""}'
           ].join('\n')
         };
       default:
@@ -582,7 +583,12 @@ export class AIHybridOCRService {
       // Dados do veículo (para preencher o card "Dados do Veículo" da apólice)
       out.plate = out.placa || '';
       out.chassis = out.chassi || '';
-      out.brandModel = parsed.marca_modelo || '';
+      // marca/modelo vêm da IA como campos já separados (pedir "marca_modelo"
+      // combinado obrigava a gente a chutar onde cortar o texto depois, e
+      // isso vinha jogando tudo pra dentro do campo Modelo).
+      out.marca = parsed.marca || '';
+      out.modelo = parsed.modelo || '';
+      out.brandModel = [parsed.marca, parsed.modelo].filter(Boolean).join(' ');
       out.manufactureYear = parsed.ano_fabricacao || '';
       out.modelYear = parsed.ano_modelo || '';
       out.color = parsed.cor || '';
