@@ -26,6 +26,13 @@ async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || (process.env.NODE_ENV === 'production' ? 3000 : 3001);
 
+  // Railway roda atrás de um proxy reverso — sem isso, req.ip sempre devolveria o IP
+  // interno do proxy (não o do cliente real), colapsando o rate limit por IP (F-15) num
+  // único balde compartilhado por todo mundo, e o express-rate-limit v7 recusa rodar
+  // sem essa configuração explícita atrás de proxy (ERR_ERL_UNEXPECTED_X_FORWARDED_FOR).
+  // `1` confia só no primeiro hop (o proxy do Railway), não numa cadeia arbitrária.
+  app.set('trust proxy', 1);
+
   // CORS — permite Vercel frontend + localhost dev
   const corsOrigins = (process.env.CORS_ORIGIN || 'https://michelin-seguros.vercel.app,http://localhost:3000')
     .split(',').map(s => s.trim());
@@ -158,7 +165,8 @@ async function startServer() {
   });
 
   // â”€â”€ OpenRouter Proxy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  app.post('/api/proxy/openrouter/request', async (req, res) => {
+  const { externalApiLimiter } = await import('./_api/lib/rateLimiter.js');
+  app.post('/api/proxy/openrouter/request', externalApiLimiter, async (req, res) => {
     const { apiKey, method, endpoint, data } = req.body;
     const bodySize = JSON.stringify(req.body || {}).length;
     console.log(`[PROXY-REQ] Endpoint=${endpoint} bytes=${bodySize}`);
@@ -193,7 +201,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/proxy/openrouter/auth', async (req, res) => {
+  app.post('/api/proxy/openrouter/auth', externalApiLimiter, async (req, res) => {
     const { apiKey } = req.body;
     if (!apiKey) return res.status(400).json({ error: 'API Key is required' });
 
@@ -223,6 +231,7 @@ async function startServer() {
   // OAuth Google/Microsoft não carregam header Authorization — quem os protege é o
   // fluxo de consentimento do próprio provedor, não este middleware).
   const { requireAuth: requireAuthForEmail } = await import('./_api/lib/authMiddleware.js');
+  const { emailSendLimiter } = await import('./_api/lib/rateLimiter.js');
   const { default: emailAccountsHandler }        = await import('./_api/email/accounts.js');
   const { default: emailGmailAuthHandler }        = await import('./_api/email/auth/gmail.js');
   const { default: emailMicrosoftAuthHandler }    = await import('./_api/email/auth/microsoft.js');
@@ -256,7 +265,7 @@ async function startServer() {
   app.all('/api/email/folders/:id/empty',   requireAuthForEmail, emailFoldersHandler);
   app.all('/api/email/folders/:id/read-all', requireAuthForEmail, emailFoldersHandler);
   app.all('/api/email/folders/:id/move-folder', requireAuthForEmail, emailFoldersHandler);
-  app.all('/api/email/send',                requireAuthForEmail, emailSendHandler);
+  app.all('/api/email/send',                requireAuthForEmail, emailSendLimiter, emailSendHandler);
   app.all('/api/email/action',              requireAuthForEmail, emailActionHandler);
   app.all('/api/email/drafts',              requireAuthForEmail, emailDraftHandler);
   app.all('/api/email/draft',               requireAuthForEmail, emailDraftHandler);
@@ -279,7 +288,7 @@ async function startServer() {
   // ── CNPJ lookup (BrasilAPI) ───────────────────────────────────────────────────
   const { requireAuth: requireAuthForCnpj } = await import('./_api/lib/authMiddleware.js');
   const { default: cnpjLookupHandler } = await import('./_api/cnpj/lookup.js');
-  app.get('/api/cnpj/:cnpj', requireAuthForCnpj, cnpjLookupHandler);
+  app.get('/api/cnpj/:cnpj', requireAuthForCnpj, externalApiLimiter, cnpjLookupHandler);
   log.info('Rota de busca de CNPJ registrada');
 
   // ── Proxy de download de documentos (Firebase Storage não tem CORS liberado) ──
