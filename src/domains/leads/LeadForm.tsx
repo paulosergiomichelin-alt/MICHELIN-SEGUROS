@@ -715,6 +715,14 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
   const [processingStage, setProcessingStage] = useState<DocumentProcessingStage>(DocumentProcessingStage.IDLE);
   const [activeSession, setActiveSession] = useState<any>(null);
   const controller = useMemo(() => DocumentSessionController.getInstance(), []);
+  // DocumentSessionController é um singleton do app inteiro (não por lead) — sem
+  // isso, uma sessão de OCR iniciada no Lead A e ainda não confirmada quando o
+  // usuário navega pro Lead B seria aplicada (viewer + confirmExtraction) na tela
+  // do Lead B, contaminando o registro errado (achado F-05 da auditoria). Ref, não
+  // state, pra sempre ler o id mais recente dentro do closure do subscribe abaixo
+  // sem precisar re-inscrever a cada render.
+  const currentLeadIdRef = useRef<string | undefined>(lead?.id || formData.id);
+  currentLeadIdRef.current = lead?.id || formData.id;
 
   const [analysisErrorMessage, setAnalysisErrorMessage] = useState<{[key: string]: string | null}>({});
   const hydrationLockRef = useRef<Set<string>>(new Set());
@@ -767,7 +775,16 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
        console.warn('[PIPELINE_CONFIRM_BLOCKED] Session inactive or already confirming');
        return;
     }
-    
+    if (currentLeadIdRef.current && session.leadId !== currentLeadIdRef.current) {
+      // Defesa em profundidade: mesmo que o filtro do subscribe tenha deixado
+      // passar por algum caminho, nunca persiste dados de OCR de um lead no
+      // registro de outro (F-05).
+      console.error('[PIPELINE_CONFIRM_BLOCKED] Sessão pertence a outro lead', {
+        sessionLeadId: session.leadId, currentLeadId: currentLeadIdRef.current,
+      });
+      return;
+    }
+
     isConfirmingRef.current = true;
     const { type, file, leadId } = session;
     console.log(`[PIPELINE_CONFIRM_START] Persisting ${type} for lead ${leadId}`);
@@ -855,6 +872,13 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
   // Sync Global Session to Local State
   useEffect(() => {
     const unsub = controller.subscribe((session) => {
+      // Sessão pertence a outro lead (import deixado em aberto ao navegar pra cá) —
+      // nunca aplica o estado/viewer dela nesta tela (ver comentário no
+      // currentLeadIdRef acima).
+      if (session && currentLeadIdRef.current && session.leadId !== currentLeadIdRef.current) {
+        setActiveSession(null);
+        return;
+      }
       setActiveSession(session);
       if (session) {
         // Automatically open the viewer if in validation state
@@ -890,11 +914,16 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
 
   useEffect(() => {
     if (lead) {
-      // 1. Processing Guard: Ignore external snapshots if session is active
-      if (controller.isActive() || hydrationLockRef.current.size > 0) {
-        console.warn('[HYDRATION_BLOCKED_BY_SESSION]', { 
-          locked: Array.from(hydrationLockRef.current), 
-          session: controller.getSession()?.sessionId 
+      // 1. Processing Guard: Ignore external snapshots if session is active — mas só
+      // quando a sessão ativa é DESTE lead. Uma sessão órfã de outro lead (ver F-05)
+      // nunca pode travar a reconciliação em tempo real do lead atual pra sempre.
+      const currentSession = controller.getSession();
+      const sessionBlocksThisLead = controller.isActive()
+        && (!currentSession || currentSession.leadId === (lead?.id || formData.id));
+      if (sessionBlocksThisLead || hydrationLockRef.current.size > 0) {
+        console.warn('[HYDRATION_BLOCKED_BY_SESSION]', {
+          locked: Array.from(hydrationLockRef.current),
+          session: controller.getSession()?.sessionId
         });
         return;
       }
@@ -1158,13 +1187,21 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (controller.isActive()) {
-      console.warn('[PIPELINE_BLOCKED] Process already in progress');
-      return;
-    }
-
     const type = e.target.id as 'cnh' | 'crv' | 'policy';
     const leadId = lead?.id || formData.id || 'temp-doc';
+
+    if (controller.isActive()) {
+      const foreignSession = controller.getSession();
+      if (foreignSession && foreignSession.leadId !== leadId) {
+        // Sessão órfã de outro lead (usuário saiu sem confirmar/cancelar o import
+        // anterior) — nunca trava o lead atual por causa dela (F-05).
+        console.warn('[STALE_FOREIGN_SESSION_RELEASED]', { staleLeadId: foreignSession.leadId, currentLeadId: leadId });
+        controller.release();
+      } else {
+        console.warn('[PIPELINE_BLOCKED] Process already in progress');
+        return;
+      }
+    }
 
     try {
       const { session, signal } = controller.startSession(type, leadId, file);

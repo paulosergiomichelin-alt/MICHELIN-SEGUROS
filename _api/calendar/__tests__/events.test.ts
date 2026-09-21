@@ -83,7 +83,7 @@ describe('_api/calendar/events handler', () => {
     const chain = makeDbChain([{ id: 'row1', title: 'Reunião' }]);
     (getDb as any).mockReturnValue(chain);
 
-    const req = { method: 'GET', query: { userId: 'u1', accountId: 'acc1', from: '2026-01-01', to: '2026-02-01' } };
+    const req = { method: 'GET', userId: 'u1', query: { accountId: 'acc1', from: '2026-01-01', to: '2026-02-01' } };
     const res = makeRes();
 
     await handler(req, res);
@@ -128,8 +128,8 @@ describe('_api/calendar/events handler', () => {
     (fsGet as any).mockResolvedValue({ id: 'acc1', provider: 'gmail', calendarScopeGranted: true, userId: 'u1' });
     (google.createEvent as any).mockResolvedValue({ id: 'gcal1' });
     const req = {
-      method: 'POST',
-      body: { userId: 'u1', accountId: 'acc1', title: 'Reunião', startAt: '2026-01-10T10:00:00', endAt: '2026-01-10T11:00:00', allDay: false },
+      method: 'POST', userId: 'u1',
+      body: { accountId: 'acc1', title: 'Reunião', startAt: '2026-01-10T10:00:00', endAt: '2026-01-10T11:00:00', allDay: false },
     };
     const res = makeRes();
 
@@ -145,8 +145,8 @@ describe('_api/calendar/events handler', () => {
     (fsGet as any).mockResolvedValue({ id: 'acc1', provider: 'microsoft', calendarScopeGranted: true, userId: 'u1' });
     (ms.createEvent as any).mockResolvedValue({ id: 'mscal1' });
     const req = {
-      method: 'POST',
-      body: { userId: 'u1', accountId: 'acc1', title: 'Reunião', startAt: '2026-01-10T10:00:00', endAt: '2026-01-10T11:00:00', allDay: false },
+      method: 'POST', userId: 'u1',
+      body: { accountId: 'acc1', title: 'Reunião', startAt: '2026-01-10T10:00:00', endAt: '2026-01-10T11:00:00', allDay: false },
     };
     const res = makeRes();
 

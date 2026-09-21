@@ -47,7 +47,7 @@ describe('_api/email/action — move e notspam', () => {
   it('notspam no Gmail adiciona INBOX e remove SPAM', async () => {
     (fsGet as any).mockResolvedValue({ provider: 'gmail', userId: 'u1' });
     (getEmail as any).mockReturnValue({ folder: 'spam' });
-    const req = { method: 'POST', body: { accountId: 'acc1', messageId: 'm1', action: 'notspam' } };
+    const req = { method: 'POST', userId: 'u1', body: { accountId: 'acc1', messageId: 'm1', action: 'notspam' } };
     const res = makeRes();
 
     await handler(req, res);
@@ -59,7 +59,7 @@ describe('_api/email/action — move e notspam', () => {
   it('notspam no Microsoft move pra inbox', async () => {
     (fsGet as any).mockResolvedValue({ provider: 'microsoft', userId: 'u1' });
     (getEmail as any).mockReturnValue({ folder: 'spam' });
-    const req = { method: 'POST', body: { accountId: 'acc1', messageId: 'm1', action: 'notspam' } };
+    const req = { method: 'POST', userId: 'u1', body: { accountId: 'acc1', messageId: 'm1', action: 'notspam' } };
     const res = makeRes();
 
     await handler(req, res);
@@ -69,7 +69,7 @@ describe('_api/email/action — move e notspam', () => {
 
   it('move exige targetFolderId', async () => {
     (fsGet as any).mockResolvedValue({ provider: 'gmail', userId: 'u1' });
-    const req = { method: 'POST', body: { accountId: 'acc1', messageId: 'm1', action: 'move' } };
+    const req = { method: 'POST', userId: 'u1', body: { accountId: 'acc1', messageId: 'm1', action: 'move' } };
     const res = makeRes();
 
     await handler(req, res);
@@ -82,7 +82,7 @@ describe('_api/email/action — move e notspam', () => {
     (fsGet as any).mockResolvedValue({ provider: 'gmail', userId: 'u1' });
     (getEmail as any).mockReturnValue({ folder: 'inbox' });
     const req = {
-      method: 'POST',
+      method: 'POST', userId: 'u1',
       body: { accountId: 'acc1', messageId: 'm1', action: 'move', sourceFolderId: 'inbox', targetFolderId: 'Label_9' },
     };
     const res = makeRes();
@@ -96,7 +96,7 @@ describe('_api/email/action — move e notspam', () => {
     (fsGet as any).mockResolvedValue({ provider: 'gmail', userId: 'u1' });
     (getEmail as any).mockReturnValue({ folder: 'archive' });
     const req = {
-      method: 'POST',
+      method: 'POST', userId: 'u1',
       body: { accountId: 'acc1', messageId: 'm1', action: 'move', sourceFolderId: 'archived', targetFolderId: 'Label_9' },
     };
     const res = makeRes();
@@ -110,7 +110,7 @@ describe('_api/email/action — move e notspam', () => {
     (fsGet as any).mockResolvedValue({ provider: 'microsoft', userId: 'u1' });
     (getEmail as any).mockReturnValue({ folder: 'inbox' });
     const req = {
-      method: 'POST',
+      method: 'POST', userId: 'u1',
       body: { accountId: 'acc1', messageId: 'm1', action: 'move', targetFolderId: 'AAA-BBB' },
     };
     const res = makeRes();
@@ -124,7 +124,7 @@ describe('_api/email/action — move e notspam', () => {
     (fsGet as any).mockResolvedValue({ provider: 'imap', userId: 'u1' });
     (getEmail as any).mockReturnValue(undefined);
     const req = {
-      method: 'POST',
+      method: 'POST', userId: 'u1',
       body: { accountId: 'acc1', messageId: 'inbox:42', action: 'move', sourceFolderId: 'inbox', targetFolderId: 'Projetos' },
     };
     const res = makeRes();
