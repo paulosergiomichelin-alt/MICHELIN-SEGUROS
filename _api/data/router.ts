@@ -112,6 +112,27 @@ function orgScopeWhere(entity: string, table: any, req: any) {
   return eq(table.organizationId, req.organizationId);
 }
 
+// email_settings é keyed por userId (ver PK_COLUMN em entityMap.ts) e não tem coluna
+// organization_id pra reusar orgScopeWhere — sem este guard, GET/PATCH/DELETE
+// /api/data/email_settings/:id não tinham NENHUMA verificação de posse, e :id é
+// justamente o userId escolhido livremente por quem chama: qualquer usuário
+// autenticado lia e sobrescrevia assinatura/resposta automática/conta padrão de
+// e-mail de outro usuário só trocando o id na URL (achado F-17 da auditoria — a rota
+// dedicada /api/email/settings já foi corrigida separadamente, mas nunca protegeu
+// este caminho genérico, que continua registrado em ENTITY_TABLE).
+const SELF_USER_PK_ENTITIES = new Set(['email_settings']);
+function selfUserScopeWhere(entity: string, table: any, req: any) {
+  if (req.userSuperadmin) return undefined;
+  if (!SELF_USER_PK_ENTITIES.has(entity)) return undefined;
+  return eq(table.userId, req.userId);
+}
+
+function scopeWhere(entity: string, table: any, req: any) {
+  const clauses = [orgScopeWhere(entity, table, req), selfUserScopeWhere(entity, table, req)].filter(Boolean);
+  if (clauses.length === 0) return undefined;
+  return clauses.length === 1 ? clauses[0] : and(...(clauses as any[]));
+}
+
 // Rotas de incremento atômico para os agregados de métricas (DataService.updateAggregates).
 // Registradas antes das rotas genéricas /:entity para não depender de ordem — de qualquer
 // forma não colidem, pois nenhuma rota genérica POST de 2 segmentos aceita um segundo
@@ -245,7 +266,7 @@ dataRouter.post('/_batch', async (req: any, res) => {
 
 dataRouter.get('/:entity/:id', async (req: any, res) => {
   const table = resolveTable(req.params.entity, res); if (!table) return;
-  const scope = orgScopeWhere(req.params.entity, table, req);
+  const scope = scopeWhere(req.params.entity, table, req);
   const idEq = eq(pkColumn(req.params.entity, table), req.params.id);
   const where = scope ? and(idEq, scope) : idEq;
   const [row] = await getDb().select().from(table).where(where);
@@ -259,7 +280,7 @@ dataRouter.post('/:entity/query', async (req: any, res) => {
   const constraints = req.body.constraints ?? [];
   const userWhere = buildWhere(table, constraints);
   const cursorWhere = buildStartAfter(table, constraints);
-  const scope = orgScopeWhere(req.params.entity, table, req);
+  const scope = scopeWhere(req.params.entity, table, req);
   const clauses = [userWhere, cursorWhere, scope].filter(Boolean);
   const where = clauses.length ? and(...clauses) : undefined;
   let q = getDb().select().from(table).where(where);
@@ -279,6 +300,12 @@ dataRouter.post('/:entity', async (req: any, res) => {
     }
     req.body.organizationId = req.organizationId;
   }
+  if (!req.userSuperadmin && SELF_USER_PK_ENTITIES.has(req.params.entity)) {
+    if (req.body.userId && req.body.userId !== req.userId) {
+      return res.status(403).json({ error: 'userId do payload não corresponde ao usuário autenticado' });
+    }
+    req.body.userId = req.userId;
+  }
   let values: any = req.body;
   if (GENERIC_JSON_ENTITIES.has(req.params.entity)) {
     values = { [pkPropertyName(req.params.entity)]: req.body.id, data: req.body };
@@ -293,7 +320,7 @@ dataRouter.post('/:entity', async (req: any, res) => {
 
 dataRouter.patch('/:entity/:id', async (req: any, res) => {
   const table = resolveTable(req.params.entity, res); if (!table) return;
-  const scope = orgScopeWhere(req.params.entity, table, req);
+  const scope = scopeWhere(req.params.entity, table, req);
   const idEq = eq(pkColumn(req.params.entity, table), req.params.id);
   const where = scope ? and(idEq, scope) : idEq;
   let setValues: any = req.body;
@@ -340,7 +367,7 @@ dataRouter.put('/:entity/:id', async (req: any, res) => {
 
 dataRouter.delete('/:entity/:id', async (req: any, res) => {
   const table = resolveTable(req.params.entity, res); if (!table) return;
-  const scope = orgScopeWhere(req.params.entity, table, req);
+  const scope = scopeWhere(req.params.entity, table, req);
   const idEq = eq(pkColumn(req.params.entity, table), req.params.id);
   const where = scope ? and(idEq, scope) : idEq;
   // .returning() ANTES de perder a linha — sem isso, organizationId vira null no evento
