@@ -152,6 +152,129 @@ export class AIHybridOCRService {
     console.log(`[AI_REQUEST] model=${activeModel} bytes=${preprocessed.bytes}`);
     AIOCRMetricsService.recordEvent('OPENROUTER_ROUTING', `sort=${routing.sort} lat<=${routing.preferred_max_latency.p90}s thr>=${routing.preferred_min_throughput.p90}t/s`, { type, sort: routing.sort });
     AIOCRMetricsService.recordEvent('AI_REQUEST', `model=${activeModel}`, { type, bytes: preprocessed.bytes });
+
+    return this.sendAndScore(payload, apiKey, type, activeTimeout, maxRetries, cacheKey, preprocessed.bytes, start);
+  }
+
+  /**
+   * Native-PDF entry point for apólices — sends the original PDF file straight
+   * to the model (OpenRouter's `file-parser` plugin with `engine: 'native'')
+   * instead of rendering pages to a canvas. Apólices routinely run 8-10+
+   * pages with the relevant sections (dados do veículo, seguradora) anywhere
+   * from page 1 to 4+; the old canvas path capped rendering at 3 pages and
+   * squeezed them into one shrunk composite image, which is what was losing
+   * small-print fields (marca/modelo, ano, seguradora). Letting the provider
+   * paginate the real PDF avoids both the page cap and the resolution loss.
+   */
+  public async extractFromPdfFile(file: File, documentType: AIDocumentType): Promise<AIExtractionResult> {
+    const start = Date.now();
+    const type = this.normalizeType(documentType);
+
+    const cfg = AIOCRConfigService.peek();
+    if (cfg && cfg.enabled === false) {
+      console.warn('[AI_OCR_DISABLED] Pipeline disabled in settings; signalling caller to fall back.');
+      AIOCRMetricsService.recordEvent('AI_OCR_DISABLED', 'AI pipeline disabled in settings', { type });
+      return this.failure(type, 'AI_DISABLED', start, 0);
+    }
+
+    console.log(`[AI_OCR_START] type=${type} mode=native_pdf`);
+    AIOCRMetricsService.recordStart(type);
+
+    const apiKey = AIOCRConfigService.resolveApiKey() || OpenRouterOCRClient.resolveApiKey();
+    if (!apiKey) {
+      console.warn('[AI_OCR_NO_KEY] OpenRouter API key not configured; signalling caller to fall back.');
+      AIOCRMetricsService.recordFailure(type, 'NO_API_KEY', Date.now() - start);
+      return this.failure(type, 'NO_API_KEY', start, 0);
+    }
+
+    let base64: string;
+    try {
+      base64 = await this.fileToBase64(file);
+    } catch (err: any) {
+      console.error('[PDF_READ_FAIL]', err.message);
+      return this.failure(type, 'PDF_READ_FAILED', start, 0);
+    }
+    console.log(`[PDF_NATIVE_UPLOAD] ${file.name} ${Math.round(file.size / 1024)}KB`);
+
+    const hash = await ImagePreprocessor.hash(base64).catch(() => '');
+    const cacheKey = hash ? `${CACHE_PREFIX}pdf:${type}:${hash}` : '';
+    if (cacheKey) {
+      const cached = this.cacheGet(cacheKey);
+      if (cached) {
+        console.log(`[AI_OCR_CACHE_HIT] ${type}`);
+        return { ...cached, cached: true, metrics: { ...cached.metrics, latency: Date.now() - start } };
+      }
+    }
+
+    const prompt = this.buildPrompt(type);
+    const activeModel = cfg?.model || MODEL_ID;
+    // Native PDF parsing (provider-side page rendering) is slower than a
+    // single pre-rendered image — give it more headroom than the default.
+    const activeTimeout = Math.max(cfg?.timeout || 40000, 60000);
+    const maxRetries = cfg?.retryEnabled === false ? 0 : Math.min(2, cfg?.retries ?? 2);
+
+    const routing = {
+      sort: (cfg?.routingSort ?? 'throughput') as 'throughput' | 'latency' | 'price',
+      allow_fallbacks: cfg?.routingAllowFallbacks ?? true,
+      require_parameters: cfg?.routingRequireParameters ?? false,
+      data_collection: (cfg?.routingDataCollection ?? 'deny') as 'allow' | 'deny',
+      ...(cfg?.routingZdr ? { zdr: true } : {}),
+      preferred_max_latency: { p90: cfg?.routingMaxLatencyP90 ?? 3 },
+      preferred_min_throughput: { p90: cfg?.routingMinThroughputP90 ?? 40 }
+    };
+
+    const payload: OpenRouterChatRequest = {
+      model: activeModel,
+      temperature: 0,
+      max_tokens: 8192,
+      provider: routing,
+      plugins: [{ id: 'file-parser', pdf: { engine: 'native' } }],
+      messages: [
+        { role: 'system', content: prompt.system },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt.user },
+            { type: 'file', file: { filename: file.name || 'apolice.pdf', file_data: `data:application/pdf;base64,${base64}` } }
+          ]
+        }
+      ]
+    };
+
+    console.log(`[AI_PIPELINE_PRIMARY] model=${activeModel} type=${type} mode=native_pdf`);
+    console.log(`[OPENROUTER_ROUTING] sort=${routing.sort} maxLatencyP90=${routing.preferred_max_latency.p90}s minThroughputP90=${routing.preferred_min_throughput.p90}t/s data=${routing.data_collection}${routing.zdr ? ' zdr=on' : ''}`);
+    console.log(`[AI_REQUEST] model=${activeModel} bytes=${file.size}`);
+    AIOCRMetricsService.recordEvent('OPENROUTER_ROUTING', `sort=${routing.sort} lat<=${routing.preferred_max_latency.p90}s thr>=${routing.preferred_min_throughput.p90}t/s`, { type, sort: routing.sort });
+    AIOCRMetricsService.recordEvent('AI_REQUEST', `model=${activeModel}`, { type, bytes: file.size });
+
+    return this.sendAndScore(payload, apiKey, type, activeTimeout, maxRetries, cacheKey, file.size, start);
+  }
+
+  /** Reads a File as a base64 string (no data: prefix). */
+  private fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+      reader.onerror = () => reject(reader.error || new Error('FILE_READ_ERROR'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /**
+   * Shared tail for both entry points: send the request (with retry/backoff),
+   * parse the JSON response, run semantic validation, compute the hybrid
+   * confidence score, cache on success, and return the final result.
+   */
+  private async sendAndScore(
+    payload: OpenRouterChatRequest,
+    apiKey: string,
+    type: string,
+    activeTimeout: number,
+    maxRetries: number,
+    cacheKey: string,
+    byteSize: number,
+    start: number
+  ): Promise<AIExtractionResult> {
     let raw = '';
     let tokensUsed = 0;
     // Retry loop: provider routing lets OpenRouter switch providers on its end,
@@ -163,7 +286,7 @@ export class AIHybridOCRService {
         const response = await OpenRouterOCRClient.chatCompletion(apiKey, payload, activeTimeout);
         raw = response.choices?.[0]?.message?.content || '';
         tokensUsed = response.usage?.total_tokens || 0;
-        modelEcho = response.model || activeModel;
+        modelEcho = response.model || payload.model;
         console.log(`[OPENROUTER_SUCCESS] provider-resolved-model=${modelEcho} attempt=${attempt + 1}`);
         console.log(`[AI_RESPONSE] tokens=${tokensUsed} finish=${response.choices?.[0]?.finish_reason}`);
         AIOCRMetricsService.recordEvent('OPENROUTER_SUCCESS', `model=${modelEcho} attempt=${attempt + 1}`, { type, attempts: attempt + 1 });
@@ -186,14 +309,14 @@ export class AIHybridOCRService {
     if (lastError) {
       console.error('[OCR_FALLBACK]', lastError.message);
       AIOCRMetricsService.recordFailure(type, lastError.message || 'AI_REQUEST_FAILED', Date.now() - start);
-      return this.failure(type, lastError.message || 'AI_REQUEST_FAILED', start, preprocessed.bytes);
+      return this.failure(type, lastError.message || 'AI_REQUEST_FAILED', start, byteSize);
     }
 
     // Parse
     const parsed = this.parseJSON(raw);
     if (!parsed) {
       console.warn('[JSON_PARSE] failed; falling back. raw head:', raw.substring(0, 200));
-      return this.failure(type, 'JSON_PARSE_FAILED', start, preprocessed.bytes);
+      return this.failure(type, 'JSON_PARSE_FAILED', start, byteSize);
     }
     console.log('[JSON_PARSE] fields=', Object.keys(parsed));
 
@@ -217,14 +340,14 @@ export class AIHybridOCRService {
     const result: AIExtractionResult = {
       success: true,
       documentType: type,
-      provider: modelEcho || activeModel,
+      provider: modelEcho || payload.model,
       confidence,
       fields: normalizedFields,
       rawText: this.maskSensitive(raw),
       metrics: {
         latency: Date.now() - start,
         tokens: tokensUsed,
-        imageBytes: preprocessed.bytes,
+        imageBytes: byteSize,
         semanticScore
       },
       validation

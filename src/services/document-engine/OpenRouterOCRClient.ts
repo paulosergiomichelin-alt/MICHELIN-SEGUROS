@@ -14,7 +14,17 @@ export interface OpenRouterMessage {
   content: string | Array<
     | { type: 'text'; text: string }
     | { type: 'image_url'; image_url: { url: string } }
+    | { type: 'file'; file: { filename: string; file_data: string } }
   >;
+}
+
+// OpenRouter's "file-parser" plugin: lets a PDF be sent as a `file` content
+// block instead of pre-rendered images. `engine: 'native'` hands the raw PDF
+// to models with native document support (Gemini, Claude) so the provider
+// paginates/renders internally instead of us capping pages client-side.
+export interface OpenRouterFileParserPlugin {
+  id: 'file-parser';
+  pdf: { engine: 'native' | 'pdf-text' | 'mistral-ocr' };
 }
 
 export interface OpenRouterProviderRouting {
@@ -37,6 +47,7 @@ export interface OpenRouterChatRequest {
   max_tokens?: number;
   response_format?: { type: 'json_object' };
   provider?: OpenRouterProviderRouting;
+  plugins?: OpenRouterFileParserPlugin[];
 }
 
 export interface OpenRouterChatResponse {
@@ -68,12 +79,18 @@ export class OpenRouterOCRClient {
   ): Promise<OpenRouterChatResponse> {
     if (!apiKey) throw new Error('OPENROUTER_API_KEY_MISSING');
 
-    // Normalise messages for LLM Obs (image_url content becomes a text summary)
+    // Normalise messages for LLM Obs — image/file payloads carry base64 that's
+    // both huge and sensitive, so summarize instead of dumping raw content.
     const obsMessages = payload.messages.map(m => ({
       role: m.role,
       content: typeof m.content === 'string'
         ? m.content
-        : JSON.stringify(m.content).slice(0, 200) + '…',
+        : m.content.map(part => {
+            if (part.type === 'text') return part.text;
+            if (part.type === 'image_url') return '[image omitted]';
+            if (part.type === 'file') return `[file omitted: ${part.file.filename}]`;
+            return '[unknown content part]';
+          }).join(' '),
     }));
 
     return traceLLM(

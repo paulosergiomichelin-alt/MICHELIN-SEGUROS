@@ -14,7 +14,7 @@ import { PDFRenderService } from './PDFRenderService';
 // Bump this when the result-shape or merge logic changes so previously-cached
 // results (which may be missing fields the new pipeline would have added) are
 // invalidated automatically on the next import.
-const ENTERPRISE_CACHE_PREFIX = 'enterprise_ocr_cache_v4';
+const ENTERPRISE_CACHE_PREFIX = 'enterprise_ocr_cache_v5';
 
 export enum ProcessingState {
   IDLE = 'IDLE',
@@ -237,6 +237,30 @@ export class OCRService {
     | { kind: 'transport_error'; reason: string }
     | { kind: 'parse_error'; reason: string }
   > {
+    const isPolicyDoc = typeHint === 'policy' || typeHint === 'apolice';
+
+    // Apólices em PDF vão direto pro modelo como arquivo nativo (Gemini/Claude
+    // paginam e renderizam internamente) em vez de passar pelo canvas, que
+    // limitava a 3 páginas e espremia todas numa única imagem — foi isso que
+    // vinha perdendo marca/modelo/ano em documentos mais longos (8-10+ pgs).
+    if (isPDF && isPolicyDoc && file instanceof File) {
+      try {
+        const aiResultPdf = await AIHybridOCRService.getInstance().extractFromPdfFile(file, typeHint);
+        const outcome = this.classifyAIOutcome(aiResultPdf);
+        // Config/disabled/success outcomes are final either way — the canvas
+        // path would hit the same wall (or there's nothing to improve on).
+        // Only a transport/parse failure (e.g. the model/provider rejected
+        // the native file format) falls through to the older, proven path.
+        if (outcome.kind !== 'transport_error' && outcome.kind !== 'parse_error') {
+          return outcome;
+        }
+        console.warn(`[NATIVE_PDF_FALLBACK] Native PDF path failed (${outcome.reason}); falling back to rendered-image pipeline.`);
+      } catch (err: any) {
+        console.warn(`[NATIVE_PDF_FALLBACK] Native PDF path threw (${err.message}); falling back to rendered-image pipeline.`);
+      }
+      // falls through to the canvas-based path below
+    }
+
     let canvas: HTMLCanvasElement | null;
     try {
       canvas = await this.renderToCanvas(file, url, isPDF, typeHint);
@@ -252,6 +276,16 @@ export class OCRService {
       return { kind: 'transport_error', reason: err.message || 'AI_THROW' };
     }
 
+    return this.classifyAIOutcome(aiResult);
+  }
+
+  private classifyAIOutcome(aiResult: any):
+    | { kind: 'success'; result: any }
+    | { kind: 'low_confidence'; reason: string }
+    | { kind: 'no_key'; reason: string }
+    | { kind: 'disabled'; reason: string }
+    | { kind: 'transport_error'; reason: string }
+    | { kind: 'parse_error'; reason: string } {
     if (aiResult.success && aiResult.confidence >= 40) {
       return { kind: 'success', result: aiResult };
     }
