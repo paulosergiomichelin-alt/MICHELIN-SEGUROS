@@ -865,6 +865,12 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
       console.error(`[PIPELINE_FATAL_ERROR]`, err);
       controller.updateState(DocumentPipelineState.FAILED, null, err.message);
       setAnalysisErrorMessage(prev => ({ ...prev, [type]: 'Falha crítica na persistência do documento.' }));
+      // Sem isso, uma falha na persistência (upload/save) deixava a trava de
+      // hidratação presa pra sempre — a aba parava de refletir mudanças remotas
+      // desse lead até o usuário descartar ou navegar pra outra tela (achado F-20
+      // da auditoria; handleDocUpload já limpa a trava no seu próprio catch, só
+      // este ponto ficava sem).
+      hydrationLockRef.current.delete(type);
       isConfirmingRef.current = false;
     }
   }, [controller, formData, handleSaveInternal, lead]);

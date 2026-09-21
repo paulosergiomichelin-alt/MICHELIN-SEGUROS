@@ -177,6 +177,7 @@ export const LeadsPage = React.memo(({
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url); // F-24 da auditoria: URL de blob nunca era liberada
     } catch (error) {
       console.error('Export error:', error);
     }
