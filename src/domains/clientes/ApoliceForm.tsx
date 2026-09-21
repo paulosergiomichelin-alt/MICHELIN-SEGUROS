@@ -227,6 +227,9 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
   // do veículo) depois que a apólice já tinha sido cadastrada.
   const handleReimport = async () => {
     if (!docMeta) return;
+    // Reimportar sempre destrava a edição — sem isso o usuário reprocessaria
+    // o documento na visualização somente-leitura sem conseguir salvar o resultado.
+    if (readOnly) setReadOnly(false);
     setDocError('');
     setReimporting(true);
     try {
@@ -391,21 +394,19 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
                 <a href={docMeta.url} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="w-3.5 h-3.5 text-[#1F8A4C] hover:opacity-80 transition-colors" />
                 </a>
+                <button
+                  type="button"
+                  onClick={handleReimport}
+                  disabled={reimporting || docProcessing}
+                  title="Reimportar documento (atualiza os campos extraídos, ex: dados do veículo)"
+                  className="text-[#1F8A4C] hover:text-[#153E73] transition-colors disabled:opacity-40"
+                >
+                  {reimporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                </button>
                 {!readOnly && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handleReimport}
-                      disabled={reimporting || docProcessing}
-                      title="Reimportar documento (atualiza os campos extraídos, ex: dados do veículo)"
-                      className="text-[#1F8A4C] hover:text-[#153E73] transition-colors disabled:opacity-40"
-                    >
-                      {reimporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                    </button>
-                    <button type="button" onClick={() => { setDocMeta(null); setDocFile(null); setOcrData(null); }} className="text-slate-400 hover:text-[#C0392B] transition-colors">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </>
+                  <button type="button" onClick={() => { setDocMeta(null); setDocFile(null); setOcrData(null); }} className="text-slate-400 hover:text-[#C0392B] transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 )}
               </div>
             ) : (
