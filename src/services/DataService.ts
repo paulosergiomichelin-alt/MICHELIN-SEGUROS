@@ -1051,10 +1051,13 @@ export class DataService {
       return before;
     }
 
-    if (entity === 'lead') {
+    // Concorrência otimista estendida pra 'cliente' (achado F-18 da auditoria) — antes só
+    // 'lead' tinha essa trava; dois usuários editando o mesmo cliente ao mesmo tempo faziam
+    // o segundo save sobrescrever o primeiro em silêncio, sem coluna version pra detectar.
+    if (entity === 'lead' || entity === 'cliente') {
       const currentVersion = before.version || 0;
       if (sanitizedUpdates.version !== undefined && sanitizedUpdates.version < currentVersion) {
-        console.warn(`[DataService] Version conflict for lead ${id}`);
+        console.warn(`[DataService] Version conflict for ${entity} ${id}`);
         // Devolve o estado atual (já persistido) pra quem chamou re-sincronizar
         // a version local, em vez de ficar preso repetindo o mesmo conflito.
         return before;

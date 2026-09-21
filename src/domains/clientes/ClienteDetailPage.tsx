@@ -222,8 +222,13 @@ export const ClienteDetailPage: React.FC = () => {
 
   const handleSaveCliente = async (data: Omit<Cliente, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!id) return;
-    await DataService.update('cliente', id, { ...data, updatedAt: new Date().toISOString() });
-    setCliente(prev => prev ? { ...prev, ...data } : prev);
+    const persisted = await DataService.update('cliente', id, { ...data, updatedAt: new Date().toISOString() });
+    // Sincroniza a version com a que o backend acabou de persistir — mesmo padrão de
+    // LeadForm.handleSaveInternal (achado F-18 da auditoria estendido pra cliente): sem
+    // isso, o próximo save manda uma version desatualizada e é descartado silenciosamente
+    // pelo bloqueio de conflito.
+    const nextVersion = persisted && typeof persisted === 'object' ? (persisted as any).version : undefined;
+    setCliente(prev => prev ? { ...prev, ...data, ...(nextVersion !== undefined ? { version: nextVersion } : {}) } : prev);
     await ClienteService.addHistorico(id, {
       clienteId: id,
       tipo: 'editado',

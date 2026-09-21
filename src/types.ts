@@ -437,6 +437,7 @@ export interface Cliente {
   dataRenovacao?: string;
   documentos?: ClienteDocumento[];
   organizationId?: string;
+  version?: number; // Controle de concorrência otimista (F-18 da auditoria)
   createdAt: string;
   updatedAt: string;
 }

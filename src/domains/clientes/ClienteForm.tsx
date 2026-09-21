@@ -351,6 +351,10 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
           whatsapp: c.whatsapp ? c.whatsapp.replace(/\D/g, '') : undefined,
         })),
         status: (cliente?.status as any) ?? 'ativo',
+        // Carrega a version pra DataService.update detectar edição concorrente (F-18 da
+        // auditoria) — sem isso, o backend nunca recebe o que comparar contra o valor
+        // persistido e a checagem vira sempre um no-op.
+        version: cliente?.version,
         leadOrigemId: cliente?.leadOrigemId,
         seguradoraAtualId: cliente?.seguradoraAtualId,
         produtoAtual: cliente?.produtoAtual,

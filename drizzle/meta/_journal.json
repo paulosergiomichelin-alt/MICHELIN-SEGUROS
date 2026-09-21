@@ -15,6 +15,13 @@
       "when": 1790018285950,
       "tag": "0001_remove_whatsapp_integration",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790025561448,
+      "tag": "0002_add_cliente_version",
+      "breakpoints": true
     }
   ]
 }

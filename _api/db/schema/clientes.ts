@@ -46,6 +46,10 @@ export const clientes = pgTable('clientes', {
   produtoAtual: text('produto_atual'),
   dataRenovacao: date('data_renovacao'),
   documentos: jsonb('documentos'),
+  // Trava de concorrência otimista (mesmo padrão de leads.version, achado F-18 da auditoria):
+  // sem isso, dois usuários editando o mesmo cliente ao mesmo tempo faziam o segundo save
+  // sobrescrever o primeiro silenciosamente (last-write-wins sem aviso nenhum).
+  version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 }, (t) => [
