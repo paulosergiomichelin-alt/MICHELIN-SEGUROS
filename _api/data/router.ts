@@ -61,10 +61,39 @@ function resolveTable(entity: string, res: any) {
 // que a entidade migrou de documento Firestore plano para linha Postgres com coluna jsonb.
 const GENERIC_JSON_ENTITIES = new Set(['settings', 'config']);
 
+// `leads` tem colunas reais só pros campos mais usados/filtrados (status, name,
+// phone, cpf, plate...) e uma coluna `data` (jsonb) pra tudo o mais que o tipo
+// Lead define (dezenas de campos: documents, rg, rgOrgaoEmissor, birthDate,
+// civilStatus, endereços, etc.). As rotas genéricas abaixo faziam `.set(req.body)`
+// direto contra as colunas da tabela — igual ao bug já documentado pra
+// settings/config acima — então qualquer campo que não fosse uma dessas ~20
+// colunas era silenciosamente descartado, sem erro, sem log. Confirmado em
+// produção: import de CNH/CRLV/apólice num lead persistia o anexo no Storage
+// mas perdia a referência (documents) e os campos extraídos (rg, etc.) porque
+// nenhum deles é coluna de `leads` — a coluna `data` que deveria guardá-los
+// nunca era escrita.
+const HYBRID_JSON_ENTITIES = new Set(['leads', 'lead']);
+const JSON_BLOB_ENTITIES = new Set([...GENERIC_JSON_ENTITIES, ...HYBRID_JSON_ENTITIES]);
+
 function flattenJsonRow(row: any): any {
   if (!row) return row;
   const { data, ...rest } = row;
   return { ...(data ?? {}), ...rest };
+}
+
+// Separa um payload plano (ex: o `after` que o DataService do frontend monta)
+// entre campos que são coluna real da tabela e campos que precisam cair na
+// coluna `data` (jsonb). `data` nunca é aceito como campo direto do payload —
+// é sempre gerenciado por quem chama esta função.
+function splitHybridColumns(table: any, body: Record<string, any>): { known: Record<string, any>; extra: Record<string, any> } {
+  const known: Record<string, any> = {};
+  const extra: Record<string, any> = {};
+  for (const [key, value] of Object.entries(body)) {
+    if (key === 'data') continue;
+    if (table[key] !== undefined) known[key] = value;
+    else extra[key] = value;
+  }
+  return { known, extra };
 }
 
 function orgScopeWhere(entity: string, table: any, req: any) {
@@ -196,7 +225,7 @@ dataRouter.get('/:entity/:id', async (req: any, res) => {
   const [row] = await getDb().select().from(table).where(where);
   // Se o registro existe mas é de outra organização, retorna 404 (não 403) para não
   // revelar existência do dado a quem não tem acesso.
-  res.json(GENERIC_JSON_ENTITIES.has(req.params.entity) ? flattenJsonRow(row ?? null) : (row ?? null));
+  res.json(JSON_BLOB_ENTITIES.has(req.params.entity) ? flattenJsonRow(row ?? null) : (row ?? null));
 });
 
 dataRouter.post('/:entity/query', async (req: any, res) => {
@@ -213,7 +242,7 @@ dataRouter.post('/:entity/query', async (req: any, res) => {
   const n = getLimit(constraints);
   if (n) q = q.limit(n) as any;
   const rows = await q;
-  res.json(rows);
+  res.json(JSON_BLOB_ENTITIES.has(req.params.entity) ? rows.map(flattenJsonRow) : rows);
 });
 
 dataRouter.post('/:entity', async (req: any, res) => {
@@ -224,11 +253,16 @@ dataRouter.post('/:entity', async (req: any, res) => {
     }
     req.body.organizationId = req.organizationId;
   }
-  const isGenericJson = GENERIC_JSON_ENTITIES.has(req.params.entity);
-  const values = isGenericJson ? { [pkPropertyName(req.params.entity)]: req.body.id, data: req.body } : req.body;
+  let values: any = req.body;
+  if (GENERIC_JSON_ENTITIES.has(req.params.entity)) {
+    values = { [pkPropertyName(req.params.entity)]: req.body.id, data: req.body };
+  } else if (HYBRID_JSON_ENTITIES.has(req.params.entity)) {
+    const { known, extra } = splitHybridColumns(table, req.body);
+    values = { ...known, data: extra };
+  }
   const [row] = await getDb().insert(table).values(values).returning();
   await emitDataChanged(req.params.entity, row[pkPropertyName(req.params.entity)], row.organizationId ?? null);
-  res.status(201).json(isGenericJson ? flattenJsonRow(row) : row);
+  res.status(201).json(JSON_BLOB_ENTITIES.has(req.params.entity) ? flattenJsonRow(row) : row);
 });
 
 dataRouter.patch('/:entity/:id', async (req: any, res) => {
@@ -236,15 +270,18 @@ dataRouter.patch('/:entity/:id', async (req: any, res) => {
   const scope = orgScopeWhere(req.params.entity, table, req);
   const idEq = eq(pkColumn(req.params.entity, table), req.params.id);
   const where = scope ? and(idEq, scope) : idEq;
-  const isGenericJson = GENERIC_JSON_ENTITIES.has(req.params.entity);
-  let setValues = req.body;
-  if (isGenericJson) {
+  let setValues: any = req.body;
+  if (GENERIC_JSON_ENTITIES.has(req.params.entity)) {
     const [current] = await getDb().select().from(table).where(where);
     setValues = { data: { ...(current?.data ?? {}), ...req.body } };
+  } else if (HYBRID_JSON_ENTITIES.has(req.params.entity)) {
+    const [current] = await getDb().select().from(table).where(where);
+    const { known, extra } = splitHybridColumns(table, req.body);
+    setValues = { ...known, data: { ...(current?.data ?? {}), ...extra } };
   }
   const [row] = await getDb().update(table).set(setValues).where(where).returning();
   await emitDataChanged(req.params.entity, req.params.id, row?.organizationId ?? null);
-  res.json(isGenericJson ? flattenJsonRow(row ?? null) : (row ?? null));
+  res.json(JSON_BLOB_ENTITIES.has(req.params.entity) ? flattenJsonRow(row ?? null) : (row ?? null));
 });
 
 dataRouter.put('/:entity/:id', async (req: any, res) => {
@@ -256,16 +293,23 @@ dataRouter.put('/:entity/:id', async (req: any, res) => {
     req.body.organizationId = req.organizationId;
   }
   const pkProp = pkPropertyName(req.params.entity);
-  const isGenericJson = GENERIC_JSON_ENTITIES.has(req.params.entity);
-  const values = isGenericJson ? { [pkProp]: req.params.id, data: req.body } : { ...req.body, [pkProp]: req.params.id };
-  const setOnConflict = isGenericJson ? { data: req.body } : req.body;
+  let values: any = { ...req.body, [pkProp]: req.params.id };
+  let setOnConflict: any = req.body;
+  if (GENERIC_JSON_ENTITIES.has(req.params.entity)) {
+    values = { [pkProp]: req.params.id, data: req.body };
+    setOnConflict = { data: req.body };
+  } else if (HYBRID_JSON_ENTITIES.has(req.params.entity)) {
+    const { known, extra } = splitHybridColumns(table, req.body);
+    values = { ...known, [pkProp]: req.params.id, data: extra };
+    setOnConflict = { ...known, data: extra };
+  }
   const [row] = await getDb()
     .insert(table)
     .values(values)
     .onConflictDoUpdate({ target: pkColumn(req.params.entity, table), set: setOnConflict })
     .returning();
   await emitDataChanged(req.params.entity, req.params.id, row?.organizationId ?? null);
-  res.json(isGenericJson ? flattenJsonRow(row) : row);
+  res.json(JSON_BLOB_ENTITIES.has(req.params.entity) ? flattenJsonRow(row) : row);
 });
 
 dataRouter.delete('/:entity/:id', async (req: any, res) => {
