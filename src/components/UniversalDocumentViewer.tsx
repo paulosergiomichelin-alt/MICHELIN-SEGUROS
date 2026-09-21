@@ -118,7 +118,18 @@ function coerceBool(v: any): boolean {
   return ['SIM', 'YES', 'TRUE', '1', 'POSSUI', 'CONSTA', 'VERDADEIRO'].includes(s);
 }
 
-function renderValidationFields(type: string | undefined, data: any) {
+// `data` é o rascunho local editável (não a prop original) e `onFieldChange`
+// escreve cada edição nele — os inputs eram uncontrolled (defaultValue) e o
+// botão "Confirmar e Importar" chamava onConfirm(data) com a prop ORIGINAL,
+// nunca com o que o usuário tinha acabado de digitar. Qualquer correção manual
+// numa extração errada (CPF com um dígito trocado pelo OCR, nome incompleto
+// etc.) era silenciosamente descartada e o dado errado ia pro banco mesmo
+// assim (achado F-06 da auditoria).
+function renderValidationFields(
+  type: string | undefined,
+  data: any,
+  onFieldChange: (key: string, value: string) => void,
+) {
   if (!data) return null;
   const t = (type || '').toLowerCase();
   // Normalize 'crlv' → 'crv', 'apolice' → 'policy'
@@ -134,7 +145,8 @@ function renderValidationFields(type: string | undefined, data: any) {
           <label className="text-[10px] uppercase tracking-wider text-gold-deep font-black ml-1">{key}</label>
           <input
             type="text"
-            defaultValue={String(value || '')}
+            value={String(value ?? '')}
+            onChange={(e) => onFieldChange(key, e.target.value)}
             className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-[12px] font-medium focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 outline-none transition-all"
           />
         </div>
@@ -145,10 +157,6 @@ function renderValidationFields(type: string | undefined, data: any) {
     const value = pickValue(data, def);
     if (def.type === 'boolean') {
       const checked = coerceBool(value);
-      // Debug: log boolean field resolution so we can see exactly which alias the value came from
-      // and what coerceBool decided. Helps diagnose 'NÃO when it should be SIM' issues.
-      // eslint-disable-next-line no-console
-      console.log(`[VIEWER_FIELD] ${def.key}`, { value, checked, allCandidates: [def.key, ...(def.aliases || [])].reduce((acc: any, k) => { acc[k] = data?.[k]; return acc; }, {}) });
       return (
         <div key={def.key} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
           <label className="text-[11px] uppercase tracking-wider text-gold-deep font-black">{def.label}</label>
@@ -167,7 +175,8 @@ function renderValidationFields(type: string | undefined, data: any) {
         <div className="relative group">
           <input
             type="text"
-            defaultValue={String(value || '')}
+            value={String(value ?? '')}
+            onChange={(e) => onFieldChange(def.key, e.target.value)}
             className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-[12px] font-medium focus:border-[#1B4D8F]/60 focus:ring-1 focus:ring-[#1B4D8F]/40 outline-none transition-all"
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-gold-deep opacity-0 group-focus-within:opacity-100 transition-opacity" />
@@ -193,6 +202,25 @@ export const UniversalDocumentViewer: React.FC<UniversalDocumentViewerProps> = (
   const [error, setError] = useState<string | null>(null);
   const renderLockRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Rascunho editável dos campos extraídos — é isto que onConfirm recebe, nunca
+  // a prop `data` original (ver comentário em renderValidationFields / F-06).
+  const [editedData, setEditedData] = useState<any>(data);
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (isOpen && !wasOpenRef.current) {
+      // Nova sessão de validação abrindo agora — reseta o rascunho pros valores
+      // extraídos originais. Fora desse instante, `data` pode trocar de
+      // referência por re-renders do formulário pai sem que isso deva apagar o
+      // que o usuário já digitou.
+      setEditedData(data);
+    }
+    wasOpenRef.current = isOpen;
+  }, [isOpen, data]);
+
+  const handleFieldChange = (key: string, value: string) => {
+    setEditedData((prev: any) => ({ ...(prev ?? {}), [key]: value }));
+  };
 
   // Global Blob Cache for the current session to prevent redundant storage hits
   const blobCacheRef = useRef<Map<string, string>>(new Map());
@@ -376,9 +404,9 @@ export const UniversalDocumentViewer: React.FC<UniversalDocumentViewerProps> = (
                     {(() => {
                       const schemaKey = (type || '').toLowerCase() === 'crlv' ? 'crv' : (type || '').toLowerCase() === 'apolice' ? 'policy' : (type || '').toLowerCase();
                       const schema = DOCUMENT_SCHEMAS[schemaKey];
-                      if (schema && data) {
+                      if (schema && editedData) {
                         const filled = schema.filter(d => {
-                          const v = pickValue(data, d);
+                          const v = pickValue(editedData, d);
                           return v !== '' && v !== false && v != null;
                         }).length;
                         const ratio = filled / schema.length;
@@ -392,7 +420,7 @@ export const UniversalDocumentViewer: React.FC<UniversalDocumentViewerProps> = (
                       }
                       return null;
                     })()}
-                    {renderValidationFields(type, data)}
+                    {renderValidationFields(type, editedData, handleFieldChange)}
                   </div>
 
                   {/* Technical Debug Info */}
@@ -488,7 +516,7 @@ export const UniversalDocumentViewer: React.FC<UniversalDocumentViewerProps> = (
 
                 <div className="p-6 border-t border-slate-200 bg-white flex flex-col gap-3">
                   <button
-                    onClick={() => onConfirm(data)}
+                    onClick={() => onConfirm(editedData)}
                     className="w-full bg-[#1B4D8F] hover:bg-[#153E73] text-white font-bold py-3.5 rounded-xl transition-all shadow-sm shadow-[#1B4D8F]/20 active:scale-[0.98]"
                   >
                     Confirmar e Importar
