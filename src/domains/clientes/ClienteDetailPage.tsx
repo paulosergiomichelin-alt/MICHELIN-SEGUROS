@@ -6,7 +6,7 @@ import {
   Calendar, DollarSign, Building2, ClipboardList, Car, Shield, Tag, Users,
 } from 'lucide-react';
 import { cn, formatCNPJ } from '../../lib/utils';
-import { Cliente, Lead, Apolice, ClienteHistoricoItem, ClienteStatus, UserProfile } from '../../types';
+import { Cliente, Lead, Apolice, ApoliceVeiculo, ClienteHistoricoItem, ClienteStatus, UserProfile } from '../../types';
 import { DataService } from '../../services/DataService';
 import { ClienteService } from '../../services/ClienteService';
 import { dataApiClient } from '../../lib/dataApiClient';
@@ -127,6 +127,15 @@ function fmtDiasVencimento(dataISO?: string): string {
     const { meses, dias: d } = diferencaMesesDias(alvo, hoje);
     return `Vencida há ${fmtMesesDias(meses, d)}`;
   } catch { return ''; }
+}
+
+// "ABC1D23 - Marca - Modelo - AnoModelo/AnoFabricação", omitindo partes ausentes.
+function fmtVeiculoResumo(v?: ApoliceVeiculo): string {
+  if (!v) return '';
+  const parts = [v.placa, v.marca, v.modelo].filter(Boolean) as string[];
+  const anos = [v.anoModelo, v.anoFabricacao].filter(Boolean).join('/');
+  if (anos) parts.push(anos);
+  return parts.join(' - ');
 }
 
 const HIST_ICON: Record<string, React.ElementType> = {
@@ -454,9 +463,9 @@ export const ClienteDetailPage: React.FC = () => {
                   <div>
                     <p className="text-[9px] text-slate-400 uppercase font-black mb-1">Produto</p>
                     <p className="text-[11px] text-slate-800 font-bold">{apoliceAtiva.produto}</p>
-                    {apoliceAtiva.veiculo?.placa && (
+                    {fmtVeiculoResumo(apoliceAtiva.veiculo) && (
                       <p className="text-[9px] text-slate-400 font-mono mt-0.5">
-                        {apoliceAtiva.veiculo.placa}{apoliceAtiva.veiculo.modelo ? ` · ${apoliceAtiva.veiculo.modelo}` : ''}
+                        {fmtVeiculoResumo(apoliceAtiva.veiculo)}
                       </p>
                     )}
                   </div>
@@ -692,9 +701,9 @@ export const ClienteDetailPage: React.FC = () => {
                               <p className="text-[9px] text-slate-400 uppercase font-black mb-1">Produto</p>
                               <p className="text-[11px] text-slate-800 font-bold">{a.produto}</p>
                               {a.numeroApolice && <p className="text-[9px] text-slate-400 font-mono mt-0.5">#{a.numeroApolice}</p>}
-                              {a.veiculo?.placa && (
+                              {fmtVeiculoResumo(a.veiculo) && (
                                 <p className="text-[9px] text-slate-400 font-mono mt-0.5">
-                                  {a.veiculo.placa}{a.veiculo.modelo ? ` · ${a.veiculo.modelo}` : ''}
+                                  {fmtVeiculoResumo(a.veiculo)}
                                 </p>
                               )}
                             </div>
