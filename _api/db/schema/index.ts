@@ -3,7 +3,6 @@ export * from './leads';
 export * from './audit';
 export * from './metrics';
 export * from './clientes';
-export * from './whatsapp';
 export * from './campaigns-email';
 export * from './tenant-nfse';
 export * from './settings';

@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   ChevronLeft, Save, Loader2, Lock, Shield, Eye,
-  LayoutGrid, Users, Send, MessageSquare, Bot, ShieldAlert,
+  LayoutGrid, Users, Bot, ShieldAlert,
   Cog, ChevronDown, ChevronUp, Check,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -14,8 +14,6 @@ import { cn } from '../../lib/utils';
 const MENU_ITEMS = [
   { key: 'pipeline',  label: 'Pipeline',      icon: LayoutGrid,    hasEdit: false, hasDelete: false },
   { key: 'leads',     label: 'Leads',         icon: Users,         hasEdit: true,  hasDelete: true  },
-  { key: 'ativos',    label: 'Ativos',        icon: Send,          hasEdit: false, hasDelete: false },
-  { key: 'chat',      label: 'WhatsApp',      icon: MessageSquare, hasEdit: false, hasDelete: false },
   { key: 'agent',     label: 'Agente de IA',  icon: Bot,           hasEdit: true,  hasDelete: false },
   { key: 'users',     label: 'Equipe',        icon: ShieldAlert,   hasEdit: true,  hasDelete: true  },
   { key: 'settings',  label: 'Configurações', icon: Cog,           hasEdit: true,  hasDelete: false },
@@ -78,7 +76,7 @@ function toFieldPermsMap(profile: AccessProfile | null): FieldPermsMap {
 
 /** Computa os 5 booleanos legados a partir das novas permissões de menu. */
 function computeLegacyPermissions(mp: MenuPermsMap) {
-  const readItems: string[] = ['pipeline', 'leads', 'ativos', 'chat'];
+  const readItems: string[] = ['pipeline', 'leads'];
   return {
     canReadAllLeads:   readItems.some(k => mp[k]?.canView),
     canWriteAllLeads:  mp['leads']?.canEdit ?? false,

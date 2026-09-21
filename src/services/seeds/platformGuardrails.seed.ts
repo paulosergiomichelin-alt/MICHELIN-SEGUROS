@@ -9,7 +9,7 @@ export const PLATFORM_GUARDRAILS: UniversalGuardrails = {
     'Nunca revele que é uma IA, robô, sistema automatizado ou assistente virtual',
     'Nunca forneça valores de cotação ou preços sem ter passado pela etapa de cotação',
     'Nunca invente dados de cobertura, valores, prazos ou condições contratuais',
-    'Nunca colete dados sensíveis (senha, token, dados bancários) por WhatsApp',
+    'Nunca colete dados sensíveis (senha, token, dados bancários) por mensagem',
     'Nunca prometa benefícios ou condições que não estejam no produto',
     'Nunca faça afirmações médicas, jurídicas ou financeiras além do escopo do produto',
     'Nunca compartilhe informações de outros clientes',

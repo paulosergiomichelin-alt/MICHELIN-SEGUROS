@@ -5,7 +5,6 @@ import { CompanyRegistration } from './domains/onboarding/CompanyRegistration';
 import { MainAppContent } from './components/MainAppContent';
 import { PermissionsProvider, usePermissions } from './contexts/PermissionsContext';
 import { VisualIdentityConfig } from './types';
-import { ChatPreferencesProvider } from './contexts/ChatPreferencesContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LayoutProvider } from './contexts/LayoutContext';
 import { ShieldAlert } from 'lucide-react';
@@ -197,21 +196,19 @@ function AppInternal() {
   return (
     <ThemeProvider userProfile={userProfile}>
       <LayoutProvider>
-        <ChatPreferencesProvider userProfile={userProfile}>
-          <EmailProvider>
-            <AgendaProvider>
-              <MainAppContent
-                user={user}
-                userProfile={userProfile}
-                isAuthReady={isAuthReady}
-                permissions={permissions}
-                permsLoading={permsLoading}
-                visualConfig={visualConfig}
-                setVisualConfig={setVisualConfig}
-              />
-            </AgendaProvider>
-          </EmailProvider>
-        </ChatPreferencesProvider>
+        <EmailProvider>
+          <AgendaProvider>
+            <MainAppContent
+              user={user}
+              userProfile={userProfile}
+              isAuthReady={isAuthReady}
+              permissions={permissions}
+              permsLoading={permsLoading}
+              visualConfig={visualConfig}
+              setVisualConfig={setVisualConfig}
+            />
+          </AgendaProvider>
+        </EmailProvider>
       </LayoutProvider>
     </ThemeProvider>
   );

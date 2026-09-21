@@ -1,27 +1,22 @@
 
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { useLeads } from '../contexts/LeadRealtimeContext';
 import { Permissions, VisualIdentityConfig, AgentConfig, UserProfile } from '../types';
 import { DataService } from '../services/DataService';
 
 const LeadsView          = lazy(() => import('../domains/leads/LeadsPage').then(m => ({ default: m.LeadsPage })));
-const ChatView           = lazy(() => import('../domains/leads/ChatView').then(m => ({ default: m.ChatView })));
 const SalesPipeline      = lazy(() => import('../domains/leads/SalesPipeline').then(m => ({ default: m.SalesPipeline })));
 const TeamPage           = lazy(() => import('../domains/admin/TeamPage').then(m => ({ default: m.TeamPage })));
 const Settings           = lazy(() => import('../domains/settings/SettingsPage').then(m => ({ default: m.Settings })));
 const TechDocs           = lazy(() => import('../domains/settings/TechDocs').then(m => ({ default: m.TechDocs })));
 const AgentSettings      = lazy(() => import('../domains/settings/AgentSettings').then(m => ({ default: m.AgentSettings })));
 const UserLogsView       = lazy(() => import('../domains/admin/UserLogsView').then(m => ({ default: m.UserLogsView })));
-const MensagensAtivas    = lazy(() => import('../domains/leads/MensagensAtivas').then(m => ({ default: m.MensagensAtivas })));
 const EmpresasManagement = lazy(() => import('../domains/admin/EmpresasManagement').then(m => ({ default: m.EmpresasManagement })));
 const UserProfilePage    = lazy(() => import('../domains/admin/UserProfilePage').then(m => ({ default: m.UserProfilePage })));
 const LeadPage           = lazy(() => import('../domains/leads/LeadPage').then(m => ({ default: m.LeadPage })));
 const ClientesPage       = lazy(() => import('../domains/clientes/ClientesPage').then(m => ({ default: m.ClientesPage })));
 const ClienteDetailPage  = lazy(() => import('../domains/clientes/ClienteDetailPage').then(m => ({ default: m.ClienteDetailPage })));
 const RenovacoesPage     = lazy(() => import('../domains/clientes/RenovacoesPage').then(m => ({ default: m.RenovacoesPage })));
-const WhatsAppInboxPage  = lazy(() => import('../domains/whatsapp/WhatsAppInboxPage').then(m => ({ default: m.WhatsAppInboxPage })));
-const SessionsPage       = lazy(() => import('../domains/whatsapp/SessionsPage').then(m => ({ default: m.SessionsPage })));
 const EmailPage          = lazy(() => import('../domains/email/EmailPage').then(m => ({ default: m.EmailPage })));
 const EmailAccountsPage  = lazy(() => import('../domains/email/EmailAccountsPage').then(m => ({ default: m.EmailAccountsPage })));
 const EmailSettingsPage  = lazy(() => import('../domains/email/EmailSettingsPage').then(m => ({ default: m.EmailSettingsPage })));
@@ -55,7 +50,6 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
   userProfile,
 }) => {
   const navigate = useNavigate();
-  const { leads } = useLeads();
 
   // Programmatic navigation — passed as prop to pages that need it
   const setActiveTab = (tab: string) => navigate('/' + tab);
@@ -99,40 +93,10 @@ export const AppContentManager: React.FC<AppContentManagerProps> = ({
           <Route path="/relatorios" element={<RelatoriosPage />} />
           <Route path="/multicalculo" element={<MulticalculoPage />} />
 
-          <Route path="/whatsapp" element={<WhatsAppInboxPage />} />
-          <Route path="/whatsapp/sessoes" element={<SessionsPage />} />
-
           <Route path="/email" element={<EmailPage />} />
           <Route path="/email/contas" element={<EmailAccountsPage />} />
           <Route path="/email/configuracoes" element={<EmailSettingsPage />} />
           <Route path="/agenda" element={<AgendaPage />} />
-
-          <Route
-            path="/chat"
-            element={
-              <ChatView
-                visualConfig={visualConfig}
-                permissions={permissions}
-                agentConfig={agentConfig}
-                setActiveTab={setActiveTab}
-                isSlow={false}
-              />
-            }
-          />
-
-          {/* Ativos / Mensagens Ativas */}
-          <Route
-            path="/ativos"
-            element={
-              permissions.canReadAllLeads
-                ? <MensagensAtivas leads={leads} visualConfig={visualConfig} />
-                : <Navigate to="/dashboard" replace />
-            }
-          />
-          <Route
-            path="/active_messages"
-            element={<Navigate to="/ativos" replace />}
-          />
 
           <Route
             path="/logs"

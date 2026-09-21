@@ -50,9 +50,6 @@ export class DataService {
     'follow_ups', 'follow_up', 'empresas', 'empresa',
     'clientes', 'cliente',
     'settings', 'config',
-    'whatsapp_sessions', 'whatsapp_session',
-    'whatsapp_conversations', 'whatsapp_conversation',
-    'whatsapp_messages', 'whatsapp_message',
     'cliente_relacionamentos', 'cliente_relacionamento',
     'cotacoes', 'cotacao',
     'email_rules', 'email_rule',
@@ -95,15 +92,6 @@ export class DataService {
     'cliente_relacionamento': 'cliente_relacionamentos',
     'seguradoras': 'seguradoras',
     'seguradora': 'seguradoras',
-    'whatsapp_sessions': 'whatsapp_sessions',
-    'whatsapp_session': 'whatsapp_sessions',
-    'whatsapp_conversations': 'whatsapp_conversations',
-    'whatsapp_conversation': 'whatsapp_conversations',
-    'whatsapp_messages': 'whatsapp_messages',
-    'whatsapp_message': 'whatsapp_messages',
-    'campaigns': 'campaigns',
-    'campaign': 'campaigns',
-    'campaign_log': 'campaign_log',
     'platform_agent_templates': 'platform_agent_templates',
     'platform_guardrails': 'platform_guardrails',
     'tenant_agent_configs': 'tenant_agent_configs',
@@ -314,7 +302,7 @@ export class DataService {
     this.quotaExceededCallbacks.forEach(cb => cb(true));
   }
 
-  private static readonly CRITICAL_COLLECTIONS = ['leads', 'messages', 'users', 'flows', 'chat', 'pipeline'];
+  private static readonly CRITICAL_COLLECTIONS = ['leads', 'messages', 'users', 'flows', 'pipeline'];
 
   private static isCritical(entity: string): boolean {
     const coll = this.getCollectionName(entity);

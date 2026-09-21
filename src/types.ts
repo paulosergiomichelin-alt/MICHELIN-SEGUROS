@@ -44,7 +44,6 @@ export interface UserProfile {
   updatedAt: string;
   lastAccess?: string; // ISO
   theme?: Theme;
-  chatPreferences?: ChatPreferences;
   organizationId?: string;
   superadmin?: boolean;
 }
@@ -333,16 +332,6 @@ export interface AccessProfile {
   updatedAt: string;
 }
 
-export interface ChatPreferences {
-  fontSize: number;
-  chatZoom: number;
-  messageSpacing: number;
-  bubbleSize: number;
-  leftWidth: number;
-  rightWidth: number;
-  theme?: Theme;
-}
-
 export interface VisualIdentityConfig {
   logoDark?: string;
   logoLight?: string;
@@ -559,75 +548,10 @@ export interface ClienteHistoricoItem {
   createdAt: string;
 }
 
-// ─── WhatsApp QR Code Integration (Evolution API) ────────────────────────────
-
-export type WhatsAppSessionStatus = 'open' | 'connecting' | 'close' | 'qr';
-
-export interface WhatsAppSession {
-  id: string;
-  userId: string;
-  sessionName: string;
-  phoneNumber?: string;
-  profileName?: string;
-  profilePicture?: string;
-  status: WhatsAppSessionStatus;
-  qrBase64?: string;
-  qrCode?: string;
-  organizationId?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface WhatsAppConversation {
-  id: string;
-  sessionId: string;
-  sessionName: string;
-  phone: string;
-  contactName: string;
-  contactPicture?: string;
-  isGroup?: boolean;
-  leadId?: string;
-  clienteId?: string;
-  lastMessage?: string;
-  lastMessageAt?: string;
-  lastMessageDirection?: 'inbound' | 'outbound';
-  unreadCount: number;
-  presence?: 'available' | 'composing' | 'recording' | 'paused' | 'unavailable';
-  organizationId?: string;
-  updatedAt: string;
-}
-
-export interface WhatsAppMessage {
-  id: string;
-  conversationId: string;
-  sessionId: string;
-  direction: 'inbound' | 'outbound';
-  messageType: 'text' | 'image' | 'video' | 'audio' | 'document' | 'sticker' | string;
-  body?: string;
-  phone?: string;
-  contactName?: string;
-  mediaUrl?: string;
-  mediaPath?: string;
-  mimeType?: string;
-  fileName?: string;
-  transcription?: string;
-  timestamp: string;
-  status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed' | string;
-  evolutionId?: string;
-  organizationId?: string;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-
 export interface IntegrationConfig {
   webhookUrl: string;
   apiKey: string;
-  whatsappApiUrl: string;
   openrouterApiKey: string;
-  metaVerifyToken?: string;
-  metaAppSecret?: string;
-  metaAccessToken?: string;
-  whatsappPhoneId?: string;
   lastSync?: string;
 }
 
@@ -862,7 +786,6 @@ export interface AgentConfig {
   isActive: boolean;
   provider: 'openrouter';
   model: string;
-  whatsappEnabled: boolean;
   openrouterApiKey?: string;
 
   // New: Structured persona (AgentBrain uses this)

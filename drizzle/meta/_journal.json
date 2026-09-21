@@ -8,6 +8,13 @@
       "when": 1789305646467,
       "tag": "0000_low_madelyne_pryor",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790018285950,
+      "tag": "0001_remove_whatsapp_integration",
+      "breakpoints": true
     }
   ]
 }

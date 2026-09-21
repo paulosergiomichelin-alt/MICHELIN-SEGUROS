@@ -1,13 +1,3 @@
-// Allow self-signed TLS certs (Evolution API VPS uses one). Safe in dev; production should use a valid cert.
-if (process.env.NODE_ENV !== 'production') {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-}
-
-// On VPS production, the Evolution API itself uses a self-signed cert
-if (process.env.EVOLUTION_API_URL?.startsWith('https://')) {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-}
-
 import express from 'express';
 import { createServer } from 'http';
 import path from 'path';
@@ -82,25 +72,7 @@ async function startServer() {
   });
 
   app.get('/api/health', async (req, res) => {
-    const evolutionUrl = process.env.EVOLUTION_API_URL;
-    const evolutionKey = process.env.EVOLUTION_API_KEY;
-
-    let evolution = 'not_configured';
     let postgres = 'not_configured';
-
-    if (evolutionUrl && evolutionKey) {
-      try {
-        const ctrl = new AbortController();
-        const id = setTimeout(() => ctrl.abort(), 4000);
-        const r = await fetch(`${evolutionUrl.replace(/\/$/, '')}/instance/fetchInstances`, {
-          headers: { apikey: evolutionKey },
-          signal: ctrl.signal,
-        }).finally(() => clearTimeout(id));
-        evolution = (r.ok || r.status === 401) ? 'online' : `error_${r.status}`;
-      } catch {
-        evolution = 'offline';
-      }
-    }
 
     if (process.env.DATABASE_URL) {
       try {
@@ -117,7 +89,7 @@ async function startServer() {
       status: 'ok',
       time: new Date().toISOString(),
       nodeEnv: process.env.NODE_ENV || 'development',
-      services: { evolution, postgres },
+      services: { postgres },
     });
   });
 
@@ -175,27 +147,6 @@ async function startServer() {
   });
 
   log.info('API genérica de dados (Postgres) registrada em /api/data');
-
-  // ── Meta / WhatsApp Cloud API routes ─────────────────────────────────────────
-  const { handleVerify: metaVerify, handleEvent: metaEvent } = await import('./_api/webhook/whatsapp.js');
-  const { default: metaSendHandler }          = await import('./_api/meta/send.js');
-  const { default: metaStatusHandler }        = await import('./_api/meta/status.js');
-  const { default: metaMessagesHandler }      = await import('./_api/meta/messages.js');
-  const { default: metaConversationsHandler } = await import('./_api/meta/conversations.js');
-
-  app.get('/api/webhook/whatsapp',   metaVerify);
-  app.post('/api/webhook/whatsapp',  metaEvent);
-  app.all('/api/meta/send',          metaSendHandler);
-  app.all('/api/meta/status',        metaStatusHandler);
-  app.all('/api/meta/messages',      metaMessagesHandler);
-  app.all('/api/meta/conversations', metaConversationsHandler);
-  log.info('Meta WhatsApp routes registradas');
-
-  // ── Campaign routes ───────────────────────────────────────────────────────
-  const { default: campaignsStartHandler } = await import('./_api/campaigns/start.js');
-  const { default: campaignsPauseHandler } = await import('./_api/campaigns/pause.js');
-  app.all('/api/campaigns/start', campaignsStartHandler);
-  app.all('/api/campaigns/pause', campaignsPauseHandler);
 
   // Body-parser error handler (catches 413 before routes see it)
   app.use((err: any, _req: any, res: any, next: any) => {
@@ -266,42 +217,6 @@ async function startServer() {
       res.status(errorStatus).json(errorData);
     }
   });
-
-  // â”€â”€ Evolution API routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const { default: evolutionSessionsHandler }        = await import('./_api/evolution/sessions.js');
-  const { default: evolutionQrHandler }              = await import('./_api/evolution/qr.js');
-  const { default: evolutionSendHandler }            = await import('./_api/evolution/send.js');
-  const { default: evolutionSyncHandler }            = await import('./_api/evolution/sync.js');
-  const { default: evolutionConversationHandler }    = await import('./_api/evolution/conversation.js');
-  const { default: evolutionConversationsHandler }   = await import('./_api/evolution/conversations.js');
-  const { default: evolutionMessagesHandler }        = await import('./_api/evolution/messages.js');
-  const { default: evolutionReconcileHandler, scheduleReconcile } = await import('./_api/evolution/reconcile.js');
-  const { default: evolutionMediaHandler }            = await import('./_api/evolution/media.js');
-  const { default: evolutionStatsHandler }           = await import('./_api/evolution/stats.js');
-  const { default: evolutionSendMediaHandler }       = await import('./_api/evolution/sendMedia.js');
-  const { default: evolutionAvatarHandler }          = await import('./_api/evolution/avatar.js');
-  const { default: evolutionContactsHandler }        = await import('./_api/evolution/contacts.js');
-  const { default: evolutionWebhookHandler }         = await import('./_api/webhook/evolution.js');
-
-  app.all('/api/evolution/sessions',      evolutionSessionsHandler);
-  app.all('/api/evolution/qr',            evolutionQrHandler);
-  app.all('/api/evolution/send',          evolutionSendHandler);
-  app.all('/api/evolution/sync',          evolutionSyncHandler);
-  app.all('/api/evolution/conversation',  evolutionConversationHandler);
-  app.all('/api/evolution/conversations', evolutionConversationsHandler);
-  app.all('/api/evolution/messages',      evolutionMessagesHandler);
-  app.all('/api/evolution/reconcile',     evolutionReconcileHandler);
-  app.all('/api/evolution/media',         evolutionMediaHandler);
-  app.all('/api/evolution/stats',         evolutionStatsHandler);
-  app.all('/api/evolution/sendMedia',     evolutionSendMediaHandler);
-  app.all('/api/evolution/avatar',        evolutionAvatarHandler);
-  app.all('/api/evolution/contacts',      evolutionContactsHandler);
-  // byEvents:true faz a Evolution API enviar para sub-caminhos (ex: /messages-upsert)
-  app.all('/api/webhook/evolution', evolutionWebhookHandler);
-  app.all('/api/webhook/evolution/:event', evolutionWebhookHandler);
-
-  scheduleReconcile(5 * 60 * 1000);
-  log.info('Evolution API routes registradas');
 
   // â”€â”€ Email Module routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const { default: emailAccountsHandler }        = await import('./_api/email/accounts.js');

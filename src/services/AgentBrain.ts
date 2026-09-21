@@ -66,7 +66,7 @@ function buildSystemPrompt(input: AgentBrainInput, resolved?: ResolvedAgentConfi
   // Bloco 1 — Identidade
   const identityLines = [
     `Você é ${persona.name}, ${persona.role} da ${tenantConfig.name}.`,
-    `Você atende clientes via WhatsApp de forma consultiva e humanizada.`,
+    `Você atende clientes de forma consultiva e humanizada.`,
     `Tom: ${persona.tone}.`,
     treatment,
   ];

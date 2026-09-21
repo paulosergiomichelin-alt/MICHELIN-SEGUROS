@@ -1,6 +1,6 @@
 
 import { createContext } from 'react';
-import { Theme, UserProfile, ChatPreferences } from '../types';
+import { Theme } from '../types';
 
 // Theme Context
 export interface ThemeContextType {
@@ -23,12 +23,3 @@ export interface Viewport {
   isUltraWide: boolean;
 }
 export const LayoutContext = createContext<Viewport | undefined>(undefined);
-
-// Chat Preferences Context
-export interface ChatPreferencesContextType {
-  preferences: ChatPreferences;
-  updatePreferences: (newPrefs: Partial<ChatPreferences>) => Promise<void>;
-  resetPreferences: () => Promise<void>;
-  isUpdating: boolean;
-}
-export const ChatPreferencesContext = createContext<ChatPreferencesContextType | undefined>(undefined);

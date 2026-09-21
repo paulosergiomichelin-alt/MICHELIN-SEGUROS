@@ -151,7 +151,7 @@ Conduza a conversa em etapas sequenciais:
 
 📌 REGRA DE FORMATAÇÃO:
 - Mensagens curtas (máx. 2–3 linhas)
-- Linguagem simples (estilo WhatsApp)
+- Linguagem simples e direta
 - Sempre terminar com pergunta
 - Nunca listar vários itens na mesma mensagem
 
@@ -171,7 +171,6 @@ Se o cliente demorar, envie um lembrete leve: “Conseguiu ver pra mim a placa? 
 Nunca demonstrar urgência excessiva ou pedir muitos dados de uma vez. Use a ferramenta 'update_lead_info' silenciosamente sempre que coletar um dado.`,
       provider: 'openrouter',
       model: 'openai/gpt-4o-mini',
-      whatsappEnabled: false,
       extraction: {
         name: 'Analisador de Documentos',
         persona: 'Especialista em OCR e Extração de Dados',
@@ -321,22 +320,7 @@ CLASSIFICAÇÃO:
     const { name, value, type } = e.target as HTMLInputElement;
     const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
     
-    setConfig(prev => {
-      const newConfig: AgentConfig = { ...prev, [name]: val, isActive: true };
-      
-      // Auto-save if it's the whatsappEnabled toggle
-      if (name === 'whatsappEnabled') {
-        localStorage.setItem('michelin_agent_config', JSON.stringify(newConfig));
-        DataService.update('config', 'agent', newConfig).catch(e => {
-          console.warn('Silent sync fail via DataService', e);
-        });
-        if (onUpdate) onUpdate(newConfig);
-        setAutoSaveStatus('saved');
-        setTimeout(() => setAutoSaveStatus('idle'), 2000);
-      }
-      
-      return newConfig;
-    });
+    setConfig(prev => ({ ...prev, [name]: val, isActive: true }));
   };
 
   const handleAddFollowUp = () => {
@@ -631,25 +615,6 @@ CLASSIFICAÇÃO:
                   </div>
                 </div>
 
-                {/* WhatsApp toggle */}
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-800">WhatsApp Ativo</p>
-                    <p className="text-[9px] text-slate-400">Respostas automáticas via WhatsApp Business</p>
-                  </div>
-                  <button
-                    onClick={() => handleChange({ target: { name: 'whatsappEnabled', type: 'checkbox', checked: !config.whatsappEnabled } } as any)}
-                    className={cn(
-                      "w-11 h-6 rounded-full border relative transition-all flex-shrink-0",
-                      config.whatsappEnabled ? "bg-gold-deep border-gold-deep" : "bg-slate-200 border-slate-200"
-                    )}
-                  >
-                    <span className={cn(
-                      "absolute top-[2px] w-5 h-5 bg-white rounded-full shadow transition-all",
-                      config.whatsappEnabled ? "left-[22px]" : "left-[2px]"
-                    )} />
-                  </button>
-                </div>
               </section>
             </div>
           ) : activeTab === 'sales' ? (

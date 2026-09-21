@@ -2,7 +2,6 @@
 import React, { Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
-import { useChatPreferences } from '../hooks/useAppContexts';
 import { useViewport } from '../hooks/useAppContexts';
 import { ShellProviders } from './ShellProviders';
 import { MobileHeader } from './MobileHeader';
@@ -32,7 +31,6 @@ export const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const navigate = useNavigate();
   const viewport = useViewport();
-  const { preferences } = useChatPreferences();
 
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(() => {
     if (typeof window !== 'undefined') {

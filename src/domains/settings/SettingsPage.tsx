@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Save, Link2, Key, Globe, RefreshCcw, CheckCircle2, AlertCircle, ShieldAlert, Code, Info, FileText, Bot, Wand2, Palette, Image as ImageIcon, Trash2, Upload, Moon, Sun, ShieldCheck, Lock, MessageSquare, BookOpen, Activity, Wrench, HelpCircle, Settings as Cog, Zap, Building2, Phone, Mail, Clock, Database, Users, Star, Shield, QrCode } from 'lucide-react';
+import { Save, Link2, RefreshCcw, CheckCircle2, AlertCircle, ShieldAlert, Code, Info, FileText, Bot, Wand2, Palette, Image as ImageIcon, Trash2, Upload, Moon, Sun, BookOpen, Activity, Wrench, HelpCircle, Settings as Cog, Zap, Building2, Phone, Mail, Clock, Database, Users, Star, Shield } from 'lucide-react';
 import { IntegrationConfig, VisualIdentityConfig, Theme, Permissions, UserProfile, Empresa } from '../../types';
 import { EmpresaService } from '../../services/EmpresaService';
 import { UserManagement } from '../admin/UserManagement';
@@ -20,7 +20,6 @@ import { CacheManager } from '../../services/CacheManager';
 import { AIDocumentExtractionPanel } from './AIDocumentExtractionPanel';
 import { AggerToolSettings } from '../../components/AggerToolSettings';
 import { AgentSettings } from './AgentSettings';
-import { SessionsPage } from '../whatsapp/SessionsPage';
 import { InsurerSettings } from './InsurerSettings';
 import { InsurerLogosSettings } from './InsurerLogosSettings';
 import { PacotesCoberturaSettings } from './PacotesCoberturaSettings';
@@ -230,63 +229,11 @@ function EmpresaPerfil({ organizationId }: { organizationId: string }) {
   );
 }
 
-const WebhookUrlBox: React.FC = () => {
-  const [copied, setCopied] = useState(false);
-  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  const productionUrl = 'https://michelin-seguros.vercel.app/api/webhook/whatsapp';
-  const webhookUrl = isLocalhost ? productionUrl : `${window.location.origin}/api/webhook/whatsapp`;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(webhookUrl).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  return (
-    <div className="p-6 bg-gold-deep/5 rounded-3xl border border-gold-deep/10 space-y-4">
-      <h4 className="text-[10px] font-black text-gold-deep uppercase tracking-[0.2em] flex items-center gap-2">
-        <Info className="w-4 h-4" />
-        Configuração de Webhook
-      </h4>
-
-      {isLocalhost && (
-        <div className="flex items-start gap-2 p-3 bg-[#FFF3DC] rounded-xl border border-[#B8860B]/20">
-          <AlertCircle className="w-4 h-4 text-[#B8860B] shrink-0 mt-0.5" />
-          <p className="text-[9px] text-[#B8860B] leading-relaxed font-semibold">
-            A Meta não aceita <code className="font-mono">localhost</code>. Use a URL de produção (Vercel) abaixo.
-          </p>
-        </div>
-      )}
-
-      <div className="p-3 bg-black/50 rounded-xl border border-white/5 flex items-center gap-2 overflow-hidden">
-        <code className="text-[10px] font-mono text-gold-light truncate flex-1">{webhookUrl}</code>
-        <button
-          onClick={handleCopy}
-          title="Copiar URL"
-          className="shrink-0 p-1.5 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
-        >
-          {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-[#1F8A4C]" /> : <Save className="w-3.5 h-3.5" />}
-        </button>
-      </div>
-
-      <p className="text-[9px] text-slate-400 leading-relaxed uppercase font-bold tracking-tight">
-        {isLocalhost
-          ? 'Faça o deploy para produção e configure este webhook no painel da Meta.'
-          : 'Aponte o seu Webhook da Meta para a URL acima para receber mensagens.'}
-      </p>
-    </div>
-  );
-};
-
 export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig, onUpdateVisualConfig, permissions, userProfile }: SettingsProps) {
   const { theme: currentTheme, setTheme: setAppTheme } = useTheme();
-  const [activeSubTab, setActiveSubTab] = useState<'general' | 'diagnostic' | 'health' | 'admin' | 'visual' | 'ai_ocr' | 'empresa' | 'sessoes_wa' | 'agente_ia' | 'seguradoras'>('general');
+  const [activeSubTab, setActiveSubTab] = useState<'general' | 'diagnostic' | 'health' | 'admin' | 'visual' | 'ai_ocr' | 'empresa' | 'agente_ia' | 'seguradoras'>('general');
 
   const [isDocsModalOpen, setIsDocsModalOpen] = useState(false);
-  const [isTestMode, setIsTestMode] = useState<boolean>(() => {
-    return localStorage.getItem('michelin_test_mode') === 'true';
-  });
   const [config, setConfig] = useState<IntegrationConfig>(() => {
     const savedKeys = localStorage.getItem('seguro_crm_api_keys');
     let loadedOrKey = '';
@@ -314,12 +261,7 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
     return {
       webhookUrl: (n8nParsed as any).webhookUrl || '',
       apiKey: (n8nParsed as any).apiKey || '',
-      whatsappApiUrl: (n8nParsed as any).whatsappApiUrl || '',
       openrouterApiKey: loadedOrKey || (n8nParsed as any).openrouterApiKey || '',
-      metaVerifyToken: (n8nParsed as any).metaVerifyToken || '',
-      metaAppSecret: (n8nParsed as any).metaAppSecret || '',
-      metaAccessToken: (n8nParsed as any).metaAccessToken || '',
-      whatsappPhoneId: (n8nParsed as any).whatsappPhoneId || '',
     };
   });
 
@@ -332,44 +274,11 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
     // Deterministic: no usage polling
   }, [config.openrouterApiKey]);
 
-  // Load Meta/Omnichannel config from Firestore on mount (overrides localStorage if set)
-  useEffect(() => {
-    DataService.get('config', 'omnichannel').then((data: any) => {
-      if (!data) return;
-      setConfig(prev => ({
-        ...prev,
-        metaVerifyToken: data.metaVerifyToken || prev.metaVerifyToken || '',
-        metaAppSecret: data.metaAppSecret || prev.metaAppSecret || '',
-        metaAccessToken: data.metaAccessToken || prev.metaAccessToken || '',
-        whatsappPhoneId: data.whatsappPhoneId || prev.whatsappPhoneId || '',
-      }));
-    }).catch(() => {});
-  }, []);
-
-  const handleSave = useCallback(async (currentConfig: IntegrationConfig, testMode: boolean) => {
-    console.log('[SETTINGS] handleSave triggered', { hasKey: !!currentConfig.openrouterApiKey, testMode });
+  const handleSave = useCallback(async (currentConfig: IntegrationConfig) => {
+    console.log('[SETTINGS] handleSave triggered', { hasKey: !!currentConfig.openrouterApiKey });
     setAutoSaveStatus('saving');
-    // Sync Test Mode to localStorage and Firestore
-    localStorage.setItem('michelin_test_mode', String(testMode));
 
     try {
-      try {
-        await DataService.save('config', 'system', { isTestMode: testMode });
-      } catch (e) {
-        console.warn('Failed to sync system config to Firestore', e);
-      }
-
-      try {
-        await DataService.save('config', 'omnichannel', {
-          metaVerifyToken: currentConfig.metaVerifyToken || '',
-          metaAppSecret: currentConfig.metaAppSecret || '',
-          metaAccessToken: currentConfig.metaAccessToken || '',
-          whatsappPhoneId: currentConfig.whatsappPhoneId || '',
-        });
-      } catch (e) {
-        console.warn('Failed to sync omnichannel config to Firestore', e);
-      }
-
       // Save functional configs
       const { openrouterApiKey, ...functionalConfig } = currentConfig;
       localStorage.setItem('seguro_crm_n8n_config', JSON.stringify(functionalConfig));
@@ -397,11 +306,11 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
   useEffect(() => {
     const timer = setTimeout(() => {
        // Only trigger if values are different from initial load (avoid save on mount)
-       handleSave(config, isTestMode);
+       handleSave(config);
     }, 1500);
 
     return () => clearTimeout(timer);
-  }, [config, isTestMode, handleSave]);
+  }, [config, handleSave]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -678,16 +587,6 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
         </button>
 
         <button
-          onClick={() => setActiveSubTab('sessoes_wa')}
-          className={cn(
-            "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
-            activeSubTab === 'sessoes_wa' ? "text-[#1B4D8F] border-[#1B4D8F]" : "text-slate-400 hover:text-slate-700 border-transparent"
-          )}
-        >
-          <QrCode className="w-3.5 h-3.5 flex-shrink-0" /> Sessões WA
-        </button>
-
-        <button
           onClick={() => setActiveSubTab('agente_ia')}
           className={cn(
             "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2",
@@ -957,78 +856,6 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
           </div>
         </section>
 
-        {/* Column 1: Simulação & Cérebro IA */}
-        <div className="space-y-6 w-full">
-          <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-            <div className="flex items-center gap-3 border-l-4 border-gold-deep pl-4 mb-2">
-              <ShieldAlert className="w-5 h-5 text-gold-deep" />
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Ambiente de Simulação</h3>
-            </div>
-
-            <div className="space-y-4">
-               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200 transition-all hover:border-slate-300">
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
-                    isTestMode ? "bg-[#FFF3DC] text-[#B8860B]" : "bg-slate-100 text-slate-500"
-                  )}>
-                    <RefreshCcw className={cn("w-6 h-6", isTestMode && "animate-spin-slow")} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 uppercase tracking-widest">Modo de Teste do chat WhatsApp</p>
-                    <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
-                      Permite simular conversas e extrações de dados sem precisar enviar mensagens reais via WhatsApp API.
-                    </p>
-                  </div>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isTestMode}
-                    onChange={(e) => setIsTestMode(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#B8860B] transition-all"></div>
-                </label>
-              </div>
-            </div>
-          </section>
-
-        </div>
-
-        {/* Column 2: Meta Omnichannel */}
-        <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6 w-full">
-          <div className="flex items-center gap-3 border-l-4 border-gold-deep pl-4 mb-2">
-            <MessageSquare className="w-5 h-5 text-gold-deep" />
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Omnichannel (Meta)</h3>
-          </div>
-
-          <div className="space-y-4">
-            {[
-              { label: 'Verify Token', name: 'metaVerifyToken', placeholder: 'michelin_secure_token', icon: Lock, type: 'text' },
-              { label: 'App Secret', name: 'metaAppSecret', placeholder: 'Certificado de Segurança Meta', icon: ShieldCheck, type: 'password' },
-              { label: 'Access Token', name: 'metaAccessToken', placeholder: 'EAA...', icon: Key, type: 'password' },
-              { label: 'WhatsApp Phone ID', name: 'whatsappPhoneId', placeholder: 'ID Numérico da Meta', icon: Globe, type: 'text' }
-            ].map((field) => (
-              <div key={field.name} className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 tracking-widest">{field.label}</label>
-                <div className="relative">
-                  <field.icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type={field.type}
-                    name={field.name}
-                    value={(config as any)[field.name] || ''}
-                    onChange={handleChange}
-                    placeholder={field.placeholder}
-                    className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#1B4D8F]/15 focus:border-[#1B4D8F]/60 text-slate-800 text-sm font-bold transition-all"
-                  />
-                </div>
-              </div>
-            ))}
-
-            <WebhookUrlBox />
-          </div>
-        </section>
       </div>
     </motion.div>
   )}
@@ -1078,16 +905,6 @@ export function Settings({ canManageUsers, onOpenDocs, onOpenAgent, visualConfig
               <AdminTools />
               <PerformanceDashboard />
             </div>
-          </motion.div>
-        )}
-
-        {activeSubTab === 'sessoes_wa' && (
-          <motion.div
-            key="sessoes_wa"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-          >
-            <SessionsPage />
           </motion.div>
         )}
 

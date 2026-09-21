@@ -2,8 +2,6 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Users,
-  Send,
-  MessageSquare,
   ShieldAlert,
   Cog,
   LogOut,
@@ -14,7 +12,6 @@ import {
   Building2,
   Briefcase,
   RefreshCw,
-  Smartphone,
   Mail,
   CalendarDays,
   BarChart3,
@@ -27,7 +24,6 @@ import { useViewport } from '../hooks/useAppContexts';
 import { auth, signOut } from '../lib/firebase';
 import { AggerInstallBanner } from './AggerInstallBanner';
 import { useEmail } from '../contexts/EmailContext';
-import { useWhatsApp } from '../contexts/WhatsAppContext';
 
 interface SidebarProps {
   permissions: Permissions;
@@ -52,14 +48,10 @@ export const Sidebar = React.memo(({
   const location = useLocation();
   const navigate = useNavigate();
   const { state: emailState } = useEmail();
-  const { totalUnreadWA } = useWhatsApp();
 
   const emailUnreadCount = emailState.stats.unread || emailState.unreadByFolder['inbox'] || 0;
   const emailUnreadBadge = emailUnreadCount > 0
     ? (emailUnreadCount > 99 ? '99+' : String(emailUnreadCount))
-    : undefined;
-  const waBadge = totalUnreadWA > 0
-    ? (totalUnreadWA > 99 ? '99+' : String(totalUnreadWA))
     : undefined;
 
   // Derive active tab from current URL path — supports nested routes like /users/:uid
@@ -151,9 +143,6 @@ export const Sidebar = React.memo(({
           { id: 'multicalculo', label: 'Multicálculo', icon: ShieldCheck,   permission: permissions.canReadAllLeads },
           { id: 'leads',       label: 'LEADS',         icon: Users,         permission: permissions.canReadAllLeads },
           { id: 'clientes',    label: 'Clientes',      icon: Briefcase,     permission: permissions.canReadAllLeads },
-          { id: 'ativos',           label: 'Msgs Ativas',   icon: Send,          permission: permissions.canReadAllLeads },
-          { id: 'chat',             label: 'WhatsApp IA',   icon: MessageSquare, permission: permissions.canReadAllLeads },
-          { id: 'whatsapp',         label: 'WA Pessoal',    icon: Smartphone,    permission: permissions.canReadAllLeads, badge: waBadge },
           { id: 'email',            label: 'E-mails',       icon: Mail,          permission: permissions.canReadAllLeads, badge: emailUnreadBadge },
           { id: 'agenda',           label: 'Agenda',        icon: CalendarDays,  permission: permissions.canReadAllLeads },
           { id: 'users',       label: 'Equipe',        icon: ShieldAlert,   permission: permissions.canManageUsers },
@@ -172,7 +161,7 @@ export const Sidebar = React.memo(({
 
           const Icon = item.icon;
           const isActive = currentTab === item.id ||
-            (item.id !== 'clientes' && item.id !== 'whatsapp' && currentTab.startsWith(item.id + '/')) ||
+            (item.id !== 'clientes' && currentTab.startsWith(item.id + '/')) ||
             (item.id === 'clientes' && (currentTab === 'clientes' || currentTab.startsWith('clientes/')));
 
           return (

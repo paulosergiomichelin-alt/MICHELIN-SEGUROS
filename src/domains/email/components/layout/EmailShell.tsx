@@ -62,8 +62,7 @@ export const EmailShell: React.FC<{ onOpenSettings: () => void }> = ({ onOpenSet
     );
   }
 
-  // Celular: uma coluna por vez (pastas -> lista -> mensagem), com barra de voltar —
-  // mesmo padrão de navegação já usado em WhatsAppInboxPage.tsx pra conversas.
+  // Celular: uma coluna por vez (pastas -> lista -> mensagem), com barra de voltar.
   // A ribbon some no visualizador: lá o cabeçalho já tem botão de voltar e as ações
   // de resposta/exclusão próprias, então repeti-la só tomaria espaço da tela.
   return (

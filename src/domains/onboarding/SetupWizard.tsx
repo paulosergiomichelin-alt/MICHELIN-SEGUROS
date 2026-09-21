@@ -34,7 +34,7 @@ const SEGMENT_OPTIONS = [
     icon: Car,
     color: 'from-blue-50 to-white border-blue-200',
     iconColor: 'text-blue-600',
-    description: 'Venda consultiva de seguros auto, vida e residencial via WhatsApp.',
+    description: 'Venda consultiva de seguros auto, vida e residencial.',
   },
   {
     id: 'imobiliaria' as BusinessSegment,

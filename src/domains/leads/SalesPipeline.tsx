@@ -327,7 +327,7 @@ export const SalesPipeline: React.FC<SalesPipelineProps> = React.memo(({ permiss
 
   const onOpenChat = (leadId: string) => {
     setSelectedLeadId(leadId);
-    if (setActiveTab) setActiveTab('chat');
+    navigate('/leads/' + leadId);
   };
 
   const onEditLead = React.useCallback((lead: Lead) => {

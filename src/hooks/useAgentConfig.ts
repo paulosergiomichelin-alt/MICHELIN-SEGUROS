@@ -11,7 +11,6 @@ export function useAgentConfig(user: any, userProfile: UserProfile | null, visua
     isActive: false,
     provider: 'openrouter',
     model: 'openai/gpt-4o-mini',
-    whatsappEnabled: false,
     extraction: {
       name: 'Analisador de Documentos',
       persona: 'Especialista em OCR e Extração de Dados',

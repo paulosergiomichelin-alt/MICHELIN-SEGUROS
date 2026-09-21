@@ -214,7 +214,7 @@ export function TechDocs({ onBack }: TechDocsProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-4">
                     {[
-                      { step: 1, name: 'INPUT (EVENT_START)', desc: 'Recebimento da mensagem via Webhook WhatsApp.', action: 'Gera log [EVENT_START] e enfileira no Buffer.' },
+                      { step: 1, name: 'INPUT (EVENT_START)', desc: 'Recebimento da mensagem/documento do lead.', action: 'Gera log [EVENT_START] e enfileira no Buffer.' },
                       { step: 2, name: 'EVENT_QUEUE (LOCK)', desc: 'Ativação do Lock Atômico por Lead ID.', action: 'Evita concorrência e garante ordem cronológica.' },
                       { step: 3, name: 'DOCUMENT_AI (HARDENED)', desc: 'Processamento Multimodal (GenAI) com Lock Atômico.', action: 'Extração profunda com validação de confiança (>0.7) e persistência validada.' },
                       { step: 4, name: 'LEAD_SYNC (ATOMIC)', desc: 'Sincronização com Firestore via Fresh State.', action: 'Garante que os dados do documento não sobrescrevam atualizações de texto paralelas.' },

@@ -6,7 +6,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'corretora_seguros',
     segment: 'corretora_seguros',
     name: 'Corretora de Seguros Auto',
-    description: 'Agente especializado em vendas consultivas de seguro automóvel via WhatsApp. Coleta documentos, calcula cotações e fecha propostas.',
+    description: 'Agente especializado em vendas consultivas de seguro automóvel. Coleta documentos, calcula cotações e fecha propostas.',
     version: 1,
     publishedAt: '2026-05-16T00:00:00.000Z',
     publishedBy: 'platform',
