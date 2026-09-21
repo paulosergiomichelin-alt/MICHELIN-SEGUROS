@@ -1,4 +1,4 @@
-import { fsGet } from '../lib/pgData.js';
+import { loadOwnedEmailAccount, handleOwnershipError } from '../lib/emailOwnership.js';
 import { getEmail, updateEmail, removeEmail, setEmail } from '../lib/emailCache.js';
 import { emitGlobal } from '../lib/socketRegistry.js';
 import {
@@ -303,8 +303,7 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'targetFolderId é obrigatório pra action "move"' });
     }
 
-    const account = await fsGet('email_accounts', String(accountId));
-    if (!account) return res.status(404).json({ error: 'Conta não encontrada' });
+    const account = await loadOwnedEmailAccount(String(accountId), req.userId);
 
     const cachedForFolder = getEmail(String(accountId), String(messageId));
     // Para IMAP o próprio id já carrega a pasta (`${folder}:${uid}`), então a
@@ -345,6 +344,7 @@ export default async function handler(req: any, res: any) {
 
     return res.status(200).json({ success: true });
   } catch (err: any) {
+    if (handleOwnershipError(err, res)) return;
     console.error('[email/action] error:', err);
     return res.status(500).json({ error: 'Erro ao executar ação', detail: err?.message });
   }

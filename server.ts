@@ -219,6 +219,10 @@ async function startServer() {
   });
 
   // â”€â”€ Email Module routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // requireAuth em tudo que não seja um redirect de browser puro (init/callback do
+  // OAuth Google/Microsoft não carregam header Authorization — quem os protege é o
+  // fluxo de consentimento do próprio provedor, não este middleware).
+  const { requireAuth: requireAuthForEmail } = await import('./_api/lib/authMiddleware.js');
   const { default: emailAccountsHandler }        = await import('./_api/email/accounts.js');
   const { default: emailGmailAuthHandler }        = await import('./_api/email/auth/gmail.js');
   const { default: emailMicrosoftAuthHandler }    = await import('./_api/email/auth/microsoft.js');
@@ -236,7 +240,7 @@ async function startServer() {
   const { default: emailStatsHandler }            = await import('./_api/email/stats.js');
   const { scheduleEmailSync }                     = await import('./_api/lib/emailSync.js');
 
-  app.all('/api/email/accounts',            emailAccountsHandler);
+  app.all('/api/email/accounts',            requireAuthForEmail, emailAccountsHandler);
   app.all('/api/email/auth/gmail/init',     emailGmailAuthHandler);
   app.all('/api/email/auth/gmail/callback', emailGmailAuthHandler);
   app.all('/api/email/auth/microsoft/init',     emailMicrosoftAuthHandler);
@@ -245,31 +249,31 @@ async function startServer() {
   app.all('/api/email/auth/gmail/calendar-callback',     emailGmailCalendarAuthHandler);
   app.all('/api/email/auth/microsoft/calendar-init',     emailMicrosoftCalendarAuthHandler);
   app.all('/api/email/auth/microsoft/calendar-callback', emailMicrosoftCalendarAuthHandler);
-  app.all('/api/email/messages',            emailMessagesHandler);
-  app.all('/api/email/messages/:id',        emailMessagesHandler);
-  app.all('/api/email/folders',             emailFoldersHandler);
-  app.all('/api/email/folders/:id',         emailFoldersHandler);
-  app.all('/api/email/folders/:id/empty',   emailFoldersHandler);
-  app.all('/api/email/folders/:id/read-all', emailFoldersHandler);
-  app.all('/api/email/folders/:id/move-folder', emailFoldersHandler);
-  app.all('/api/email/send',                emailSendHandler);
-  app.all('/api/email/action',              emailActionHandler);
-  app.all('/api/email/drafts',              emailDraftHandler);
-  app.all('/api/email/draft',               emailDraftHandler);
-  app.all('/api/email/draft/:id',           emailDraftHandler);
-  app.all('/api/email/sync',                emailSyncHandler);
-  app.all('/api/email/rules/run',           emailRulesRunHandler);
-  app.all('/api/email/search',              emailSearchHandler);
-  app.all('/api/email/settings',            emailSettingsHandler);
-  app.all('/api/email/stats',               emailStatsHandler);
+  app.all('/api/email/messages',            requireAuthForEmail, emailMessagesHandler);
+  app.all('/api/email/messages/:id',        requireAuthForEmail, emailMessagesHandler);
+  app.all('/api/email/folders',             requireAuthForEmail, emailFoldersHandler);
+  app.all('/api/email/folders/:id',         requireAuthForEmail, emailFoldersHandler);
+  app.all('/api/email/folders/:id/empty',   requireAuthForEmail, emailFoldersHandler);
+  app.all('/api/email/folders/:id/read-all', requireAuthForEmail, emailFoldersHandler);
+  app.all('/api/email/folders/:id/move-folder', requireAuthForEmail, emailFoldersHandler);
+  app.all('/api/email/send',                requireAuthForEmail, emailSendHandler);
+  app.all('/api/email/action',              requireAuthForEmail, emailActionHandler);
+  app.all('/api/email/drafts',              requireAuthForEmail, emailDraftHandler);
+  app.all('/api/email/draft',               requireAuthForEmail, emailDraftHandler);
+  app.all('/api/email/draft/:id',           requireAuthForEmail, emailDraftHandler);
+  app.all('/api/email/sync',                requireAuthForEmail, emailSyncHandler);
+  app.all('/api/email/rules/run',           requireAuthForEmail, emailRulesRunHandler);
+  app.all('/api/email/search',              requireAuthForEmail, emailSearchHandler);
+  app.all('/api/email/settings',            requireAuthForEmail, emailSettingsHandler);
+  app.all('/api/email/stats',               requireAuthForEmail, emailStatsHandler);
 
   scheduleEmailSync(5 * 60 * 1000);
   log.info('Email Module routes registradas');
 
   // ── Calendar Module routes ───────────────────────────────────────────────────
   const { default: calendarEventsHandler } = await import('./_api/calendar/events.js');
-  app.all('/api/calendar/events',     calendarEventsHandler);
-  app.all('/api/calendar/events/:id', calendarEventsHandler);
+  app.all('/api/calendar/events',     requireAuthForEmail, calendarEventsHandler);
+  app.all('/api/calendar/events/:id', requireAuthForEmail, calendarEventsHandler);
   log.info('Calendar Module routes registradas');
 
   // ── CNPJ lookup (BrasilAPI) ───────────────────────────────────────────────────

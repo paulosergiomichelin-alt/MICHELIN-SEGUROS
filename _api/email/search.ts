@@ -1,4 +1,4 @@
-import { fsGet } from '../lib/pgData.js';
+import { loadOwnedEmailAccount, handleOwnershipError } from '../lib/emailOwnership.js';
 import { getAllEmailsByFolder, CachedEmail } from '../lib/emailCache.js';
 import {
   getMessage as gmailGetMessage,
@@ -180,8 +180,7 @@ export default async function handler(req: any, res: any) {
     if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
     if (!q) return res.status(400).json({ error: 'q (query) é obrigatório' });
 
-    const account = await fsGet('email_accounts', String(accountId));
-    if (!account) return res.status(404).json({ error: 'Conta não encontrada' });
+    const account = await loadOwnedEmailAccount(String(accountId), req.userId);
 
     // First search cache for quick results
     const cachedResults = searchCache(String(accountId), String(q), folder ? String(folder) : undefined);
@@ -228,6 +227,7 @@ export default async function handler(req: any, res: any) {
 
     return res.status(200).json({ messages: results });
   } catch (err: any) {
+    if (handleOwnershipError(err, res)) return;
     console.error('[email/search] error:', err);
     return res.status(500).json({ error: 'Erro na busca', detail: err?.message });
   }

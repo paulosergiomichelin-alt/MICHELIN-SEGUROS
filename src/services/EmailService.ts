@@ -137,28 +137,35 @@ export interface SearchResponse {
 }
 
 // ─── EmailService ─────────────────────────────────────────────────────────────
+//
+// Toda rota /api/email/* (exceto os redirects OAuth abaixo) exige o Firebase ID
+// token do usuário logado — sem isso o backend responde 401 (ver requireAuthForEmail
+// em server.ts). Os métodos de leitura/atualização, além disso, não confiam mais no
+// userId passado pelo chamador: o backend deriva o usuário do próprio token.
+
+import { authHeader } from '../lib/dataApiClient';
 
 export const EmailService = {
   // ── Contas ──────────────────────────────────────────────────────────────────
-  getAccounts: (userId: string): Promise<EmailAccount[]> =>
-    fetch(`/api/email/accounts?userId=${encodeURIComponent(userId)}`).then(r => r.json()).then(d => d.accounts ?? d),
+  getAccounts: async (): Promise<EmailAccount[]> =>
+    fetch('/api/email/accounts', { headers: await authHeader() })
+      .then(r => r.json()).then(d => d.accounts ?? d),
 
-  deleteAccount: (accountId: string): Promise<{ success: boolean }> =>
-    fetch(`/api/email/accounts?accountId=${encodeURIComponent(accountId)}`, { method: 'DELETE' }).then(r => r.json()),
+  deleteAccount: async (accountId: string): Promise<{ success: boolean }> =>
+    fetch(`/api/email/accounts?accountId=${encodeURIComponent(accountId)}`, {
+      method: 'DELETE', headers: await authHeader(),
+    }).then(r => r.json()),
 
-  updateAccount: (data: {
+  updateAccount: async (data: {
     accountId: string;
     isDefault?: boolean;
     displayName?: string;
   }): Promise<EmailAccount> =>
     fetch('/api/email/accounts', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      method: 'PATCH', headers: await authHeader(), body: JSON.stringify(data),
     }).then(r => r.json()),
 
-  createImapAccount: (data: {
-    userId: string;
+  createImapAccount: async (data: {
     email: string;
     username?: string;
     password: string;
@@ -171,9 +178,7 @@ export const EmailService = {
     smtpSecure?: boolean;
   }): Promise<{ success: boolean; accountId?: string; error?: string }> =>
     fetch('/api/email/accounts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      method: 'POST', headers: await authHeader(), body: JSON.stringify(data),
     }).then(async r => {
       const json = await r.json();
       if (!r.ok) return { success: false, error: json.error ?? 'Falha ao conectar' };
@@ -181,6 +186,8 @@ export const EmailService = {
     }),
 
   // ── Auth ────────────────────────────────────────────────────────────────────
+  // Redirects de browser puro (o usuário navega pra cá, não um fetch) — o backend
+  // identifica o usuário pelo userId embutido no `state` do OAuth, não por um token.
   getGmailAuthUrl: (userId: string, returnUrl: string): string =>
     `/api/email/auth/gmail/init?userId=${encodeURIComponent(userId)}&returnUrl=${encodeURIComponent(returnUrl)}`,
 
@@ -188,56 +195,46 @@ export const EmailService = {
     `/api/email/auth/microsoft/init?userId=${encodeURIComponent(userId)}&returnUrl=${encodeURIComponent(returnUrl)}`,
 
   // ── Pastas reais ────────────────────────────────────────────────────────────
-  getFolders: (accountId: string): Promise<EmailFolderNode[]> =>
-    fetch(`/api/email/folders?accountId=${encodeURIComponent(accountId)}`)
+  getFolders: async (accountId: string): Promise<EmailFolderNode[]> =>
+    fetch(`/api/email/folders?accountId=${encodeURIComponent(accountId)}`, { headers: await authHeader() })
       .then(r => r.json())
       .then(data => data?.folders ?? []),
 
-  createFolder: (accountId: string, name: string, parentId: string | null): Promise<{ folder: { id: string; name: string } }> =>
+  createFolder: async (accountId: string, name: string, parentId: string | null): Promise<{ folder: { id: string; name: string } }> =>
     fetch('/api/email/folders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountId, name, parentId }),
+      method: 'POST', headers: await authHeader(), body: JSON.stringify({ accountId, name, parentId }),
     }).then(r => r.json()),
 
   // Relocaliza uma pasta customizada já existente pra debaixo de outra (ex.: pasta de
   // seguradora criada solta na raiz antes do padrão virar "sempre subpasta da Inbox").
   // Só suportado no Outlook — ver moveFolderForAccount em _api/email/folders.ts.
-  moveFolder: (accountId: string, folderId: string, destinationId: string): Promise<{ success: boolean }> =>
+  moveFolder: async (accountId: string, folderId: string, destinationId: string): Promise<{ success: boolean }> =>
     fetch(`/api/email/folders/${encodeURIComponent(folderId)}/move-folder`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountId, destinationId }),
+      method: 'POST', headers: await authHeader(), body: JSON.stringify({ accountId, destinationId }),
     }).then(r => r.json()),
 
-  renameFolder: (accountId: string, folderId: string, name: string): Promise<{ success: boolean }> =>
+  renameFolder: async (accountId: string, folderId: string, name: string): Promise<{ success: boolean }> =>
     fetch(`/api/email/folders/${encodeURIComponent(folderId)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountId, name }),
+      method: 'PATCH', headers: await authHeader(), body: JSON.stringify({ accountId, name }),
     }).then(r => r.json()),
 
-  deleteFolder: (accountId: string, folderId: string): Promise<{ success: boolean }> =>
+  deleteFolder: async (accountId: string, folderId: string): Promise<{ success: boolean }> =>
     fetch(`/api/email/folders/${encodeURIComponent(folderId)}?accountId=${encodeURIComponent(accountId)}`, {
-      method: 'DELETE',
+      method: 'DELETE', headers: await authHeader(),
     }).then(r => r.json()),
 
-  emptyFolder: (accountId: string, folderId: string): Promise<{ success: boolean }> =>
+  emptyFolder: async (accountId: string, folderId: string): Promise<{ success: boolean }> =>
     fetch(`/api/email/folders/${encodeURIComponent(folderId)}/empty`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountId }),
+      method: 'POST', headers: await authHeader(), body: JSON.stringify({ accountId }),
     }).then(r => r.json()),
 
-  markFolderRead: (accountId: string, folderId: string): Promise<{ success: boolean }> =>
+  markFolderRead: async (accountId: string, folderId: string): Promise<{ success: boolean }> =>
     fetch(`/api/email/folders/${encodeURIComponent(folderId)}/read-all`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountId }),
+      method: 'POST', headers: await authHeader(), body: JSON.stringify({ accountId }),
     }).then(r => r.json()),
 
   // ── Mensagens ───────────────────────────────────────────────────────────────
-  getMessages: (
+  getMessages: async (
     accountId: string,
     folder: string,
     page: number,
@@ -245,10 +242,13 @@ export const EmailService = {
   ): Promise<MessageListResponse> =>
     fetch(
       `/api/email/messages?accountId=${encodeURIComponent(accountId)}&folder=${encodeURIComponent(folder)}&page=${page}&limit=${limit}`,
+      { headers: await authHeader() },
     ).then(r => r.json()),
 
-  getMessage: (id: string, accountId: string): Promise<CachedEmail> =>
-    fetch(`/api/email/messages/${encodeURIComponent(id)}?accountId=${encodeURIComponent(accountId)}`)
+  getMessage: async (id: string, accountId: string): Promise<CachedEmail> =>
+    fetch(`/api/email/messages/${encodeURIComponent(id)}?accountId=${encodeURIComponent(accountId)}`, {
+      headers: await authHeader(),
+    })
       .then(r => { if (!r.ok) throw new Error(`getMessage ${r.status}`); return r.json(); })
       .then(data => {
         const message = data?.message;
@@ -257,18 +257,16 @@ export const EmailService = {
       }),
 
   // ── Ações ───────────────────────────────────────────────────────────────────
-  doAction: (
+  doAction: async (
     accountId: string,
     messageId: string,
     action: 'read' | 'unread' | 'star' | 'unstar' | 'archive' | 'trash' | 'restore' | 'spam' | 'notspam',
   ): Promise<{ success: boolean }> =>
     fetch('/api/email/action', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountId, messageId, action }),
+      method: 'POST', headers: await authHeader(), body: JSON.stringify({ accountId, messageId, action }),
     }).then(r => r.json()),
 
-  moveMessage: (
+  moveMessage: async (
     accountId: string,
     messageId: string,
     sourceFolderId: string,
@@ -276,7 +274,7 @@ export const EmailService = {
   ): Promise<{ success: boolean }> =>
     fetch('/api/email/action', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await authHeader(),
       body: JSON.stringify({ accountId, messageId, action: 'move', sourceFolderId, targetFolderId }),
     }).then(r => r.json()),
 
@@ -284,60 +282,55 @@ export const EmailService = {
   // Anexos vão como base64 no corpo JSON — é o formato que _api/email/send.ts já espera
   // (SendEmailBody.attachments: {filename,mimeType,data}[]). Use fileToAttachmentPayload()
   // para converter File[] do composer antes de chamar isto.
-  sendEmail: (data: SendEmailPayload): Promise<{ success: boolean; messageId?: string }> =>
+  sendEmail: async (data: SendEmailPayload): Promise<{ success: boolean; messageId?: string }> =>
     fetch('/api/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      method: 'POST', headers: await authHeader(), body: JSON.stringify(data),
     }).then(r => r.json()),
 
   // ── Rascunhos ───────────────────────────────────────────────────────────────
-  getDrafts: (accountId: string): Promise<CachedEmail[]> =>
-    fetch(`/api/email/drafts?accountId=${encodeURIComponent(accountId)}`).then(r => r.json()),
+  getDrafts: async (accountId: string): Promise<CachedEmail[]> =>
+    fetch(`/api/email/drafts?accountId=${encodeURIComponent(accountId)}`, { headers: await authHeader() }).then(r => r.json()),
 
-  saveDraft: (data: DraftPayload): Promise<{ success: boolean; draftId: string }> =>
+  saveDraft: async (data: DraftPayload): Promise<{ success: boolean; draftId: string }> =>
     fetch('/api/email/draft', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      method: 'POST', headers: await authHeader(), body: JSON.stringify(data),
     }).then(r => r.json()),
 
-  deleteDraft: (id: string, accountId: string): Promise<{ success: boolean }> =>
+  deleteDraft: async (id: string, accountId: string): Promise<{ success: boolean }> =>
     fetch(`/api/email/draft/${encodeURIComponent(id)}?accountId=${encodeURIComponent(accountId)}`, {
-      method: 'DELETE',
+      method: 'DELETE', headers: await authHeader(),
     }).then(r => r.json()),
 
   // ── Sync ────────────────────────────────────────────────────────────────────
-  syncAccount: (accountId: string): Promise<{ success: boolean; synced: number }> =>
-    fetch(`/api/email/sync?accountId=${encodeURIComponent(accountId)}`, { method: 'POST' }).then(r => r.json()),
+  syncAccount: async (accountId: string): Promise<{ success: boolean; synced: number }> =>
+    fetch(`/api/email/sync?accountId=${encodeURIComponent(accountId)}`, {
+      method: 'POST', headers: await authHeader(),
+    }).then(r => r.json()),
 
   // Roda as regras de organização em todos os e-mails já na inbox (não só nos
   // novos do próximo sync) — ver _api/email/rules-run.ts.
-  runRulesNow: (accountId: string): Promise<{ success: boolean; checked: number; moved: number; errors: string[] }> =>
+  runRulesNow: async (accountId: string): Promise<{ success: boolean; checked: number; moved: number; errors: string[] }> =>
     fetch('/api/email/rules/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountId }),
+      method: 'POST', headers: await authHeader(), body: JSON.stringify({ accountId }),
     }).then(r => r.json()),
 
   // ── Busca ───────────────────────────────────────────────────────────────────
-  search: (accountId: string, q: string, folder?: string): Promise<SearchResponse> =>
+  search: async (accountId: string, q: string, folder?: string): Promise<SearchResponse> =>
     fetch(
       `/api/email/search?accountId=${encodeURIComponent(accountId)}&q=${encodeURIComponent(q)}&folder=${encodeURIComponent(folder || '')}`,
+      { headers: await authHeader() },
     ).then(r => r.json()),
 
   // ── Configurações ────────────────────────────────────────────────────────────
-  getSettings: (userId: string): Promise<EmailSettings> =>
-    fetch(`/api/email/settings?userId=${encodeURIComponent(userId)}`).then(r => r.json()).then(d => d.settings ?? d),
+  getSettings: async (): Promise<EmailSettings> =>
+    fetch('/api/email/settings', { headers: await authHeader() }).then(r => r.json()).then(d => d.settings ?? d),
 
-  saveSettings: (data: Partial<EmailSettings>): Promise<{ success: boolean }> =>
+  saveSettings: async (data: Partial<EmailSettings>): Promise<{ success: boolean }> =>
     fetch('/api/email/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      method: 'PUT', headers: await authHeader(), body: JSON.stringify(data),
     }).then(r => r.json()),
 
   // ── Stats ───────────────────────────────────────────────────────────────────
-  getStats: (userId: string): Promise<EmailStats> =>
-    fetch(`/api/email/stats?userId=${encodeURIComponent(userId)}`).then(r => r.json()).then(d => d.stats ?? d),
+  getStats: async (): Promise<EmailStats> =>
+    fetch('/api/email/stats', { headers: await authHeader() }).then(r => r.json()).then(d => d.stats ?? d),
 };

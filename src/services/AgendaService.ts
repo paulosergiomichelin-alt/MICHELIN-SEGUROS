@@ -42,6 +42,8 @@ export interface GetEventsResponse {
   needsReauth?: boolean;
 }
 
+import { authHeader } from '../lib/dataApiClient';
+
 async function toJsonOrThrow(r: Response): Promise<any> {
   if (!r.ok) {
     const body = await r.json().catch(() => ({}));
@@ -50,28 +52,29 @@ async function toJsonOrThrow(r: Response): Promise<any> {
   return r.json();
 }
 
+// userId não vai mais na query: o backend deriva do Firebase ID token
+// (requireAuthForEmail em server.ts) — ver EmailService.ts para o mesmo padrão.
 export const AgendaService = {
-  getEvents: (userId: string, accountId: string, from: string, to: string): Promise<GetEventsResponse> =>
+  getEvents: async (accountId: string, from: string, to: string): Promise<GetEventsResponse> =>
     fetch(
-      `/api/calendar/events?userId=${encodeURIComponent(userId)}&accountId=${encodeURIComponent(accountId)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      `/api/calendar/events?accountId=${encodeURIComponent(accountId)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      { headers: await authHeader() },
     ).then(toJsonOrThrow),
 
-  createEvent: (payload: CreateEventPayload): Promise<{ id: string; success: boolean }> =>
+  createEvent: async (payload: Omit<CreateEventPayload, 'userId'>): Promise<{ id: string; success: boolean }> =>
     fetch('/api/calendar/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      method: 'POST', headers: await authHeader(), body: JSON.stringify(payload),
     }).then(toJsonOrThrow),
 
-  updateEvent: (id: string, payload: UpdateEventPayload): Promise<{ success: boolean }> =>
+  updateEvent: async (id: string, payload: UpdateEventPayload): Promise<{ success: boolean }> =>
     fetch(`/api/calendar/events/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      method: 'PATCH', headers: await authHeader(), body: JSON.stringify(payload),
     }).then(toJsonOrThrow),
 
-  deleteEvent: (id: string): Promise<{ success: boolean }> =>
-    fetch(`/api/calendar/events/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(toJsonOrThrow),
+  deleteEvent: async (id: string): Promise<{ success: boolean }> =>
+    fetch(`/api/calendar/events/${encodeURIComponent(id)}`, {
+      method: 'DELETE', headers: await authHeader(),
+    }).then(toJsonOrThrow),
 
   getCalendarConnectUrl: (provider: 'gmail' | 'microsoft', accountId: string, returnUrl: string): string =>
     `/api/email/auth/${provider}/calendar-init?accountId=${encodeURIComponent(accountId)}&returnUrl=${encodeURIComponent(returnUrl)}`,

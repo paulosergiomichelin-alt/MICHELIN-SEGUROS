@@ -4,6 +4,7 @@ import { encrypt } from '../lib/emailEncryption.js';
 import { detectImapSmtpConfig } from '../lib/imapAutodetect.js';
 import { testImapConnection, ImapAccount } from '../lib/imapClient.js';
 import { testSmtpConnection, SmtpAccount } from '../lib/smtpClient.js';
+import { loadOwnedEmailAccount, handleOwnershipError } from '../lib/emailOwnership.js';
 
 function generateId(): string {
   return `imap_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -20,8 +21,10 @@ function stripTokens(account: Record<string, any>): Record<string, any> {
 export default async function handler(req: any, res: any) {
   try {
     if (req.method === 'GET') {
-      const { userId } = req.query ?? {};
-      if (!userId) return res.status(400).json({ error: 'userId é obrigatório' });
+      // userId vem do token verificado por requireAuth, nunca do cliente — senão
+      // qualquer usuário logado listaria as contas de e-mail de outro só trocando
+      // o query param (achado F-01/F-17 da auditoria).
+      const userId = req.userId;
 
       const accounts = await fsQueryFull('email_accounts', [
         { field: 'userId', value: String(userId) },
@@ -35,6 +38,7 @@ export default async function handler(req: any, res: any) {
     if (req.method === 'DELETE') {
       const { accountId } = req.query ?? {};
       if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
+      await loadOwnedEmailAccount(String(accountId), req.userId);
 
       await fsDelete('email_accounts', String(accountId));
       clearAccount(String(accountId));
@@ -45,6 +49,7 @@ export default async function handler(req: any, res: any) {
     if (req.method === 'PUT') {
       const { accountId, isDefault, displayName } = req.body ?? {};
       if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
+      await loadOwnedEmailAccount(String(accountId), req.userId);
 
       const patch: Record<string, any> = {};
       if (isDefault !== undefined) patch.isDefault = Boolean(isDefault);
@@ -59,8 +64,8 @@ export default async function handler(req: any, res: any) {
     }
 
     if (req.method === 'POST') {
-      const { userId, email, username, password, displayName } = req.body ?? {};
-      if (!userId) return res.status(400).json({ error: 'userId é obrigatório' });
+      const { email, username, password, displayName } = req.body ?? {};
+      const userId = req.userId;
       if (!email) return res.status(400).json({ error: 'email é obrigatório' });
       if (!password) return res.status(400).json({ error: 'password é obrigatório' });
 
@@ -129,6 +134,7 @@ export default async function handler(req: any, res: any) {
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err: any) {
+    if (handleOwnershipError(err, res)) return;
     console.error('[email/accounts] error:', err);
     return res.status(500).json({ error: 'Erro interno', detail: err?.message });
   }

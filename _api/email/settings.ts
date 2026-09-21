@@ -31,10 +31,12 @@ const DEFAULT_SETTINGS: Omit<EmailSettings, 'userId'> = {
 
 export default async function handler(req: any, res: any) {
   try {
-    // ── GET /api/email/settings?userId= ────────────────────────────────────
+    // ── GET /api/email/settings ──────────────────────────────────────────────
     if (req.method === 'GET') {
-      const { userId } = req.query ?? {};
-      if (!userId) return res.status(400).json({ error: 'userId é obrigatório' });
+      // userId vem do token verificado por requireAuth — antes, qualquer usuário
+      // logado lia/gravava a configuração de outro só trocando o query param
+      // (F-17 da auditoria: cross-user access em email_settings).
+      const userId = req.userId;
 
       const settings = await fsGet('email_settings', String(userId));
 
@@ -46,9 +48,8 @@ export default async function handler(req: any, res: any) {
     // ── PUT /api/email/settings ─────────────────────────────────────────────
     if (req.method === 'PUT') {
       const body = req.body ?? {};
-      const { userId, signature, displayName, defaultAccountId, notifications, theme, previewPane, emailsPerPage } = body;
-
-      if (!userId) return res.status(400).json({ error: 'userId é obrigatório' });
+      const { signature, displayName, defaultAccountId, notifications, theme, previewPane, emailsPerPage } = body;
+      const userId = req.userId;
 
       // Load existing to merge
       const existing = (await fsGet('email_settings', String(userId))) ?? {

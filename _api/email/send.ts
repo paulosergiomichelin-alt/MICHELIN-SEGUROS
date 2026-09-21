@@ -1,4 +1,4 @@
-import { fsGet } from '../lib/pgData.js';
+import { loadOwnedEmailAccount, handleOwnershipError } from '../lib/emailOwnership.js';
 import { setEmail, CachedEmail } from '../lib/emailCache.js';
 import { emitGlobal } from '../lib/socketRegistry.js';
 import {
@@ -203,8 +203,7 @@ export default async function handler(req: any, res: any) {
     if (!subject) return res.status(400).json({ error: 'subject é obrigatório' });
     if (!bodyHtml) return res.status(400).json({ error: 'bodyHtml é obrigatório' });
 
-    const account = await fsGet('email_accounts', accountId);
-    if (!account) return res.status(404).json({ error: 'Conta não encontrada' });
+    const account = await loadOwnedEmailAccount(String(accountId), req.userId);
 
     let sentMessageId: string | undefined;
 
@@ -268,6 +267,7 @@ export default async function handler(req: any, res: any) {
 
     return res.status(200).json({ success: true, messageId: optimisticId });
   } catch (err: any) {
+    if (handleOwnershipError(err, res)) return;
     console.error('[email/send] error:', err);
     return res.status(500).json({ error: 'Erro ao enviar e-mail', detail: err?.message });
   }

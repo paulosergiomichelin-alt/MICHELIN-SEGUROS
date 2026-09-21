@@ -194,7 +194,6 @@ export const EmailAccountsPage: React.FC = () => {
     setImapError(null);
     try {
       const result = await EmailService.createImapAccount({
-        userId: userProfile.uid,
         email: imapForm.email,
         password: imapForm.password,
         displayName: imapForm.displayName || undefined,

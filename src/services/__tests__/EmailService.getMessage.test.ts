@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EmailService } from '../EmailService';
 
+vi.mock('../../lib/dataApiClient', () => ({
+  authHeader: vi.fn(async () => ({ Authorization: 'Bearer test-token', 'Content-Type': 'application/json' })),
+}));
+
 describe('EmailService.getMessage', () => {
   const originalFetch = global.fetch;
 

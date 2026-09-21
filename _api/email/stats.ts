@@ -9,8 +9,8 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { userId } = req.query ?? {};
-    if (!userId) return res.status(400).json({ error: 'userId é obrigatório' });
+    // userId vem do token verificado por requireAuth, não do query param (F-17).
+    const userId = req.userId;
 
     // Load all accounts for user
     const accounts = await fsQueryFull('email_accounts', [

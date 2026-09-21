@@ -1,5 +1,6 @@
 import { syncAccount } from '../lib/emailSync.js';
 import { getSyncState } from '../lib/emailCache.js';
+import { loadOwnedEmailAccount, handleOwnershipError } from '../lib/emailOwnership.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -9,6 +10,7 @@ export default async function handler(req: any, res: any) {
   try {
     const { accountId } = req.query ?? {};
     if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
+    await loadOwnedEmailAccount(String(accountId), req.userId);
 
     const result = await syncAccount(String(accountId));
     const syncState = getSyncState(String(accountId));
@@ -20,6 +22,7 @@ export default async function handler(req: any, res: any) {
       lastSync: syncState.lastSync,
     });
   } catch (err: any) {
+    if (handleOwnershipError(err, res)) return;
     console.error('[email/sync] error:', err);
     return res.status(500).json({ error: 'Erro ao sincronizar', detail: err?.message });
   }

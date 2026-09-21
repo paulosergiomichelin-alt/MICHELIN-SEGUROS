@@ -1,4 +1,4 @@
-import { fsGet } from '../lib/pgData.js';
+import { loadOwnedEmailAccount, handleOwnershipError } from '../lib/emailOwnership.js';
 import {
   getAllEmailsByFolder, setEmail, removeEmail, CachedEmail,
 } from '../lib/emailCache.js';
@@ -93,6 +93,7 @@ export default async function handler(req: any, res: any) {
     if (req.method === 'GET') {
       const { accountId } = query;
       if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
+      await loadOwnedEmailAccount(String(accountId), req.userId);
 
       const drafts = getAllEmailsByFolder(String(accountId), 'drafts');
       return res.status(200).json({ drafts });
@@ -105,8 +106,7 @@ export default async function handler(req: any, res: any) {
 
       if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
 
-      const account = await fsGet('email_accounts', String(accountId));
-      if (!account) return res.status(404).json({ error: 'Conta não encontrada' });
+      const account = await loadOwnedEmailAccount(String(accountId), req.userId);
 
       let resultId: string;
 
@@ -185,8 +185,7 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ error: 'draftId é obrigatório na URL' });
       }
 
-      const account = await fsGet('email_accounts', String(accountId));
-      if (!account) return res.status(404).json({ error: 'Conta não encontrada' });
+      const account = await loadOwnedEmailAccount(String(accountId), req.userId);
 
       if (account.provider === 'gmail') {
         await gmailDeleteDraft(account as GmailAccount, draftId);
@@ -204,6 +203,7 @@ export default async function handler(req: any, res: any) {
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err: any) {
+    if (handleOwnershipError(err, res)) return;
     console.error('[email/draft] error:', err);
     return res.status(500).json({ error: 'Erro interno', detail: err?.message });
   }

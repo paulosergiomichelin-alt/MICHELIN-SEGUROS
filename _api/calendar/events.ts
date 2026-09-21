@@ -2,6 +2,7 @@ import { eq, and, gte, lte, isNull } from 'drizzle-orm';
 import { fsGet, fsSet, fsUpdate, fsDelete } from '../lib/pgData.js';
 import { getDb } from '../lib/db.js';
 import { calendarEvents } from '../db/schema/campaigns-email.js';
+import { loadOwnedEmailAccount, handleOwnershipError, OwnershipError } from '../lib/emailOwnership.js';
 import {
   listEvents as googleListEvents, createEvent as googleCreateEvent,
   updateEvent as googleUpdateEvent, deleteEvent as googleDeleteEvent,
@@ -68,8 +69,11 @@ export default async function handler(req: any, res: any) {
 
     // ── GET /api/calendar/events?userId&accountId&from&to ──────────────────────
     if (req.method === 'GET') {
-      const { userId, accountId, from, to } = req.query ?? {};
-      if (!userId) return res.status(400).json({ error: 'userId é obrigatório' });
+      const { accountId, from, to } = req.query ?? {};
+      // userId vem do token verificado por requireAuth, não do query param —
+      // senão qualquer usuário logado lia a agenda de outro (mesma classe de
+      // achado do F-17, agora aplicada a calendar_events).
+      const userId = req.userId;
       if (!from || !to) return res.status(400).json({ error: 'from e to são obrigatórios' });
 
       // Filtra por INÍCIO do evento dentro do intervalo — simplificação aceita pra esta
@@ -90,8 +94,7 @@ export default async function handler(req: any, res: any) {
         return res.status(200).json({ events: rows });
       }
 
-      const account = await fsGet('email_accounts', String(accountId));
-      if (!account) return res.status(404).json({ error: 'Conta não encontrada' });
+      const account = await loadOwnedEmailAccount(String(accountId), userId);
 
       if (account.provider !== 'imap' && !account.calendarScopeGranted) {
         return res.status(200).json({ events: [], needsReauth: true });
@@ -109,8 +112,8 @@ export default async function handler(req: any, res: any) {
 
     // ── POST /api/calendar/events ───────────────────────────────────────────────
     if (req.method === 'POST') {
-      const { userId, accountId, ...body } = req.body ?? {};
-      if (!userId) return res.status(400).json({ error: 'userId é obrigatório' });
+      const { accountId, ...body } = req.body ?? {};
+      const userId = req.userId;
       if (!body.title) return res.status(400).json({ error: 'title é obrigatório' });
       if (!body.startAt || !body.endAt) return res.status(400).json({ error: 'startAt e endAt são obrigatórios' });
 
@@ -119,8 +122,7 @@ export default async function handler(req: any, res: any) {
       let account: Record<string, any> | null = null;
 
       if (accountId && accountId !== 'internal') {
-        account = await fsGet('email_accounts', String(accountId));
-        if (!account) return res.status(404).json({ error: 'Conta não encontrada' });
+        account = await loadOwnedEmailAccount(String(accountId), userId);
         if (account.provider !== 'imap' && !account.calendarScopeGranted) {
           return res.status(400).json({ error: 'Conta ainda não autorizou o escopo de calendário' });
         }
@@ -162,6 +164,9 @@ export default async function handler(req: any, res: any) {
     if (req.method === 'PATCH' && eventId) {
       const existing = await fsGet('calendar_events', eventId);
       if (!existing) return res.status(404).json({ error: 'Evento não encontrado' });
+      if (existing.userId !== req.userId) {
+        throw new OwnershipError('Evento não pertence ao usuário autenticado', 403);
+      }
 
       const body = req.body ?? {};
 
@@ -191,6 +196,9 @@ export default async function handler(req: any, res: any) {
     if (req.method === 'DELETE' && eventId) {
       const existing = await fsGet('calendar_events', eventId);
       if (!existing) return res.status(404).json({ error: 'Evento não encontrado' });
+      if (existing.userId !== req.userId) {
+        throw new OwnershipError('Evento não pertence ao usuário autenticado', 403);
+      }
 
       if (existing.accountId && existing.providerEventId) {
         const account = await fsGet('email_accounts', existing.accountId);
@@ -207,6 +215,7 @@ export default async function handler(req: any, res: any) {
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err: any) {
+    if (handleOwnershipError(err, res)) return;
     console.error('[calendar/events] error:', err);
     return res.status(500).json({ error: 'Erro na operação de evento', detail: err?.message });
   }

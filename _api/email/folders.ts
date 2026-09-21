@@ -1,4 +1,4 @@
-import { fsGet } from '../lib/pgData.js';
+import { loadOwnedEmailAccount, handleOwnershipError } from '../lib/emailOwnership.js';
 import {
   listFolders as msListFolders, createFolder as msCreateFolder, renameFolder as msRenameFolder,
   deleteFolder as msDeleteFolder, listAllMessageIds as msListAllMessageIds,
@@ -41,12 +41,6 @@ const SYSTEM_FOLDER_KEYS = new Set(['inbox', 'sent', 'drafts', 'trash', 'spam', 
 
 // Esvaziar Lixeira/Spam exclui definitivamente; qualquer outra pasta move tudo pra Lixeira.
 const PERMANENT_EMPTY_FOLDERS = new Set(['trash', 'spam']);
-
-async function loadAccount(accountId: string): Promise<Record<string, any>> {
-  const account = await fsGet('email_accounts', accountId);
-  if (!account) throw new Error(`Account ${accountId} not found`);
-  return account;
-}
 
 async function listFoldersForAccount(account: Record<string, any>): Promise<EmailFolderNode[]> {
   if (account.provider === 'gmail') {
@@ -162,7 +156,7 @@ export default async function handler(req: any, res: any) {
     if (req.method === 'GET') {
       const { accountId } = req.query ?? {};
       if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
-      const account = await loadAccount(String(accountId));
+      const account = await loadOwnedEmailAccount(String(accountId), req.userId);
       const folders = await listFoldersForAccount(account);
       return res.status(200).json({ folders });
     }
@@ -171,7 +165,7 @@ export default async function handler(req: any, res: any) {
       const { accountId, name, parentId } = req.body ?? {};
       if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
       if (!name || !String(name).trim()) return res.status(400).json({ error: 'name é obrigatório' });
-      const account = await loadAccount(String(accountId));
+      const account = await loadOwnedEmailAccount(String(accountId), req.userId);
       const created = await createFolderForAccount(account, String(name).trim(), parentId ? String(parentId) : null);
       return res.status(200).json({ folder: created });
     }
@@ -179,7 +173,7 @@ export default async function handler(req: any, res: any) {
     if (req.method === 'POST' && folderId && subAction === 'empty') {
       const { accountId } = req.body ?? {};
       if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
-      const account = await loadAccount(String(accountId));
+      const account = await loadOwnedEmailAccount(String(accountId), req.userId);
       await emptyFolderForAccount(account, folderId);
       return res.status(200).json({ success: true });
     }
@@ -188,7 +182,7 @@ export default async function handler(req: any, res: any) {
       const { accountId, destinationId } = req.body ?? {};
       if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
       if (!destinationId) return res.status(400).json({ error: 'destinationId é obrigatório' });
-      const account = await loadAccount(String(accountId));
+      const account = await loadOwnedEmailAccount(String(accountId), req.userId);
       await moveFolderForAccount(account, folderId, normalizeFolderId(String(destinationId)));
       return res.status(200).json({ success: true });
     }
@@ -196,7 +190,7 @@ export default async function handler(req: any, res: any) {
     if (req.method === 'POST' && folderId && subAction === 'read-all') {
       const { accountId } = req.body ?? {};
       if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
-      const account = await loadAccount(String(accountId));
+      const account = await loadOwnedEmailAccount(String(accountId), req.userId);
       await markFolderReadForAccount(account, folderId);
       return res.status(200).json({ success: true });
     }
@@ -205,7 +199,7 @@ export default async function handler(req: any, res: any) {
       const { accountId, name } = req.body ?? {};
       if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
       if (!name || !String(name).trim()) return res.status(400).json({ error: 'name é obrigatório' });
-      const account = await loadAccount(String(accountId));
+      const account = await loadOwnedEmailAccount(String(accountId), req.userId);
       await renameFolderForAccount(account, folderId, String(name).trim());
       return res.status(200).json({ success: true });
     }
@@ -213,13 +207,14 @@ export default async function handler(req: any, res: any) {
     if (req.method === 'DELETE' && folderId) {
       const { accountId } = req.query ?? {};
       if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
-      const account = await loadAccount(String(accountId));
+      const account = await loadOwnedEmailAccount(String(accountId), req.userId);
       await deleteFolderForAccount(account, folderId);
       return res.status(200).json({ success: true });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err: any) {
+    if (handleOwnershipError(err, res)) return;
     console.error('[email/folders] error:', err);
     return res.status(500).json({ error: 'Erro na operação de pasta', detail: err?.message });
   }

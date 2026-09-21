@@ -120,7 +120,7 @@ export const AgendaProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
       const { from, to } = rangeForView(stateRef.current.view, new Date(stateRef.current.currentDate));
-      const result = await AgendaService.getEvents(uid, stateRef.current.selectedAccountId, from.toISOString(), to.toISOString());
+      const result = await AgendaService.getEvents(stateRef.current.selectedAccountId, from.toISOString(), to.toISOString());
       dispatch({ type: 'SET_EVENTS', payload: { events: result.events, needsReauth: Boolean(result.needsReauth) } });
     } catch {
       dispatch({ type: 'SET_ERROR', payload: 'Falha ao carregar eventos.' });
@@ -162,7 +162,7 @@ export const AgendaProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!uid) return false;
     try {
       await AgendaService.createEvent({
-        ...payload, userId: uid,
+        ...payload,
         accountId: stateRef.current.selectedAccountId === 'internal' ? null : stateRef.current.selectedAccountId,
       });
       await loadEvents();

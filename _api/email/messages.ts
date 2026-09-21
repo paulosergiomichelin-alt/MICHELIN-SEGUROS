@@ -1,4 +1,4 @@
-import { fsGet } from '../lib/pgData.js';
+import { loadOwnedEmailAccount, handleOwnershipError } from '../lib/emailOwnership.js';
 import {
   getEmailsByFolder, getEmail, setEmail, updateEmail, getSyncState,
 } from '../lib/emailCache.js';
@@ -38,12 +38,6 @@ function safeDecode(value: string): string {
   }
 }
 
-async function loadAccount(accountId: string): Promise<Record<string, any>> {
-  const account = await fsGet('email_accounts', accountId);
-  if (!account) throw new Error(`Account ${accountId} not found`);
-  return account;
-}
-
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -65,7 +59,7 @@ export default async function handler(req: any, res: any) {
       const { accountId } = query;
       if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
 
-      const account = await loadAccount(String(accountId));
+      const account = await loadOwnedEmailAccount(String(accountId), req.userId);
       const cached = getEmail(String(accountId), String(messageId));
 
       // Return from cache if body already loaded
@@ -137,7 +131,7 @@ export default async function handler(req: any, res: any) {
     const pageNum = Math.max(1, parseInt(String(page), 10));
     const limitNum = Math.min(100, Math.max(1, parseInt(String(limit), 10)));
 
-    const account = await loadAccount(String(accountId));
+    const account = await loadOwnedEmailAccount(String(accountId), req.userId);
     if (account.status === 'error' || account.status === 'disconnected') {
       return res.status(400).json({ error: `Account status: ${account.status}` });
     }
@@ -187,6 +181,7 @@ export default async function handler(req: any, res: any) {
       hasMore: pageNum * limitNum < totalCount,
     });
   } catch (err: any) {
+    if (handleOwnershipError(err, res)) return;
     console.error('[email/messages] error:', err);
     return res.status(500).json({ error: 'Erro interno', detail: err?.message });
   }

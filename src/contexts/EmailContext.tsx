@@ -403,7 +403,7 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     dispatch({ type: 'SET_LOADING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: null });
     try {
-      const accounts = await EmailService.getAccounts(userProfile.uid);
+      const accounts = await EmailService.getAccounts();
       dispatch({ type: 'SET_ACCOUNTS', payload: Array.isArray(accounts) ? accounts : [] });
 
       const defaultAcc = Array.isArray(accounts) && accounts.find(a => a.isDefault);
@@ -670,7 +670,7 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const loadStats = useCallback(async () => {
     if (!userProfile?.uid) return;
     try {
-      const stats = await EmailService.getStats(userProfile.uid);
+      const stats = await EmailService.getStats();
       dispatch({ type: 'SET_STATS', payload: stats });
       dispatch({
         type: 'SET_UNREAD_BY_FOLDER',
@@ -688,7 +688,7 @@ export const EmailProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const loadSettings = useCallback(async () => {
     if (!userProfile?.uid) return;
     try {
-      const settings = await EmailService.getSettings(userProfile.uid);
+      const settings = await EmailService.getSettings();
       dispatch({ type: 'SET_SETTINGS', payload: settings });
     } catch {
       // non-critical
