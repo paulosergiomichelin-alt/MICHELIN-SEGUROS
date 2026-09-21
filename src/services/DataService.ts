@@ -921,6 +921,9 @@ export class DataService {
       CacheManager.set(this.getCacheKey(entity, created.id), created);
       CacheManager.invalidatePattern(`list:${entity}`);
       this.updateAggregates(entity, null, created);
+      if (entity === 'lead' && created.responsibleAgentId) {
+        await this.incrementUserMetric(created.responsibleAgentId, 'totalLeads');
+      }
       return created.id;
     }
 
@@ -1068,6 +1071,9 @@ export class DataService {
       CacheManager.set(cacheKey, updated ?? after);
       CacheManager.invalidatePattern(`list:${entity}`);
       this.updateAggregates(entity, before, after);
+      if (entity === 'lead' && before.status !== 'Fechado' && after.status === 'Fechado' && after.responsibleAgentId) {
+        await this.incrementUserMetric(after.responsibleAgentId, 'totalVendas');
+      }
       return updated ?? after;
     }
 
@@ -1241,6 +1247,45 @@ export class DataService {
       CacheManager.set(this.getCacheKey('user', userId), { ...userData, metrics: nextMetrics });
     } catch (e) {
       console.error(`[DataService] Error updating user metrics for ${userId}:`, e);
+    }
+  }
+
+  // Equivalente Postgres do gatilho de métricas acima (totalLeads em create(), totalVendas
+  // em update() ao fechar) — o original só existia no branch Firestore legado de
+  // create()/update(), que o branch USE_POSTGRES nunca alcança (return antes de chegar lá).
+  // Zerava silenciosamente metrics.totalVendas/totalLeads de todo agente em produção desde
+  // a migração pra Postgres (achado F-13 da auditoria — "Vale auditar se há MAIS lógica
+  // presa nesse branch morto": totalLeads tinha o mesmo problema, não só totalVendas).
+  // Read-modify-write simples (sem incremento atômico dedicado) — aceitável pro volume real
+  // desses eventos (leads atribuídos/fechados por um agente, não escritas concorrentes em
+  // massa como os agregados de status que já têm rota SQL atômica própria).
+  private static async incrementUserMetric(userId: string, field: 'totalLeads' | 'totalVendas'): Promise<void> {
+    try {
+      const userRow = await dataApiClient.get('users', userId) as (UserProfile & { metrics?: UserMetrics }) | null;
+      if (!userRow) return;
+
+      const currentMetrics = userRow.metrics;
+      const leads = (currentMetrics?.totalLeads || 0) + (field === 'totalLeads' ? 1 : 0);
+      const vendas = (currentMetrics?.totalVendas || 0) + (field === 'totalVendas' ? 1 : 0);
+      const conversionRate = leads > 0 ? (vendas / leads) * 100 : 0;
+
+      let performanceLevel: 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
+      if (conversionRate >= 25) performanceLevel = 'HIGH';
+      else if (conversionRate >= 10) performanceLevel = 'MEDIUM';
+
+      const nextMetrics: UserMetrics = {
+        ...(currentMetrics || {}),
+        totalLeads: leads,
+        totalVendas: vendas,
+        conversionRate: Number(conversionRate.toFixed(1)),
+        performanceLevel,
+        lastUpdated: new Date().toISOString(),
+      };
+
+      await dataApiClient.update('users', userId, { metrics: nextMetrics });
+      CacheManager.set(this.getCacheKey('user', userId), { ...userRow, metrics: nextMetrics });
+    } catch (e) {
+      console.error(`[DataService] Erro ao atualizar metrics.${field} (Postgres) para ${userId}:`, e);
     }
   }
 

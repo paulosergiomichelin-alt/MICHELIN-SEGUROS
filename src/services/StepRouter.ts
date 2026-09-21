@@ -64,7 +64,7 @@ const STEP_TO_SALES_BLOCKS: Record<LeadStep, SalesBlockKey[]> = {
   OCR_FALHOU: ['reducao_atrito'],
 };
 
-function resolveStep(lead: Lead): LeadStep {
+function resolveStep(lead: Lead, agentConfig: AgentConfig): LeadStep {
   if (lead.documentStatus === 'erro_extracao') return 'OCR_FALHOU';
   if (!lead.name || lead.name.match(/^\d+$/)) return 'COLETAR_NOME';
   if (lead.status === 'Novo Lead' && !lead.isRenewal && lead.isRenewal !== false) return 'IDENTIFICAR_INTENCAO';
@@ -85,7 +85,13 @@ function resolveStep(lead: Lead): LeadStep {
   const sinceHours = lead.stuckSince
     ? (Date.now() - new Date(lead.stuckSince).getTime()) / 3_600_000
     : 0;
-  if (sinceHours > (lead as any)._maxInactivity || 0) return 'REENGAJAMENTO';
+  // Bug empilhado corrigido (F-11 da auditoria): `_maxInactivity` não existe em
+  // lugar nenhum (o campo real é agentConfig.hardRules.maxInactivityHours, e esta
+  // função nem recebia agentConfig) e, mesmo ignorando isso, a precedência de
+  // operador fazia a expressão virar `(sinceHours > undefined) || 0` — sempre
+  // `false || 0`, nunca disparando REENGAJAMENTO pra nenhum lead.
+  const maxInactivityHours = agentConfig.hardRules?.maxInactivityHours ?? 24;
+  if (sinceHours > maxInactivityHours) return 'REENGAJAMENTO';
 
   return 'NOVO_LEAD';
 }
@@ -100,7 +106,7 @@ function buildSalesBlock(step: LeadStep, salesBlocks?: AgentConfig['salesBlocks'
 }
 
 export function getStepContext(lead: Lead, agentConfig: AgentConfig): StepContext {
-  const step = resolveStep(lead);
+  const step = resolveStep(lead, agentConfig);
   return {
     step,
     objective: STEP_OBJECTIVES[step],

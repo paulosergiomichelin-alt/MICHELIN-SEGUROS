@@ -68,7 +68,14 @@ export class OrchestratorService {
     if (!hasCnh) return LeadFlowState.SOLICITAR_CNH;
     if (!hasCrv) return LeadFlowState.SOLICITAR_CRV;
 
-    if (lead.insuranceType === 'Renovação' && !lead.documents?.policy) {
+    // insuranceType é usado no resto do app como categoria de produto (ex.:
+    // === 'Automóvel' em LeadForm.tsx) — nunca vale literalmente 'Renovação' no
+    // fluxo real, então esta condição praticamente nunca disparava. isRenewal é
+    // o campo boolean dedicado a essa decisão, já usado corretamente pelo motor
+    // irmão (StepRouter.resolveStep) — unificado aqui pra não divergir sobre o
+    // que é uma renovação (achado F-12 da auditoria: status podia avançar pra
+    // 'Em Cotação' sem ter coletado a apólice anterior).
+    if (lead.isRenewal && !lead.documents?.policy) {
       return LeadFlowState.SOLICITAR_APOLICE;
     }
 
