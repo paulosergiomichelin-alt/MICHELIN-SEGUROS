@@ -8,7 +8,6 @@ import { OCRService } from './OCRService';
 import { standardizeLeadData } from '../lib/lead-utils';
 import { LockService } from './LockService';
 import { SecurityService } from './SecurityService';
-import { ExecutionGuard } from './ExecutionGuard';
 import { DeadLetterQueue } from './DeadLetterQueue';
 import { getStepContext } from './StepRouter';
 import { generateReply as agentBrainReply } from './AgentBrain';

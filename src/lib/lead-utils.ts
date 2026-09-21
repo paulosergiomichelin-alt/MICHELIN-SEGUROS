@@ -286,14 +286,3 @@ export const standardizeLeadData = (data: any, existingLead?: Partial<Lead>): Pa
 export const getLeadDisplayName = (lead: Lead): string => {
   return lead.name || 'Sem Nome';
 };
-
-export const calculateLeadScore = (lead: Lead): number => {
-  let score = 0;
-  if (lead.name) score += 1;
-  if (lead.phone) score += 2;
-  if (lead.cpf) score += 2;
-  if (lead.plate) score += 2;
-  if (lead.chassis) score += 1;
-  if (Object.keys(lead.documents || {}).length > 0) score += 2;
-  return score;
-};
