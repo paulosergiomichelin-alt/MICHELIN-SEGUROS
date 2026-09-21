@@ -14,7 +14,7 @@ import { PDFRenderService } from './PDFRenderService';
 // Bump this when the result-shape or merge logic changes so previously-cached
 // results (which may be missing fields the new pipeline would have added) are
 // invalidated automatically on the next import.
-const ENTERPRISE_CACHE_PREFIX = 'enterprise_ocr_cache_v3';
+const ENTERPRISE_CACHE_PREFIX = 'enterprise_ocr_cache_v4';
 
 export enum ProcessingState {
   IDLE = 'IDLE',
@@ -579,6 +579,22 @@ export class OCRService {
         for (const k of schemaKeys) merged[k] = detValue;
         filled++;
         console.log(`[OCR_MERGE] Filled "${schemaKeys[0]}" from text layer: "${detValue.substring(0, 60)}"`);
+      }
+
+      // Seguradora: um keyword/domínio batendo no texto real do PDF (ex:
+      // "bradescoseguros.com.br" no rodapé) é mais confiável que a leitura
+      // visual da IA, que já confundiu seguradoras em documentos mal escaneados.
+      // Aqui SOBRESCREVE mesmo que a IA tenha preenchido algo (ao contrário do
+      // loop acima, que só preenche lacunas).
+      const detInsurer = String(detFields.insurer ?? '').trim();
+      if (detInsurer && detInsurer.toLowerCase() !== 'unknown') {
+        const aiInsurer = String(merged.seguradora ?? merged.insurer ?? '').trim();
+        if (aiInsurer.toLowerCase() !== detInsurer.toLowerCase()) {
+          console.log(`[OCR_MERGE] Overriding seguradora "${aiInsurer || '(vazio)'}" with text-layer match: "${detInsurer}"`);
+          merged.seguradora = detInsurer;
+          merged.insurer = detInsurer;
+          filled++;
+        }
       }
 
       // Bonus: if brokerName carries a CNPJ inline, mine it out into corretora_cnpj

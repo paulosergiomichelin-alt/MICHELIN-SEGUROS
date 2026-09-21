@@ -17,12 +17,18 @@ function stripAccentsUpper(s: string): string {
 
 // [id, nome, keywords[]] — construído a partir da lista canônica de
 // seguradoras (lib/seguradoras.ts) pra nunca ficar desatualizado quando uma
-// nova seguradora for cadastrada ali.
-const INSURER_KEYWORDS: Array<{ id: string; nome: string; keywords: string[] }> = SEGURADORAS.map(s => ({
-  id: s.id,
-  nome: s.nome,
-  keywords: [stripAccentsUpper(s.nome), ...(EXTRA_KEYWORDS[s.id] ?? [])],
-}));
+// nova seguradora for cadastrada ali. Inclui também a variante sem espaço
+// (ex: "BRADESCOSEGUROS") pra casar com o domínio no rodapé das páginas,
+// ex: "bradescoseguros.com.br" — muito mais confiável que o nome do
+// segurado numa apólice ruim de ler.
+const INSURER_KEYWORDS: Array<{ id: string; nome: string; keywords: string[] }> = SEGURADORAS.map(s => {
+  const nomeUpper = stripAccentsUpper(s.nome);
+  return {
+    id: s.id,
+    nome: s.nome,
+    keywords: [nomeUpper, nomeUpper.replace(/\s+/g, ''), ...(EXTRA_KEYWORDS[s.id] ?? [])],
+  };
+});
 
 export class InsurerDetectorService {
   /** Retorna o nome da seguradora (ex: "Bradesco Seguros") ou "unknown". */
