@@ -432,7 +432,11 @@ export class DeterministicParser {
     }
 
     if (!data.brandModel) {
-      data.brandModel = ContextualFieldExtractor.extract(text, ['MARCA/MODELO', 'MARCA / MODELO', 'MARCA MODELO', 'VEICULO', 'MODELO'], {
+      // "MODELO" sozinho é ambíguo demais — costuma casar dentro de "ANO
+      // FAB/MODELO: 2014/2015" e devolver o ano em vez da marca/modelo do
+      // veículo. Só rótulos compostos (que não aparecem em frases de ano)
+      // são usados como âncora.
+      data.brandModel = ContextualFieldExtractor.extract(text, ['MARCA/MODELO', 'MARCA / MODELO', 'MARCA MODELO', 'VEICULO'], {
         maxChars: 50,
         stopTokens: ['PLACA', 'CHASSI', 'ANO', 'COR', 'RENAVAM', 'CATEGORIA', 'COMBUSTIVEL']
       });

@@ -1,5 +1,5 @@
 import { PolicyParser } from './parsers/PolicyParser';
-import { Insurer, InsurerDetectorService } from './InsurerDetectorService';
+import { InsurerDetectorService } from './InsurerDetectorService';
 
 export class PolicyParserFactory {
   static getParser(text: string) {

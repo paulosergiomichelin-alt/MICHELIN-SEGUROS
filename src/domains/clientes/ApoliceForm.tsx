@@ -273,20 +273,20 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
 
     const veicUpdates: Partial<ApoliceVeiculo> = {};
     if (data.plate || data.placa) veicUpdates.placa = data.plate || data.placa;
-    if (data.chassis || data.chassi) veicUpdates.chassi = data.chassis ?? data.chassi;
+    if (data.chassis || data.chassi) veicUpdates.chassi = data.chassis || data.chassi;
     if (data.renavam) veicUpdates.renavam = data.renavam;
-    if (data.manufactureYear || data.ano_fabricacao) veicUpdates.anoFabricacao = data.manufactureYear ?? data.ano_fabricacao;
-    if (data.modelYear || data.ano_modelo) veicUpdates.anoModelo = data.modelYear ?? data.ano_modelo;
-    if (data.color || data.cor) veicUpdates.cor = data.color ?? data.cor;
+    if (data.manufactureYear || data.ano_fabricacao) veicUpdates.anoFabricacao = data.manufactureYear || data.ano_fabricacao;
+    if (data.modelYear || data.ano_modelo) veicUpdates.anoModelo = data.modelYear || data.ano_modelo;
+    if (data.color || data.cor) veicUpdates.cor = data.color || data.cor;
     const brandModel = data.brandModel || data.marca_modelo;
     if (brandModel) Object.assign(veicUpdates, splitBrandModel(brandModel));
     if (Object.keys(veicUpdates).length > 0) setVeiculo(v => ({ ...v, ...veicUpdates }));
 
     // Map premium values from OCR
-    const premioLiquidoStr = parseBRMoneyStr(data.premioLiquido ?? data.premio_liquido ?? '');
+    const premioLiquidoStr = parseBRMoneyStr(data.premioLiquido || data.premio_liquido || '');
     if (premioLiquidoStr) updates.premioLiquido = premioLiquidoStr;
 
-    const premioTotalStr = parseBRMoneyStr(data.premio ?? data.valor_total ?? data.valorTotal ?? '');
+    const premioTotalStr = parseBRMoneyStr(data.premio || data.valor_total || data.valorTotal || '');
     if (premioTotalStr) updates.valorTotal = premioTotalStr;
 
     setForm(f => ({ ...f, ...updates }));

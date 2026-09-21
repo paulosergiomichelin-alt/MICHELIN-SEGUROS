@@ -1,35 +1,40 @@
 import { DocumentNormalizationService } from './DocumentNormalizationService';
+import { SEGURADORAS } from '../../lib/seguradoras';
 
-export enum Insurer {
-  PORTO = 'Porto Seguro',
-  AZUL = 'Azul Seguros',
-  YELUM = 'Yelum Seguros',
-  TOKIO = 'Tokio Marine',
-  HDI = 'HDI Seguros',
-  ALLIANZ = 'Allianz',
-  UNKNOWN = 'unknown'
+// Aliases/variantes que não aparecem literalmente no `nome` da SEGURADORAS
+// (ex: nome fantasia antigo, forma abreviada comum em apólices).
+const EXTRA_KEYWORDS: Record<string, string[]> = {
+  yelum: ['LIBERTY SEGUROS', 'LIBERTY MUTUAL'], // Yelum é a ex-Liberty
+  porto: ['PORTO SEG', 'COMPANHIA DE SEGUROS GERAIS'],
+  azul: ['AZUL COMPANHIA', 'PORTO AZUL'],
+  tokio: ['TOKIO MARINE SEGURADORA'],
+  bradesco: ['BRADESCO AUTO', 'BRADESCO SEGUROS S A'],
+};
+
+function stripAccentsUpper(s: string): string {
+  return s.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
-export class InsurerDetectorService {
-  private static readonly INSURER_KEYWORDS: Record<Insurer, string[]> = {
-    [Insurer.PORTO]: ['PORTO SEGURO', 'PORTO SEG', 'COMPANHIA DE SEGUROS GERAIS'],
-    [Insurer.AZUL]: ['AZUL SEGUROS', 'AZUL COMPANHIA', 'PORTO AZUL'],
-    [Insurer.YELUM]: ['YELUM', 'LIBERTY SEGUROS', 'YELUM SEGUROS'], // Yelum is former Liberty
-    [Insurer.TOKIO]: ['TOKIO MARINE', 'TOKIO MARINE SEGURADORA'],
-    [Insurer.HDI]: ['HDI SEGUROS', 'HDI SEGUROS S.A.'],
-    [Insurer.ALLIANZ]: ['ALLIANZ SEGUROS', 'ALLIANZ BRASIL'],
-    [Insurer.UNKNOWN]: []
-  };
+// [id, nome, keywords[]] — construído a partir da lista canônica de
+// seguradoras (lib/seguradoras.ts) pra nunca ficar desatualizado quando uma
+// nova seguradora for cadastrada ali.
+const INSURER_KEYWORDS: Array<{ id: string; nome: string; keywords: string[] }> = SEGURADORAS.map(s => ({
+  id: s.id,
+  nome: s.nome,
+  keywords: [stripAccentsUpper(s.nome), ...(EXTRA_KEYWORDS[s.id] ?? [])],
+}));
 
-  static detect(text: string): Insurer {
+export class InsurerDetectorService {
+  /** Retorna o nome da seguradora (ex: "Bradesco Seguros") ou "unknown". */
+  static detect(text: string): string {
     const normalizedText = DocumentNormalizationService.normalize(text);
-    
-    for (const [insurer, keywords] of Object.entries(this.INSURER_KEYWORDS)) {
+
+    for (const { nome, keywords } of INSURER_KEYWORDS) {
       if (keywords.some(keyword => normalizedText.includes(keyword))) {
-        return insurer as Insurer;
+        return nome;
       }
     }
 
-    return Insurer.UNKNOWN;
+    return 'unknown';
   }
 }

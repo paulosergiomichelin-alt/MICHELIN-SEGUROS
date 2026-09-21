@@ -14,7 +14,7 @@ import { PDFRenderService } from './PDFRenderService';
 // Bump this when the result-shape or merge logic changes so previously-cached
 // results (which may be missing fields the new pipeline would have added) are
 // invalidated automatically on the next import.
-const ENTERPRISE_CACHE_PREFIX = 'enterprise_ocr_cache_v2';
+const ENTERPRISE_CACHE_PREFIX = 'enterprise_ocr_cache_v3';
 
 export enum ProcessingState {
   IDLE = 'IDLE',
@@ -551,13 +551,13 @@ export class OCRService {
         ['insurer',        ['seguradora', 'insurer']],
         ['insuredName',    ['segurado_nome', 'insuredName']],
         ['insuredCpf',     ['segurado_cpf', 'insuredCpf']],
-        ['plate',          ['placa']],
-        ['chassis',        ['chassi']],
+        ['plate',          ['placa', 'plate']],
+        ['chassis',        ['chassi', 'chassis']],
         ['renavam',        ['renavam']],
-        ['brandModel',     ['marca_modelo']],
-        ['manufactureYear',['ano_fabricacao']],
-        ['modelYear',      ['ano_modelo']],
-        ['color',          ['cor']],
+        ['brandModel',     ['marca_modelo', 'brandModel']],
+        ['manufactureYear',['ano_fabricacao', 'manufactureYear']],
+        ['modelYear',      ['ano_modelo', 'modelYear']],
+        ['color',          ['cor', 'color']],
         ['cep',            ['cep']],
         ['startDate',      ['inicio_vigencia', 'startDate']],
         ['insuranceExpiry',['fim_vigencia', 'insuranceExpiry']]
@@ -568,7 +568,7 @@ export class OCRService {
         const rawDetValue = detFields[detKey];
         if (rawDetValue == null) continue;
         const detValue = this.trimDeterministicValue(detKey, String(rawDetValue));
-        if (!detValue || detValue.length < 2) continue;
+        if (!detValue || detValue.length < 2 || detValue.toLowerCase() === 'unknown') continue;
 
         const aiHasIt = schemaKeys.some(k => {
           const v = merged[k];

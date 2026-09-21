@@ -47,7 +47,7 @@ export interface AIExtractionResult {
 const MODEL_ID = 'google/gemini-2.5-pro';
 // Cache version: bump this whenever the prompt, model, or output schema changes so
 // old cached responses (which may miss fields) are invalidated automatically.
-const CACHE_VERSION = 'v13';
+const CACHE_VERSION = 'v14';
 const CACHE_PREFIX = `ai_ocr_cache_${CACHE_VERSION}:`;
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
