@@ -44,6 +44,14 @@ export class DataService {
   }
 
   // Entities whose documents carry an organizationId and must be org-scoped in cache
+  // Precisa ficar em paridade com ORG_SCOPED_ENTITIES em _api/data/tenantMiddleware.ts —
+  // achado F-16 da auditoria: um comentário afirmava paridade que na prática não existia
+  // (backend tinha 8 entidades a mais). Aqui a lista não é a barreira de segurança em si
+  // (o backend já filtra corretamente mesmo quando as duas divergem) — o risco real é o
+  // CacheManager local colidir entre organizações no mesmo navegador (ex.: superadmin
+  // trocando de contexto sem reload). 'settings'/'config' ficam de fora de propósito: usam
+  // um esquema de namespacing por prefixo no próprio id (ORG_SETTINGS_COLLECTIONS logo
+  // abaixo), não a coluna organization_id que esta lista modela.
   private static readonly ORG_SCOPED_ENTITIES = new Set([
     'leads', 'lead', 'users', 'user', 'messages', 'message',
     'notifications', 'notification', 'flows', 'flow',
@@ -51,9 +59,13 @@ export class DataService {
     'clientes', 'cliente',
     'settings', 'config',
     'cliente_relacionamentos', 'cliente_relacionamento',
-    'cotacoes', 'cotacao',
+    'cliente_pessoa_juridica', 'lead_pessoa_juridica',
+    'nfse_documents', 'nfse_logs',
+    'email_accounts', 'email_account',
     'email_rules', 'email_rule',
+    'cotacoes', 'cotacao',
     'calendar_events', 'learning_memory',
+    'tenant_agent_configs', 'tenant_onboarding_wizard_state',
   ]);
 
   // Collections whose document IDs are scoped per-org: {orgId}::{docId}

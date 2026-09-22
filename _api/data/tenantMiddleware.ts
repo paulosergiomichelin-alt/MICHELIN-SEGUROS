@@ -12,7 +12,12 @@ export async function loadTenantContext(req: any, res: any, next: any) {
   next();
 }
 
-// Mesma lista de DataService.ts:47-58 (ORG_SCOPED_ENTITIES) — mantida em paridade.
+// Fonte de verdade da segurança (é isto que filtra as queries no backend). Mesma lista
+// de src/services/DataService.ts (ORG_SCOPED_ENTITIES) — reconciliadas em F-16 da
+// auditoria, que encontrou 8 entidades presentes aqui e ausentes lá (o comentário
+// antigo afirmava paridade que não existia). Ao adicionar uma entidade nova com coluna
+// organization_id aqui, adicionar também no frontend (que só usa a lista pra
+// namespacing de cache local, não como barreira de segurança).
 export const ORG_SCOPED_ENTITIES = new Set([
   'leads', 'lead', 'users', 'user', 'messages', 'message',
   'notifications', 'notification', 'flows', 'flow',
