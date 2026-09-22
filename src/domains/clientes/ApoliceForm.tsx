@@ -10,6 +10,8 @@ import { Button, Card } from '../../components/ui';
 import { cn } from '../../lib/utils';
 import { parseISO } from 'date-fns';
 import { authHeader } from '../../lib/dataApiClient';
+import { buildDocumentDisplayName } from '../../lib/document-naming';
+import { getSeguradora } from '../../lib/seguradoras';
 
 interface ApoliceFormProps {
   isOpen: boolean;
@@ -21,6 +23,10 @@ interface ApoliceFormProps {
   // usado quando o usuário clica na apólice na lista pra só consultar os dados;
   // o botão "Editar" dentro do próprio formulário destrava pra edição.
   initialReadOnly?: boolean;
+  // Nome do cliente dono desta apólice — usado só pra padronizar o nome de exibição
+  // dos anexos enviados aqui (documento principal + anexos adicionais), ex.:
+  // "Apólice Bradesco Seguros - Paulo Sergio Michelin".
+  clienteNome?: string;
 }
 
 const inputCls = "w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 text-[11px] font-medium focus:border-[#1B4D8F]/60 focus:ring-2 focus:ring-[#1B4D8F]/15 transition-all placeholder:text-slate-300 disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed disabled:border-slate-200";
@@ -108,7 +114,7 @@ const ANEXO_TIPO_LABEL: Record<ApoliceAnexoTipo, string> = {
   outros: 'Outros',
 };
 
-export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSave, apolice, inline = false, initialReadOnly = false }) => {
+export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSave, apolice, inline = false, initialReadOnly = false, clienteNome }) => {
   const isEditing = !!apolice;
   const [readOnly, setReadOnly] = useState(initialReadOnly);
   const [saving, setSaving] = useState(false);
@@ -314,7 +320,11 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
     try {
       const ext = docFile.name.split('.').pop() ?? 'pdf';
       const { url, path } = await StorageService.uploadFile(docFile, 'documents', `apolice_${Date.now()}.${ext}`);
-      setDocMeta({ url, path, name: docFile.name });
+      // Nome de exibição padronizado (Tipo Seguradora - Nome do cliente) em vez do nome
+      // bruto do arquivo enviado — updates.seguradoraId pode não ter chegado no `form`
+      // ainda (setForm acima é assíncrono), por isso o fallback pra ele primeiro.
+      const seguradoraNome = getSeguradora(updates.seguradoraId || form.seguradoraId)?.nome;
+      setDocMeta({ url, path, name: buildDocumentDisplayName('apolice', clienteNome, seguradoraNome) });
     } catch {}
   };
 
@@ -327,7 +337,7 @@ export const ApoliceForm: React.FC<ApoliceFormProps> = ({ isOpen, onClose, onSav
       const ext = file.name.split('.').pop() ?? 'pdf';
       const { url, path } = await StorageService.uploadFile(file, 'documents', `${novoAnexoTipo}_${Date.now()}.${ext}`);
       setAnexos(prev => [...prev, {
-        url, path, nome: file.name, tipo: novoAnexoTipo,
+        url, path, nome: buildDocumentDisplayName(novoAnexoTipo, clienteNome), tipo: novoAnexoTipo,
         uploadedAt: new Date().toISOString(),
       }]);
     } catch {

@@ -23,6 +23,7 @@ import { StorageService } from '../../services/StorageService';
 import { handleFirestoreError, OperationType } from '../../lib/firestore-utils';
 import { logger } from '../../services/LoggerService';
 import { standardizeLeadData } from '../../lib/lead-utils';
+import { buildDocumentDisplayName } from '../../lib/document-naming';
 import { DataService } from '../../services/DataService';
 import { auth } from '../../lib/firebase';
 import { OCRService } from '../../services/OCRService';
@@ -798,10 +799,13 @@ export const LeadForm = React.memo(({ lead, onSave, onCancel, onDelete, onNaviga
       console.log(`[DOCUMENT_STORAGE_SUCCESS] URL: ${url}`);
 
       // 2. PREPARE OBJECT
+      // Nome de exibição padronizado (Tipo - Nome da pessoa, ex. "CNH - Paulo Sergio
+      // Michelin") em vez do nome bruto do arquivo enviado (tipo "IMG_2384.jpg") —
+      // validatedData já traz o nome/seguradora extraídos por este mesmo documento.
       const docObject: LeadDocument = {
         url: url,
         storagePath: storagePath,
-        fileName: file.name,
+        fileName: buildDocumentDisplayName(type, validatedData.name || formData.name, validatedData.insurer || validatedData.seguradora),
         uploadedAt: new Date().toISOString(),
         extractedData: validatedData,
         aiStatus: 'validated',

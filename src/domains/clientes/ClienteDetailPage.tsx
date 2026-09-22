@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Edit2, Plus, Trash2, CheckCircle2, AlertTriangle, Clock,
   User, Phone, Mail, MapPin, FileText, History, RefreshCw, ExternalLink,
-  Calendar, DollarSign, Building2, ClipboardList, Car, Shield, Tag, Users,
+  Calendar, DollarSign, Building2, ClipboardList, Car, Shield, Tag, Users, Paperclip, Download,
 } from 'lucide-react';
 import { cn, formatCNPJ } from '../../lib/utils';
+import { documentTypeLabel } from '../../lib/document-naming';
 import { Cliente, Lead, Apolice, ApoliceVeiculo, ClienteHistoricoItem, ClienteStatus, UserProfile } from '../../types';
 import { DataService } from '../../services/DataService';
 import { ClienteService } from '../../services/ClienteService';
@@ -21,6 +22,17 @@ import { format, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 type Tab = 'resumo' | 'cadastro' | 'apolices' | 'renovacoes' | 'historico' | 'relacionamentos';
+
+// Item unificado do card "Anexos" da aba Resumo — junta documentos importados no lead
+// de origem, no cadastro do cliente e em cada apólice num só lugar.
+interface AnexoUnificado {
+  key: string;
+  tipo: string;
+  nome: string;
+  url: string;
+  uploadedAt?: string;
+  origem: 'Lead' | 'Cliente' | 'Apólice';
+}
 
 const STATUS_CONFIG: Record<ClienteStatus, { label: string; cls: string; icon: React.ElementType }> = {
   ativo:             { label: 'Ativo',             cls: 'bg-[#E4F5EA] text-[#1F8A4C] border-[#1F8A4C]/20', icon: CheckCircle2 },
@@ -269,6 +281,65 @@ export const ClienteDetailPage: React.FC = () => {
     }
   };
 
+  // Todos os anexos do lead de origem + do cliente + de cada apólice, unificados numa
+  // lista só pro card "Anexos" da aba Resumo — antes de hooks condicionais (early
+  // returns de loading/not-found abaixo), pra não violar a ordem dos hooks do React.
+  const anexosUnificados = useMemo<AnexoUnificado[]>(() => {
+    const out: AnexoUnificado[] = [];
+    if (leadOrigem?.documents) {
+      Object.entries(leadOrigem.documents).forEach(([tipo, doc]) => {
+        if (doc?.url) {
+          out.push({
+            key: `lead-doc-${tipo}`, tipo: documentTypeLabel(tipo),
+            nome: doc.fileName || documentTypeLabel(tipo), url: doc.url,
+            uploadedAt: doc.uploadedAt, origem: 'Lead',
+          });
+        }
+      });
+    }
+    (leadOrigem?.cotacaoFiles || []).forEach((f, i) => {
+      if (f?.url) {
+        out.push({
+          key: `lead-cotacao-${i}`, tipo: 'Cotação', nome: f.fileName || 'Cotação',
+          url: f.url, uploadedAt: f.uploadedAt, origem: 'Lead',
+        });
+      }
+    });
+    if (leadOrigem?.quoteAttachment?.url) {
+      out.push({
+        key: 'lead-quote', tipo: 'Cotação', nome: leadOrigem.quoteAttachment.fileName || 'Cotação',
+        url: leadOrigem.quoteAttachment.url, uploadedAt: leadOrigem.quoteAttachment.uploadedAt, origem: 'Lead',
+      });
+    }
+    (cliente?.documentos || []).forEach((d, i) => {
+      if (d?.url) {
+        out.push({
+          key: `cliente-doc-${i}`, tipo: documentTypeLabel(d.tipo),
+          nome: d.nome || documentTypeLabel(d.tipo), url: d.url,
+          uploadedAt: d.uploadedAt, origem: 'Cliente',
+        });
+      }
+    });
+    apolices.forEach(a => {
+      if (a.documentoUrl) {
+        out.push({
+          key: `apolice-doc-${a.id}`, tipo: 'Apólice', nome: a.documentoFileName || 'Apólice',
+          url: a.documentoUrl, uploadedAt: a.documentoUploadedAt, origem: 'Apólice',
+        });
+      }
+      (a.anexos || []).forEach((an, i) => {
+        if (an?.url) {
+          out.push({
+            key: `apolice-anexo-${a.id}-${i}`, tipo: documentTypeLabel(an.tipo),
+            nome: an.nome || documentTypeLabel(an.tipo), url: an.url,
+            uploadedAt: an.uploadedAt, origem: 'Apólice',
+          });
+        }
+      });
+    });
+    return out.sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || ''));
+  }, [leadOrigem, cliente?.documentos, apolices]);
+
   if (loadingCliente) {
     return (
       <div className="flex items-center justify-center h-full bg-slate-50">
@@ -491,6 +562,42 @@ export const ClienteDetailPage: React.FC = () => {
               </Card>
             )}
 
+            {/* Anexos — junta documentos do lead de origem, do cadastro do cliente e de
+                cada apólice num só lugar */}
+            <Card title={`Anexos (${anexosUnificados.length})`} icon={Paperclip} className="md:col-span-2">
+              {anexosUnificados.length === 0 ? (
+                <p className="text-[10px] text-slate-400 py-2">Nenhum anexo encontrado ainda.</p>
+              ) : (
+                <div className="space-y-2">
+                  {anexosUnificados.map(a => (
+                    <a
+                      key={a.key}
+                      href={a.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors group"
+                    >
+                      <div className="shrink-0 w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center">
+                        <FileText className="w-3.5 h-3.5 text-slate-400" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10.5px] font-bold text-slate-700 truncate">{a.nome}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[8px] font-black uppercase tracking-wider text-slate-400">
+                            {a.origem}
+                          </span>
+                          {a.uploadedAt && (
+                            <span className="text-[9px] text-slate-400">{fmtDate(a.uploadedAt)}</span>
+                          )}
+                        </div>
+                      </div>
+                      <Download className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#1B4D8F] transition-colors shrink-0" />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </Card>
+
             {/* Observações */}
             {cliente.observacoes && (
               <Card className="md:col-span-2">
@@ -674,6 +781,7 @@ export const ClienteDetailPage: React.FC = () => {
                 onSave={handleSaveApolice}
                 apolice={editingApolice}
                 initialReadOnly={viewingApoliceOnly}
+                clienteNome={cliente.tipoPessoa === 'juridica' ? (clientePJ?.nomeFantasia || clientePJ?.razaoSocial || cliente.nome) : cliente.nome}
               />
             ) : (
               <>

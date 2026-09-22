@@ -8,6 +8,7 @@ import { Button, Card } from '../../components/ui';
 import { OCRService } from '../../services/OCRService';
 import { CnpjService } from '../../services/CnpjService';
 import { dataApiClient } from '../../lib/dataApiClient';
+import { buildDocumentDisplayName } from '../../lib/document-naming';
 import type { DadosEmpresa, TipoPessoa } from '../../types';
 
 interface ClienteFormProps {
@@ -293,11 +294,14 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({ isOpen, onClose, onSav
     try {
       const fileName = `${generateId()}_${file.name}`;
       const result = await StorageService.uploadFile(file, 'documents', fileName);
+      const nomePessoa = tipoPessoa === 'juridica' ? (pj.nomeFantasia || pj.razaoSocial) : form.nome;
       const doc: ClienteDocumento = {
         tipo: selectedDocTipo,
         url: result.url,
         path: result.path,
-        nome: file.name,
+        // Nome de exibição padronizado (Tipo - Nome da pessoa) em vez do nome bruto do
+        // arquivo enviado.
+        nome: buildDocumentDisplayName(selectedDocTipo, nomePessoa),
         uploadedAt: new Date().toISOString(),
       };
       setDocumentos(prev => [...prev, doc]);
