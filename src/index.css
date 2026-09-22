@@ -35,8 +35,26 @@
 
   html, body {
     overflow: hidden;
+    /* 100vh no mobile é medido como se a barra de endereço do navegador estivesse
+       sempre escondida — maior que a área realmente visível quando ela aparece
+       (o caso comum, já que o app não tem scroll nativo de página pra escondê-la).
+       Com overflow:hidden aqui, esse excesso de altura simplesmente cortava o fim
+       da página, sem nenhum jeito de rolar até lá. 100vh fica como fallback pra
+       navegador sem suporte a dvh; 100dvh (altura dinâmica de viewport) sobrescreve
+       nos que suportam, acompanhando a barra de endereço abrir/fechar de verdade. */
     height: 100vh;
+    height: 100dvh;
     width: 100vw;
+  }
+
+  /* Mesmo raciocínio do html/body acima, isolado numa classe própria porque
+     Tailwind não garante que `h-screen h-[100dvh]` juntos resolvam de forma
+     previsível (as duas mexem em `height`, e a ordem final no CSS gerado não
+     é garantida pela ordem em que aparecem no className). Usar SÓ esta classe
+     no lugar das duas — ver AppShell.tsx. */
+  .h-app-shell {
+    height: 100vh;
+    height: 100dvh;
   }
 
   /* ============================================================

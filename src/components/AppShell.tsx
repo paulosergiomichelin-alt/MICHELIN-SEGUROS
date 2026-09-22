@@ -50,7 +50,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   return (
     <ShellProviders user={user} userProfile={userProfile}>
-      <div className="flex flex-col md:flex-row h-screen h-[100dvh] overflow-hidden bg-slate-50 text-slate-800 font-sans selection:bg-gold-deep/30">
+      <div className="flex flex-col md:flex-row h-app-shell overflow-hidden bg-slate-50 text-slate-800 font-sans selection:bg-gold-deep/30">
         <MobileHeader
           user={user}
           userProfile={userProfile}
