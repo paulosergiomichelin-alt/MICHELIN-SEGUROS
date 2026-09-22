@@ -113,11 +113,27 @@ export const LeadsPage = React.memo(({
   const handleImportLeads = async (importedLeads: Lead[]) => {
     setIsImporting(true);
     try {
+      // Import de CSV é o único ponto de criação de lead sem nenhuma checagem de
+      // duplicidade — LeadForm.tsx já avisa (não bloqueia) por telefone/CPF ao
+      // preencher manualmente, mas esse aviso nunca roda aqui (achado F-25 da
+      // auditoria). Como é um lote sem UI por item, a checagem pula (em vez de só
+      // avisar) e reporta quantos foram ignorados no resumo final.
+      const { where } = await import('../../lib/queryConstraints');
+      let skipped = 0;
       for (const lead of importedLeads) {
+        const phone = (lead.phone || '').replace(/\D/g, '');
+        if (phone.length >= 10) {
+          const existing = await DataService.list('leads', [where('phone', '==', lead.phone)]);
+          if (existing.length > 0) { skipped++; continue; }
+        }
         await DataService.create('lead', lead);
       }
       setShowImport(false);
-      alert('Importação concluída com sucesso!');
+      alert(
+        skipped > 0
+          ? `Importação concluída: ${importedLeads.length - skipped} lead(s) criado(s), ${skipped} ignorado(s) por telefone já cadastrado.`
+          : 'Importação concluída com sucesso!'
+      );
     } catch (error) {
       console.error('Import error:', error);
       alert('Erro ao importar leads.');
