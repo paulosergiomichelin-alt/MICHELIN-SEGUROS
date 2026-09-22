@@ -238,6 +238,14 @@ export class OCRService {
     | { kind: 'parse_error'; reason: string }
   > {
     const isPolicyDoc = typeHint === 'policy' || typeHint === 'apolice';
+    const pipelineStart = Date.now();
+    // Teto de tempo total antes de empilhar o caminho de canvas em cima do nativo — sem
+    // isso, um nativo lento (até 120s após reduzir os retries — ver AIHybridOCRService.ts)
+    // ainda cairia pra tentar canvas (mais até 120s), somando pior caso de ~5min com só um
+    // spinner genérico. Passado esse teto, o nativo já esgotou o próprio orçamento de
+    // tempo — pula direto pro pipeline de texto legado em vez de tentar mais um caminho de
+    // IA (achado F-19 da auditoria).
+    const MAX_AI_PIPELINE_MS = 90_000;
 
     // Apólices em PDF vão direto pro modelo como arquivo nativo (Gemini/Claude
     // paginam e renderizam internamente) em vez de passar pelo canvas, que
@@ -254,8 +262,15 @@ export class OCRService {
         if (outcome.kind !== 'transport_error' && outcome.kind !== 'parse_error') {
           return outcome;
         }
+        if (Date.now() - pipelineStart > MAX_AI_PIPELINE_MS) {
+          console.warn(`[NATIVE_PDF_FALLBACK] Native PDF path failed (${outcome.reason}) after ${Date.now() - pipelineStart}ms — orçamento de tempo de IA esgotado, pulando canvas e indo direto pro pipeline legado.`);
+          return outcome;
+        }
         console.warn(`[NATIVE_PDF_FALLBACK] Native PDF path failed (${outcome.reason}); falling back to rendered-image pipeline.`);
       } catch (err: any) {
+        if (Date.now() - pipelineStart > MAX_AI_PIPELINE_MS) {
+          return { kind: 'transport_error', reason: err.message || 'NATIVE_PDF_THREW' };
+        }
         console.warn(`[NATIVE_PDF_FALLBACK] Native PDF path threw (${err.message}); falling back to rendered-image pipeline.`);
       }
       // falls through to the canvas-based path below

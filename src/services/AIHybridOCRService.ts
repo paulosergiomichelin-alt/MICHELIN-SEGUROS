@@ -211,7 +211,14 @@ export class AIHybridOCRService {
     // Native PDF parsing (provider-side page rendering) is slower than a
     // single pre-rendered image — give it more headroom than the default.
     const activeTimeout = Math.max(cfg?.timeout || 40000, 60000);
-    const maxRetries = cfg?.retryEnabled === false ? 0 : Math.min(2, cfg?.retries ?? 2);
+    // Teto de 1 retry (2 tentativas, 120s no pior caso) — era 2 (3 tentativas, 180s).
+    // Esse caminho nativo é só o primeiro estágio de um pipeline com MAIS dois abaixo
+    // dele (canvas, depois o pipeline de texto legado): sem este teto, o pior caso
+    // empilhado passava de 5 minutos com só um spinner genérico, sem indicar em qual
+    // tentativa/caminho está — usuário recarregava a página no meio achando que travou,
+    // matando a requisição sem cancelar corretamente no servidor (billing desperdiçado)
+    // e reiniciando do zero (achado F-19 da auditoria).
+    const maxRetries = cfg?.retryEnabled === false ? 0 : Math.min(1, cfg?.retries ?? 1);
 
     const routing = {
       sort: (cfg?.routingSort ?? 'throughput') as 'throughput' | 'latency' | 'price',
