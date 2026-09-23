@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import {
-  RefreshCw, BarChart2, PieChart, X,
+  RefreshCw, BarChart2, PieChart, X, Check,
 } from 'lucide-react';
 import {
   ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -24,11 +24,22 @@ function fmtShort(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
+const SelectBox: React.FC<{ checked: boolean }> = ({ checked }) => (
+  <span
+    className={cn(
+      'w-3.5 h-3.5 shrink-0 rounded border flex items-center justify-center transition-colors',
+      checked ? 'bg-gold-deep border-gold-deep' : 'border-slate-300 bg-white',
+    )}
+  >
+    {checked && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+  </span>
+);
+
 export const RenovacoesPage: React.FC = () => {
   const { userProfile } = usePermissions();
   const [apolices, setApolices] = useState<Apolice[]>([]);
-  const [selectedSeguradora, setSelectedSeguradora] = useState<string | null>(null);
-  const [selectedProduto, setSelectedProduto] = useState<string | null>(null);
+  const [selectedSeguradoras, setSelectedSeguradoras] = useState<string[]>([]);
+  const [selectedProdutos, setSelectedProdutos] = useState<string[]>([]);
   const [chartMetric, setChartMetric] = useState<'valor' | 'qtd'>('valor');
   const [comissaoMetric, setComissaoMetric] = useState<'valor' | 'pct'>('valor');
 
@@ -39,37 +50,90 @@ export const RenovacoesPage: React.FC = () => {
     return unsub;
   }, [organizationId]);
 
-  const totalApolices = apolices.length;
-  const totalValor = useMemo(() => apolices.reduce((sum, a) => sum + (a.valorTotal ?? 0), 0), [apolices]);
+  const toggleSeguradora = (id: string) =>
+    setSelectedSeguradoras(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const toggleProduto = (produto: string) =>
+    setSelectedProdutos(prev => prev.includes(produto) ? prev.filter(x => x !== produto) : [...prev, produto]);
 
-  const bySeguradora = useMemo(() => {
+  const matchSeguradora = (a: Apolice) =>
+    selectedSeguradoras.length === 0 || (!!a.seguradoraId && selectedSeguradoras.includes(a.seguradoraId));
+  const matchProduto = (a: Apolice) =>
+    selectedProdutos.length === 0 || (!!a.produto && selectedProdutos.includes(a.produto));
+
+  // Apólices que passam por ambos os filtros — base de gráficos e tabelas
+  const filteredApolices = useMemo(
+    () => apolices.filter(a => matchSeguradora(a) && matchProduto(a)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [apolices, selectedSeguradoras, selectedProdutos],
+  );
+
+  // Cada painel é filtrado apenas pela seleção do outro painel
+  const apolicesPorProduto = useMemo(
+    () => apolices.filter(matchProduto),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [apolices, selectedProdutos],
+  );
+  const apolicesPorSeguradora = useMemo(
+    () => apolices.filter(matchSeguradora),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [apolices, selectedSeguradoras],
+  );
+
+  const segBaseCount = apolicesPorProduto.length;
+  const segBaseValor = useMemo(() => apolicesPorProduto.reduce((s, a) => s + (a.valorTotal ?? 0), 0), [apolicesPorProduto]);
+  const prodBaseCount = apolicesPorSeguradora.length;
+  const prodBaseValor = useMemo(() => apolicesPorSeguradora.reduce((s, a) => s + (a.valorTotal ?? 0), 0), [apolicesPorSeguradora]);
+
+  // Agrupa, ordena, limita a 8 e garante que itens selecionados continuem visíveis
+  // (mesmo zerados pelo filtro cruzado) para poderem ser desmarcados.
+  const groupBy = (list: Apolice[], key: (a: Apolice) => string | undefined, selected: string[]) => {
     const map: Record<string, { count: number; valor: number }> = {};
-    apolices.forEach(a => {
-      if (!a.seguradoraId) return;
-      if (!map[a.seguradoraId]) map[a.seguradoraId] = { count: 0, valor: 0 };
-      map[a.seguradoraId].count++;
-      map[a.seguradoraId].valor += a.valorTotal ?? 0;
+    list.forEach(a => {
+      const k = key(a);
+      if (!k) return;
+      if (!map[k]) map[k] = { count: 0, valor: 0 };
+      map[k].count++;
+      map[k].valor += a.valorTotal ?? 0;
     });
-    return Object.entries(map).sort((a, b) => b[1].count - a[1].count).slice(0, 8);
-  }, [apolices]);
-
-  const byProduto = useMemo(() => {
-    const filtered = selectedSeguradora
-      ? apolices.filter(a => a.seguradoraId === selectedSeguradora)
-      : apolices;
-    const map: Record<string, { count: number; valor: number }> = {};
-    filtered.forEach(a => {
-      if (!a.produto) return;
-      if (!map[a.produto]) map[a.produto] = { count: 0, valor: 0 };
-      map[a.produto].count++;
-      map[a.produto].valor += a.valorTotal ?? 0;
+    const top = Object.entries(map).sort((a, b) => b[1].count - a[1].count).slice(0, 8);
+    selected.forEach(s => {
+      if (!top.some(([k]) => k === s)) top.push([s, map[s] ?? { count: 0, valor: 0 }]);
     });
-    return Object.entries(map).sort((a, b) => b[1].count - a[1].count).slice(0, 8);
-  }, [apolices, selectedSeguradora]);
+    return top;
+  };
 
-  const seguradoraNome = selectedSeguradora
-    ? (SEGURADORAS.find(s => s.id === selectedSeguradora)?.nome ?? selectedSeguradora)
-    : null;
+  const bySeguradora = useMemo(
+    () => groupBy(apolicesPorProduto, a => a.seguradoraId, selectedSeguradoras),
+    [apolicesPorProduto, selectedSeguradoras],
+  );
+
+  const byProduto = useMemo(
+    () => groupBy(apolicesPorSeguradora, a => a.produto, selectedProdutos),
+    [apolicesPorSeguradora, selectedProdutos],
+  );
+
+  const seguradoraNome = (id: string) => SEGURADORAS.find(s => s.id === id)?.nome ?? id;
+
+  const filterChips = (selectedSeguradoras.length > 0 || selectedProdutos.length > 0) && (
+    <>
+      {selectedSeguradoras.map(id => (
+        <div key={`s-${id}`} className="flex items-center gap-1.5 bg-gold-deep/10 border border-gold-deep/20 rounded-full px-2 py-0.5">
+          <span className="text-[9px] text-gold-deep font-bold truncate max-w-[100px]">{seguradoraNome(id)}</span>
+          <button onClick={() => toggleSeguradora(id)} className="text-gold-deep/70 hover:text-gold-deep transition-colors">
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ))}
+      {selectedProdutos.map(produto => (
+        <div key={`p-${produto}`} className="flex items-center gap-1.5 bg-gold-deep/10 border border-gold-deep/20 rounded-full px-2 py-0.5">
+          <span className="text-[9px] text-gold-deep font-bold truncate max-w-[100px]">{produto}</span>
+          <button onClick={() => toggleProduto(produto)} className="text-gold-deep/70 hover:text-gold-deep transition-colors">
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ))}
+    </>
+  );
 
   const last12Months = useMemo(() => {
     const now = new Date();
@@ -85,10 +149,7 @@ export const RenovacoesPage: React.FC = () => {
   }, []);
 
   const apolicesByMonth = useMemo(() => {
-    const filtered = apolices.filter(a =>
-      (!selectedSeguradora || a.seguradoraId === selectedSeguradora) &&
-      (!selectedProduto    || a.produto       === selectedProduto)
-    );
+    const filtered = filteredApolices;
     const map: Record<string, { valorTotal: number; qtd: number }> = {};
     filtered.forEach(a => {
       const iso = a.inicioVigencia || a.createdAt;
@@ -99,7 +160,7 @@ export const RenovacoesPage: React.FC = () => {
       map[key].qtd += 1;
     });
     return map;
-  }, [apolices, selectedSeguradora, selectedProduto]);
+  }, [filteredApolices]);
 
   const chartData = useMemo(() =>
     last12Months.map(m => ({
@@ -135,10 +196,7 @@ export const RenovacoesPage: React.FC = () => {
     try { pytdE = format(new Date(py, now.getMonth(), now.getDate()), 'yyyy-MM-dd'); }
     catch { pytdE = `${py}-12-31`; }
 
-    const filtered = apolices.filter(a =>
-      (!selectedSeguradora || a.seguradoraId === selectedSeguradora) &&
-      (!selectedProduto    || a.produto       === selectedProduto)
-    );
+    const filtered = filteredApolices;
     let t12V=0,t12Q=0, p12V=0,p12Q=0, ytdV=0,ytdQ=0, pytdV=0,pytdQ=0;
     filtered.forEach(a => {
       const iso = a.inicioVigencia || a.createdAt;
@@ -158,13 +216,10 @@ export const RenovacoesPage: React.FC = () => {
       crescYtdV: pytdV > 0 ? (ytdV  - pytdV) / pytdV * 100 : null,
       crescYtdQ: pytdQ > 0 ? (ytdQ  - pytdQ) / pytdQ * 100 : null,
     };
-  }, [apolices, selectedSeguradora, selectedProduto, last12Months]);
+  }, [filteredApolices, last12Months]);
 
   const comissaoByMonth = useMemo(() => {
-    const filtered = apolices.filter(a =>
-      (!selectedSeguradora || a.seguradoraId === selectedSeguradora) &&
-      (!selectedProduto    || a.produto       === selectedProduto)
-    );
+    const filtered = filteredApolices;
     const map: Record<string, { comissao: number; pctSum: number; qtd: number }> = {};
     filtered.forEach(a => {
       const iso = a.inicioVigencia || a.createdAt;
@@ -176,7 +231,7 @@ export const RenovacoesPage: React.FC = () => {
       map[key].qtd += 1;
     });
     return map;
-  }, [apolices, selectedSeguradora, selectedProduto]);
+  }, [filteredApolices]);
 
   const tableComissao = useMemo(() =>
     last12Months.map(m => {
@@ -204,10 +259,7 @@ export const RenovacoesPage: React.FC = () => {
     try { pytdE = format(new Date(py, now.getMonth(), now.getDate()), 'yyyy-MM-dd'); }
     catch { pytdE = `${py}-12-31`; }
 
-    const filtered = apolices.filter(a =>
-      (!selectedSeguradora || a.seguradoraId === selectedSeguradora) &&
-      (!selectedProduto    || a.produto       === selectedProduto)
-    );
+    const filtered = filteredApolices;
     let t12=0, p12=0, ytd=0, pytd=0;
     let t12pct=0, p12pct=0, ytdpct=0, pytdpct=0;
     let t12n=0, p12n=0, ytdn=0, pytdn=0;
@@ -235,7 +287,7 @@ export const RenovacoesPage: React.FC = () => {
       crescPct12:  rate12  !== null && rateP12  !== null ? rate12  - rateP12  : null,
       crescPctYtd: rateYtd !== null && ratePytd !== null ? rateYtd - ratePytd : null,
     };
-  }, [apolices, selectedSeguradora, selectedProduto, last12Months]);
+  }, [filteredApolices, last12Months]);
 
   const ChartTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
@@ -273,21 +325,28 @@ export const RenovacoesPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Panels: Seguradora + Produto */}
+        {/* Panels: Seguradora + Produto (filtro cruzado, seleção múltipla) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Por seguradora */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <PieChart className="w-4 h-4 text-gold-deep" />
               <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Carteira por Seguradora</h3>
+              {selectedProdutos.length > 0 && (
+                <div className="flex items-center gap-1 bg-slate-100 rounded-full px-2 py-0.5">
+                  <span className="text-[9px] text-gold-deep font-bold truncate max-w-[90px]">
+                    {selectedProdutos.length === 1 ? selectedProdutos[0] : `${selectedProdutos.length} produtos`}
+                  </span>
+                </div>
+              )}
               <div className="ml-auto">
-                {selectedSeguradora ? (
+                {selectedSeguradoras.length > 0 ? (
                   <button
-                    onClick={() => setSelectedSeguradora(null)}
+                    onClick={() => setSelectedSeguradoras([])}
                     className="flex items-center gap-1 text-[9px] font-black text-gold-deep/80 hover:text-gold-deep uppercase tracking-widest transition-colors"
                   >
                     <X className="w-3 h-3" />
-                    Limpar filtro
+                    Limpar ({selectedSeguradoras.length})
                   </button>
                 ) : (
                   <span className="text-[9px] text-slate-300 font-medium">clique para filtrar</span>
@@ -299,13 +358,14 @@ export const RenovacoesPage: React.FC = () => {
             ) : (
               <div className="space-y-3">
                 {bySeguradora.map(([id, { count, valor }]) => {
-                  const pctCount = totalApolices > 0 ? Math.round((count / totalApolices) * 100) : 0;
-                  const pctValor = totalValor > 0 ? Math.round((valor / totalValor) * 100) : 0;
-                  const isSelected = selectedSeguradora === id;
+                  const pctCount = segBaseCount > 0 ? Math.round((count / segBaseCount) * 100) : 0;
+                  const pctValor = segBaseValor > 0 ? Math.round((valor / segBaseValor) * 100) : 0;
+                  const isSelected = selectedSeguradoras.includes(id);
                   return (
                     <button
                       key={id}
-                      onClick={() => setSelectedSeguradora(isSelected ? null : id)}
+                      onClick={() => toggleSeguradora(id)}
+                      aria-pressed={isSelected}
                       className={cn(
                         'w-full text-left rounded-xl p-2.5 -mx-1 transition-colors',
                         isSelected
@@ -314,7 +374,10 @@ export const RenovacoesPage: React.FC = () => {
                       )}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <SeguradoraBadge seguradoraId={id} size="xs" />
+                        <div className="flex items-center gap-2">
+                          <SelectBox checked={isSelected} />
+                          <SeguradoraBadge seguradoraId={id} size="xs" />
+                        </div>
                         <div className="text-right">
                           <span className="text-[10px] text-slate-600 font-mono">{count}</span>
                           <span className="text-[9px] text-slate-400 ml-1">({pctCount}%)</span>
@@ -333,8 +396,8 @@ export const RenovacoesPage: React.FC = () => {
                 <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between">
                   <span className="text-[9px] text-slate-500 uppercase font-black">Total</span>
                   <div className="text-right">
-                    <span className="text-[10px] text-slate-600 font-mono">{totalApolices} apólices</span>
-                    <span className="text-[9px] text-slate-500 ml-2">{fmtCurrency(totalValor)}</span>
+                    <span className="text-[10px] text-slate-600 font-mono">{segBaseCount} apólices</span>
+                    <span className="text-[9px] text-slate-500 ml-2">{fmtCurrency(segBaseValor)}</span>
                   </div>
                 </div>
               </div>
@@ -346,19 +409,21 @@ export const RenovacoesPage: React.FC = () => {
             <div className="flex items-center gap-2 mb-4">
               <BarChart2 className="w-4 h-4 text-gold-deep" />
               <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Carteira por Produto</h3>
-              {selectedSeguradora && seguradoraNome && (
+              {selectedSeguradoras.length > 0 && (
                 <div className="flex items-center gap-1 bg-slate-100 rounded-full px-2 py-0.5">
-                  <span className="text-[9px] text-gold-deep font-bold truncate max-w-[60px]">{seguradoraNome}</span>
+                  <span className="text-[9px] text-gold-deep font-bold truncate max-w-[90px]">
+                    {selectedSeguradoras.length === 1 ? seguradoraNome(selectedSeguradoras[0]) : `${selectedSeguradoras.length} seguradoras`}
+                  </span>
                 </div>
               )}
               <div className="ml-auto">
-                {selectedProduto ? (
+                {selectedProdutos.length > 0 ? (
                   <button
-                    onClick={() => setSelectedProduto(null)}
+                    onClick={() => setSelectedProdutos([])}
                     className="flex items-center gap-1 text-[9px] font-black text-gold-deep/80 hover:text-gold-deep uppercase tracking-widest transition-colors"
                   >
                     <X className="w-3 h-3" />
-                    Limpar filtro
+                    Limpar ({selectedProdutos.length})
                   </button>
                 ) : (
                   <span className="text-[9px] text-slate-300 font-medium">clique para filtrar</span>
@@ -370,19 +435,14 @@ export const RenovacoesPage: React.FC = () => {
             ) : (
               <div className="space-y-2.5">
                 {byProduto.map(([produto, { count, valor }]) => {
-                  const base = selectedSeguradora
-                    ? apolices.filter(a => a.seguradoraId === selectedSeguradora).length
-                    : totalApolices;
-                  const pctCount = base > 0 ? Math.round((count / base) * 100) : 0;
-                  const baseValor = selectedSeguradora
-                    ? apolices.filter(a => a.seguradoraId === selectedSeguradora).reduce((s, a) => s + (a.valorTotal ?? 0), 0)
-                    : totalValor;
-                  const pctValor = baseValor > 0 ? Math.round((valor / baseValor) * 100) : 0;
-                  const isSelected = selectedProduto === produto;
+                  const pctCount = prodBaseCount > 0 ? Math.round((count / prodBaseCount) * 100) : 0;
+                  const pctValor = prodBaseValor > 0 ? Math.round((valor / prodBaseValor) * 100) : 0;
+                  const isSelected = selectedProdutos.includes(produto);
                   return (
                     <button
                       key={produto}
-                      onClick={() => setSelectedProduto(isSelected ? null : produto)}
+                      onClick={() => toggleProduto(produto)}
+                      aria-pressed={isSelected}
                       className={cn(
                         'w-full text-left rounded-xl p-2.5 -mx-1 transition-colors',
                         isSelected
@@ -391,7 +451,10 @@ export const RenovacoesPage: React.FC = () => {
                       )}
                     >
                       <div className="flex items-center justify-between mb-0.5">
-                        <span className={cn('text-[10px] font-medium', isSelected ? 'text-slate-800' : 'text-slate-600')}>{produto}</span>
+                        <div className="flex items-center gap-2">
+                          <SelectBox checked={isSelected} />
+                          <span className={cn('text-[10px] font-medium', isSelected ? 'text-slate-800' : 'text-slate-600')}>{produto}</span>
+                        </div>
                         <div className="text-right">
                           <span className="text-[10px] text-slate-600 font-mono">{count}</span>
                           <span className="text-[9px] text-slate-400 ml-1">({pctCount}%)</span>
@@ -419,22 +482,7 @@ export const RenovacoesPage: React.FC = () => {
             <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">
               Emissões Mês a Mês
             </h3>
-            {selectedSeguradora && seguradoraNome && (
-              <div className="flex items-center gap-1.5 bg-gold-deep/10 border border-gold-deep/20 rounded-full px-2 py-0.5">
-                <span className="text-[9px] text-gold-deep font-bold truncate max-w-[100px]">{seguradoraNome}</span>
-                <button onClick={() => setSelectedSeguradora(null)} className="text-gold-deep/70 hover:text-gold-deep transition-colors">
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            )}
-            {selectedProduto && (
-              <div className="flex items-center gap-1.5 bg-gold-deep/10 border border-gold-deep/20 rounded-full px-2 py-0.5">
-                <span className="text-[9px] text-gold-deep font-bold truncate max-w-[100px]">{selectedProduto}</span>
-                <button onClick={() => setSelectedProduto(null)} className="text-gold-deep/70 hover:text-gold-deep transition-colors">
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            )}
+            {filterChips}
             <div className="ml-auto flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5">
               <button
                 onClick={() => setChartMetric('valor')}
@@ -603,22 +651,7 @@ export const RenovacoesPage: React.FC = () => {
             <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">
               Comissões Mês a Mês
             </h3>
-            {selectedSeguradora && seguradoraNome && (
-              <div className="flex items-center gap-1.5 bg-gold-deep/10 border border-gold-deep/20 rounded-full px-2 py-0.5">
-                <span className="text-[9px] text-gold-deep font-bold truncate max-w-[100px]">{seguradoraNome}</span>
-                <button onClick={() => setSelectedSeguradora(null)} className="text-gold-deep/70 hover:text-gold-deep transition-colors">
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            )}
-            {selectedProduto && (
-              <div className="flex items-center gap-1.5 bg-gold-deep/10 border border-gold-deep/20 rounded-full px-2 py-0.5">
-                <span className="text-[9px] text-gold-deep font-bold truncate max-w-[100px]">{selectedProduto}</span>
-                <button onClick={() => setSelectedProduto(null)} className="text-gold-deep/70 hover:text-gold-deep transition-colors">
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            )}
+            {filterChips}
             <div className="ml-auto flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5">
               <button
                 onClick={() => setComissaoMetric('valor')}
